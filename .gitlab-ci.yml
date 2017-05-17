@@ -8,5 +8,5 @@ test_async:
   script:
    - npm install
    - pip install
-   - transpyle hello.py
+   - transcrypt hello.py
 
