@@ -1,0 +1,22 @@
+{
+  "name": "sosml-web",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@types/jest": "^19.2.3",
+    "@types/node": "^7.0.21",
+    "@types/react": "^15.0.24",
+    "@types/react-dom": "^15.5.0",
+    "react": "^15.5.4",
+    "react-dom": "^15.5.4"
+  },
+  "devDependencies": {
+    "react-scripts-ts": "1.4.0"
+  },
+  "scripts": {
+    "start": "react-scripts-ts start",
+    "build": "react-scripts-ts build",
+    "test": "react-scripts-ts test --env=jsdom",
+    "eject": "react-scripts-ts eject"
+  }
+}
