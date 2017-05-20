@@ -7,5 +7,6 @@ cache:
 test_async:
   script:
    - npm install
-   - node test.js
+   - CI=true npm run build
+   - CI=true npm test
 
