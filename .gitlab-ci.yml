@@ -7,7 +7,5 @@ cache:
 test_async:
   script:
    - npm install
-   - pip install
-   - transcrypt -b -p .none hello.py
    - node test.js
 
