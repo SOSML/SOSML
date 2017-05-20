@@ -6,13 +6,13 @@ describe('the enthusiasm reducer', () => {
     it('changes the state on increment', () => {
         const oldState: StoreState = {
             languageName: "typescript",
-            enthusiasmLevel: 1
+            enthusiasmLevel: 3
         };
         const newState = enthusiasm(oldState, incrementEnthusiasm());
         expect(oldState).not.toEqual(newState);
     });
 
-    it('keeps the state on decrement', () => {
+    it('keeps the state on decrementing over bounds', () => {
         const oldState: StoreState = {
             languageName: "typescript",
             enthusiasmLevel: 1
@@ -24,7 +24,7 @@ describe('the enthusiasm reducer', () => {
     it('increments the state by one on increment', () => {
         const oldState: StoreState = {
             languageName: "typescript",
-            enthusiasmLevel: 1
+            enthusiasmLevel: 2
         };
         const newState = enthusiasm(oldState, incrementEnthusiasm());
         expect(newState.enthusiasmLevel).toEqual(oldState.enthusiasmLevel + 1);
