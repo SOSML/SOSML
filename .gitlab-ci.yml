@@ -8,5 +8,5 @@ test_async:
   script:
    - npm install -g
    - CI=true npm run build
-   - CI=true npm test
+   - CI=true npm citest
 
