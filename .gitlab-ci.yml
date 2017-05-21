@@ -6,7 +6,7 @@ cache:
 
 test_async:
   script:
-   - npm install -g
+   - npm install
    - CI=true npm run build
    - CI=true npm run citest
 
