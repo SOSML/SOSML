@@ -2,6 +2,13 @@
 
 This folder contains the source code and configuration to build and test the interpreter.
 
+## Prerequisites
+
+The dependencies of this package must be installed to test or build.
+```bash
+npm install
+```
+
 ## Test
 
 To run the tests use:
@@ -12,7 +19,7 @@ This runs all tests located in the `test` directory.
 
 ##### Write your own tests
 
-To write you own tests, create a new file in the `test` directory. You can write multiple tests into the same file. The testing framework used is
+To write your own tests, create a new file in the `test` directory. You can write multiple tests into the same file. The testing framework used is
 [Jest](https://facebook.github.io/jest/).
 
 Example test:
