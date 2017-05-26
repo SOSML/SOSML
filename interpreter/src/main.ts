@@ -18,15 +18,15 @@ let AST = instance.lexParse(..code..);
 To export the API of the interpreter, use the TypeScript "export = " statement.
 For example to export an object with two methods, one could write:
 export = {
-    "run" : function(code) {
+    "run": function(code) {
         // ...
     },
-    "createAST" : otherFunction
+    "createAST": otherFunction
 };
 
 */
 export = class API {
-    static dummy(str : string) : string {
-        return str + "!!";
+    static dummy(str: string): string {
+        return str + '!!';
     }
 };
