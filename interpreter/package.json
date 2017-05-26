@@ -4,7 +4,8 @@
   "description": "",
   "scripts": {
     "citest": "jest --coverage --expand --verbose",
-    "test": "jest --notify --watch"
+    "cilint": "tslint -c tslint.json 'src/**/*.ts'",
+    "test": "jest --notify --watch",
     "build": "webpack --env=dev",
     "dist": "webpack --env=prod"
   },
@@ -16,6 +17,7 @@
     "jest": "^20.0.4",
     "ts-jest": "^20.0.4",
     "ts-loader": "^2.1.0",
+    "tslint": "^5.3.2",
     "typescript": "^2.3.3",
     "webpack": "^2.6.0"
   },
