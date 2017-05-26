@@ -1,5 +1,6 @@
 import * as React from 'react';
 import './Hello.css';
+import Editor from './Editor';
 
 export interface Props {
     name: string;
@@ -22,6 +23,7 @@ function Hello({name, enthusiasmLevel = 1, onIncrement, onDecrement}: Props) {
                 <button onClick={onDecrement}>-</button>
                 <button onClick={onIncrement}>+</button>
             </div>
+            <Editor />
         </div>
     );
 }

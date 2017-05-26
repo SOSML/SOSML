@@ -2,11 +2,16 @@
 # http://docs.gitlab.com/ce/ci/yaml/README.html#cache
 cache:
   paths:
-  - node_modules/
+  - interpreter/node_modules/
 
-test_async:
+build:
   script:
-   - npm install
-   - CI=true npm run build
-   - CI=true npm run citest
+   - ./ci/lnterpreter-build.sh
 
+test:
+  script:
+   - ./ci/lnterpreter-test.sh
+
+lint:
+  script:
+   - ./ci/lnterpreter-lint.sh
