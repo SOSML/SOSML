@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "test": "jest",
+    "citest": "jest --coverage --expand --verbose",
+    "test": "jest --notify --watch"
     "build": "webpack --env=dev",
     "dist": "webpack --env=prod"
   },
