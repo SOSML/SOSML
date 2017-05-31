@@ -4,14 +4,26 @@ cache:
   paths:
   - interpreter/node_modules/
 
-build:
+interpreter-build:
   script:
    - ./ci/lnterpreter-build.sh
 
-test:
+interpreter-test:
   script:
    - ./ci/lnterpreter-test.sh
 
-lint:
+interpreter-lint:
   script:
    - ./ci/lnterpreter-lint.sh
+
+frontend-build:
+  script:
+   - ./ci/frontend-build.sh
+
+frontend-test:
+  script:
+   - ./ci/frontend-test.sh
+
+frontend-lint:
+  script:
+   - ./ci/frontend-lint.sh
