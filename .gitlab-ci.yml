@@ -3,6 +3,7 @@
 cache:
   paths:
   - interpreter/node_modules/
+  - frontend/node_modules/
 
 interpreter-build:
   script:
