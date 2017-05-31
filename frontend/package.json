@@ -7,14 +7,10 @@
     "@types/node": "^7.0.21",
     "@types/react": "^15.0.24",
     "@types/react-dom": "^15.5.0",
-    "@types/react-redux": "^4.4.40",
     "react": "^15.5.4",
     "react-bootstrap": "^0.31.0",
     "react-codemirror": "^1.0.0",
-    "react-dom": "^15.5.4",
-    "react-redux": "^5.0.5",
-    "redux": "^3.6.0",
-    "redux-devtools-extension": "^2.13.2"
+    "react-dom": "^15.5.4"
   },
   "devDependencies": {
     "@types/enzyme": "^2.8.0",
@@ -88,6 +84,6 @@
       "tsx",
       "js"
     ],
-    "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx|js)$"
+    "testRegex": "(/test/.*|\\.(test|spec))\\.(ts|tsx|js)$"
   }
 }
