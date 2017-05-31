@@ -1,9 +1,9 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import './index.css';
-import Hello from './components/Hello';
+import RootPage from './components/RootPage';
 
 ReactDOM.render(
-    <Hello name="TypeScript" enthusiasmLevel={10}/>,
+    <RootPage />,
     document.getElementById('root') as HTMLElement
 );
