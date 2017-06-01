@@ -1,20 +1,24 @@
 import * as React from 'react';
 // import './MiniWindow.css';
 import MenuBar from './MenuBar';
-import MiniWindow from './MiniWindow';
-import CodeMirrorWrapper from './CodeMirrorWrapper';
+import Playground from './Playground';
+import Help from './Help';
+import {
+    BrowserRouter as Router,
+    Route
+} from 'react-router-dom';
+import './RootPage.css';
 
 class RootPage extends React.Component<any, any> {
     render() {
         return (
-            <div>
-                <MenuBar />
-                <div className="container">
-                    <MiniWindow content={
-                        <CodeMirrorWrapper />
-                    } title="SML" />
+            <Router>
+                <div className="rootPage">
+                    <MenuBar />
+                    <Route exact={true} path="/" component={Playground} />
+                    <Route path="/help" component={Help} />
                 </div>
-            </div>);
+            </Router>);
     }
 }
 

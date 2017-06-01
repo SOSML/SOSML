@@ -1,29 +1,35 @@
 import * as React from 'react';
+import { Nav, Navbar, NavItem } from 'react-bootstrap';
+const LinkContainer = require('react-router-bootstrap').LinkContainer;
+// ^ this circumvents type checking as the @types/react-router-bootstrap package is buggy
+// it does not know the exact property, although it is clearly specified
+// in the documentation!
+
 // import './MainMenu.css';
 
 class MenuBar extends React.Component<any, any> {
     render() {
         return (
-            <nav className="navbar navbar-inverse navbar-static-top">
-                <div className="container-fluid">
-                    <div className="navbar-header">
-                        <button type="button" className="navbar-toggle collapsed"
-                        data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
-                            <span className="sr-only">Toggle navigation</span>
-                            <span className="icon-bar" />
-                            <span className="icon-bar" />
-                            <span className="icon-bar" />
-                        </button>
-                        <a className="navbar-brand" href="#">SOSML</a>
-                    </div>
-                    <div className="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-                        <ul className="nav navbar-nav">
-                            <li className="active"><a href="#">Home <span className="sr-only">(current)</span></a></li>
-                            <li><a href="#">Help</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </nav>);
+            <Navbar inverse={true} collapseOnSelect={true} staticTop={true} fluid={true}>
+                <Navbar.Header>
+                    <Navbar.Brand>
+                        <a href="#">SOSML</a>
+                    </Navbar.Brand>
+                    <Navbar.Toggle />
+                </Navbar.Header>
+                <Navbar.Collapse>
+                    <Nav>
+                        <LinkContainer exact={true} to="/">
+                            <NavItem>Editor</NavItem>
+                        </LinkContainer>
+                    </Nav>
+                    <Nav pullRight={true}>
+                        <LinkContainer to="/help">
+                            <NavItem>Hilfe</NavItem>
+                        </LinkContainer>
+                    </Nav>
+                </Navbar.Collapse>
+            </Navbar>);
     }
 }
 

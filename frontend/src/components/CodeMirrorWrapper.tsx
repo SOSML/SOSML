@@ -4,6 +4,7 @@ const CodeMirror: any = require('react-codemirror');
 require('codemirror/lib/codemirror.css');
 require('codemirror/mode/mllike/mllike.js');
 require('codemirror/addon/edit/matchbrackets.js');
+import './CodeMirrorWrapper.css';
 
 class CodeMirrorWrapper extends React.Component<any, any> {
     editor: any;
