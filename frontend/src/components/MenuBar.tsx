@@ -13,6 +13,9 @@ class MenuBar extends React.Component<any, any> {
             <Navbar inverse={true} collapseOnSelect={true} staticTop={true} fluid={true}>
                 <Navbar.Header>
                     <Navbar.Brand>
+                        <img src="/logo.png" style={{padding: '10px'}} alt="Logo" />
+                    </Navbar.Brand>
+                    <Navbar.Brand>
                         <a href="#">SOSML</a>
                     </Navbar.Brand>
                     <Navbar.Toggle />
