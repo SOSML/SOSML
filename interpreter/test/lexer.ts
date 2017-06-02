@@ -6,7 +6,7 @@ const API = require("../src/lexer");
 
 it("very basic test", () => {
     expect(API.lex("abc 1234")).toEqual([new API.IdentifierToken("abc"), new API.IntegerConstantToken("1234", 1234)]);
-}
+});
 
 it("code snippet", () => {
     let testcase: string = `(* Parsercomb -- Hutton/Paulson-style parser combinators for Moscow ML.
@@ -208,12 +208,12 @@ it("strings", () => {
         new API.StringConstantToken('""', ''),
         new API.StringConstantToken('"\\\\ \\" "', '\\ \" ')
     ]);
-}
+});
 
 it("char with multiple characters", () => {
     let testcase: string = ` #"test" "`;
-    expect(API.lex, testcase).toThrow(API.LexerError);
-}
+    expect(() => { API.lex(testcase); }).toThrow(API.LexerError);
+});
 
 it("floating point numbers", () => {
     let testcase: string = '1e2 1e 2'
@@ -224,4 +224,4 @@ it("floating point numbers", () => {
         new API.IdentifierToken("e"),
         new API.IntegerConstantToken("2", 2)
     ])
-}
+});
