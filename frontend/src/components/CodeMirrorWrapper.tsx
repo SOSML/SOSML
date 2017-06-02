@@ -6,8 +6,16 @@ require('codemirror/mode/mllike/mllike.js');
 require('codemirror/addon/edit/matchbrackets.js');
 import './CodeMirrorWrapper.css';
 
-class CodeMirrorWrapper extends React.Component<any, any> {
+export interface Props {
+    flex?: boolean;
+}
+
+class CodeMirrorWrapper extends React.Component<Props, any> {
     editor: any;
+
+    constructor(props: Props) {
+        super(props);
+    }
 
     render() {
         const options = {
@@ -17,8 +25,13 @@ class CodeMirrorWrapper extends React.Component<any, any> {
             matchBrackets: true,
             lineWrapping: true
         };
+        let classAdd = '';
+        if (this.props.flex) {
+            classAdd = 'flexy flexcomponent';
+        }
         return (
-            <CodeMirror ref={(editor: any) => {this.editor = editor; }} value="fun test x = x + 1;" options={options}/>
+            <CodeMirror className={classAdd} ref={(editor: any) => {this.editor = editor; }}
+                value="fun test x = x + 1;" options={options}/>
         );
     }
 
@@ -33,6 +46,7 @@ class CodeMirrorWrapper extends React.Component<any, any> {
                 return GCodeMirror.commands.insertSoftTab(cm);
             }
         };
+        this.editor.getCodeMirror().refresh();
     }
 }
 

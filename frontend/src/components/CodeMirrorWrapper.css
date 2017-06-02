@@ -1,5 +1,12 @@
-.CodeMirror {
+.flexcomponent.flexy > .CodeMirror {
     height: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.flexcomponent.flexy > .CodeMirror > .CodeMirror-scroll {
+    flex: 1;
 }
 
 .ReactCodeMirror {

@@ -23,11 +23,10 @@ class Playground extends React.Component<any, State> {
             stylesRight.display = 'none';
         }
         return (
-            <Grid className="playground">
-                <Col xs={(this.state.hideRight ? 12 : 6)} className="flexcomponent">
+            <Grid className="playground flexcomponent">
+                <Col xs={(this.state.hideRight ? 12 : 6)} className="flexcomponent flexy">
                     <MiniWindow content={
-                        <CodeMirrorWrapper />
-                    } title="SML" />
+                        <CodeMirrorWrapper flex={true} />} title="SML" className="flexy" />
                 </Col>
                 <Col xs={6} style={stylesRight} />
             </Grid>

@@ -5,6 +5,7 @@ export interface Props {
     title: string;
     footer?: any;
     content: any;
+    className?: string;
 }
 
 class MiniWindow extends React.Component<Props, any> {
@@ -14,11 +15,15 @@ class MiniWindow extends React.Component<Props, any> {
 
     render() {
         let footerAdd = '';
+        let classAdd = '';
+        if (this.props.className) {
+            classAdd = this.props.className;
+        }
         if (!this.props.footer) {
             footerAdd = 'no-content';
         }
         return (
-            <div className="mini-window">
+            <div className={`mini-window ${classAdd}`}>
                 <div className="window-header noselect">
                     {this.props.title}
                 </div>
