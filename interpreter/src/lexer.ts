@@ -205,10 +205,10 @@ class Lexer {
     }
 
     lexString(): StringConstantToken {
+        let startPosition: number = this.position;
         if (this.consumeChar() !== '"') {
             throw new LexerError();
         } // TODO: internal compiler error?
-        let startPosition: number = this.position;
         let value: string = '';
 
         while (this.getChar() !== '"') {
