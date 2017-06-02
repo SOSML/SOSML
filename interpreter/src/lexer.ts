@@ -4,19 +4,35 @@
 
 // SML uses these types and we may have to emulate them more closely, in particular int
 export type char = string;
-export type int  = number;
+export type int = number;
 
-export class KeywordToken { constructor(public text: string) {} }
-export class IdentifierToken { constructor(public text: string) {} }
-export class IntegerConstantToken { constructor(public text: string, public value: int) {} }
-export class RealConstantToken { constructor(public text: string, public value: number) {} }
-export class WordConstantToken { constructor(public text: string, public value: int) {} }
-export class CharacterConstantToken { constructor(public text: string, public value: char) {} }
-export class StringConstantToken { constructor(public text: string, public value: string) {} }
-export class ErrorToken { constructor(public text: string = '') {} }
+export interface Token {
+    text: string;
+    // TODO: add position
+}
 
-export type Token = KeywordToken | IdentifierToken | IntegerConstantToken | RealConstantToken | WordConstantToken |
-    CharacterConstantToken | StringConstantToken | ErrorToken;
+export class KeywordToken implements Token { constructor(public text: string) {} }
+export class IdentifierToken implements Token { constructor(public text: string) {} }
+export class IntegerConstantToken implements Token { constructor(public text: string, public value: int) {} }
+export class RealConstantToken implements Token { constructor(public text: string, public value: number) {} }
+export class WordConstantToken implements Token { constructor(public text: string, public value: int) {} }
+export class CharacterConstantToken implements Token { constructor(public text: string, public value: char) {} }
+export class StringConstantToken implements Token { constructor(public text: string, public value: string) {} }
+
+// A star (*) can be used as an identifier in most, but not all places and thus must be separated.
+// See SML definition, chapter 2.4 Identifiers
+export class StarToken implements Token { public text: string = '*'; }
+
+// Reserved words are generally not allowed as identifiers. "The only exception to this rule is that the symbol = ,
+// which is a reserved word, is also allowed as an identifier to stand for the equality predicate.
+// The identifier = may not be re-bound; this precludes any syntactic ambiguity." (Definition of SML, page 5)
+export class EqualsToken implements Token { public text: string = '='; }
+
+// A numeric constant not starting with 0
+// Unlike other Integer constants, it can be used as a record label instead of a normal identifier.
+export class NumericToken extends IntegerConstantToken {
+    constructor(text: string, value: int) { super(text, value); }
+}
 
 // TODO: move this somewhere else, derive it from some general CompilerError class and give it an error message.
 class LexerError extends Error {
@@ -40,6 +56,22 @@ class Lexer {
     position: number = 0;
     input: string;
 
+    static isAlphanumeric(c: char): boolean {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c === '\'' || c === '_';
+    }
+
+    static isSymbolic(c: char): boolean {
+        return symbolicCharacters.has(c);
+    }
+
+    static isWhitespace(c: char): boolean {
+        return c === ' ' || c === '\t' || c === '\n' || c === '\f';
+    }
+
+    static isNumber(c: char, hexadecimal: boolean): boolean {
+        return (c >= '0' && c <= '9') || (hexadecimal && ((c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')));
+    }
+
     constructor(input: string) {
         this.input = input;
         this.skipWhitespaceAndComments();
@@ -62,20 +94,8 @@ class Lexer {
         }
     }
 
-    isAlphanumeric(c: char): boolean {
-        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c === '\'' || c === '_';
-    }
-
-    isSymbolic(c: char): boolean {
-        return symbolicCharacters.has(c);
-    }
-
-    isWhitespace(c: char): boolean {
-        return c === ' ' || c === '\t' || c === '\n' || c === '\f';
-    }
-
     skipWhitespace(): void {
-        while (this.isWhitespace(this.getChar())) {
+        while (Lexer.isWhitespace(this.getChar())) {
             ++this.position;
         }
     }
@@ -111,15 +131,11 @@ class Lexer {
         } while (this.position !== oldPosition);
     }
 
-    isNumber(c: char, hexadecimal: boolean): boolean {
-        return (c >= '0' && c <= '9') || (hexadecimal && ((c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')));
-    }
-
-    /* Reads a sequence of digits. Sign, exponent etc. are handled by lexNumber.
+    /* Reads a sequence of digits. Sign, exponent etc. are handled by lexNumber. Accepts leading zeros.
      */
     readNumeric(hexadecimal: boolean, maxLength: number = -1): string {
         let result: string = '';
-        while (this.isNumber(this.getChar(), hexadecimal) && result.length !== -1) {
+        while (Lexer.isNumber(this.getChar(), hexadecimal) && result.length !== maxLength) {
             result += this.consumeChar();
         }
         if (result === '') {
@@ -142,7 +158,12 @@ class Lexer {
         if (word) {
             return new WordConstantToken(token, v);
         } else {
-            return new IntegerConstantToken(token, v);
+            let firstChar = token.charAt(0);
+            if (Lexer.isNumber(firstChar, false) && firstChar !== '0') {
+                return new NumericToken(token, v);
+            } else {
+                return new IntegerConstantToken(token, v);
+            }
         }
     }
 
@@ -177,7 +198,7 @@ class Lexer {
         }
 
         if (this.getChar() === '.') {
-            if (this.isNumber(this.getChar(1), false)) {
+            if (Lexer.isNumber(this.getChar(1), false)) {
                 value += this.consumeChar();
                 value += this.readNumeric(false);
             } else {
@@ -187,11 +208,11 @@ class Lexer {
         }
 
         if (this.getChar() === 'e' || this.getChar() === 'E') {
-            if (this.isNumber(this.getChar(1), false)) {
+            if (Lexer.isNumber(this.getChar(1), false)) {
                 value += 'e';
                 ++this.position;
                 value += this.readNumeric(false);
-            } else if (this.getChar(1) === '~' && this.isNumber(this.getChar(2), false)) {
+            } else if (this.getChar(1) === '~' && Lexer.isNumber(this.getChar(2), false)) {
                 value += 'e-';
                 this.position += 2;
                 value += this.readNumeric(false);
@@ -214,7 +235,7 @@ class Lexer {
         while (this.getChar() !== '"') {
             if (this.getChar() === '\\') {
                 ++this.position;
-                if (this.isWhitespace(this.getChar())) {
+                if (Lexer.isWhitespace(this.getChar())) {
                    this.skipWhitespace();
                    if (this.consumeChar() !== '\\') {
                        throw new LexerError();
@@ -305,10 +326,10 @@ class Lexer {
 
         let charChecker: (c: char) => boolean;
         let c: char = this.getChar();
-        if (this.isSymbolic(c)) {
-            charChecker = this.isSymbolic;
-        } else if (this.isAlphanumeric(c)) {
-            charChecker = this.isAlphanumeric;
+        if (Lexer.isSymbolic(c)) {
+            charChecker = Lexer.isSymbolic;
+        } else if (Lexer.isAlphanumeric(c)) {
+            charChecker = Lexer.isAlphanumeric;
         } else if (reservedWords.has(c)) {
             return new KeywordToken(this.consumeChar());
         } else {
@@ -329,12 +350,11 @@ class Lexer {
             }
         }
 
-        // TODO:
-        // "The only exception to this rule is that the symbol = , which is a reserved word, is also allowed as an
-        // identifier to stand for the equality predicate. The identifier = may not be re-bound; this precludes any
-        // syntactic ambiguity." (Definition of SML, page 5)
-        // TODO: "* is excluded from TyCon"
-        if (reservedWords.has(token)) {
+        if (token === '*') {
+            return new StarToken();
+        } else if (token === '=') {
+            return new EqualsToken();
+        } else if (reservedWords.has(token)) {
             return new KeywordToken(token);
         } else {
             return new IdentifierToken(token);
@@ -343,7 +363,8 @@ class Lexer {
 
     nextToken(): Token {
         let token: Token;
-        if (this.isNumber(this.getChar(), false) || (this.getChar() === '~' && this.isNumber(this.getChar(1), false))) {
+        if (Lexer.isNumber(this.getChar(), false)
+            || (this.getChar() === '~' && Lexer.isNumber(this.getChar(1), false))) {
             token = this.lexNumber();
         } else if (this.getChar() === '"') {
             token = this.lexString();
