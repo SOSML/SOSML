@@ -4,7 +4,7 @@
 
 // SML uses these types and we may have to emulate them more closely, in particular int
 export type char = string;
-export type int = number;
+export type int  = number;
 
 export class KeywordToken { constructor(public text: string) {} }
 export class IdentifierToken { constructor(public text: string) {} }

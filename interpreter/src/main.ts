@@ -13,20 +13,46 @@ let AST = instance.lexParse(..code..);
 
 */
 
+import State        = require('./state');
+import * as Lexer from "./lexer";
+// . . .
+
 /*
+ * Map identifier ->
+ *      - unique id (int)
+ *      - value (string, int, tuple, etc)
+ *      - type (SML type)
+ */
+export type State = Map<string,(int, any, any)>;
 
-To export the API of the interpreter, use the TypeScript "export = " statement.
-For example to export an object with two methods, one could write:
-export = {
-    "run": function(code) {
-        // ...
-    },
-    "createAST": otherFunction
-};
+export class API {
+    /* Think of some additional flags n stuff etc */
+    static interpret(oldState : State, nextInstruction : string) : State {
+        // TODO
+        Lexer lexer = Lexer();
+        tkn = lexer.lex(nextInstruction);
 
-*/
-export = class API {
-    static dummy(str: string): string {
-        return str + '!!';
+        // Parser parser = Parser();
+        // ast = parser.parse(tkn);
+        //
+        // Analyzer analyzer = Analyzer();
+        // analyzer.analyze(oldState, ast);
+        //
+        // Interpreter interpreter = Interpreter();
+        // let newState = interpreter.interpret(oldState, ast);
+
+        // return newState;
+        return State;
+    }
+
+    static interpret(oldState : State, currentPartialInstruction : string, nextInstructionPart : string) : (State,string) | Error {
+        try {
+            return (interpret(oldState, currentPartialInstruction + nextInstructionPart), "");
+        } catch( e ) {
+            //if( e instanceof IncompleteCode ) {
+            //  return (oldState, currentPartialInstruction + nextInstructionPart);
+            //}
+            throw e;
+        }
     }
 };
