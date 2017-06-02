@@ -1,23 +1,9 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import Hello from './containers/Hello';
-import {Provider} from 'react-redux';
-
-import {createStore} from 'redux';
-import {enthusiasm} from './reducers/index';
-import {StoreState} from './types/index';
-import {composeWithDevTools} from 'redux-devtools-extension';
-
-const store = createStore<StoreState>(enthusiasm, {
-        enthusiasmLevel: 1,
-        languageName: 'TypeScript'
-    },
-    composeWithDevTools()
-);
+import './index.css';
+import RootPage from './components/RootPage';
 
 ReactDOM.render(
-    <Provider store={store}>
-        <Hello />
-    </Provider>,
+    <RootPage />,
     document.getElementById('root') as HTMLElement
 );

@@ -1,0 +1,15 @@
+.playground {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding-bottom: 0.5rem;
+}
+
+.flexcomponent {
+    display: flex;
+    flex-flow: column;
+    height: 100%;
+}
+
+.rootPage {
+    max-height: 100vh;
+}
