@@ -13,7 +13,7 @@ let AST = instance.lexParse(..code..);
 
 */
 
-//import * as Lexer from "./lexer";
+// import * as Lexer from "./lexer";
 // . . .
 
 /*
@@ -22,13 +22,13 @@ let AST = instance.lexParse(..code..);
  *      - value (string, int, tuple, etc)
  *      - type (SML type)
  */
-export type State = Map<string,[number, any, any]>;
+export type State = Map<string, [number, any, any]>;
 
 export class API {
     /* Think of some additional flags n stuff etc */
-    static interpret(oldState : State, nextInstruction : string) : State {
+    static interpret(oldState: State, nextInstruction: string): State {
         // TODO
-        //let tkn = Lexer.lex(nextInstruction);
+        // let tkn = Lexer.lex(nextInstruction);
 
         // Parser parser = Parser();
         // ast = parser.parse(tkn);
@@ -43,14 +43,15 @@ export class API {
         return oldState;
     }
 
-    static interpretFurther(oldState : State, currentPartialInstruction : string, nextInstructionPart : string) : [State,string] | Error {
+    static interpretFurther(oldState: State, currentPartialInstruction: string,
+                            nextInstructionPart: string): [State, string] | Error {
         try {
-            return [API.interpret(oldState, currentPartialInstruction + nextInstructionPart), ""];
-        } catch( e ) {
-            //if( e instanceof IncompleteCode ) {
-            //  return (oldState, currentPartialInstruction + nextInstructionPart);
-            //}
+            return [API.interpret(oldState, currentPartialInstruction + nextInstructionPart), ''];
+        } catch (e) {
+            // if( e instanceof IncompleteCode ) {
+            //   return (oldState, currentPartialInstruction + nextInstructionPart);
+            // }
             throw e;
         }
     }
-};
+}
