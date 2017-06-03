@@ -4,6 +4,7 @@ import './MiniWindow.css';
 export interface Props {
     title: string;
     footer?: any;
+    header?: any;
     content: any;
     className?: string;
 }
@@ -25,7 +26,7 @@ class MiniWindow extends React.Component<Props, any> {
         return (
             <div className={`mini-window ${classAdd}`}>
                 <div className="window-header noselect">
-                    {this.props.title}
+                    <div className="window-title">{this.props.title}</div> {this.props.header}
                 </div>
                 <div className="window-content">
                     {this.props.content}

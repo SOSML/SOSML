@@ -1,23 +1,23 @@
 .playground {
-    flex: 1 1 auto;
+    flex: 1;
     overflow-y: hidden;
     padding-bottom: 0.5rem;
+
+    position: relative;
+    width: calc(100% - 6px);
+    margin-left: 3px;
+}
+
+.playground > div {
+    position: absolute;
+    left: 0px;
+    height: calc(100% - 5px);
 }
 
 .playground .window-content {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-}
-
-.flexcomponent {
-    display: flex;
-    flex-flow: column;
-    height: 100%;
-}
-
-.flexy {
-    flex: 1;
 }
 
 .rootPage {

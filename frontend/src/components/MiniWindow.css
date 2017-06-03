@@ -11,8 +11,12 @@
 .window-header {
     padding: 0rem .20rem;
     background-color: #C4C4C4;
+}
+
+.window-title {
     font-family: Georgia,sans-serif;
     font-size: 22px;
+    display: inline-block;
 }
 
 .window-content {
