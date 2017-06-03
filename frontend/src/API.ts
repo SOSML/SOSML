@@ -6,17 +6,17 @@ Interfaces with both the client side interpreter and the server side fallback.
 */
 
 export class API {
-    static fallbackInterpreter(code: string) : Promise<string> {
-        return fetch("/api/fallback/",
+    static fallbackInterpreter(code: string): Promise<string> {
+        return fetch('/api/fallback/',
             {
                 headers: {
                   'Accept': 'text/plain',
                   'Content-Type': 'application/json'
                 },
-                method: "POST",
+                method: 'POST',
                 body: JSON.stringify({'code': code})
             }
-        ).then(function(response){
+        ).then(function(response: any){
             return response.text();
         });
     }
