@@ -346,7 +346,7 @@ class Lexer {
         } else if (reservedWords.has(c)) {
             return new KeywordToken(this.consumeChar());
         } else if (c === '.' && this.getChar(1) === '.' && this.getChar(2) === '.') {
-            this.position += 2;
+            this.position += 3;
             return new KeywordToken('...');
         } else {
             if (c.charCodeAt(0) < 32) {
