@@ -178,9 +178,11 @@ class Lexer {
         let hexadecimal: boolean = false;
         let word: boolean = false;
         let real: boolean = false;
+        let negative: boolean = false;
 
         if (this.getChar() === '~') {
             ++this.position;
+            negative = true;
             value += '-';
         }
 
@@ -188,12 +190,17 @@ class Lexer {
             ++this.position;
             if (this.getChar() === 'w') {
                 word = true;
-                ++this.position;
             }
-            if (this.getChar() === 'x') {
+            if (this.getChar(word ? 1 : 0) === 'x') {
                 hexadecimal = true;
-                ++this.position;
             }
+            let nextDigitOffset = (word && hexadecimal) ? 2 : 1;
+            if ((negative && word) || !Lexer.isNumber(this.getChar(nextDigitOffset), hexadecimal)) {
+                // The 'w' or 'x' is not part of the number
+                value += '0';
+                return this.makeNumberToken(value, startPosition, false,  false, false);
+            }
+            this.position += nextDigitOffset;
         }
 
         value += this.readNumeric(hexadecimal);
