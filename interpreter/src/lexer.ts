@@ -184,7 +184,7 @@ class Lexer {
             value += '-';
         }
 
-        if (this.getChar() === '0' && (this.getChar() === 'w' || this.getChar() === 'x')) {
+        if (this.getChar() === '0' && (this.getChar(1) === 'w' || this.getChar(1) === 'x')) {
             ++this.position;
             if (this.getChar() === 'w') {
                 word = true;
