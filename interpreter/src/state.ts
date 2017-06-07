@@ -11,7 +11,7 @@ export class Environment {
 };
 
 export class State {
-    T: string[];
+    T: any;         // Type names
     F: any;         // Functor environment
     G: any;         // Signature environment
     E: Environment;
