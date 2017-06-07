@@ -293,3 +293,101 @@ it("reserved words", () => {
         new API.KeywordToken("#")
     ])
 });
+
+it("integer constants decimal", () => {
+    let testcase_nonint: string = '~';
+    let testcase_pos: string = '42';
+    let testcase_neg: string = '~69';
+    let testcase_pos_leadingzero: string = '0000042';
+    let testcase_neg_leadingzero: string = '~0000023';
+    let testcase_bigzero: string = '000000';
+
+    expect(API.lex(testcase_nonint)).toEqual([
+        new API.IdentifierToken("~")
+    ]);
+    expect(API.lex(testcase_pos)).toEqual([
+        new API.NumericToken(testcase_pos, 42)
+    ]);
+    expect(API.lex(testcase_neg)).toEqual([
+        new API.IntegerConstantToken(testcase_neg, -69)
+    ]);
+    expect(API.lex(testcase_pos_leadingzero)).toEqual([
+        new API.IntegerConstantToken(testcase_pos_leadingzero, 42)
+    ]);
+    expect(API.lex(testcase_neg_leadingzero)).toEqual([
+        new API.IntegerConstantToken(testcase_neg_leadingzero, -23)
+    ]);
+    expect(API.lex(testcase_bigzero)).toEqual([
+        new API.IntegerConstantToken(testcase_bigzero, 0)
+    ]);
+});
+
+it("integer constants hexadecimal wellformed", () => {
+    let testcase_pos: string = '0x4a';
+    let testcase_neg: string = '~0x6E';
+    let testcase_pos_leadingzero: string = '0x000004F';
+    let testcase_neg_leadingzero: string = '~000a';
+    let testcase_bigzero: string = '0x00000';
+    let testcase_all_chars1: string = '0x0123456789';
+    let testcase_all_chars2: string = '0xabcdef';
+    let testcase_all_chars3: string = '0xABCDEF';
+
+    expect(API.lex(testcase_pos)).toEqual([
+        new API.NumericToken(testcase_pos, 0x4a)
+    ]);
+    expect(API.lex(testcase_neg)).toEqual([
+        new API.IntegerConstantToken(testcase_neg, -0x6e)
+    ]);
+    expect(API.lex(testcase_pos_leadingzero)).toEqual([
+        new API.IntegerConstantToken(testcase_pos_leadingzero, 0x4f)
+    ]);
+    expect(API.lex(testcase_neg_leadingzero)).toEqual([
+        new API.IntegerConstantToken(testcase_neg_leadingzero, -0xa)
+    ]);
+    expect(API.lex(testcase_bigzero)).toEqual([
+        new API.IntegerConstantToken(testcase_bigzero, 0)
+    ]);
+    expect(API.lex(testcase_all_chars1)).toEqual([
+        new API.IntegerConstantToken(testcase_all_chars1, 0x123456789)
+    ]);
+    expect(API.lex(testcase_all_chars2)).toEqual([
+        new API.IntegerConstantToken(testcase_all_chars2, 0xabcdef)
+    ]);
+    expect(API.lex(testcase_all_chars3)).toEqual([
+        new API.IntegerConstantToken(testcase_all_chars3, 0xabcdef)
+    ]);
+});
+
+it("integer constants hexadecimal illformed", () => {
+    let testcase_nonint: string = '~0x';
+    let testcase_too_long_prefix: string = '00x42';
+    let testcase_too_short_prefix: string = 'x42';
+    let testcase_neg_too_long_prefix: string = '~00x69';
+    let testcase_neg_too_short_prefix: string = '~x42';
+    let testcase_not_hex: string = '0xabcgcba';
+
+    expect(API.lex(testcase_nonint)).toEqual([
+        new API.IntegerConstantToken("~0", -0)
+        new API.IdentifierToken("x")
+    ]);
+    expect(API.lex(testcase_too_long_prefix)).toEqual([
+        new API.IntegerConstantToken("00", 0),
+        new API.IdentifierToken("x42")
+    ]);
+    expect(API.lex(testcase_too_short_prefix)).toEqual([
+        new API.IdentifierToken("x42")
+    ]);
+    expect(API.lex(testcase_neg_too_long_prefix)).toEqual([
+        new API.IdentifierToken("~"),
+        new API.IntegerConstantToken("00", 0),
+        new API.IdentifierToken("x69")
+    ]);
+    expect(API.lex(testcase_neg_too_short_prefix)).toEqual([
+        new API.IdentifierToken("~"),
+        new API.IdentifierToken("x42")
+    ]);
+    expect(API.lex(testcase_not_hex)).toEqual([
+        new API.IntegerConstantToken("0xabc", 0xabc),
+        new API.IdentifierToken("gcba")
+    ]);
+});
