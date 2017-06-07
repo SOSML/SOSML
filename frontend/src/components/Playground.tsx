@@ -4,6 +4,7 @@ import MiniWindow from './MiniWindow';
 import CodeMirrorWrapper from './CodeMirrorWrapper';
 import { Button, ButtonToolbar, Glyphicon } from 'react-bootstrap';
 import './Playground.css';
+import {API as WebserverAPI} from '../API';
 
 enum WindowState {
     LEFT,
@@ -13,16 +14,20 @@ enum WindowState {
 
 interface State {
     windowState: WindowState;
+    output: string;
+    code: string;
 }
 
 class Playground extends React.Component<any, State> {
     constructor(props: any) {
         super(props);
 
-        this.state = { windowState: WindowState.LEFT };
+        this.state = { windowState: WindowState.LEFT, output: '', code: '' };
 
         this.handleLeftResize = this.handleLeftResize.bind(this);
         this.handleRightResize = this.handleRightResize.bind(this);
+        this.handleRun = this.handleRun.bind(this);
+        this.handleCodeChange = this.handleCodeChange.bind(this);
     }
 
     render() {
@@ -46,13 +51,18 @@ class Playground extends React.Component<any, State> {
             default:
                 break;
         }
+        let lines: string[] = this.state.output.split('\n');
+        let lineItems = lines.map((line) =>
+            <div>{line}</div>
+        );
         return (
             <div className="playground">
                 <div style={stylesLeft} className="flexcomponent flexy">
                     <MiniWindow content={
-                        <CodeMirrorWrapper flex={true} />} footer={(
+                        <CodeMirrorWrapper flex={true} onChange={this.handleCodeChange} />}
+                        footer={(
                         <ButtonToolbar>
-                            <Button bsSize="small" bsStyle="primary">Ausführen</Button>
+                            <Button bsSize="small" bsStyle="primary" onClick={this.handleRun}>Ausführen</Button>
                         </ButtonToolbar>
                     )} header={(
                         <ButtonToolbar className="pull-right">
@@ -64,8 +74,7 @@ class Playground extends React.Component<any, State> {
                 </div>
                 <div style={stylesRight} className="flexcomponent flexy">
                     <MiniWindow content={
-                        <p>Hallo!</p>
-                    } header={(
+                        <p>{lineItems}</p>} header={(
                         <ButtonToolbar className="pull-right">
                             <Button bsSize="small" onClick={this.handleRightResize}>
                                 <Glyphicon glyph={glyphRight} />
@@ -94,6 +103,24 @@ class Playground extends React.Component<any, State> {
             } else {
                 return {windowState: WindowState.RIGHT};
             }
+        });
+    }
+
+    handleRun() {
+        WebserverAPI.fallbackInterpreter(this.state.code).then((val) => {
+            this.setState(prevState => {
+                let ret: any = {output: val};
+                if (prevState.windowState === WindowState.LEFT) {
+                    ret.windowState = WindowState.BOTH;
+                }
+                return ret;
+            });
+        });
+    }
+
+    handleCodeChange(newCode: string) {
+        this.setState(prevState => {
+            return {code: newCode};
         });
     }
 }

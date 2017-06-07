@@ -1,7 +1,7 @@
 .playground {
     flex: 1;
     overflow-y: hidden;
-    padding-bottom: 0.5rem;
+    padding-bottom: 3px;
 
     position: relative;
     width: calc(100% - 6px);
@@ -11,7 +11,7 @@
 .playground > div {
     position: absolute;
     left: 0px;
-    height: calc(100% - 5px);
+    height: calc(100% - 3px);
 }
 
 .playground .window-content {

@@ -8,6 +8,7 @@ import './CodeMirrorWrapper.css';
 
 export interface Props {
     flex?: boolean;
+    onChange?: (x: string) => void;
 }
 
 class CodeMirrorWrapper extends React.Component<Props, any> {
@@ -15,6 +16,8 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
 
     constructor(props: Props) {
         super(props);
+
+        this.handleChange = this.handleChange.bind(this);
     }
 
     render() {
@@ -31,6 +34,7 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
         }
         return (
             <CodeMirror className={classAdd} ref={(editor: any) => {this.editor = editor; }}
+                onChange={this.handleChange}
                 value="fun test x = x + 1;" options={options}/>
         );
     }
@@ -47,6 +51,12 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
             }
         };
         this.editor.getCodeMirror().refresh();
+    }
+
+    handleChange(newValue: string) {
+        if (this.props.onChange) {
+            this.props.onChange(newValue);
+        }
     }
 }
 
