@@ -13,6 +13,7 @@ let AST = instance.lexParse(..code..);
 
 */
 
+import * as State from "./state";
 // import * as Lexer from "./lexer";
 // . . .
 
@@ -22,11 +23,10 @@ let AST = instance.lexParse(..code..);
  *      - value (string, int, tuple, etc)
  *      - type (SML type)
  */
-export type State = Map<string, [number, any, any]>;
 
 export class API {
     /* Think of some additional flags n stuff etc */
-    static interpret(oldState: State, nextInstruction: string): State {
+    static interpret(oldState: State.State, nextInstruction: string): State.State {
         // TODO
         // let tkn = Lexer.lex(nextInstruction);
 
@@ -43,8 +43,8 @@ export class API {
         return oldState;
     }
 
-    static interpretFurther(oldState: State, currentPartialInstruction: string,
-                            nextInstructionPart: string): [State, string] | Error {
+    static interpretFurther(oldState: State.State, currentPartialInstruction: string,
+                            nextInstructionPart: string): [State.State, string] | Error {
         try {
             return [API.interpret(oldState, currentPartialInstruction + nextInstructionPart), ''];
         } catch (e) {
