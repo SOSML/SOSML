@@ -225,3 +225,16 @@ it("floating point numbers", () => {
         new API.IntegerConstantToken("2", 2)
     ])
 });
+
+it("dots", () => {
+    let testcase1: string = '.';
+    let testcase2: string = '..';
+    let testcase3: string = '...';
+
+    expect(() => { API.lex(testcase1); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase2); }).toThrow(API.LexerError);
+
+    expect(API.lex(testcase3)).toEqual([
+        new API.KeywordToken("...")
+    ]);
+});
