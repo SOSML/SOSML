@@ -238,3 +238,60 @@ it("dots", () => {
         new API.KeywordToken("...")
     ]);
 });
+
+
+
+it("reserved words", () => {
+    let testcase: string = 'abstype and andalso as case datatype do else end exception fn fun handle if in infix infixr let local nonfix of op open orelse raise rec then type val with withtype while ( ) [ ] { } , : ; ... _ | = => -> #';
+
+    expect(API.lex(testcase)).toEqual([
+        new API.KeywordToken("abstype"),
+        new API.KeywordToken("and"),
+        new API.KeywordToken("andalso"),
+        new API.KeywordToken("as"),
+        new API.KeywordToken("case"),
+        new API.KeywordToken("datatype"),
+        new API.KeywordToken("do"),
+        new API.KeywordToken("else"),
+        new API.KeywordToken("end"),
+        new API.KeywordToken("exception"),
+        new API.KeywordToken("fn"),
+        new API.KeywordToken("fun"),
+        new API.KeywordToken("handle"),
+        new API.KeywordToken("if"),
+        new API.KeywordToken("in"),
+        new API.KeywordToken("infix"),
+        new API.KeywordToken("infixr"),
+        new API.KeywordToken("let"),
+        new API.KeywordToken("local"),
+        new API.KeywordToken("nonfix"),
+        new API.KeywordToken("of"),
+        new API.KeywordToken("op"),
+        new API.KeywordToken("open"),
+        new API.KeywordToken("orelse"),
+        new API.KeywordToken("raise"),
+        new API.KeywordToken("rec"),
+        new API.KeywordToken("then"),
+        new API.KeywordToken("type"),
+        new API.KeywordToken("val"),
+        new API.KeywordToken("with"),
+        new API.KeywordToken("withtype"),
+        new API.KeywordToken("while"),
+        new API.KeywordToken("("),
+        new API.KeywordToken(")"),
+        new API.KeywordToken("["),
+        new API.KeywordToken("]"),
+        new API.KeywordToken("{"),
+        new API.KeywordToken("}"),
+        new API.KeywordToken(","),
+        new API.KeywordToken(":"),
+        new API.KeywordToken(";"),
+        new API.KeywordToken("..."),
+        new API.KeywordToken("_"),
+        new API.KeywordToken("|"),
+        new API.EqualsToken(),
+        new API.KeywordToken("=>"),
+        new API.KeywordToken("->"),
+        new API.KeywordToken("#")
+    ])
+});
