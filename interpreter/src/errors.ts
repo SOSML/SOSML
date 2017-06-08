@@ -30,3 +30,8 @@ export class FeatureNotImplementedError extends CompilerError {
 export class FeatureDisabledError extends CompilerError {
     constructor(message: string, position: Position) { super(message, position); }
 }
+
+// Used if the input is incomplete, but may be a prefix of valid SML code.
+export class IncompleteError extends CompilerError {
+    constructor(position: Position, message: string = 'unexpected end of input') { super(message, position); }
+}
