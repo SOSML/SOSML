@@ -2,7 +2,7 @@
  * TODO: Documentation for the lexer
  */
 
-import {Position, CompilerError, InternalCompilerError} from './errors';
+import { Position, CompilerError, InternalCompilerError, IncompleteError } from './errors';
 
 // SML uses these types and we may have to emulate them more closely, in particular int
 export type char = string;
@@ -128,8 +128,7 @@ class Lexer {
 
     consumeChar(): char {
         if (this.position >= this.input.length) {
-            // TOOD: should throw an IncompleteError, not a LexerError
-            throw new LexerError('unexpected end of input', this.position);
+            throw new IncompleteError(this.position);
         }
         ++this.position;
         return this.input.charAt(this.position - 1);
@@ -164,8 +163,7 @@ class Lexer {
 
                 while (openComments > 0) {
                     if (this.position > this.input.length - 2) {
-                        // TOOD: should be IncompleteError, not LexerError
-                        throw new LexerError('unclosed comment', commentStart);
+                        throw new IncompleteError(commentStart, 'unclosed comment');
                     }
 
                     let s: string = this.input.substr(this.position, 2);
@@ -220,7 +218,6 @@ class Lexer {
     }
 
     lexNumber(): Token {
-        // TODO: an Integer constant could also be a record label
         let value: string = '';
         let hexadecimal: boolean = false;
         let word: boolean = false;
@@ -368,7 +365,7 @@ class Lexer {
         }
 
         if (this.consumeChar() !== '"') {
-            throw new LexerError('unterminated string', this.tokenStart);
+            throw new IncompleteError(this.tokenStart, 'unterminated string');
         }
         return new StringConstantToken(this.input.substring(startPosition, this.position), this.tokenStart, value);
     }
