@@ -5,14 +5,14 @@
 // TODO Remove stuff not needed for our subset of SML
 
 export class Environment {
-    stringEnvironment:  any;
+    structEnvironment:  any;
     typeEnvironmet:     any;
     valueEnvironment:   any; // maps value identifiers to (type scheme, identifier status)
-};
+}
 
 export class State {
     T: any;         // Type names
     F: any;         // Functor environment
     G: any;         // Signature environment
     E: Environment;
-};
+}

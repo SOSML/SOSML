@@ -13,7 +13,7 @@ let AST = instance.lexParse(..code..);
 
 */
 
-import * as State from "./state";
+import { State } from './state';
 // import * as Lexer from "./lexer";
 // . . .
 
@@ -26,8 +26,9 @@ import * as State from "./state";
 
 export class API {
     /* Think of some additional flags n stuff etc */
-    static interpret(oldState: State.State, nextInstruction: string): State.State {
+    static interpret(oldState: State, nextInstruction: string): State {
         // TODO
+        // TODO copy old state
         // let tkn = Lexer.lex(nextInstruction);
 
         // Parser parser = Parser();
@@ -43,8 +44,8 @@ export class API {
         return oldState;
     }
 
-    static interpretFurther(oldState: State.State, currentPartialInstruction: string,
-                            nextInstructionPart: string): [State.State, string] | Error {
+    static interpretFurther(oldState: State, currentPartialInstruction: string,
+                            nextInstructionPart: string): [State, string] | Error {
         try {
             return [API.interpret(oldState, currentPartialInstruction + nextInstructionPart), ''];
         } catch (e) {
