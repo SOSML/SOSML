@@ -2,7 +2,7 @@
  * TODO: Documentation for the lexer
  */
 
-import {Position, CompilerError, InternalCompilerError, IncompleteError } from './errors';
+import { Position, CompilerError, InternalCompilerError, IncompleteError } from './errors';
 
 // SML uses these types and we may have to emulate them more closely, in particular int
 export type char = string;
