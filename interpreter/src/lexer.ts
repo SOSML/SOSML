@@ -272,7 +272,7 @@ class Lexer {
                 this.position += 2;
                 value += this.readNumeric(false);
             } else {
-                return this.makeNumberToken(value);
+                return this.makeNumberToken(value, real);
             }
             real = true;
         }
