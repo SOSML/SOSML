@@ -2,6 +2,8 @@
  * TODO: Documentation for the lexer
  */
 
+import {CompilerError, InternalCompilerError} from './errors';
+
 // SML uses these types and we may have to emulate them more closely, in particular int
 export type char = string;
 export type int = number;
@@ -35,10 +37,8 @@ export class NumericToken extends IntegerConstantToken {
 }
 
 // TODO: move this somewhere else, derive it from some general CompilerError class and give it an error message.
-class LexerError extends Error {
-    constructor(message: string) {
-        super('Lexer error: ' + message);
-    }
+class LexerError extends CompilerError {
+    constructor(message: string, position: number) { super(message, position); }
 }
 
 // TODO: maybe these should be static class members
@@ -55,6 +55,7 @@ let symbolicCharacters: Set<string> = new Set<string>([
 
 class Lexer {
     position: number = 0;
+    tokenStart: number;
     input: string;
 
     static isAlphanumeric(c: char): boolean {
@@ -81,7 +82,7 @@ class Lexer {
     consumeChar(): char {
         if (this.position >= this.input.length) {
             // TOOD: should throw an IncompleteError, not a LexerError
-            throw new LexerError('unexpected end of input');
+            throw new LexerError('unexpected end of input', this.position);
         }
         ++this.position;
         return this.input.charAt(this.position - 1);
@@ -110,13 +111,14 @@ class Lexer {
             this.skipWhitespace();
 
             while (this.position + 1 < this.input.length && this.input.substr(this.position, 2) === '(*') {
+                let commentStart = this.position;
                 this.position += 2;
                 let openComments: number = 1;
 
                 while (openComments > 0) {
                     if (this.position > this.input.length - 2) {
                         // TOOD: should be IncompleteError, not LexerError
-                        throw new LexerError('unclosed comment');
+                        throw new LexerError('unclosed comment', commentStart);
                     }
 
                     let s: string = this.input.substr(this.position, 2);
@@ -132,6 +134,7 @@ class Lexer {
                 }
             }
         } while (this.position !== oldPosition);
+        this.tokenStart = this.position;
     }
 
     /* Reads a sequence of digits. Sign, exponent etc. are handled by lexNumber. Accepts leading zeros.
@@ -142,8 +145,7 @@ class Lexer {
             result += this.consumeChar();
         }
         if (result === '') {
-            // TODO: internal compiler error
-            throw new LexerError('internal compiler error');
+            throw new InternalCompilerError(this.position);
         }
         return result;
     }
@@ -151,8 +153,7 @@ class Lexer {
     makeNumberToken(value: string, startPosition: number, real: boolean = false, word: boolean = false,
                     hexadecimal: boolean = false): Token {
         if (real && word) {
-            // TODO: internal compiler error
-            throw new LexerError('internal compiler error');
+            throw new InternalCompilerError(this.position);
         }
         let token: string = this.input.substring(startPosition, this.position);
         if (real) {
@@ -239,8 +240,7 @@ class Lexer {
     lexString(): StringConstantToken {
         let startPosition: number = this.position;
         if (this.consumeChar() !== '"') {
-            // TODO: internal compiler error
-            throw new LexerError('internal compiler error');
+            throw new InternalCompilerError(this.position);
         }
         let value: string = '';
 
@@ -250,7 +250,8 @@ class Lexer {
                 if (Lexer.isWhitespace(this.getChar())) {
                    this.skipWhitespace();
                    if (this.consumeChar() !== '\\') {
-                       throw new LexerError('only whitespace is allowed in whitespace escape sequence');
+                       throw new LexerError('only whitespace is allowed in whitespace escape sequence',
+                           this.position - 1);
                    }
                 } else {
                     let c: char = this.consumeChar();
@@ -268,7 +269,7 @@ class Lexer {
                             let cc: number = this.consumeChar().charCodeAt(0);
                             if (cc < 64 || cc > 95) {
                                 throw new LexerError('"' + String.fromCharCode(cc) +
-                                    '" does not represent a valid control character');
+                                    '" does not represent a valid control character', this.position - 1);
                             }
                             value += String.fromCharCode(cc - 64);
                             break;
@@ -276,11 +277,13 @@ class Lexer {
                         case 'u': {
                             let s: string = this.readNumeric(false, 4);
                             if (s.length !== 4) {
-                                throw new LexerError('unicode escape sequence must have four digits');
+                                throw new LexerError('unicode escape sequence must have four digits',
+                                    this.position - s.length - 1);
                             }
                             let v: number = parseInt(s, 16);
                             if (v >= 256) {
-                                throw new LexerError('character code ' + s + ' is too large, only 00 to ff is allowed');
+                                throw new LexerError('character code ' + s + ' is too large, only 00 to ff is allowed',
+                                    this.position - s.length - 1);
                             } // TODO: remove?
                             value += String.fromCharCode(v);
                             break;
@@ -289,15 +292,16 @@ class Lexer {
                             let s: string = this.readNumeric(false, 3);
                             if (s.length !== 3) {
                                 if (s.length === 0) {
-                                    throw new LexerError('invalid escape sequence');
+                                    throw new LexerError('invalid escape sequence', this.position - 1);
                                 } else {
-                                    throw new LexerError('numeric escape sequence must have three digits');
+                                    throw new LexerError('numeric escape sequence must have three digits',
+                                        this.position - s.length - 1);
                                 }
                             }
                             let v: number = parseInt(s, 10);
                             if (v >= 256) {
                                 throw new LexerError('character code ' + s +
-                                    ' is too large, only 000 to 255 is allowed');
+                                    ' is too large, only 000 to 255 is allowed', this.position - s.length - 1);
                             } // TODO: remove?
                             value += String.fromCharCode(v);
                             break;
@@ -311,26 +315,25 @@ class Lexer {
                 // We however also allow all non-ASCII characters (>128), since MosML and SML/NJ seem to do so as well.
                 if ((c < 33 || c > 126) && c !== 32 /*space*/ && c < 128) {
                     // invalid characters are not printable, so we should print its code rather than the character
-                    throw new LexerError('invalid character with code ' + c + ' in string');
+                    throw new LexerError('invalid character with code ' + c + ' in string', this.position - 1);
                 }
                 value += String.fromCharCode(c);
             }
         }
 
         if (this.consumeChar() !== '"') {
-            throw new LexerError('unterminated string');
+            throw new LexerError('unterminated string', this.tokenStart);
         }
         return new StringConstantToken(this.input.substring(startPosition, this.position), value);
     }
 
     lexCharacter(): CharacterConstantToken {
         if (this.consumeChar() !== '#') {
-            // TODO: internal compiler error
-            throw new LexerError('internal compiler error');
+            throw new InternalCompilerError(this.position);
         }
         let t: StringConstantToken = this.lexString();
         if (t.value.length !== 1) {
-            throw new LexerError('character constant must have length 1, not ' + t.value.length);
+            throw new LexerError('character constant must have length 1, not ' + t.value.length, this.tokenStart);
         }
         return new CharacterConstantToken(t.text, t.value);
     }
@@ -357,17 +360,16 @@ class Lexer {
             return new KeywordToken('...');
         } else {
             if (c.charCodeAt(0) < 32) {
-                throw new LexerError('invalid character with ascii code ' + c.charCodeAt(0));
+                throw new LexerError('invalid character with ascii code ' + c.charCodeAt(0), this.position);
             } else {
-                throw new LexerError('invalid token: ' + c);
+                throw new LexerError('invalid token: ' + c, this.position);
             }
         }
 
         while (true) {
             do {
-                c = this.getChar();
+                c = this.consumeChar();
                 token += c;
-                ++this.position;
             } while (charChecker(this.getChar()));
 
             if (this.getChar() === '.') {
@@ -390,6 +392,7 @@ class Lexer {
 
     nextToken(): Token {
         let token: Token;
+        this.tokenStart = this.position;
         if (Lexer.isNumber(this.getChar(), false)
             || (this.getChar() === '~' && Lexer.isNumber(this.getChar(1), false))) {
             token = this.lexNumber();
