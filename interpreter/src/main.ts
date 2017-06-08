@@ -13,7 +13,7 @@ let AST = instance.lexParse(..code..);
 
 */
 
-import { State } from "./state";
+import { State } from './state';
 // import * as Lexer from "./lexer";
 // . . .
 

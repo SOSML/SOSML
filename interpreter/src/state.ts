@@ -8,11 +8,11 @@ export class Environment {
     structEnvironment:  any;
     typeEnvironmet:     any;
     valueEnvironment:   any; // maps value identifiers to (type scheme, identifier status)
-};
+}
 
 export class State {
     T: any;         // Type names
     F: any;         // Functor environment
     G: any;         // Signature environment
     E: Environment;
-};
+}
