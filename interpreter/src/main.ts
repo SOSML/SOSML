@@ -28,6 +28,7 @@ export class API {
     /* Think of some additional flags n stuff etc */
     static interpret(oldState: State.State, nextInstruction: string): State.State {
         // TODO
+        // TODO copy old state
         // let tkn = Lexer.lex(nextInstruction);
 
         // Parser parser = Parser();
