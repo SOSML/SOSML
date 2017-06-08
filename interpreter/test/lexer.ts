@@ -371,6 +371,7 @@ it("integer constants hexadecimal illformed", () => {
     let testcase_not_hex: string = '0xabcgcba';
     let testcase_missing_x: string = '04a';
     let testcase_capital_x: string = '0X4a';
+    let testcase_double_x: string = '0xx4a';
 
     expect(API.lex(testcase_nonint)).toEqual([
         new API.IntegerConstantToken("~0", 0, -0),
@@ -402,6 +403,10 @@ it("integer constants hexadecimal illformed", () => {
     expect(API.lex(testcase_capital_x)).toEqual([
         new API.IntegerConstantToken("0", 0, 0),
         new API.AlphanumericIdentifierToken("X4a", 1)
+    ]);
+    expect(API.lex(testcase_double_x)).toEqual([
+        new API.IntegerConstantToken("0", 0, 0),
+        new API.AlphanumericIdentifierToken("xx4a", 1)
     ]);
 });
 
@@ -439,5 +444,102 @@ it("word constants decimal", () => {
     expect(API.lex(testcase_neg)).toEqual([
         new API.IntegerConstantToken("~0", 0, -0),
         new API.AlphanumericIdentifierToken("w69", 2)
+    ]);
+});
+
+it("word constants hexadecimal", () => {
+    let testcase_noword: string = '0wx';
+    let testcase_pos: string = '0wx4aA';
+    let testcase_capital_w: string = '0Wx1337';
+    let testcase_zero_after_w: string = '0wx01337';
+    let testcase_leading_zero: string = '00wx01';
+    let testcase_neg: string = '~0wx69';
+    let testcase_capital_x: string = '0wX4aA';
+    let testcase_wrong_order: string = '0xwabc';
+    let testcase_double_w: string = '0wwabc';
+
+    expect(API.lex(testcase_noword)).toEqual([
+        new API.IntegerConstantToken("0", 0, 0),
+        new API.AlphanumericIdentifierToken("wx", 1)
+    ]);
+    expect(API.lex(testcase_pos)).toEqual([
+        new API.WordConstantToken(testcase_pos, 0, 0x4aa)
+    ]);
+    expect(API.lex(testcase_capital_w)).toEqual([
+        new API.IntegerConstantToken("0", 0, 0),
+        new API.AlphanumericIdentifierToken("Wx1337", 1)
+    ]);
+    expect(API.lex(testcase_zero_after_w)).toEqual([
+        new API.WordConstantToken(testcase_zero_after_w, 0, 0x1337)
+    ]);
+    expect(API.lex(testcase_leading_zero)).toEqual([
+        new API.IntegerConstantToken("00", 0, 0),
+        new API.AlphanumericIdentifierToken("wx01", 2)
+    ]);
+    expect(API.lex(testcase_neg)).toEqual([
+        new API.IntegerConstantToken("~0", 0, -0),
+        new API.AlphanumericIdentifierToken("wx69", 2)
+    ]);
+    expect(API.lex(testcase_capital_x)).toEqual([
+        new API.IntegerConstantToken("0", 0, 0),
+        new API.AlphanumericIdentifierToken("wX4aA", 1)
+    ]);
+    expect(API.lex(testcase_wrong_order)).toEqual([
+        new API.IntegerConstantToken("0", 0, 0),
+        new API.AlphanumericIdentifierToken("xwabc", 1)
+    ]);
+    expect(API.lex(testcase_double_w)).toEqual([
+        new API.IntegerConstantToken("0", 0, 0),
+        new API.AlphanumericIdentifierToken("wwabc", 1)
+    ]);
+});
+
+it("floating point constants", () => {
+    let testcase_good1: string = '0.0e0';
+    let testcase_good2: string = '0.0';
+    let testcase_good3: string = '0E0';
+    let testcase_leading_zero: string = '004e1';
+    let testcase_hex1: string = '0x1.09e03';
+    let testcase_hex2: string = '01.0x9e03';
+    let testcase_hex3: string = '01.09e0x3';
+    let testcase_double_dot: string = '12.34.56';
+    let testcase_double_e: string = '12e34e56';
+    let testcase_wrong_order: string = '12e34.56';
+    let testcase_missing_component1: string = '.34e56';
+    let testcase_missing_component2: string = '12.e56';
+    let testcase_missing_component3: string = '12.34e';
+
+    expect(API.lex(testcase_good1)).toEqual([
+        new API.RealConstantToken(testcase_good1, 0, 0)
+    ]);
+    expect(API.lex(testcase_good2)).toEqual([
+        new API.RealConstantToken(testcase_good2, 0, 0)
+    ]);
+    expect(API.lex(testcase_good3)).toEqual([
+        new API.RealConstantToken(testcase_good3, 0, 0)
+    ]);
+    expect(API.lex(testcase_leading_zero)).toEqual([
+        new API.RealConstantToken(testcase_leading_zero, 0, 40)
+    ]);
+    expect(() => { API.lex(testcase_hex1); }).toThrow(API.LexerError);
+    expect(API.lex(testcase_hex2)).toEqual([
+        new API.RealConstantToken('01.0', 0, 1),
+        new API.AlphanumericIdentifierToken('x9e03', 4)
+    ]);
+    expect(API.lex(testcase_hex3)).toEqual([
+        new API.RealConstantToken('01.09e0', 0, 1.09),
+        new API.AlphanumericIdentifierToken('x3', 7)
+    ]);
+    expect(() => { API.lex(testcase_double_dot); }).toThrow(API.LexerError);
+    expect(API.lex(testcase_double_e)).toEqual([
+        new API.RealConstantToken('12e34', 0, 12e34),
+        new API.AlphanumericIdentifierToken('e56', 5)
+    ]);
+    expect(() => { API.lex(testcase_wrong_order); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase_missing_component1); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase_missing_component2); }).toThrow(API.LexerError);
+    expect(API.lex(testcase_missing_component3)).toEqual([
+        new API.RealConstantToken('12.34', 0, 12.34),
+        new API.AlphanumericIdentifierToken('e', 5)
     ]);
 });
