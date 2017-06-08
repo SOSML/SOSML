@@ -369,7 +369,7 @@ it("integer constants hexadecimal illformed", () => {
     let testcase_capital_x: string = '0X4a';
 
     expect(API.lex(testcase_nonint)).toEqual([
-        new API.IntegerConstantToken("~0", -0)
+        new API.IntegerConstantToken("~0", -0),
         new API.IdentifierToken("x")
     ]);
     expect(API.lex(testcase_too_long_prefix)).toEqual([
@@ -398,5 +398,42 @@ it("integer constants hexadecimal illformed", () => {
     expect(API.lex(testcase_capital_x)).toEqual([
         new API.IntegerConstantToken("0", 0),
         new API.IdentifierToken("X4a")
+    ]);
+});
+
+it("word constants decimal", () => {
+    let testcase_noword: string = '0w';
+    let testcase_pos: string = '0w42';
+    let testcase_nohex: string = '0w9a';
+    let testcase_capital_w: string = '0W1337';
+    let testcase_zero_after_w: string = '0w01337';
+    let testcase_leading_zero: string = '00w01';
+    let testcase_neg: string = '~0w69';
+
+    expect(API.lex(testcase_noword)).toEqual([
+        new API.IntegerConstantToken("0", 0),
+        new API.IdentifierToken("w")
+    ]);
+    expect(API.lex(testcase_pos)).toEqual([
+        new API.WordConstantToken("0w42", 42)
+    ]);
+    expect(API.lex(testcase_nohex)).toEqual([
+        new API.IntegerConstantToken("0", 0),
+        new API.IdentifierToken("w9a")
+    ]);
+    expect(API.lex(testcase_capital_w)).toEqual([
+        new API.IntegerConstantToken("0", 0),
+        new API.IdentifierToken("W1337")
+    ]);
+    expect(API.lex(testcase_zero_after_w)).toEqual([
+        new API.WordConstantToken("0w01337", 1337)
+    ]);
+    expect(API.lex(testcase_leading_zero)).toEqual([
+        new API.IntegerConstantToken("00", 0),
+        new API.IdentifierToken("w01")
+    ]);
+    expect(API.lex(testcase_leading_zero)).toEqual([
+        new API.IntegerConstantToken("~0", -0),
+        new API.IdentifierToken("w69")
     ]);
 });
