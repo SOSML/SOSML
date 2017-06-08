@@ -295,6 +295,7 @@ it("reserved words", () => {
 });
 
 it("integer constants decimal", () => {
+    let testcase_zero: string = '0';
     let testcase_nonint: string = '~';
     let testcase_pos: string = '42';
     let testcase_neg: string = '~69';
@@ -302,6 +303,9 @@ it("integer constants decimal", () => {
     let testcase_neg_leadingzero: string = '~0000023';
     let testcase_bigzero: string = '000000';
 
+    expect(API.lex(testcase_zero)).toEqual([
+        new API.NumericToken(testcase_zero, 0, 0)
+    ]);
     expect(API.lex(testcase_nonint)).toEqual([
         new API.IdentifierToken("~", 0)
     ]);
