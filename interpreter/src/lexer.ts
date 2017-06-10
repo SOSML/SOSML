@@ -322,7 +322,7 @@ class Lexer {
                             break;
                         }
                         case 'u': {
-                            let s: string = this.readNumeric(false, 4);
+                            let s: string = this.readNumeric(true, 4);
                             if (s.length !== 4) {
                                 throw new LexerError('unicode escape sequence must have four digits',
                                     this.position - s.length - 1);
