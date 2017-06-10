@@ -332,6 +332,7 @@ class Lexer {
                             break;
                         }
                         default: {
+                            --this.position; // 'un-consume' the first character of the number
                             let s: string = this.readNumeric(false, 3);
                             if (s.length !== 3) {
                                 if (s.length === 0) {
