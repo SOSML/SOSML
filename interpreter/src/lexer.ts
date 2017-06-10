@@ -383,7 +383,7 @@ class Lexer {
         if (t.value.length !== 1) {
             throw new LexerError('character constant must have length 1, not ' + t.value.length, this.tokenStart);
         }
-        return new CharacterConstantToken(t.text,  this.tokenStart, t.value);
+        return new CharacterConstantToken('#' + t.text,  this.tokenStart, t.value);
     }
 
     lexIdentifierOrKeyword(): Token {
