@@ -126,9 +126,13 @@ class Lexer {
         this.skipWhitespaceAndComments();
     }
 
-    consumeChar(): char {
+    consumeChar(errorMessageOnEOF: string = '', errorPositionOnEOF: number = this.input.length - 1): char {
         if (this.position >= this.input.length) {
-            throw new IncompleteError(this.position);
+            if (errorMessageOnEOF === '') {
+                throw new IncompleteError(errorPositionOnEOF);
+            } else {
+                throw new IncompleteError(errorPositionOnEOF, errorMessageOnEOF);
+            }
         }
         ++this.position;
         return this.input.charAt(this.position - 1);
@@ -292,7 +296,7 @@ class Lexer {
                 ++this.position;
                 if (Lexer.isWhitespace(this.getChar())) {
                    this.skipWhitespace();
-                   if (this.consumeChar() !== '\\') {
+                   if (this.consumeChar('unterminated whitespace escape sequence') !== '\\') {
                        throw new LexerError('only whitespace is allowed in whitespace escape sequence',
                            this.position - 1);
                    }
@@ -354,7 +358,7 @@ class Lexer {
                 }
 
             } else {
-                let c: number = this.consumeChar().charCodeAt(0);
+                let c: number = this.consumeChar('unterminated string', this.tokenStart).charCodeAt(0);
                 // Only printable characters (33 to 126) and spaces are allowed (SML definition, chapter 2.2)
                 // We however also allow all non-ASCII characters (>128), since MosML and SML/NJ seem to do so as well.
                 if ((c < 33 || c > 126) && c !== 32 /*space*/ && c < 128) {
@@ -366,7 +370,7 @@ class Lexer {
         }
 
         if (this.consumeChar() !== '"') {
-            throw new IncompleteError(this.tokenStart, 'unterminated string');
+            throw new InternalCompilerError(this.position);
         }
         return new StringConstantToken(this.input.substring(startPosition, this.position), this.tokenStart, value);
     }
