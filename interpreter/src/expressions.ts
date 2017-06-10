@@ -1,5 +1,6 @@
 import { Type } from './types';
 import { Pattern } from './patterns';
+import { Token } from './lexer';
 
 // Interfaces
 
@@ -7,63 +8,42 @@ import { Pattern } from './patterns';
 export interface Expression {
 }
 
-// Infix expressions
-export interface InfExp extends Expression {
-}
-
-// Application evpressions
-export interface AppExp extends InfExp {
-}
-
 // Atomic expressions
-export interface AtExp extends AppExp {
+export interface AtomicExpression extends Expression {
 }
 
 // Classes
 export class Match {
 // pat => exp or pat => exp | match
-    pat: Pattern;
-    exp: Expression;
-    match: Match | undefined;
+    patterns: [Pattern, Expression];
 }
 
-export class ExpressionRow {
-// lab = exp or lab = exp, exprow
-    lab: any; // Label
-    exp: Expression;
-    exprow: ExpressionRow | undefined;
-}
-
-// InfExp subclasses
-export class InfixExpression implements InfExp {
-// infexp1 vid infexp2
-    infexp1: InfixExpression;
-    vid: any;
-    infexp2: InfixExpression;
+//
+export class InfixExpression {
+// InfExp = infexp1 vid infexp2
+    leftOperand: InfixExpression;
+    operator: ValueIdentifier;
+    rightOperand: InfixExpression;
 }
 
 // Expression subclasses
 export class TypedExpression implements Expression {
 // exp: ty (L)
-    exp: Expression;
-    ty: Type;
+    expression: Expression;
+    type: Type;
 }
 
-export class Conjunction implements Expression {
-// exp1 andalso exp2
-    exp1: Expression;
-    exp2: Expression;
-}
-
-export class Disjunction implements Expression {
-// exp1 orelse exp2
-    exp1: Expression;
-    exp2: Expression;
+// TODO: better name?
+export class BooleanOperation implements Expression {
+// exp1 andalso exp2, exp1 orelse exp2
+    isConjunction: boolean; // otherwise it is a disjunction
+    leftOperand: Expression;
+    rightOperand: Expression;
 }
 
 export class HandleException implements Expression {
 // exp handle match
-    exp: Expression;
+    expression: Expression;
     match: Match;
 }
 
@@ -74,73 +54,81 @@ export class RaiseException implements Expression {
 
 export class Conditional implements Expression {
 // if exp1 then exp2 else exp3
-    exp1: Expression;
-    exp2: Expression;
-    exp3: Expression;
+    condition: Expression;
+    ifTrue: Expression;
+    ifFalse: Expression;
 }
 
+// TODO: not functional
 export class Iteration implements Expression {
 // while exp1 do exp2
-    exp1: Expression;
-    exp2: Expression;
+    condition: Expression;
+    body: Expression;
 }
 
 export class CaseAnalysis implements Expression {
 // case exp of match
-    exp: Expression;
+    expression: Expression;
     match: Match;
 }
 
-export class Function implements Expression {
+export class Lambda implements Expression {
 // fn match
     match: Match;
 }
 
-// AppExp subclasses
-export class ApplicationExpression implements AppExp {
+export class ApplicationExpression {
 // appexp atexp
-    appexp: AppExp;
-    atExp: AtExp;
+    function: Expression;
+    argument: Expression;
 }
 
-// AtExp subclasses
-export class SpecialConstant implements AtExp {
-    scon: any;
-}
-
-export class ValueIdentifier implements AtExp {
-// op longvid or longvid
-    op: 'op' | undefined;
-    longvid: any;
-}
-
-export class Record implements AtExp {
-// { exprow } or { }
-    exprow: ExpressionRow | undefined;
-}
-
-export class RecordSelector implements AtExp {
+export class RecordSelector implements Expression {
 // #lab
-    lab: any; // Label
+    label: Token; // Label
+    record: Expression;
 }
 
-export class Tuple implements AtExp {
-// (exp1, ..., expn), n != 1
+// Atomic Expressions
+
+export class Constant implements AtomicExpression {
+    token: Token;
+}
+
+export class ValueIdentifier implements AtomicExpression {
+// op longvid or longvid
+    op: boolean; // whether this identifier is preceded by 'op'
+    name: Token;
+}
+
+export class Record implements AtomicExpression {
+// { exprow } or { }
+// exprow = lab = exp or lab = exp, exprow
+    // label and corresponding value
+    entries: [Token, Expression];
+}
+
+// TODO: syntactic sugar
+export class Tuple implements AtomicExpression {
+// (exp1, ..., expn), n > 1
     exp: Expression[];
 }
 
-export class List implements AtExp {
+// TODO: syntactic sugar
+export class List implements AtomicExpression {
 // [exp1, ..., expn]
     exp: Expression[];
 }
 
-export class Sequence implements AtExp {
+// TODO: not really functional?
+export class Sequence implements AtomicExpression {
 // (exp1; ...; expn), n >= 2
     exp: Expression[];
 }
 
-export class LocalDeclaration implements AtExp {
+export class LocalDeclaration implements AtomicExpression {
 // let dec in exp1; ...; expn end
-    dec: any; // TODO Declaration;
-    exp: Expression[];
+    dec: any; // TODO: Declaration;
+    // this expression may be a sequence even without parentheses
+    exp: Expression;
 }
