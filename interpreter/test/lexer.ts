@@ -644,7 +644,7 @@ it("character constants", () => {
         new API.CharacterConstantToken(testcase_good, 0, 'a')
     ]);
     expect(API.lex(testcase_escape)).toEqual([
-        new API.CharacterConstantToken(testcase_escape, 0, 'j')
+        new API.CharacterConstantToken(testcase_escape, 0, 'J')
     ]);
     expect(API.lex(testcase_ignores)).toEqual([
         new API.CharacterConstantToken(testcase_ignores, 0, '{')
