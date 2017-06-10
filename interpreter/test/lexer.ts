@@ -543,3 +543,59 @@ it("floating point constants", () => {
         new API.AlphanumericIdentifierToken('e', 5)
     ]);
 });
+
+it("string constants", () => {
+    let testcase_empty: string = '""';
+    let testcase_non_ending1: string = '"';
+    let testcase_non_ending2: string = '"\\';
+    let testcase_non_ending3: string = '"\\^';
+    let testcase_non_ending4: string = '"\\"';
+    let testcase_basic_string: string = '"The quick brown fox jumps over the lazy dog"';
+    let testcase_newline: string = '"The quick brown fox \n jumps over the lazy dog"';
+    let testcase_all_basic_escapes: string = '"\\a \\b \\t \\n \\v \\f \\r \\" \\\\"';
+    let testcase_control_escapes: string = '"\\^@\\^J\\^^\\^_"';
+    let testcase_invalid_control_escapes1: string = '"\\^?"';
+    let testcase_invalid_control_escapes2: string = '"\\^j"';
+    let testcase_invalid_control_escapes3: string = '"\\^`"';
+    let testcase_invalid_escapes1: string = '"\\ "';
+    let testcase_invalid_escapes2: string = '"\\,"';
+    let testcase_invalid_escapes3: string = '"\\c"';
+    let testcase_decimal_escape: string = '"\\042\\069\\106"';
+    let testcase_decimal_escape_too_short1: string = '"\\42"';
+    let testcase_decimal_escape_too_short2: string = '"\\4"';
+    let testcase_decimal_escape_too_short3: string = '"\\0"';
+    let testcase_decimal_escape_overlapping: string = '"\\000000"';
+
+    expect(API.lex(testcase_empty)).toEqual([
+        new API.StringConstantToken(testcase_empty, 0, '')
+    ]);
+    expect(() => { API.lex(testcase_non_ending1); }).toThrow(API.IncompleteError);
+    expect(() => { API.lex(testcase_non_ending2); }).toThrow(API.IncompleteError);
+    expect(() => { API.lex(testcase_non_ending3); }).toThrow(API.IncompleteError);
+    expect(() => { API.lex(testcase_non_ending4); }).toThrow(API.IncompleteError);
+    expect(API.lex(testcase_basic_string)).toEqual([
+        new API.StringConstantToken(testcase_basic_string, 0, 'The quick brown fox jumps over the lazy dog')
+    ]);
+    expect(() => { API.lex(testcase_newline); }).toThrow(API.LexerError);
+    expect(API.lex(testcase_all_basic_escapes)).toEqual([
+        new API.StringConstantToken(testcase_all_basic_escapes, 0, '\a \b \t \n \v \f \r " \\')
+    ]);
+    expect(API.lex(testcase_control_escapes)).toEqual([
+        new API.StringConstantToken(testcase_control_escapes, 0, '\x00\x0A\x1E\x1F')
+    ]);
+    expect(() => { API.lex(testcase_invalid_control_escapes1); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase_invalid_control_escapes2); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase_invalid_control_escapes3); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase_invalid_escapes1); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase_invalid_escapes2); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase_invalid_escapes3); }).toThrow(API.LexerError);
+    expect(API.lex(testcase_decimal_escape)).toEqual([
+        new API.StringConstantToken(testcase_decimal_escape, 0, '*Ej')
+    ]);
+    expect(() => { API.lex(testcase_decimal_escape_too_short1); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase_decimal_escape_too_short2); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase_decimal_escape_too_short3); }).toThrow(API.LexerError);
+    expect(API.lex(testcase_decimal_escape_overlapping)).toEqual([
+        new API.StringConstantToken(testcase_decimal_escape_overlapping, 0, '\000000')
+    ]);
+});
