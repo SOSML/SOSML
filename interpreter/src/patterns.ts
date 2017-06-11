@@ -10,9 +10,12 @@ export interface Pattern {
 export interface AtomicPattern extends Pattern {
 }
 
+export interface PatternRow {
+}
+
 // Classes
 // PatternRow
-export class RowWildcard {
+export class RowWildcard implements PatternRow {
 // ... (It is literally 3 dots)
 }
 
@@ -46,7 +49,7 @@ export class ValueIdentifier implements AtomicPattern {
 
 export class Record implements AtomicPattern {
 // { patrow } or { }
-    patternRow: (RowWildcard | PatternRowPart | LabelAsVariable)[];
+    patternRow: PatternRow[];
 }
 
 export class Tuple implements AtomicPattern {
