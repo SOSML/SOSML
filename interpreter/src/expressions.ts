@@ -1,6 +1,7 @@
 import { Type } from './types';
 import { Pattern } from './patterns';
 import { Token, IdentifierToken, LongIdentifierToken } from './lexer';
+import { Declaration } from './declarations';
 
 // Interfaces
 
@@ -134,6 +135,6 @@ export class Sequence implements AtomicExpression {
 
 export class LocalDeclaration implements AtomicExpression {
 // let dec in exp1; ...; expn end
-    declaration: any; // TODO Declaration;
+    declaration: Declaration;
     expressions: Expression[];
 }

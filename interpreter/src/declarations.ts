@@ -21,7 +21,7 @@ export class ValueBinding {
 }
 
 export class FunctionValueBinding {
-    opPrefixed: boolean;
+    infix: boolean;
     name: IdentifierToken;
     parameters: Pattern[][];
     type: Type | undefined;
