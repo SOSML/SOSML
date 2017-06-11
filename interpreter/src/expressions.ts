@@ -9,30 +9,18 @@ import { Declaration } from './declarations';
 export interface Expression {
 }
 
-// Infix expressions
-export interface InfExp extends Expression {
-}
-
-// Application evpressions
-export interface ApplicationExpression extends InfExp {
-}
-
-// Atomic expressions
-export interface AtomicExpression extends ApplicationExpression {
-}
-
 // Classes
 export class Match {
 // pat => exp or pat => exp | match
     matches: [Pattern,  Expression][];
 }
 
-// InfExp subclasses
-export class InfixExpression implements InfExp {
+// Expression subclasses
+export class InfixExpression implements Expression {
 // leftOperand operator rightOperand
-    leftOperand: InfixExpression;
+    leftOperand: Expression;
     operator: IdentifierToken;
-    rightOperand: InfixExpression;
+    rightOperand: Expression;
 }
 
 // Expression subclasses
@@ -90,50 +78,49 @@ export class Lambda implements Expression {
 }
 
 // ApplicationExpression subclasses
-export class FunctionApplication implements ApplicationExpression {
+export class FunctionApplication implements Expression {
 // function argument
-    function: ApplicationExpression;
-    argument: AtomicExpression;
+    function: Expression;
+    argument: Expression;
 }
 
-// AtomicExpression subclasses
-export class Constant implements AtomicExpression {
+export class Constant implements Expression {
     token: Token;
 }
 
-export class ValueIdentifier implements AtomicExpression {
+export class ValueIdentifier implements Expression {
 // op longvid or longvid
     opPrefixed: boolean;
     name: LongIdentifierToken;
 }
 
-export class Record implements AtomicExpression {
+export class Record implements Expression {
 // { lab = exp, ... } or { }
     entries: [Token, Expression][];
 }
 
-export class RecordSelector implements AtomicExpression {
+export class RecordSelector implements Expression {
 // #label record
     label: Token;
     record: Expression;
 }
 
-export class Tuple implements AtomicExpression {
+export class Tuple implements Expression {
 // (exp1, ..., expn), n != 1
     expressions: Expression[];
 }
 
-export class List implements AtomicExpression {
+export class List implements Expression {
 // [exp1, ..., expn]
     expressions: Expression[];
 }
 
-export class Sequence implements AtomicExpression {
+export class Sequence implements Expression {
 // (exp1; ...; expn), n >= 2
     expressions: Expression[];
 }
 
-export class LocalDeclaration implements AtomicExpression {
+export class LocalDeclaration implements Expression {
 // let dec in exp1; ...; expn end
     declaration: Declaration;
     expressions: Expression[];

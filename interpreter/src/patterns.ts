@@ -6,10 +6,6 @@ import { Token, LongIdentifierToken, IdentifierToken } from './lexer';
 export interface Pattern {
 }
 
-// Atomic patterns
-export interface AtomicPattern extends Pattern {
-}
-
 export interface PatternRow {
 }
 
@@ -32,32 +28,32 @@ export class LabelAsVariable implements PatternRow {
     pattern: Pattern | undefined;
 }
 
-// Subclasses of AtomicPattern
-export class AtomicWildcard implements AtomicPattern {
+// Subclasses of Pattern
+export class AtomicWildcard implements Pattern {
 // _
 }
 
-export class Constant implements AtomicPattern {
+export class Constant implements Pattern {
     token: Token;
 }
 
-export class ValueIdentifier implements AtomicPattern {
+export class ValueIdentifier implements Pattern {
 // op longvid or longvid
     opPrefixed: boolean;
     identifier: LongIdentifierToken;
 }
 
-export class Record implements AtomicPattern {
+export class Record implements Pattern {
 // { patrow } or { }
     patternRow: PatternRow[];
 }
 
-export class Tuple implements AtomicPattern {
+export class Tuple implements Pattern {
 // (pat1, ..., patn), n != 1
     patterns: Pattern[];
 }
 
-export class List implements AtomicPattern {
+export class List implements Pattern {
 // [pat1, ..., patn]
     patterns: Pattern[];
 }
@@ -67,7 +63,7 @@ export class ConstructedValue implements Pattern {
 // <op> identifier atomic
     opPrefixed: boolean;
     identifier: LongIdentifierToken;
-    atomic: AtomicPattern;
+    atomic: Pattern;
 }
 
 export class ConstructedValueInfix implements Pattern {
