@@ -1,11 +1,9 @@
 import { Type } from './types';
+import { Token, LongIdentifierToken, IdentifierToken } from './lexer';
 
 // interfaces
 
 export interface Pattern {
-}
-
-export interface PatternRow {
 }
 
 // Atomic patterns
@@ -13,24 +11,22 @@ export interface AtomicPattern extends Pattern {
 }
 
 // Classes
-// Subclasses of PatternRow
-export class RowWildcard implements PatternRow {
+// PatternRow
+export class RowWildcard {
 // ... (It is literally 3 dots)
 }
 
 export class PatternRowPart implements PatternRow {
-// lab = pat or lab = pat, patrow
-    lab: any;
-    pat: Pattern;
-    patrow: PatternRow | undefined;
+// label = pattern
+    label: Token;
+    pattern: Pattern;
 }
 
 export class LabelAsVariable implements PatternRow {
-// vid<:ty> <as pat> <,patrow>
-    vid: any;
-    ty: Type | undefined;
-    pat: Pattern | undefined;
-    patrow: PatternRow | undefined;
+// identifier<:type> <as patttern>
+    identifier: IdentifierToken;
+    type: Type | undefined;
+    pattern: Pattern | undefined;
 }
 
 // Subclasses of AtomicPattern
@@ -38,56 +34,56 @@ export class AtomicWildcard implements AtomicPattern {
 // _
 }
 
-export class SpecialConstant implements AtomicPattern {
-    scon: any;
+export class Constant implements AtomicPattern {
+    token: Token;
 }
 
 export class ValueIdentifier implements AtomicPattern {
 // op longvid or longvid
-    op: 'op' | undefined;
-    longvid: any;
+    opPrefixed: boolean;
+    identifier: LongIdentifierToken;
 }
 
 export class Record implements AtomicPattern {
 // { patrow } or { }
-    patrow: PatternRow | undefined;
+    patternRow: (RowWildcard | PatternRowPart | LabelAsVariable)[];
 }
 
 export class Tuple implements AtomicPattern {
 // (pat1, ..., patn), n != 1
-    pat: Pattern[];
+    patterns: Pattern[];
 }
 
 export class List implements AtomicPattern {
 // [pat1, ..., patn]
-    pat: Pattern[];
+    patterns: Pattern[];
 }
 
 // Subclasses of Pattern
 export class ConstructedValue implements Pattern {
-// <op> longvid atpat
-    op: 'op' | undefined;
-    longvid: any;
-    atpat: AtomicPattern;
+// <op> identifier atomic
+    opPrefixed: boolean;
+    identifier: LongIdentifierToken;
+    atomic: AtomicPattern;
 }
 
 export class ConstructedValueInfix implements Pattern {
-// pat1 vid pat2
-    pat1: Pattern;
-    vid: any;
-    pat2: Pattern;
+// leftOperand operator rightOperand
+    leftOperand: Pattern;
+    operator: IdentifierToken;
+    rightOperand: Pattern;
 }
 
 export class TypedPattern implements Pattern {
-// pat: ty
-    pat: Pattern;
-    ty: Type;
+// pattern: type
+    pattern: Pattern;
+    type: Type;
 }
 
 export class LayeredPattern implements Pattern {
-// <op> vid <:ty> as pat
-    op: 'op' | undefined;
-    vid: any;
-    ty: Type | undefined;
-    pat: Pattern;
+// <op> identifier <:type> as pattern
+    opPrefixed: boolean;
+    identifier: IdentifierToken;
+    type: Type | undefined;
+    pattern: Pattern;
 }

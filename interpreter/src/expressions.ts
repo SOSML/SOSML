@@ -102,7 +102,7 @@ export class Constant implements AtomicExpression {
 
 export class ValueIdentifier implements AtomicExpression {
 // op longvid or longvid
-    op: 'op' | undefined;
+    opPrefixed: boolean;
     name: LongIdentifierToken;
 }
 
