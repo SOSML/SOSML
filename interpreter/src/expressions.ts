@@ -23,7 +23,7 @@ export interface AtomicExpression extends ApplicationExpression {
 // Classes
 export class Match {
 // pat => exp or pat => exp | match
-    matches: [Pattern | Expression];
+    matches: [Pattern,  Expression][];
 }
 
 // InfExp subclasses
