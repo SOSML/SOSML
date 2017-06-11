@@ -9,7 +9,7 @@ export interface PatternRow {
 }
 
 // Atomic patterns
-export interface AtPat extends Pattern {
+export interface AtomicPattern extends Pattern {
 }
 
 // Classes
@@ -33,32 +33,32 @@ export class LabelAsVariable implements PatternRow {
     patrow: PatternRow | undefined;
 }
 
-// Subclasses of AtPat
-export class AtomicWildcard implements AtPat {
+// Subclasses of AtomicPattern
+export class AtomicWildcard implements AtomicPattern {
 // _
 }
 
-export class SpecialConstant implements AtPat {
+export class SpecialConstant implements AtomicPattern {
     scon: any;
 }
 
-export class ValueIdentifier implements AtPat {
+export class ValueIdentifier implements AtomicPattern {
 // op longvid or longvid
     op: 'op' | undefined;
     longvid: any;
 }
 
-export class Record implements AtPat {
+export class Record implements AtomicPattern {
 // { patrow } or { }
     patrow: PatternRow | undefined;
 }
 
-export class Tuple implements AtPat {
+export class Tuple implements AtomicPattern {
 // (pat1, ..., patn), n != 1
     pat: Pattern[];
 }
 
-export class List implements AtPat {
+export class List implements AtomicPattern {
 // [pat1, ..., patn]
     pat: Pattern[];
 }
@@ -68,7 +68,7 @@ export class ConstructedValue implements Pattern {
 // <op> longvid atpat
     op: 'op' | undefined;
     longvid: any;
-    atpat: AtPat;
+    atpat: AtomicPattern;
 }
 
 export class ConstructedValueInfix implements Pattern {
