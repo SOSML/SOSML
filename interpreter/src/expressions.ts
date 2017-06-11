@@ -112,8 +112,9 @@ export class Record implements AtomicExpression {
 }
 
 export class RecordSelector implements AtomicExpression {
-// #label
+// #label record
     label: Token;
+    record: Expression;
 }
 
 export class Tuple implements AtomicExpression {
