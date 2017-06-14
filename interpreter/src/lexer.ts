@@ -84,8 +84,11 @@ export class LongIdentifierToken implements Token {
                 public id: IdentifierToken) {}
 }
 
-class LexerError extends CompilerError {
-    constructor(message: string, position: number) { super(message, position); }
+export class LexerError extends CompilerError {
+    constructor(message: string, position: Position) {
+        super(message, position);
+        Object.setPrototypeOf(this, LexerError.prototype);
+    }
 }
 
 // TODO: maybe these should be static class members
