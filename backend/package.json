@@ -1,0 +1,37 @@
+{
+  "name": "sosml-interpreter",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "citest": "jest --coverage --expand --verbose",
+    "cilint": "tslint -c tslint.json 'src/**/*.ts'",
+    "test": "jest --notify --watch",
+    "build": "webpack --env=dev",
+    "dist": "webpack --env=prod",
+    "start": "node-dev src/main.js"
+  },
+  "author": "SOSML Team",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/jest": "^19.2.3",
+    "@types/node": "^7.0.22",
+    "jest": "^20.0.4",
+    "ts-jest": "^20.0.4",
+    "ts-loader": "^2.1.0",
+    "tslint": "^5.3.2",
+    "typescript": "^2.3.3",
+    "webpack": "^2.6.0"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.tsx?$": "<rootDir>/node_modules/ts-jest/preprocessor.js"
+    },
+    "testRegex": "(/test/.*|\\.(test|spec))\\.(ts|tsx|js)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "json"
+    ]
+  }
+}
