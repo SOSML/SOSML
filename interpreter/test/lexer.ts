@@ -636,9 +636,6 @@ it("character constants", () => {
     let testcase_ignores: string = '#"\\ \n \t  \\\\123\\   \n\\"';
     let testcase_too_long: string = '#"\\\\x"';
 
-    let testcase_non_ending_wrong: string = '#"ab';
-    expect(() => { API.lex(testcase_non_ending_wrong); }).toThrow(Errors.IncompleteError);
-
     expect(() => { API.lex(testcase_empty); }).toThrow(API.LexerError);
     expect(() => { API.lex(testcase_non_ending1); }).toThrow(Errors.IncompleteError);
     expect(() => { API.lex(testcase_non_ending2); }).toThrow(Errors.IncompleteError);
@@ -653,3 +650,25 @@ it("character constants", () => {
     ]);
     expect(() => { API.lex(testcase_too_long); }).toThrow(API.LexerError);
 });
+
+it("comments", () => {
+    let testcase_empty_comment: string = '(**)test';
+    let testcase_normal_comment: string = '(*this is a comment *)test';
+    let testcase_nested_comment: string = '(*this is a (* nested (* ? *) *) comment *)test';
+    let testcase_non_ending1: string = '(* incomplete';
+    let testcase_non_ending2: string = '(*';
+    let testcase_unmatched: string = '*)test';
+
+    expect(API.lex(testcase_empty_comment)).toEqual([
+        new API.AlphanumericIdentifierToken('test', 4, 'test')
+    ]);
+    expect(API.lex(testcase_normal_comment)).toEqual([
+        new API.AlphanumericIdentifierToken('test', 22, 'test')
+    ]);
+    expect(API.lex(testcase_nested_comment)).toEqual([
+        new API.AlphanumericIdentifierToken('test', 43, 'test')
+    ]);
+    expect(() => { API.lex(testcase_non_ending1); }).toThrow(Errors.IncompleteError);
+    expect(() => { API.lex(testcase_non_ending2); }).toThrow(Errors.IncompleteError);
+    expect(() => { API.lex(testcase_non_ending2); }).toThrow(Errors.LexerError);
+})
