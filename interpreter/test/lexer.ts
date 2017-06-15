@@ -631,7 +631,6 @@ it("character constants", () => {
     let testcase_empty: string = '#""';
     let testcase_non_ending1: string = '#"';
     let testcase_non_ending2: string = '#"a';
-    let testcase_non_ending_wrong: string = '#"ab';
     let testcase_good: string = '#"a"';
     let testcase_escape: string = '#"\\u004A"';
     let testcase_ignores: string = '#"\\ \n \t  \\\\123\\   \n\\"';
@@ -643,7 +642,6 @@ it("character constants", () => {
     expect(() => { API.lex(testcase_empty); }).toThrow(API.LexerError);
     expect(() => { API.lex(testcase_non_ending1); }).toThrow(Errors.IncompleteError);
     expect(() => { API.lex(testcase_non_ending2); }).toThrow(Errors.IncompleteError);
-    expect(() => { API.lex(testcase_non_ending_wrong); }).toThrow(API.LexerError);
     expect(API.lex(testcase_good)).toEqual([
         new API.CharacterConstantToken(testcase_good, 0, 'a')
     ]);
