@@ -339,15 +339,14 @@ class Lexer {
                             break;
                         }
                         default: {
+                            if (!Lexer.isNumber(c, false)) {
+                                throw new LexerError('invalid escape sequence', this.position - 1);
+                            }
                             --this.position; // 'un-consume' the first character of the number
                             let s: string = this.readNumeric(false, 3);
                             if (s.length !== 3) {
-                                if (s.length === 0) {
-                                    throw new LexerError('invalid escape sequence', this.position - 1);
-                                } else {
-                                    throw new LexerError('numeric escape sequence must have three digits',
-                                        this.position - s.length - 1);
-                                }
+                                throw new LexerError('numeric escape sequence must have three digits',
+                                    this.position - s.length - 1);
                             }
                             let v: number = parseInt(s, 10);
                             if (v >= 256) {
