@@ -100,7 +100,7 @@ let reservedWords: Set<string> = new Set<string>([
     'eqtype', 'functor', 'signature', 'struct', 'include', 'sharing', 'structure', 'where', 'sig', ':>'
 ]);
 let symbolicCharacters: Set<string> = new Set<string>([
-    '!', '%', '&', '$', '#', '+', '-', '/', ':', '<', '=', '>', '?', '@', '\'', '~', '`', '^', '|', '*'
+    '!', '%', '&', '$', '#', '+', '-', '/', ':', '<', '=', '>', '?', '@', '\\', '~', '`', '^', '|', '*'
 ]);
 
 class Lexer {
