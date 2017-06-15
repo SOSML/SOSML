@@ -1,8 +1,9 @@
 /* TODO: tests
 */
 
-import {IntegerConstantToken} from "../src/lexer";
 const API = require("../src/lexer");
+const Errors = require("../src/errors");
+
 
 it("very basic test", () => {
     expect(API.lex("abc 1234")).toEqual([new API.IdentifierToken("abc", 0), new API.NumericToken("1234", 4, 1234)]);
@@ -636,9 +637,12 @@ it("character constants", () => {
     let testcase_ignores: string = '#"\\ \n \t  \\\\123\\   \n\\"';
     let testcase_too_long: string = '#"\\\\x"';
 
+    let testcase_non_ending_wrong: string = '#"ab';
+    expect(() => { API.lex(testcase_non_ending_wrong); }).toThrow(Errors.IncompleteError);
+
     expect(() => { API.lex(testcase_empty); }).toThrow(API.LexerError);
-    expect(() => { API.lex(testcase_non_ending1); }).toThrow(API.IncompleteError);
-    expect(() => { API.lex(testcase_non_ending2); }).toThrow(API.IncompleteError);
+    expect(() => { API.lex(testcase_non_ending1); }).toThrow(Errors.IncompleteError);
+    expect(() => { API.lex(testcase_non_ending2); }).toThrow(Errors.IncompleteError);
     expect(() => { API.lex(testcase_non_ending_wrong); }).toThrow(API.LexerError);
     expect(API.lex(testcase_good)).toEqual([
         new API.CharacterConstantToken(testcase_good, 0, 'a')
