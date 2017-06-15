@@ -196,9 +196,6 @@ class Lexer {
         while (Lexer.isNumber(this.getChar(), hexadecimal) && result.length !== maxLength) {
             result += this.consumeChar();
         }
-        if (result === '') {
-            throw new InternalCompilerError(this.position);
-        }
         return result;
     }
 
