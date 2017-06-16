@@ -33,5 +33,9 @@
       "js",
       "json"
     ]
+  },
+  "dependencies": {
+    "hapi": "^16.4.3",
+    "node-cmd": "^3.0.0"
   }
 }
