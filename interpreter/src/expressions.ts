@@ -35,12 +35,12 @@ export abstract class Expression extends ASTNode {
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = false): string {
-        // TODO
+        // TODO: move to subclasses
         throw new InternalCompilerError(this.position, 'not yet implemented');
     }
 
     simplify(): ASTNode {
-        // TODO
+        // TODO: move to subclasses
         throw new InternalCompilerError(this.position, 'not yet implemented');
     }
 }
