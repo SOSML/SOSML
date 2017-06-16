@@ -35,7 +35,7 @@ export class TypeVariable implements Type {
 }
 
 export class Record implements Type {
-    constructor(public elements: Map<string, Type>) {}
+    constructor(public elements: Map<string, Type>, public complete: boolean = true) {}
 
     prettyPrint(): void {
         // TODO

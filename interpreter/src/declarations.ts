@@ -2,10 +2,11 @@ import { Pattern } from './patterns';
 import { Expression } from './expressions';
 import { IdentifierToken, LongIdentifierToken } from './lexer';
 import { Type, TypeVariable } from './types';
+// import { ASTNode } from './ast'
 
 // interfaces
 
-export interface Declaration {
+export abstract class Declaration /* extends ASTNode */ {
 }
 
 export interface ExceptionBinding {
