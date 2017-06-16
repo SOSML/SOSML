@@ -1,18 +1,15 @@
-import { Pattern } from './patterns';
+import { Pattern } from './expressions';
 import { Expression } from './expressions';
 import { IdentifierToken, LongIdentifierToken } from './lexer';
 import { Type, TypeVariable } from './types';
 // import { ASTNode } from './ast'
 
-// interfaces
 
 export abstract class Declaration /* extends ASTNode */ {
 }
 
 export interface ExceptionBinding {
 }
-
-// classes
 
 export class ValueBinding {
 // <rec> pattern = expression
@@ -22,7 +19,6 @@ export class ValueBinding {
 }
 
 export class FunctionValueBinding {
-    infix: boolean;
     name: IdentifierToken;
     parameters: Pattern[][];
     type: Type | undefined;
@@ -112,7 +108,7 @@ export class OpenDeclaration implements Declaration {
     names: LongIdentifierToken; // longstrid
 }
 
-export class SequentialDaclaration implements Declaration {
+export class SequentialDeclaration implements Declaration {
 // declaration1 <;> declaration2
     declaration1: Declaration;
     declaration2: Declaration;

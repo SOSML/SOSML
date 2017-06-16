@@ -39,7 +39,7 @@ export class Lambda extends Value {
 }
 
 // Values that were constructed from type constructors
-export class CustomValue {
+export class CustomValue extends Value {
     constructorName: string;
     arguments: Value[];
 

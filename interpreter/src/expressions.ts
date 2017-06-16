@@ -1,5 +1,4 @@
 import { Type } from './types';
-import { Pattern } from './patterns';
 import { Token, IdentifierToken } from './lexer';
 import { Declaration } from './declarations';
 import { ASTNode } from './ast';
