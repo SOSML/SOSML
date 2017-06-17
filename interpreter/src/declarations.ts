@@ -1,6 +1,6 @@
 import { Pattern } from './expressions';
 import { Expression } from './expressions';
-import { IdentifierToken, LongIdentifierToken } from './lexer';
+import { IdentifierToken, Token } from './lexer';
 import { Type, TypeVariable } from './types';
 // import { ASTNode } from './ast'
 
@@ -8,7 +8,7 @@ import { Type, TypeVariable } from './types';
 export abstract class Declaration /* extends ASTNode */ {
 }
 
-export interface ExceptionBinding {
+export class ExceptionDeclaration extends Declaration {
 }
 
 export class ValueBinding {
@@ -18,6 +18,7 @@ export class ValueBinding {
     expression: Expression;
 }
 
+// TODO: derived form
 export class FunctionValueBinding {
     name: IdentifierToken;
     parameters: Pattern[][];
@@ -25,7 +26,7 @@ export class FunctionValueBinding {
     bodies: Expression[];
 }
 
-export class TypeBinding {
+export class TypeDeclaration {
 // typeVariableSequence name = type
     typeVariableSequence: TypeVariable[];
     name: IdentifierToken;
@@ -36,23 +37,20 @@ export class DatatypeBinding {
 // typeVariableSequence name = <op> constructor <of type>
     typeVariableSequence: TypeVariable[];
     name: IdentifierToken;
-    // type: [opPrefixed, constructorName, <type>]
-    type: [boolean, IdentifierToken, Type | undefined][];
+    // type: [constructorName, <type>]
+    type: [IdentifierToken, Type | undefined][];
 }
 
-export class DirectExceptionBinding implements ExceptionBinding {
+export class DirectExceptionBinding extends ExceptionDeclaration {
 // <op> name <of type>
-    opPrefixed: boolean;
     name: IdentifierToken;
     type: Type | undefined;
 }
 
-export class LongExceptionBinding implements ExceptionBinding {
+export class ExceptionAlias extends ExceptionDeclaration {
 // <op> name = <op> oldname
-    opPrefixed: boolean;
     name: IdentifierToken;
-    oldnameOpPrefixed: boolean;
-    oldname: LongIdentifierToken;
+    oldname: Token;
 }
 
 // Declaration subclasses
@@ -62,39 +60,37 @@ export class ValueDeclaration implements Declaration {
     valueBinding: ValueBinding[];
 }
 
+// TODO: derived form
 export class FunctionDeclaration implements Declaration {
 // fun typeVariableSequence functionValueBinding
     typeVariableSequence: TypeVariable[];
     functionValueBinding: FunctionValueBinding[];
 }
 
-export class TypeDeclaration implements Declaration {
+// TODO: derived form
+export class TypeDeclarationList implements Declaration {
 // type typeBinding
-    typeBinding: TypeBinding[];
+    typeBinding: TypeDeclaration[];
 }
 
+// TODO: maybe merge with DatatypeBinding? <withtype typeBinding> is a derived form
 export class DatatypeDeclaration implements Declaration {
-// datatype datatypeBinding <wtihtype typeBinding>
+// datatype datatypeBinding <withtype typeBinding>
     datatypeBinding: DatatypeBinding[];
-    typeBinding: (TypeBinding[]) | undefined;
+    typeBinding: (TypeDeclaration[]) | undefined;
 }
 
 export class DatatypeReplication implements Declaration {
 // datatype name -=- datatype oldname
     name: IdentifierToken;
-    oldname: LongIdentifierToken;
+    oldname: Token;
 }
 
 export class AbstypeDeclaration implements Declaration {
 // abstype datatypeBinding <withtype typeBinding> with declaration end
     datatypeBinding: DatatypeBinding[];
-    typeBinding: (TypeBinding[]) | undefined;
+    typeBinding: (TypeDeclaration[]) | undefined;
     declaration: Declaration;
-}
-
-export class ExceptionDeclaration implements Declaration {
-// exception exceptionBinding
-    exceptionBinding: ExceptionBinding[];
 }
 
 export class LocalDeclaration implements Declaration {
@@ -105,13 +101,12 @@ export class LocalDeclaration implements Declaration {
 
 export class OpenDeclaration implements Declaration {
 // open name_1 ... name_n
-    names: LongIdentifierToken; // longstrid
+    names: Token; // longstrid
 }
 
-export class SequentialDeclaration implements Declaration {
+export class SequentialDeclarations implements Declaration {
 // declaration1 <;> declaration2
-    declaration1: Declaration;
-    declaration2: Declaration;
+    declarations: Declaration[];
 }
 
 export class InfixLDirective implements Declaration {

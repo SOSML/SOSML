@@ -18,6 +18,14 @@ export class Integer extends Value {
     }
 }
 
+export class Real extends Value {
+    value: number;
+
+    prettyPrint(): string {
+        return String(this.value);
+    }
+}
+
 export class Record extends Value {
     entries: Map<string, Value>;
 
@@ -41,12 +49,12 @@ export class Lambda extends Value {
 // Values that were constructed from type constructors
 export class CustomValue extends Value {
     constructorName: string;
-    arguments: Value[];
+    argument: Value;
 
     prettyPrint(): string {
         let result: string = '(' + this.constructorName;
-        for (let i: number = 0; i < this.arguments.length; ++i) { // TODO: figure out how range based for-loops work
-            result += ' ' + this.arguments[i];
+        if (this.argument) {
+            result += ' ' + this.argument.prettyPrint();
         }
         return result + ')';
     }

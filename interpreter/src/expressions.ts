@@ -15,7 +15,7 @@ export abstract class Expression extends ASTNode {
     }
 
     getType(state: State): Type {
-        if (this.type === undefined) { // TODO: is this.type really undefined if we never assign anything
+        if (this.type === undefined) { // TODO: is this.type really undefined if we never assign anything?
             throw new InternalCompilerError(this.position, 'didn\'t call checkStaticSemantics before getType');
         }
         return this.type;
@@ -77,15 +77,41 @@ export class LayeredPattern extends Expression implements Pattern {
 }
 
 
-export class Match {
+export class Match extends ASTNode {
 // pat => exp or pat => exp | match
+    patternType: Type;
+    returnType: Type;
     matches: [Pattern,  Expression][];
+
+    checkStaticSemantics(state: State) {
+        // TODO
+    }
+
+    simplify(): ASTNode {
+        // TODO
+        throw new InternalCompilerError(this.position, 'not yet implemented');
+    }
+
+    prettyPrint(indentation: number = 0, oneLine: boolean = false): string {
+        // TODO
+        throw new InternalCompilerError(this.position, 'not yet implemented');
+    }
+
+    evaluate(state: State): void {
+        // TODO: probably remove
+        throw new InternalCompilerError(this.position, 'not yet implemented');
+    }
+
+    getValue(state: State, matchWith: Value): Value {
+        // TODO
+        throw new InternalCompilerError(this.position, 'not yet implemented');
+    }
 }
 
 export class TypedExpression extends Expression implements Pattern {
 // expression: type (L)
     expression: Expression;
-    type: Type;
+    typeAnnotation: Type;
 
     matches(state: State, v: Value): boolean {
         // TODO
@@ -154,7 +180,8 @@ export class Record extends Expression implements Pattern {
 export class LocalDeclaration extends Expression {
 // let dec in exp1; ...; expn end
     declaration: Declaration;
-    expressions: Expression[];
+    // A sequential expression exp1; ... ; expn is represented as such, despite the potentially missing parentheses
+    expressions: Expression;
 }
 
 
