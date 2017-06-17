@@ -1,4 +1,4 @@
-import { InternalCompilerError } from './errors';
+import { InternalInterpreterError } from './errors';
 
 export interface Type {
     prettyPrint(): string;
@@ -23,7 +23,7 @@ export class PrimitiveType implements Type {
 
     unify(other: Type): Type | undefined {
         // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        throw new InternalInterpreterError(0, 'not yet implemented');
     }
 
     simplify(): Type { return this; }
@@ -38,7 +38,7 @@ export class TypeVariable implements Type {
 
     unify(other: Type): Type | undefined {
         // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        throw new InternalInterpreterError(0, 'not yet implemented');
     }
     simplify(): Type { return this; }
 }
@@ -69,7 +69,7 @@ export class Record implements Type {
 
     unify(other: Type): Type | undefined {
         // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        throw new InternalInterpreterError(0, 'not yet implemented');
     }
 
     simplify(): Type {
@@ -90,7 +90,7 @@ export class Function implements Type {
 
     unify(other: Type): Type | undefined {
         // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        throw new InternalInterpreterError(0, 'not yet implemented');
     }
 
     simplify(): Type {
@@ -121,7 +121,7 @@ export class CustomType implements Type {
 
     unify(other: Type): Type | undefined {
         // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        throw new InternalInterpreterError(0, 'not yet implemented');
     }
 
     simplify(): Type {
@@ -145,7 +145,7 @@ export class Tuple implements Type {
     }
 
     unify(other: Type): Type | undefined {
-        throw new InternalCompilerError(0, 'called Type.unify on a derived form');
+        throw new InternalInterpreterError(0, 'called Type.unify on a derived form');
     }
 
     simplify(): Type {

@@ -1,5 +1,5 @@
 import { ASTNode } from './ast';
-import { InternalCompilerError } from './errors';
+import { InternalInterpreterError } from './errors';
 import { Token } from './lexer';
 
 export class Parser {
@@ -8,7 +8,7 @@ export class Parser {
     constructor(private tokens: Token[]) {}
 
     parse(): ASTNode {
-        throw new InternalCompilerError(0, 'not yet implemented');
+        throw new InternalInterpreterError(0, 'not yet implemented');
     }
 
     finished(): boolean {

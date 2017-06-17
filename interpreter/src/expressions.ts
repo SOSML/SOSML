@@ -3,7 +3,7 @@ import { Token, IdentifierToken, KeywordToken } from './lexer';
 import { Declaration } from './declarations';
 import { ASTNode } from './ast';
 import { State } from './state';
-import { InternalCompilerError, Position } from './errors';
+import { InternalInterpreterError, Position } from './errors';
 import { Value } from './values';
 
 
@@ -16,13 +16,13 @@ export abstract class Expression extends ASTNode {
 
     getType(state: State): Type {
         if (this.type === undefined) { // TODO: is this.type really undefined if we never assign anything?
-            throw new InternalCompilerError(this.position, 'didn\'t call checkStaticSemantics before getType');
+            throw new InternalInterpreterError(this.position, 'didn\'t call checkStaticSemantics before getType');
         }
         return this.type;
     }
 
     computeType(state: State): Type {
-        throw new InternalCompilerError(this.position, 'called computeType on derived form');
+        throw new InternalInterpreterError(this.position, 'called computeType on derived form');
     }
 
     evaluate(state: State): void {
@@ -30,12 +30,12 @@ export abstract class Expression extends ASTNode {
     }
 
     getValue(state: State): Value {
-        throw new InternalCompilerError(this.position, 'called getValue on derived form');
+        throw new InternalInterpreterError(this.position, 'called getValue on derived form');
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = false): string {
         // TODO: move to subclasses
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 
     abstract simplify(): Expression;
@@ -53,7 +53,7 @@ export class Wildcard extends Expression implements Pattern {
     constructor(public position: Position) { super(); }
 
     getValue(state: State): Value {
-        throw new InternalCompilerError(this.position, 'called getValue on a pattern wildcard');
+        throw new InternalInterpreterError(this.position, 'called getValue on a pattern wildcard');
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -72,12 +72,12 @@ export class LayeredPattern extends Expression implements Pattern {
     ) { super(); }
 
     getValue(state: State): Value {
-        throw new InternalCompilerError(this.position, 'called getValue on a pattern');
+        throw new InternalInterpreterError(this.position, 'called getValue on a pattern');
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 
     simplify(): LayeredPattern {
@@ -104,17 +104,17 @@ export class Match extends ASTNode {
 
     prettyPrint(indentation: number = 0, oneLine: boolean = false): string {
         // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 
     evaluate(state: State): void {
         // TODO: probably remove
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 
     getValue(state: State, matchWith: Value): Value {
         // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 
     simplify(): Match {
@@ -133,7 +133,7 @@ export class TypedExpression extends Expression implements Pattern {
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 
     simplify(): TypedExpression {
@@ -175,7 +175,7 @@ export class FunctionApplication extends Expression implements Pattern {
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 
     simplify(): FunctionApplication {
@@ -188,7 +188,7 @@ export class Constant extends Expression implements Pattern {
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 
     simplify(): Constant { return this; }
@@ -200,7 +200,7 @@ export class ValueIdentifier extends Expression implements Pattern {
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 
     simplify(): ValueIdentifier { return this; }
@@ -215,7 +215,7 @@ export class Record extends Expression implements Pattern {
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 
     simplify(): Record {
@@ -250,7 +250,7 @@ export class InfixExpression extends Expression implements Pattern {
                 public rightOperand: Expression) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        throw new InternalCompilerError(this.position, 'called matches on derived form');
+        throw new InternalInterpreterError(this.position, 'called matches on derived form');
     }
 
     simplify(): FunctionApplication {
@@ -285,7 +285,7 @@ export class Tuple extends Expression implements Pattern {
     constructor(public position: Position, public expressions: Expression[]) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        throw new InternalCompilerError(this.position, 'called matches on derived form');
+        throw new InternalInterpreterError(this.position, 'called matches on derived form');
     }
 
     simplify(): Record {
@@ -302,12 +302,12 @@ export class List extends Expression implements Pattern {
     constructor(public position: Position, public expressions: Expression[]) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        throw new InternalCompilerError(this.position, 'called matches on derived form');
+        throw new InternalInterpreterError(this.position, 'called matches on derived form');
     }
 
     simplify(): FunctionApplication {
         // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 }
 
@@ -317,7 +317,7 @@ export class Sequence extends Expression {
 
     simplify(): FunctionApplication {
         // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 }
 
@@ -327,7 +327,7 @@ export class RecordSelector extends Expression {
 
     simplify(): FunctionApplication {
         // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 }
 

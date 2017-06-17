@@ -2,7 +2,7 @@
  * TODO: Documentation for the lexer
  */
 
-import { Position, CompilerError, InternalCompilerError, IncompleteError } from './errors';
+import { Position, InterpreterError, InternalInterpreterError, IncompleteError } from './errors';
 
 // SML uses these types and we may have to emulate them more closely, in particular int
 export type char = string;
@@ -84,7 +84,7 @@ export class LongIdentifierToken implements Token {
                 public id: IdentifierToken) {}
 }
 
-export class LexerError extends CompilerError {
+export class LexerError extends InterpreterError {
     constructor(message: string, position: Position) {
         super(message, position);
         Object.setPrototypeOf(this, LexerError.prototype);
@@ -201,7 +201,7 @@ class Lexer {
 
     makeNumberToken(value: string, real: boolean = false, word: boolean = false, hexadecimal: boolean = false): Token {
         if (real && word) {
-            throw new InternalCompilerError(this.position);
+            throw new InternalInterpreterError(this.position);
         }
         let token: string = this.input.substring(this.tokenStart, this.position);
         if (real) {
@@ -287,7 +287,7 @@ class Lexer {
     lexString(): StringConstantToken {
         let startPosition: number = this.position;
         if (this.consumeChar() !== '"') {
-            throw new InternalCompilerError(this.position);
+            throw new InternalInterpreterError(this.position);
         }
         let value: string = '';
 
@@ -369,14 +369,14 @@ class Lexer {
         }
 
         if (this.consumeChar() !== '"') {
-            throw new InternalCompilerError(this.position);
+            throw new InternalInterpreterError(this.position);
         }
         return new StringConstantToken(this.input.substring(startPosition, this.position), this.tokenStart, value);
     }
 
     lexCharacter(): CharacterConstantToken {
         if (this.consumeChar() !== '#') {
-            throw new InternalCompilerError(this.position);
+            throw new InternalInterpreterError(this.position);
         }
         let t: StringConstantToken = this.lexString();
         if (t.value.length !== 1) {

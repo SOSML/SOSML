@@ -4,7 +4,7 @@
 
 import { State } from './state';
 import { ASTNode } from './ast';
-import { InternalCompilerError } from './errors';
+import { InternalInterpreterError } from './errors';
 
 export abstract class Value {
     abstract prettyPrint(): string;
@@ -31,7 +31,7 @@ export class Record extends Value {
 
     prettyPrint(): string {
         // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        throw new InternalInterpreterError(0, 'not yet implemented');
     }
 }
 
@@ -42,7 +42,7 @@ export class Lambda extends Value {
 
     prettyPrint(): string {
         // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        throw new InternalInterpreterError(0, 'not yet implemented');
     }
 }
 
