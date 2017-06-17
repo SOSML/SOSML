@@ -1,5 +1,5 @@
 import { Type } from './types';
-import { Token, IdentifierToken } from './lexer';
+import { Token, IdentifierToken, KeywordToken } from './lexer';
 import { Declaration } from './declarations';
 import { ASTNode } from './ast';
 import { State } from './state';
@@ -38,10 +38,7 @@ export abstract class Expression extends ASTNode {
         throw new InternalCompilerError(this.position, 'not yet implemented');
     }
 
-    simplify(): Expression {
-        // TODO: move to subclasses
-        throw new InternalCompilerError(this.position, 'not yet implemented');
-    }
+    abstract simplify(): Expression;
 }
 
 
@@ -121,8 +118,12 @@ export class Match extends ASTNode {
     }
 
     simplify(): Match {
-        // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        let newMatches: [Pattern, Expression][] = [];
+        for (let i: number = 0; i < this.matches.length; ++i) {
+            let m: [Pattern, Expression] = this.matches[i];
+            newMatches.push([m[0].simplify(), m[1].simplify()]);
+        }
+        return new Match(this.position, newMatches);
     }
 }
 
@@ -208,7 +209,9 @@ export class ValueIdentifier extends Expression implements Pattern {
 export class Record extends Expression implements Pattern {
 // { lab = exp, ... } or { }
     // a record(pattern) is incomplete if it ends with '...'
-    constructor(public position: Position, public complete: boolean, public entries: [Token, Expression][]) { super(); }
+    constructor(public position: Position, public complete: boolean, public entries: [string, Expression][]) {
+        super();
+    }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
@@ -216,8 +219,12 @@ export class Record extends Expression implements Pattern {
     }
 
     simplify(): Record {
-        // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        let newEntries: [string, Expression][] = [];
+        for (let i: number = 0; i < this.entries.length; ++i) {
+            let e: [string, Expression] = this.entries[i];
+            newEntries.push([e[0], e[1].simplify()]);
+        }
+        return new Record(this.position, this.complete, newEntries);
     }
 }
 
@@ -247,18 +254,20 @@ export class InfixExpression extends Expression implements Pattern {
     }
 
     simplify(): FunctionApplication {
-        // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        let argument: Tuple = new Tuple(this.position, [this.leftOperand, this.rightOperand]);
+        return new FunctionApplication(this.position, this.operator, argument.simplify());
     }
 }
+
+let falseConstant: Constant = new Constant(0, new KeywordToken('false', 0));
+let trueConstant: Constant = new Constant(0, new KeywordToken('true', 0));
 
 export class Conjunction extends Expression {
 // leftOperand andalso rightOperand
     constructor(public position: Position, public leftOperand: Expression, public rightOperand: Expression) { super(); }
 
-    simplify(): Lambda {
-        // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+    simplify(): FunctionApplication {
+        return new Conditional(this.position, this.leftOperand, this.rightOperand, falseConstant).simplify();
     }
 }
 
@@ -266,9 +275,8 @@ export class Disjunction extends Expression {
 // leftOperand orelse rightOperand
     constructor(public position: Position, public leftOperand: Expression, public rightOperand: Expression) { super(); }
 
-    simplify(): Lambda {
-        // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+    simplify(): FunctionApplication {
+        return new Conditional(this.position, this.leftOperand, trueConstant, this.rightOperand).simplify();
     }
 }
 
@@ -281,8 +289,11 @@ export class Tuple extends Expression implements Pattern {
     }
 
     simplify(): Record {
-        // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+        let entries: [string, Expression][] = [];
+        for (let i: number = 0; i < this.expressions.length; ++i) {
+            entries[String(i + 1)] = this.expressions[i].simplify();
+        }
+        return new Record(this.position, true, entries);
     }
 }
 
@@ -304,7 +315,7 @@ export class Sequence extends Expression {
 // (exp1; ...; expn), n >= 2
     constructor(public position: Position, public expressions: Expression[]) { super(); }
 
-    simplify(): Lambda {
+    simplify(): FunctionApplication {
         // TODO
         throw new InternalCompilerError(this.position, 'not yet implemented');
     }
@@ -314,7 +325,7 @@ export class RecordSelector extends Expression {
 // #label record
     constructor(public position: Position, public label: Token) { super(); }
 
-    simplify(): Lambda {
+    simplify(): FunctionApplication {
         // TODO
         throw new InternalCompilerError(this.position, 'not yet implemented');
     }
@@ -324,9 +335,9 @@ export class CaseAnalysis extends Expression {
 // case expression of match
     constructor(public position: Position, public expression: Expression, public match: Match) { super(); }
 
-    simplify(): Lambda {
-        // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+    simplify(): FunctionApplication {
+        return new FunctionApplication(this.position, new Lambda(this.position, this.match.simplify()),
+            this.expression.simplify());
     }
 }
 
@@ -335,8 +346,8 @@ export class Conditional extends Expression {
     constructor(public position: Position, public condition: Expression, public ifTrue: Expression,
                 public ifFalse: Expression) { super(); }
 
-    simplify(): Lambda {
-        // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
+    simplify(): FunctionApplication {
+        let match: Match = new Match(this.position, [[trueConstant, this.ifTrue], [falseConstant, this.ifFalse]]);
+        return new CaseAnalysis(this.position, this.condition, match).simplify();
     }
 }
