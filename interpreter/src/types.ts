@@ -12,14 +12,13 @@ export interface Type {
 }
 
 // TODO: better name
-export enum PrimitiveTypes { INT, REAL, WORD, STRING, CHAR, BOOL }
+export enum PrimitiveTypes { int, real, word, string, char, bool }
 
 export class PrimitiveType implements Type {
     constructor(public type: PrimitiveTypes) {}
 
     prettyPrint(): string {
-        // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        return PrimitiveTypes[this.type];
     }
 
     unify(other: Type): Type | undefined {
@@ -34,8 +33,7 @@ export class TypeVariable implements Type {
     constructor(public name: string) {}
 
     prettyPrint(): string {
-        // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        return name;
     }
 
     unify(other: Type): Type | undefined {
@@ -49,8 +47,24 @@ export class Record implements Type {
     constructor(public elements: Map<string, Type>, public complete: boolean = true) {}
 
     prettyPrint(): string {
-        // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        // TODO: print as Tuple if possible
+        let result: string = '{';
+        let first: boolean = true;
+        this.elements.forEach((type: Type, key: string) => {
+            if (!first) {
+                result += ', ';
+            } else {
+                first = false;
+            }
+            result += key + ' : ' + type.prettyPrint();
+        });
+        if (!this.complete) {
+            if (!first) {
+                result += ', ';
+            }
+            result += '...';
+        }
+        return result + '}';
     }
 
     unify(other: Type): Type | undefined {
@@ -59,8 +73,11 @@ export class Record implements Type {
     }
 
     simplify(): Type {
-        // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        let newElements: Map<string, Type> = new Map<string, Type>();
+        this.elements.forEach((type: Type, key: string) => {
+            newElements[key] = type.simplify();
+        });
+        return new Record(newElements, this.complete);
     }
 }
 
@@ -68,8 +85,7 @@ export class Function implements Type {
     constructor(public parameterType: Type, public returnType: Type) {}
 
     prettyPrint(): string {
-        // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        return '(' + this.parameterType + ' -> ' + this.returnType + ')';
     }
 
     unify(other: Type): Type | undefined {
@@ -86,11 +102,21 @@ export class Function implements Type {
 export class CustomType implements Type {
     // fullName: a unique name for this type
     // typeArguments: instantiations for any type variables this datatype may have
-    constructor(public fullName: string, public typeArguments: Type[]) {}
+    constructor(public fullName: string, public typeArguments: TypeVariable[]) {}
 
     prettyPrint(): string {
-        // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        let result: string = '';
+        if (this.typeArguments.length > 0) {
+            result += '(';
+        }
+        for (let i: number = 0; i < this.typeArguments.length; ++i) {
+            result += ' ' + this.typeArguments[i].prettyPrint();
+        }
+        result += this.fullName;
+        if (this.typeArguments.length > 0) {
+            result += ')';
+        }
+        return result;
     }
 
     unify(other: Type): Type | undefined {
@@ -99,8 +125,7 @@ export class CustomType implements Type {
     }
 
     simplify(): Type {
-        // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        return this;
     }
 }
 
@@ -109,17 +134,25 @@ export class Tuple implements Type {
     constructor(public elements: Type[]) {}
 
     prettyPrint(): string {
-        // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        let result: string = '(';
+        for (let i: number = 0; i < this.elements.length; ++i) {
+            if (i > 0) {
+                result += ' * ';
+            }
+            result += ' ' + this.elements[i].prettyPrint();
+        }
+        return result + ')';
     }
 
     unify(other: Type): Type | undefined {
-        // TODO
         throw new InternalCompilerError(0, 'called Type.unify on a derived form');
     }
 
     simplify(): Type {
-        // TODO
-        throw new InternalCompilerError(0, 'not yet implemented');
+        let entries: Map<string, Type> = new Map<string, Type>();
+        for (let i: number = 0; i < this.elements.length; ++i) {
+            entries[String(i + 1)] = this.elements[i].simplify();
+        }
+        return new Record(entries, true);
     }
 }
