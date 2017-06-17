@@ -3,7 +3,7 @@ import { Token, IdentifierToken } from './lexer';
 import { Declaration } from './declarations';
 import { ASTNode } from './ast';
 import { State } from './state';
-import { InternalCompilerError } from './errors';
+import { InternalCompilerError, Position } from './errors';
 import { Value } from './values';
 
 
@@ -38,7 +38,7 @@ export abstract class Expression extends ASTNode {
         throw new InternalCompilerError(this.position, 'not yet implemented');
     }
 
-    simplify(): ASTNode {
+    simplify(): Expression {
         // TODO: move to subclasses
         throw new InternalCompilerError(this.position, 'not yet implemented');
     }
@@ -46,33 +46,50 @@ export abstract class Expression extends ASTNode {
 
 
 export interface Pattern {
-    matches(state: State, v: Value): boolean;
+    // Returns which bindings would be created by matching v to this Pattern,
+    // or undefined, if v does not match this Pattern.
+    matches(state: State, v: Value): [string, Value][] | undefined;
+    simplify(): Expression & Pattern;
 }
 
-export class Wilcard extends Expression implements Pattern {
+export class Wildcard extends Expression implements Pattern {
+    constructor(public position: Position) { super(); }
+
     getValue(state: State): Value {
         throw new InternalCompilerError(this.position, 'called getValue on a pattern wildcard');
     }
 
-    matches(state: State, v: Value): boolean {
-        // TODO
-        return false;
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        return [];
+    }
+
+    simplify(): Wildcard {
+        return this;
     }
 }
 
 export class LayeredPattern extends Expression implements Pattern {
 // <op> identifier <:type> as pattern
-    identifier: IdentifierToken;
-    typeAnnotation: Type | undefined;
-    pattern: Pattern;
+    constructor(public position: Position, public identifier: IdentifierToken, public typeAnnotation: Type | undefined,
+                public pattern: Pattern & Expression
+    ) { super(); }
 
     getValue(state: State): Value {
         throw new InternalCompilerError(this.position, 'called getValue on a pattern');
     }
 
-    matches(state: State, v: Value): boolean {
+    matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
-        return false;
+        throw new InternalCompilerError(this.position, 'not yet implemented');
+    }
+
+    simplify(): LayeredPattern {
+        if (this.typeAnnotation) {
+            return new LayeredPattern(this.position, this.identifier, this.typeAnnotation.simplify(),
+                this.pattern.simplify());
+        } else {
+            return new LayeredPattern(this.position, this.identifier, undefined, this.pattern.simplify());
+        }
     }
 }
 
@@ -81,15 +98,11 @@ export class Match extends ASTNode {
 // pat => exp or pat => exp | match
     patternType: Type;
     returnType: Type;
-    matches: [Pattern,  Expression][];
+
+    constructor(public position: Position, public matches: [Pattern, Expression][]) { super (); }
 
     checkStaticSemantics(state: State) {
         // TODO
-    }
-
-    simplify(): ASTNode {
-        // TODO
-        throw new InternalCompilerError(this.position, 'not yet implemented');
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = false): string {
@@ -106,82 +119,118 @@ export class Match extends ASTNode {
         // TODO
         throw new InternalCompilerError(this.position, 'not yet implemented');
     }
+
+    simplify(): Match {
+        // TODO
+        throw new InternalCompilerError(this.position, 'not yet implemented');
+    }
 }
 
 export class TypedExpression extends Expression implements Pattern {
 // expression: type (L)
-    expression: Expression;
-    typeAnnotation: Type;
+    constructor(public position: Position, public expression: Expression, public typeAnnotation: Type) { super(); }
 
-    matches(state: State, v: Value): boolean {
+    matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
-        return false;
+        throw new InternalCompilerError(this.position, 'not yet implemented');
+    }
+
+    simplify(): TypedExpression {
+        return new TypedExpression(this.position, this.expression.simplify(), this.typeAnnotation.simplify());
     }
 }
 
 export class HandleException extends Expression {
 // expression handle match
-    expression: Expression;
-    match: Match;
+    constructor(public position: Position, public expression: Expression, public match: Match) { super(); }
+
+    simplify(): HandleException {
+        return new HandleException(this.position, this.expression.simplify(), this.match.simplify());
+    }
 }
 
 export class RaiseException extends Expression {
 // raise expression
-    expression: Expression;
+    constructor(public position: Position, public expression: Expression) { super(); }
+
+    simplify(): RaiseException {
+        return new RaiseException(this.position, this.expression.simplify());
+    }
 }
 
 export class Lambda extends Expression {
 // fn match
-    match: Match;
+    constructor(public position: Position, public match: Match) { super(); }
+
+    simplify(): Lambda {
+        return new Lambda(this.position, this.match.simplify());
+    }
 }
 
+// May represent either a function application or a constructor with an argument
 export class FunctionApplication extends Expression implements Pattern {
 // function argument
-    // May represent either a function application or a constructor with an argument
-    function: Expression;
-    argument: Expression;
+    constructor(public position: Position, public func: Expression, public argument: Expression) { super(); }
 
-    matches(state: State, v: Value): boolean {
+    matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
-        return false;
+        throw new InternalCompilerError(this.position, 'not yet implemented');
+    }
+
+    simplify(): FunctionApplication {
+        return new FunctionApplication(this.position, this.func.simplify(), this.argument.simplify());
     }
 }
 
 export class Constant extends Expression implements Pattern {
-    token: Token;
+    constructor(public position: Position, public token: Token) { super(); }
 
-    matches(state: State, v: Value): boolean {
+    matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
-        return false;
+        throw new InternalCompilerError(this.position, 'not yet implemented');
     }
+
+    simplify(): Constant { return this; }
 }
 
 export class ValueIdentifier extends Expression implements Pattern {
 // op longvid or longvid
-    name: Token;
+    constructor(public position: Position, public name: Token) { super(); }
 
-    matches(state: State, v: Value): boolean {
+    matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
-        return false;
+        throw new InternalCompilerError(this.position, 'not yet implemented');
     }
+
+    simplify(): ValueIdentifier { return this; }
 }
 
 export class Record extends Expression implements Pattern {
 // { lab = exp, ... } or { }
-    complete: boolean; // a record(pattern) is incomplete if it ends with '...'
-    entries: [Token, Expression][];
+    // a record(pattern) is incomplete if it ends with '...'
+    constructor(public position: Position, public complete: boolean, public entries: [Token, Expression][]) { super(); }
 
-    matches(state: State, v: Value): boolean {
+    matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
-        return false;
+        throw new InternalCompilerError(this.position, 'not yet implemented');
+    }
+
+    simplify(): Record {
+        // TODO
+        throw new InternalCompilerError(this.position, 'not yet implemented');
     }
 }
 
 export class LocalDeclaration extends Expression {
 // let dec in exp1; ...; expn end
-    declaration: Declaration;
-    // A sequential expression exp1; ... ; expn is represented as such, despite the potentially missing parentheses
-    expressions: Expression;
+// A sequential expression exp1; ... ; expn is represented as such, despite the potentially missing parentheses
+    constructor(public position: Position, public declaration: Declaration, public expression: Expression) { super(); }
+
+    simplify(): LocalDeclaration {
+        // TODO: should be
+        // return new LocalDeclaration(this.position, this.declaration.simplify(), this.expression.simplify());
+        return new LocalDeclaration(this.position, this.declaration, this.expression.simplify());
+    }
 }
 
 
@@ -190,64 +239,104 @@ export class LocalDeclaration extends Expression {
 
 export class InfixExpression extends Expression implements Pattern {
 // leftOperand operator rightOperand
-    leftOperand: Expression;
-    operator: ValueIdentifier;
-    rightOperand: Expression;
+    constructor(public position: Position, public leftOperand: Expression, public operator: ValueIdentifier,
+                public rightOperand: Expression) { super(); }
 
-    matches(state: State, v: Value): boolean {
+    matches(state: State, v: Value): [string, Value][] | undefined {
         throw new InternalCompilerError(this.position, 'called matches on derived form');
+    }
+
+    simplify(): FunctionApplication {
+        // TODO
+        throw new InternalCompilerError(this.position, 'not yet implemented');
     }
 }
 
 export class Conjunction extends Expression {
 // leftOperand andalso rightOperand
-    leftOperand: Expression;
-    rightOperand: Expression;
+    constructor(public position: Position, public leftOperand: Expression, public rightOperand: Expression) { super(); }
+
+    simplify(): Lambda {
+        // TODO
+        throw new InternalCompilerError(this.position, 'not yet implemented');
+    }
 }
 
 export class Disjunction extends Expression {
 // leftOperand orelse rightOperand
-    leftOperand: Expression;
-    rightOperand: Expression;
+    constructor(public position: Position, public leftOperand: Expression, public rightOperand: Expression) { super(); }
+
+    simplify(): Lambda {
+        // TODO
+        throw new InternalCompilerError(this.position, 'not yet implemented');
+    }
 }
 
 export class Tuple extends Expression implements Pattern {
-// (exp1, ..., expn), n != 1
-    expressions: Expression[];
+// (exp1, ..., expn), n > 1
+    constructor(public position: Position, public expressions: Expression[]) { super(); }
 
-    matches(state: State, v: Value): boolean {
+    matches(state: State, v: Value): [string, Value][] | undefined {
         throw new InternalCompilerError(this.position, 'called matches on derived form');
+    }
+
+    simplify(): Record {
+        // TODO
+        throw new InternalCompilerError(this.position, 'not yet implemented');
     }
 }
 
 export class List extends Expression implements Pattern {
 // [exp1, ..., expn]
-    expressions: Expression[];
+    constructor(public position: Position, public expressions: Expression[]) { super(); }
 
-    matches(state: State, v: Value): boolean {
+    matches(state: State, v: Value): [string, Value][] | undefined {
         throw new InternalCompilerError(this.position, 'called matches on derived form');
+    }
+
+    simplify(): FunctionApplication {
+        // TODO
+        throw new InternalCompilerError(this.position, 'not yet implemented');
     }
 }
 
 export class Sequence extends Expression {
 // (exp1; ...; expn), n >= 2
-    expressions: Expression[];
+    constructor(public position: Position, public expressions: Expression[]) { super(); }
+
+    simplify(): Lambda {
+        // TODO
+        throw new InternalCompilerError(this.position, 'not yet implemented');
+    }
 }
 
 export class RecordSelector extends Expression {
 // #label record
-    label: Token;
+    constructor(public position: Position, public label: Token) { super(); }
+
+    simplify(): Lambda {
+        // TODO
+        throw new InternalCompilerError(this.position, 'not yet implemented');
+    }
 }
 
 export class CaseAnalysis extends Expression {
 // case expression of match
-    expression: Expression;
-    match: Match;
+    constructor(public position: Position, public expression: Expression, public match: Match) { super(); }
+
+    simplify(): Lambda {
+        // TODO
+        throw new InternalCompilerError(this.position, 'not yet implemented');
+    }
 }
 
 export class Conditional extends Expression {
 // if condition then ifTrue else ifFalse
-    condition: Expression;
-    ifTrue: Expression;
-    ifFalse: Expression;
+    constructor(public position: Position, public condition: Expression, public ifTrue: Expression,
+                public ifFalse: Expression) { super(); }
+
+    simplify(): Lambda {
+        // TODO
+        throw new InternalCompilerError(this.position, 'not yet implemented');
+    }
 }
