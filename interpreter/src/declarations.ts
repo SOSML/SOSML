@@ -2,10 +2,24 @@ import { Pattern } from './expressions';
 import { Expression } from './expressions';
 import { IdentifierToken, Token } from './lexer';
 import { Type, TypeVariable } from './types';
-// import { ASTNode } from './ast'
+import { State } from './state';
+import { InternalInterpreterError } from './errors';
+import { ASTNode } from './ast';
 
 
-export abstract class Declaration /* extends ASTNode */ {
+export abstract class Declaration extends ASTNode {
+    checkStaticSemantics(state: State): void {
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
+    evaluate(state: State): void {
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
+    simplify(): ASTNode {
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
 }
 
 export class ExceptionDeclaration extends Declaration {
@@ -26,7 +40,7 @@ export class FunctionValueBinding {
     bodies: Expression[];
 }
 
-export class TypeDeclaration {
+export class TypeBinding {
 // typeVariableSequence name = type
     typeVariableSequence: TypeVariable[];
     name: IdentifierToken;
@@ -54,74 +68,74 @@ export class ExceptionAlias extends ExceptionDeclaration {
 }
 
 // Declaration subclasses
-export class ValueDeclaration implements Declaration {
+export class ValueDeclaration extends Declaration {
 // val typeVariableSequence valueBinding
     typeVariableSequence: TypeVariable[];
     valueBinding: ValueBinding[];
 }
 
 // TODO: derived form
-export class FunctionDeclaration implements Declaration {
+export class FunctionDeclaration extends Declaration {
 // fun typeVariableSequence functionValueBinding
     typeVariableSequence: TypeVariable[];
     functionValueBinding: FunctionValueBinding[];
 }
 
 // TODO: derived form
-export class TypeDeclarationList implements Declaration {
+export class TypeDeclaration extends Declaration {
 // type typeBinding
-    typeBinding: TypeDeclaration[];
+    typeBinding: TypeBinding[];
 }
 
 // TODO: maybe merge with DatatypeBinding? <withtype typeBinding> is a derived form
-export class DatatypeDeclaration implements Declaration {
+export class DatatypeDeclaration extends Declaration {
 // datatype datatypeBinding <withtype typeBinding>
     datatypeBinding: DatatypeBinding[];
-    typeBinding: (TypeDeclaration[]) | undefined;
+    typeBinding: (TypeBinding[]) | undefined;
 }
 
-export class DatatypeReplication implements Declaration {
+export class DatatypeReplication extends Declaration {
 // datatype name -=- datatype oldname
     name: IdentifierToken;
     oldname: Token;
 }
 
-export class AbstypeDeclaration implements Declaration {
+export class AbstypeDeclaration extends Declaration {
 // abstype datatypeBinding <withtype typeBinding> with declaration end
     datatypeBinding: DatatypeBinding[];
-    typeBinding: (TypeDeclaration[]) | undefined;
+    typeBinding: (TypeBinding[]) | undefined;
     declaration: Declaration;
 }
 
-export class LocalDeclaration implements Declaration {
+export class LocalDeclaration extends Declaration {
 // local declaration in body end
     declaration: Declaration;
     body: Declaration;
 }
 
-export class OpenDeclaration implements Declaration {
+export class OpenDeclaration extends Declaration {
 // open name_1 ... name_n
     names: Token; // longstrid
 }
 
-export class SequentialDeclarations implements Declaration {
+export class SequentialDeclarations extends Declaration {
 // declaration1 <;> declaration2
     declarations: Declaration[];
 }
 
-export class InfixLDirective implements Declaration {
+export class InfixLDirective extends Declaration {
 // infix <level> name_1 ... name_n
     level: number;
     names: IdentifierToken[];
 }
 
-export class InfixRDirective implements Declaration {
+export class InfixRDirective extends Declaration {
 // infixr <level> name_1 ... name_n
     level: number;
     names: IdentifierToken[];
 }
 
-export class NonfixDirective implements Declaration {
+export class NonfixDirective extends Declaration {
 // nonfix name_1 ... name_n
     names: IdentifierToken[];
 }
