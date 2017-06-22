@@ -5,10 +5,20 @@ const API = require("../src/lexer");
 const Errors = require("../src/errors");
 
 const diff = require('jest-diff');
+const chalk = require('chalk');
+
+const NO_DIFF_MESSAGE = chalk.dim(
+  'Compared values have no visual difference.',
+);
 
 expect.extend({
   toEqualWithType(received, expected) {
-    const pass = JSON.stringify(received) == JSON.stringify(expected);
+    // we assume that diff prints the types as well, so if there is no diff, we assume that recieved == expected
+    const diffString = diff(expected, received, {
+      expand: this.expand,
+    });
+
+    const pass = diffString == NO_DIFF_MESSAGE;
 
     const message = pass
       ? () => this.utils.matcherHint('.not.toEqualWithType') + '\n\n' +
@@ -17,9 +27,6 @@ expect.extend({
         `Received:\n` +
         `  ${this.utils.printReceived(received)}`
       : () => {
-        const diffString = diff(expected, received, {
-          expand: this.expand,
-        });
         return this.utils.matcherHint('.toEqualWithType') + '\n\n' +
         `Expected value to equal with type:\n` +
         `  ${this.utils.printExpected(expected)}\n` +
@@ -34,7 +41,7 @@ expect.extend({
 
 
 it("very basic test", () => {
-    expect(API.lex("abc 1234")).toEqual([new API.IdentifierToken("abc", 0), new API.NumericToken("1234", 4, 1234)]);
+    expect(API.lex("abc 1234")).toEqualWithType([new API.AlphanumericIdentifierToken("abc", 0), new API.NumericToken("1234", 4, 1234)]);
 });
 
 it("code snippet", () => {
@@ -232,7 +239,7 @@ end`
 
 it("strings", () => {
     let testcase: string = ` "bla bla\\   \\ blub" "" "\\\\ \\" "`;
-    expect(API.lex(testcase)).toEqual([
+    expect(API.lex(testcase)).toEqualWithType([
         new API.StringConstantToken('"bla bla\\   \\ blub"', 1, 'bla bla blub'),
         new API.StringConstantToken('""', 21, ''),
         new API.StringConstantToken('"\\\\ \\" "', 24, '\\ \" ')
@@ -247,7 +254,7 @@ it("char with multiple characters", () => {
 it("floating point numbers", () => {
     let testcase: string = '1e2 1e 2'
 
-    expect(API.lex(testcase)).toEqual([
+    expect(API.lex(testcase)).toEqualWithType([
         new API.RealConstantToken("1e2", 0, 100),
         new API.NumericToken("1", 4, 1),
         new API.AlphanumericIdentifierToken("e", 5),
@@ -263,7 +270,7 @@ it("dots", () => {
     expect(() => { API.lex(testcase1); }).toThrow(API.LexerError);
     expect(() => { API.lex(testcase2); }).toThrow(API.LexerError);
 
-    expect(API.lex(testcase3)).toEqual([
+    expect(API.lex(testcase3)).toEqualWithType([
         new API.KeywordToken("...", 0)
     ]);
 });
@@ -271,7 +278,7 @@ it("dots", () => {
 it("reserved words", () => {
     let testcase: string = 'abstype and andalso as case datatype do else end exception fn fun handle if in infix infixr let local nonfix of op open orelse raise rec then type val with withtype while ( ) [ ] { } , : ; ... _ | = => -> #';
 
-    expect(API.lex(testcase)).toEqual([
+    expect(API.lex(testcase)).toEqualWithType([
         new API.KeywordToken("abstype", 0),
         new API.KeywordToken("and", 8),
         new API.KeywordToken("andalso", 12),
@@ -332,25 +339,25 @@ it("integer constants decimal", () => {
     let testcase_neg_leadingzero: string = '~0000023';
     let testcase_bigzero: string = '000000';
 
-    expect(API.lex(testcase_zero)).toEqual([
-        new API.NumericToken(testcase_zero, 0, 0)
+    expect(API.lex(testcase_zero)).toEqualWithType([
+        new API.IntegerConstantToken(testcase_zero, 0, 0)
     ]);
-    expect(API.lex(testcase_nonint)).toEqual([
+    expect(API.lex(testcase_nonint)).toEqualWithType([
         new API.IdentifierToken("~", 0)
     ]);
-    expect(API.lex(testcase_pos)).toEqual([
+    expect(API.lex(testcase_pos)).toEqualWithType([
         new API.NumericToken(testcase_pos, 0, 42)
     ]);
-    expect(API.lex(testcase_neg)).toEqual([
+    expect(API.lex(testcase_neg)).toEqualWithType([
         new API.IntegerConstantToken(testcase_neg, 0, -69)
     ]);
-    expect(API.lex(testcase_pos_leadingzero)).toEqual([
+    expect(API.lex(testcase_pos_leadingzero)).toEqualWithType([
         new API.IntegerConstantToken(testcase_pos_leadingzero, 0, 42)
     ]);
-    expect(API.lex(testcase_neg_leadingzero)).toEqual([
+    expect(API.lex(testcase_neg_leadingzero)).toEqualWithType([
         new API.IntegerConstantToken(testcase_neg_leadingzero, 0, -23)
     ]);
-    expect(API.lex(testcase_bigzero)).toEqual([
+    expect(API.lex(testcase_bigzero)).toEqualWithType([
         new API.IntegerConstantToken(testcase_bigzero, 0, 0)
     ]);
 });
@@ -365,28 +372,28 @@ it("integer constants hexadecimal wellformed", () => {
     let testcase_all_chars2: string = '0xabcdef';
     let testcase_all_chars3: string = '0xABCDEF';
 
-    expect(API.lex(testcase_pos)).toEqual([
-        new API.NumericToken(testcase_pos, 0, 0x4a)
+    expect(API.lex(testcase_pos)).toEqualWithType([
+        new API.IntegerConstantToken(testcase_pos, 0, 0x4a)
     ]);
-    expect(API.lex(testcase_neg)).toEqual([
+    expect(API.lex(testcase_neg)).toEqualWithType([
         new API.IntegerConstantToken(testcase_neg, 0, -0x6e)
     ]);
-    expect(API.lex(testcase_pos_leadingzero)).toEqual([
+    expect(API.lex(testcase_pos_leadingzero)).toEqualWithType([
         new API.IntegerConstantToken(testcase_pos_leadingzero, 0, 0x4f)
     ]);
-    expect(API.lex(testcase_neg_leadingzero)).toEqual([
+    expect(API.lex(testcase_neg_leadingzero)).toEqualWithType([
         new API.IntegerConstantToken(testcase_neg_leadingzero, 0, -0xa)
     ]);
-    expect(API.lex(testcase_bigzero)).toEqual([
+    expect(API.lex(testcase_bigzero)).toEqualWithType([
         new API.IntegerConstantToken(testcase_bigzero, 0, 0)
     ]);
-    expect(API.lex(testcase_all_chars1)).toEqual([
+    expect(API.lex(testcase_all_chars1)).toEqualWithType([
         new API.IntegerConstantToken(testcase_all_chars1, 0, 0x123456789)
     ]);
-    expect(API.lex(testcase_all_chars2)).toEqual([
+    expect(API.lex(testcase_all_chars2)).toEqualWithType([
         new API.IntegerConstantToken(testcase_all_chars2, 0, 0xabcdef)
     ]);
-    expect(API.lex(testcase_all_chars3)).toEqual([
+    expect(API.lex(testcase_all_chars3)).toEqualWithType([
         new API.IntegerConstantToken(testcase_all_chars3, 0, 0xabcdef)
     ]);
 });
@@ -402,38 +409,38 @@ it("integer constants hexadecimal illformed", () => {
     let testcase_capital_x: string = '0X4a';
     let testcase_double_x: string = '0xx4a';
 
-    expect(API.lex(testcase_nonint)).toEqual([
+    expect(API.lex(testcase_nonint)).toEqualWithType([
         new API.IntegerConstantToken("~0", 0, -0),
         new API.AlphanumericIdentifierToken("x", 2)
     ]);
-    expect(API.lex(testcase_too_long_prefix)).toEqual([
+    expect(API.lex(testcase_too_long_prefix)).toEqualWithType([
         new API.IntegerConstantToken("00", 0, 0),
         new API.AlphanumericIdentifierToken("x42", 2)
     ]);
-    expect(API.lex(testcase_too_short_prefix)).toEqual([
+    expect(API.lex(testcase_too_short_prefix)).toEqualWithType([
         new API.AlphanumericIdentifierToken("x42", 0)
     ]);
-    expect(API.lex(testcase_neg_too_long_prefix)).toEqual([
+    expect(API.lex(testcase_neg_too_long_prefix)).toEqualWithType([
         new API.IntegerConstantToken("~00", 0, -0),
         new API.AlphanumericIdentifierToken("x69", 3)
     ]);
-    expect(API.lex(testcase_neg_too_short_prefix)).toEqual([
+    expect(API.lex(testcase_neg_too_short_prefix)).toEqualWithType([
         new API.IdentifierToken("~", 0),
         new API.AlphanumericIdentifierToken("x42", 1)
     ]);
-    expect(API.lex(testcase_not_hex)).toEqual([
+    expect(API.lex(testcase_not_hex)).toEqualWithType([
         new API.IntegerConstantToken("0xabc", 0, 0xabc),
         new API.AlphanumericIdentifierToken("gcba", 5)
     ]);
-    expect(API.lex(testcase_missing_x)).toEqual([
+    expect(API.lex(testcase_missing_x)).toEqualWithType([
         new API.IntegerConstantToken("04", 0, 4),
         new API.AlphanumericIdentifierToken("a", 2)
     ]);
-    expect(API.lex(testcase_capital_x)).toEqual([
+    expect(API.lex(testcase_capital_x)).toEqualWithType([
         new API.IntegerConstantToken("0", 0, 0),
         new API.AlphanumericIdentifierToken("X4a", 1)
     ]);
-    expect(API.lex(testcase_double_x)).toEqual([
+    expect(API.lex(testcase_double_x)).toEqualWithType([
         new API.IntegerConstantToken("0", 0, 0),
         new API.AlphanumericIdentifierToken("xx4a", 1)
     ]);
@@ -448,29 +455,29 @@ it("word constants decimal", () => {
     let testcase_leading_zero: string = '00w01';
     let testcase_neg: string = '~0w69';
 
-    expect(API.lex(testcase_noword)).toEqual([
+    expect(API.lex(testcase_noword)).toEqualWithType([
         new API.IntegerConstantToken("0", 0, 0),
         new API.AlphanumericIdentifierToken("w", 1)
     ]);
-    expect(API.lex(testcase_pos)).toEqual([
+    expect(API.lex(testcase_pos)).toEqualWithType([
         new API.WordConstantToken("0w42", 0, 42)
     ]);
-    expect(API.lex(testcase_nohex)).toEqual([
+    expect(API.lex(testcase_nohex)).toEqualWithType([
         new API.WordConstantToken("0w9", 0, 9),
         new API.AlphanumericIdentifierToken("a", 3)
     ]);
-    expect(API.lex(testcase_capital_w)).toEqual([
+    expect(API.lex(testcase_capital_w)).toEqualWithType([
         new API.IntegerConstantToken("0", 0, 0),
         new API.AlphanumericIdentifierToken("W1337", 1)
     ]);
-    expect(API.lex(testcase_zero_after_w)).toEqual([
+    expect(API.lex(testcase_zero_after_w)).toEqualWithType([
         new API.WordConstantToken("0w01337", 0, 1337)
     ]);
-    expect(API.lex(testcase_leading_zero)).toEqual([
+    expect(API.lex(testcase_leading_zero)).toEqualWithType([
         new API.IntegerConstantToken("00", 0, 0),
         new API.AlphanumericIdentifierToken("w01", 2)
     ]);
-    expect(API.lex(testcase_neg)).toEqual([
+    expect(API.lex(testcase_neg)).toEqualWithType([
         new API.IntegerConstantToken("~0", 0, -0),
         new API.AlphanumericIdentifierToken("w69", 2)
     ]);
@@ -487,37 +494,37 @@ it("word constants hexadecimal", () => {
     let testcase_wrong_order: string = '0xwabc';
     let testcase_double_w: string = '0wwabc';
 
-    expect(API.lex(testcase_noword)).toEqual([
+    expect(API.lex(testcase_noword)).toEqualWithType([
         new API.IntegerConstantToken("0", 0, 0),
         new API.AlphanumericIdentifierToken("wx", 1)
     ]);
-    expect(API.lex(testcase_pos)).toEqual([
+    expect(API.lex(testcase_pos)).toEqualWithType([
         new API.WordConstantToken(testcase_pos, 0, 0x4aa)
     ]);
-    expect(API.lex(testcase_capital_w)).toEqual([
+    expect(API.lex(testcase_capital_w)).toEqualWithType([
         new API.IntegerConstantToken("0", 0, 0),
         new API.AlphanumericIdentifierToken("Wx1337", 1)
     ]);
-    expect(API.lex(testcase_zero_after_w)).toEqual([
+    expect(API.lex(testcase_zero_after_w)).toEqualWithType([
         new API.WordConstantToken(testcase_zero_after_w, 0, 0x1337)
     ]);
-    expect(API.lex(testcase_leading_zero)).toEqual([
+    expect(API.lex(testcase_leading_zero)).toEqualWithType([
         new API.IntegerConstantToken("00", 0, 0),
         new API.AlphanumericIdentifierToken("wx01", 2)
     ]);
-    expect(API.lex(testcase_neg)).toEqual([
+    expect(API.lex(testcase_neg)).toEqualWithType([
         new API.IntegerConstantToken("~0", 0, -0),
         new API.AlphanumericIdentifierToken("wx69", 2)
     ]);
-    expect(API.lex(testcase_capital_x)).toEqual([
+    expect(API.lex(testcase_capital_x)).toEqualWithType([
         new API.IntegerConstantToken("0", 0, 0),
         new API.AlphanumericIdentifierToken("wX4aA", 1)
     ]);
-    expect(API.lex(testcase_wrong_order)).toEqual([
+    expect(API.lex(testcase_wrong_order)).toEqualWithType([
         new API.IntegerConstantToken("0", 0, 0),
         new API.AlphanumericIdentifierToken("xwabc", 1)
     ]);
-    expect(API.lex(testcase_double_w)).toEqual([
+    expect(API.lex(testcase_double_w)).toEqualWithType([
         new API.IntegerConstantToken("0", 0, 0),
         new API.AlphanumericIdentifierToken("wwabc", 1)
     ]);
@@ -538,36 +545,36 @@ it("floating point constants", () => {
     let testcase_missing_component2: string = '12.e56';
     let testcase_missing_component3: string = '12.34e';
 
-    expect(API.lex(testcase_good1)).toEqual([
+    expect(API.lex(testcase_good1)).toEqualWithType([
         new API.RealConstantToken(testcase_good1, 0, 0)
     ]);
-    expect(API.lex(testcase_good2)).toEqual([
+    expect(API.lex(testcase_good2)).toEqualWithType([
         new API.RealConstantToken(testcase_good2, 0, 0)
     ]);
-    expect(API.lex(testcase_good3)).toEqual([
+    expect(API.lex(testcase_good3)).toEqualWithType([
         new API.RealConstantToken(testcase_good3, 0, 0)
     ]);
-    expect(API.lex(testcase_leading_zero)).toEqual([
+    expect(API.lex(testcase_leading_zero)).toEqualWithType([
         new API.RealConstantToken(testcase_leading_zero, 0, 40)
     ]);
     expect(() => { API.lex(testcase_hex1); }).toThrow(API.LexerError);
-    expect(API.lex(testcase_hex2)).toEqual([
+    expect(API.lex(testcase_hex2)).toEqualWithType([
         new API.RealConstantToken('01.0', 0, 1),
         new API.AlphanumericIdentifierToken('x9e03', 4)
     ]);
-    expect(API.lex(testcase_hex3)).toEqual([
+    expect(API.lex(testcase_hex3)).toEqualWithType([
         new API.RealConstantToken('01.09e0', 0, 1.09),
         new API.AlphanumericIdentifierToken('x3', 7)
     ]);
     expect(() => { API.lex(testcase_double_dot); }).toThrow(API.LexerError);
-    expect(API.lex(testcase_double_e)).toEqual([
+    expect(API.lex(testcase_double_e)).toEqualWithType([
         new API.RealConstantToken('12e34', 0, 12e34),
         new API.AlphanumericIdentifierToken('e56', 5)
     ]);
     expect(() => { API.lex(testcase_wrong_order); }).toThrow(API.LexerError);
     expect(() => { API.lex(testcase_missing_component1); }).toThrow(API.LexerError);
     expect(() => { API.lex(testcase_missing_component2); }).toThrow(API.LexerError);
-    expect(API.lex(testcase_missing_component3)).toEqual([
+    expect(API.lex(testcase_missing_component3)).toEqualWithType([
         new API.RealConstantToken('12.34', 0, 12.34),
         new API.AlphanumericIdentifierToken('e', 5)
     ]);
@@ -605,21 +612,21 @@ it("string constants", () => {
     let testcase_formatting_incomplete: string = '"\\ \n \t \t';
     let testcase_formatting_ignore_wrong: string = '"\\   a\\"';
 
-    expect(API.lex(testcase_empty)).toEqual([
+    expect(API.lex(testcase_empty)).toEqualWithType([
         new API.StringConstantToken(testcase_empty, 0, '')
     ]);
     expect(() => { API.lex(testcase_non_ending1); }).toThrow(API.IncompleteError);
     expect(() => { API.lex(testcase_non_ending2); }).toThrow(API.IncompleteError);
     expect(() => { API.lex(testcase_non_ending3); }).toThrow(API.IncompleteError);
     expect(() => { API.lex(testcase_non_ending4); }).toThrow(API.IncompleteError);
-    expect(API.lex(testcase_basic_string)).toEqual([
+    expect(API.lex(testcase_basic_string)).toEqualWithType([
         new API.StringConstantToken(testcase_basic_string, 0, 'The quick brown fox jumps over the lazy dog')
     ]);
     expect(() => { API.lex(testcase_newline); }).toThrow(API.LexerError);
-    expect(API.lex(testcase_all_basic_escapes)).toEqual([
+    expect(API.lex(testcase_all_basic_escapes)).toEqualWithType([
         new API.StringConstantToken(testcase_all_basic_escapes, 0, '\a \b \t \n \v \f \r " \\')
     ]);
-    expect(API.lex(testcase_control_escapes)).toEqual([
+    expect(API.lex(testcase_control_escapes)).toEqualWithType([
         new API.StringConstantToken(testcase_control_escapes, 0, '\x00\x0A\x1E\x1F')
     ]);
     expect(() => { API.lex(testcase_invalid_control_escapes1); }).toThrow(API.LexerError);
@@ -628,16 +635,16 @@ it("string constants", () => {
     expect(() => { API.lex(testcase_invalid_escapes1); }).toThrow(API.LexerError);
     expect(() => { API.lex(testcase_invalid_escapes2); }).toThrow(API.LexerError);
     expect(() => { API.lex(testcase_invalid_escapes3); }).toThrow(API.LexerError);
-    expect(API.lex(testcase_decimal_escape)).toEqual([
+    expect(API.lex(testcase_decimal_escape)).toEqualWithType([
         new API.StringConstantToken(testcase_decimal_escape, 0, '*Ej')
     ]);
     expect(() => { API.lex(testcase_decimal_escape_too_short1); }).toThrow(API.LexerError);
     expect(() => { API.lex(testcase_decimal_escape_too_short2); }).toThrow(API.LexerError);
     expect(() => { API.lex(testcase_decimal_escape_too_short3); }).toThrow(API.LexerError);
-    expect(API.lex(testcase_decimal_escape_overlapping)).toEqual([
+    expect(API.lex(testcase_decimal_escape_overlapping)).toEqualWithType([
         new API.StringConstantToken(testcase_decimal_escape_overlapping, 0, '\x00000')
     ]);
-    expect(API.lex(testcase_hex_escape)).toEqual([
+    expect(API.lex(testcase_hex_escape)).toEqualWithType([
         new API.StringConstantToken(testcase_hex_escape, 0, '@JJ')
     ]);
     expect(() => { API.lex(testcase_hex_escape_too_short1); }).toThrow(API.LexerError);
@@ -645,10 +652,10 @@ it("string constants", () => {
     expect(() => { API.lex(testcase_hex_escape_too_short3); }).toThrow(API.LexerError);
     expect(() => { API.lex(testcase_hex_escape_too_short4); }).toThrow(API.LexerError);
     expect(() => { API.lex(testcase_capital_u); }).toThrow(API.LexerError);
-    expect(API.lex(testcase_formatting_ignore1)).toEqual([
+    expect(API.lex(testcase_formatting_ignore1)).toEqualWithType([
         new API.StringConstantToken(testcase_formatting_ignore1, 0, '')
     ]);
-    expect(API.lex(testcase_formatting_ignore2)).toEqual([
+    expect(API.lex(testcase_formatting_ignore2)).toEqualWithType([
         new API.StringConstantToken(testcase_formatting_ignore2, 0, 'working?')
     ]);
     expect(() => { API.lex(testcase_formatting_incomplete); }).toThrow(API.IncompleteError);
@@ -667,13 +674,13 @@ it("character constants", () => {
     expect(() => { API.lex(testcase_empty); }).toThrow(API.LexerError);
     expect(() => { API.lex(testcase_non_ending1); }).toThrow(Errors.IncompleteError);
     expect(() => { API.lex(testcase_non_ending2); }).toThrow(Errors.IncompleteError);
-    expect(API.lex(testcase_good)).toEqual([
+    expect(API.lex(testcase_good)).toEqualWithType([
         new API.CharacterConstantToken(testcase_good, 0, 'a')
     ]);
-    expect(API.lex(testcase_escape)).toEqual([
+    expect(API.lex(testcase_escape)).toEqualWithType([
         new API.CharacterConstantToken(testcase_escape, 0, 'J')
     ]);
-    expect(API.lex(testcase_ignores)).toEqual([
+    expect(API.lex(testcase_ignores)).toEqualWithType([
         new API.CharacterConstantToken(testcase_ignores, 0, '{')
     ]);
     expect(() => { API.lex(testcase_too_long); }).toThrow(API.LexerError);
@@ -687,16 +694,16 @@ it("comments", () => {
     let testcase_non_ending2: string = '(*';
     let testcase_unmatched: string = '*)test';
 
-    expect(API.lex(testcase_empty_comment)).toEqual([
+    expect(API.lex(testcase_empty_comment)).toEqualWithType([
         new API.AlphanumericIdentifierToken('test', 4, 'test')
     ]);
-    expect(API.lex(testcase_normal_comment)).toEqual([
+    expect(API.lex(testcase_normal_comment)).toEqualWithType([
         new API.AlphanumericIdentifierToken('test', 22, 'test')
     ]);
-    expect(API.lex(testcase_nested_comment)).toEqual([
+    expect(API.lex(testcase_nested_comment)).toEqualWithType([
         new API.AlphanumericIdentifierToken('test', 43, 'test')
     ]);
     expect(() => { API.lex(testcase_non_ending1); }).toThrow(Errors.IncompleteError);
     expect(() => { API.lex(testcase_non_ending2); }).toThrow(Errors.IncompleteError);
     expect(() => { API.lex(testcase_non_ending2); }).toThrow(Errors.LexerError);
-})
+});
