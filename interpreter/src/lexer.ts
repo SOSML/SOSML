@@ -460,7 +460,7 @@ class Lexer {
         if (!(t instanceof IdentifierToken || t instanceof StarToken)) {
             throw new LexerError(t.text + ' is not a valid identifier', t.position);
         }
-        return new LongIdentifierToken(this.input.substring(tokenStart, this.position), this.tokenStart, qualifiers, t);
+        return new LongIdentifierToken(this.input.substring(tokenStart, this.position), tokenStart, qualifiers, t);
     }
 
     nextToken(): Token {
