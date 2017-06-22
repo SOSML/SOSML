@@ -4,6 +4,34 @@
 const API = require("../src/lexer");
 const Errors = require("../src/errors");
 
+const diff = require('jest-diff');
+
+expect.extend({
+  toEqualWithType(received, expected) {
+    const pass = JSON.stringify(received) == JSON.stringify(expected);
+
+    const message = pass
+      ? () => this.utils.matcherHint('.not.toEqualWithType') + '\n\n' +
+        `Expected value to not equal with type:\n` +
+        `  ${this.utils.printExpected(expected)}\n` +
+        `Received:\n` +
+        `  ${this.utils.printReceived(received)}`
+      : () => {
+        const diffString = diff(expected, received, {
+          expand: this.expand,
+        });
+        return this.utils.matcherHint('.toEqualWithType') + '\n\n' +
+        `Expected value to equal with type:\n` +
+        `  ${this.utils.printExpected(expected)}\n` +
+        `Received:\n` +
+        `  ${this.utils.printReceived(received)}` +
+        (diffString ? `\n\nDifference:\n\n${diffString}` : '');
+      };
+
+    return {actual: received, message, pass};
+  },
+});
+
 
 it("very basic test", () => {
     expect(API.lex("abc 1234")).toEqual([new API.IdentifierToken("abc", 0), new API.NumericToken("1234", 4, 1234)]);
