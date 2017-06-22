@@ -707,3 +707,87 @@ it("comments", () => {
     expect(() => { API.lex(testcase_non_ending2); }).toThrow(Errors.IncompleteError);
     expect(() => { API.lex(testcase_non_ending2); }).toThrow(Errors.LexerError);
 });
+
+it("identifiers", () => {
+    let testcase_empty: string = '';
+    let testcase_alphanum: string = 'u12idADU12IA\'\'\'123';
+    let testcase_symbolic: string = '!%&$#+-/:<=>?@\\~`^|*';
+    let testcase_prime: string = '\'';
+    let testcase_prime_symbolic: string = '\'!%!\'==';
+    let testcase_double_prime: string = '\'\'';
+    let testcase_triple_prime: string = '\'\'\'';
+    let testcase_spacing: string = ' test identifier';
+    let testcase_mixed: string = 'test!identifier';
+
+    expect(API.lex(testcase_empty)).toEqualWithType([]);
+    expect(API.lex(testcase_alphanum)).toEqualWithType([
+        new API.AlphanumericIdentifierToken(testcase_alphanum, 0, testcase_alphanum)
+    ]);
+    expect(API.lex(testcase_symbolic)).toEqualWithType([
+        new API.IdentifierToken(testcase_symbolic, 0, testcase_symbolic)
+    ]);
+    expect(JSON.stringify(API.lex(testcase_prime))).toEqualWithType(JSON.stringify([
+        new API.TypeVariableToken(testcase_prime, 0, testcase_prime)
+    ]));
+    expect(API.lex(testcase_prime_symbolic)).toEqualWithType([
+        new API.TypeVariableToken('\'', 0, '\''),
+        new API.IdentifierToken('!%!', 1, '!%!'),
+        new API.TypeVariableToken('\'', 4, '\''),
+        new API.IdentifierToken('==', 5, '==')
+    ]);
+    expect(API.lex(testcase_double_prime)).toEqualWithType([
+        new API.EqualityTypeVariableToken(testcase_double_prime, 0, testcase_double_prime)
+    ]);
+    expect(API.lex(testcase_triple_prime)).toEqualWithType([
+        new API.EqualityTypeVariableToken(testcase_triple_prime, 0, testcase_triple_prime)
+    ]);
+    expect(API.lex(testcase_spacing)).toEqualWithType([
+        new API.AlphanumericIdentifierToken('test', 1, 'test'),
+        new API.AlphanumericIdentifierToken('identifier', 6, 'identifier')
+    ]);
+    expect(API.lex(testcase_mixed)).toEqualWithType([
+        new API.AlphanumericIdentifierToken('test', 0, 'test'),
+        new API.IdentifierToken('!', 4, '!'),
+        new API.AlphanumericIdentifierToken('identifier', 5, 'identifier')
+    ]);
+});
+
+it("long identifiers", () => {
+    let testcase_small: string = 'lon.ident';
+    let testcase_long: string = 'lon.hey10.der.ident';
+    let testcase_space1: string = 'lon.hey10 .der.ident';
+    let testcase_space2: string = 'lon.hey10. der.ident';
+    let testcase_numeric: string = 'xxx0.10';
+    let testcase_prime1: string = '\'lon.ident';
+    let testcase_prime2: string = 'lon.\'ident';
+    let testcase_double_prime1: string = '\'lon.ident';
+    let testcase_double_prime2: string = 'lon.\'ident';
+    let testcase_symbolic_good: string = 'lon.==';
+    let testcase_symbolic_bad: string = '==.ident';
+
+    expect(API.lex(testcase_small)).toEqualWithType([
+        new API.LongIdentifierToken(testcase_small, 0, [
+            new API.AlphanumericIdentifierToken('lon', 0, 'lon')
+        ], new API.AlphanumericIdentifierToken('ident', 4, 'ident'))
+    ]);
+    expect(API.lex(testcase_long)).toEqualWithType([
+        new API.LongIdentifierToken(testcase_long, 0, [
+            new API.AlphanumericIdentifierToken('lon', 0, 'lon'),
+            new API.AlphanumericIdentifierToken('hey10', 4, 'hey10'),
+            new API.AlphanumericIdentifierToken('der', 10, 'der')
+        ], new API.AlphanumericIdentifierToken('ident', 14, 'ident'))
+    ]);
+    expect(() => { API.lex(testcase_space1); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase_space2); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase_numeric); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase_prime1); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase_prime2); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase_double_prime1); }).toThrow(API.LexerError);
+    expect(() => { API.lex(testcase_double_prime2); }).toThrow(API.LexerError);
+    expect(API.lex(testcase_symbolic_good)).toEqualWithType([
+        new API.LongIdentifierToken(testcase_symbolic_good, 0, [
+            new API.AlphanumericIdentifierToken('lon', 0, 'lon')
+        ], new API.IdentifierToken('==', 4, '=='))
+    ]);
+    expect(() => { API.lex(testcase_symbolic_bad); }).toThrow(API.LexerError);
+});
