@@ -275,7 +275,7 @@ it("dots", () => {
     ]);
 });
 
-it("reserved words", () => {
+it("reserved words core", () => {
     let testcase: string = 'abstype and andalso as case datatype do else end exception fn fun handle if in infix infixr let local nonfix of op open orelse raise rec then type val with withtype while ( ) [ ] { } , : ; ... _ | = => -> #';
 
     expect(API.lex(testcase)).toEqualWithType([
@@ -790,4 +790,21 @@ it("long identifiers", () => {
         ], new API.IdentifierToken('==', 4, '=='))
     ]);
     expect(() => { API.lex(testcase_symbolic_bad); }).toThrow(API.LexerError);
+});
+
+it("reserved words module", () => {
+    let testcase: string = 'eqtype functor signature struct include sharing structure where sig :>';
+
+    expect(API.lex(testcase)).toEqualWithType([
+        new API.KeywordToken("eqtype", 0),
+        new API.KeywordToken("functor", 7),
+        new API.KeywordToken("signature", 15),
+        new API.KeywordToken("struct", 25),
+        new API.KeywordToken("include", 32),
+        new API.KeywordToken("sharing", 40),
+        new API.KeywordToken("structure", 48),
+        new API.KeywordToken("where", 58),
+        new API.KeywordToken("sig", 64),
+        new API.KeywordToken(":>", 68),
+    ])
 });
