@@ -8,6 +8,19 @@
     flex-direction: column;
 }
 
+.mini-collapsed > .window-header {
+    flex: 1;
+    word-break: break-all;
+}
+
+.mini-collapsed > .window-header :not(.window-title) {
+    display: none;
+}
+
+.mini-collapsed > .window-content, .mini-collapsed > .window-footer {
+    display: none !important;
+}
+
 .window-header {
     padding: 0rem .20rem;
     background-color: #C4C4C4;
