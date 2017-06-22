@@ -398,7 +398,8 @@ class Lexer {
         let firstChar: char = this.getChar();
         if (Lexer.isSymbolic(firstChar)) {
             charChecker = Lexer.isSymbolic;
-        } else if (Lexer.isAlphanumeric(firstChar)) {
+        } else if (Lexer.isAlphanumeric(firstChar) && !Lexer.isNumber(firstChar, false)) {
+            // alphanumeric identifiers may not start with a number
             charChecker = Lexer.isAlphanumeric;
         } else if (reservedWords.has(firstChar)) {
             return new KeywordToken(this.consumeChar(), this.tokenStart);
@@ -414,8 +415,7 @@ class Lexer {
         }
 
         do {
-            firstChar = this.consumeChar();
-            token += firstChar;
+            token += this.consumeChar();
         } while (charChecker(this.getChar()));
 
         if (token === '*') {
@@ -457,8 +457,8 @@ class Lexer {
 
         // Only value identifiers, type constructors and structure identifiers are allowed here.
         // EqualsToken is not allowed because it cannot be re-bound.
-        if (!(t instanceof IdentifierToken || t instanceof StarToken)) {
-            throw new LexerError(t.text + ' is not a valid identifier', t.position);
+        if ((!(t instanceof IdentifierToken || t instanceof StarToken)) || t instanceof TypeVariableToken) {
+            throw new LexerError(t.text + ' is not allowed in a long identifier', t.position);
         }
         return new LongIdentifierToken(this.input.substring(tokenStart, this.position), tokenStart, qualifiers, t);
     }
