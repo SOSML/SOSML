@@ -413,18 +413,10 @@ class Lexer {
             }
         }
 
-        while (true) {
-            do {
-                firstChar = this.consumeChar();
-                token += firstChar;
-            } while (charChecker(this.getChar()));
-
-            if (this.getChar() === '.') {
-                token += this.consumeChar();
-            } else {
-                break;
-            }
-        }
+        do {
+            firstChar = this.consumeChar();
+            token += firstChar;
+        } while (charChecker(this.getChar()));
 
         if (token === '*') {
             return new StarToken(this.tokenStart);
