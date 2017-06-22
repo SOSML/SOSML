@@ -2,20 +2,60 @@
  * Contains classes to represent SML values, e.g. int, string, functions, …
  */
 
-export interface Value {
-    // TODO:
+import { State } from './state';
+import { ASTNode } from './ast';
+import { InternalInterpreterError } from './errors';
+
+export abstract class Value {
+    abstract prettyPrint(): string;
 }
 
-export class Integer implements Value {
-    // TODO: value and functions to add and multiply etc.
+export class Integer extends Value {
+    value: number;
+
+    prettyPrint(): string {
+        return String(this.value);
+    }
 }
 
-export class Tuple implements Value {
-    // TODO: values
+export class Real extends Value {
+    value: number;
+
+    prettyPrint(): string {
+        return String(this.value);
+    }
 }
 
-export class Function implements Value {
-    // TODO
+export class Record extends Value {
+    entries: Map<string, Value>;
+
+    prettyPrint(): string {
+        // TODO
+        throw new InternalInterpreterError(0, 'not yet implemented');
+    }
 }
 
-// TODO: a class for values that were constructed from type constructors
+export class Lambda extends Value {
+    // TODO: we only need part of the state
+    state: State;
+    body: ASTNode;
+
+    prettyPrint(): string {
+        // TODO
+        throw new InternalInterpreterError(0, 'not yet implemented');
+    }
+}
+
+// Values that were constructed from type constructors
+export class CustomValue extends Value {
+    constructorName: string;
+    argument: Value;
+
+    prettyPrint(): string {
+        let result: string = '(' + this.constructorName;
+        if (this.argument) {
+            result += ' ' + this.argument.prettyPrint();
+        }
+        return result + ')';
+    }
+}

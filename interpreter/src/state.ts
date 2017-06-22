@@ -4,15 +4,61 @@
 //
 // TODO Remove stuff not needed for our subset of SML
 
+import { Type } from './types';
+
+export enum IdentifierStatus {
+    CONSTANT,
+    VALUE,
+    EXCEPTION
+}
+
+export class IdentifierInformation {
+    type: Type;
+    identifierStatus: IdentifierStatus;
+    precedence: number;
+    rightAssociative: boolean;
+    infix: boolean;
+}
+
+export interface ValueEnvironment {
+    // maps value identifiers to (type scheme, identifier status)
+    [name: string]: IdentifierInformation;
+}
+
+export class ConstructorInformation {
+    type: Type;
+    identifierStatus: IdentifierStatus;
+}
+
+export interface ConstructorSet {
+    [name: string]: ConstructorInformation;
+}
+
+export class TypeDefinition {
+    type: Type;
+    constructors: ConstructorSet;
+}
+
+export interface TypeEnvironment {
+    // maps type name to (type, [constructor])
+    [name: string]: TypeDefinition;
+}
+
 export class Environment {
-    structEnvironment:  any;
-    typeEnvironmet:     any;
-    valueEnvironment:   any; // maps value identifiers to (type scheme, identifier status)
+    structEnvironment:  any; // TODO
+    typeEnvironment: TypeEnvironment;
+    valueEnvironment: ValueEnvironment;
+}
+
+export class TypeName {
+    name: string;
+    arity: number;
+    allowsEquality: boolean;
 }
 
 export class State {
-    T: any;         // Type names
-    F: any;         // Functor environment
-    G: any;         // Signature environment
-    E: Environment;
+    typeNames:              TypeName[];         // Type names
+    functorEnvironment:     any;         // Functor environment TODO
+    signatureEnvironment:   any;         // Signature environment TODO
+    environment:            Environment;
 }

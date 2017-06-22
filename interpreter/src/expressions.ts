@@ -1,127 +1,353 @@
 import { Type } from './types';
-import { Pattern } from './patterns';
-import { Token, IdentifierToken, LongIdentifierToken } from './lexer';
+import { Token, IdentifierToken, KeywordToken } from './lexer';
 import { Declaration } from './declarations';
+import { ASTNode } from './ast';
+import { State } from './state';
+import { InternalInterpreterError, Position } from './errors';
+import { Value } from './values';
 
-// Interfaces
 
-// All expressions
-export interface Expression {
-}
-
-// Classes
-export class Match {
-// pat => exp or pat => exp | match
-    matches: [Pattern,  Expression][];
-}
-
-// Expression subclasses
-export class InfixExpression implements Expression {
-// leftOperand operator rightOperand
-    leftOperand: Expression;
-    operator: IdentifierToken;
-    rightOperand: Expression;
-}
-
-// Expression subclasses
-export class TypedExpression implements Expression {
-// expression: type (L)
-    expression: Expression;
+export abstract class Expression extends ASTNode {
     type: Type;
+
+    checkStaticSemantics(state: State): void {
+        this.type = this.computeType(state);
+    }
+
+    getType(state: State): Type {
+        if (this.type === undefined) { // TODO: is this.type really undefined if we never assign anything?
+            throw new InternalInterpreterError(this.position, 'didn\'t call checkStaticSemantics before getType');
+        }
+        return this.type;
+    }
+
+    computeType(state: State): Type {
+        throw new InternalInterpreterError(this.position, 'called computeType on derived form');
+    }
+
+    evaluate(state: State): void {
+        // TODO: should create a binding for the variable it to this expression value
+    }
+
+    getValue(state: State): Value {
+        throw new InternalInterpreterError(this.position, 'called getValue on derived form');
+    }
+
+    prettyPrint(indentation: number = 0, oneLine: boolean = false): string {
+        // TODO: move to subclasses
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+
+    abstract simplify(): Expression;
 }
 
-export class Conjunction implements Expression {
-// leftOperand andalso rightOperand
-    leftOperand: Expression;
-    rightOperand: Expression;
+
+export interface Pattern {
+    // Returns which bindings would be created by matching v to this Pattern,
+    // or undefined, if v does not match this Pattern.
+    matches(state: State, v: Value): [string, Value][] | undefined;
+    simplify(): Expression & Pattern;
 }
 
-export class Disjunction implements Expression {
-// leftOperand orelse rightOperand
-    leftOperand: Expression;
-    rightOperand: Expression;
+export class Wildcard extends Expression implements Pattern {
+    constructor(public position: Position) { super(); }
+
+    getValue(state: State): Value {
+        throw new InternalInterpreterError(this.position, 'called getValue on a pattern wildcard');
+    }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        return [];
+    }
+
+    simplify(): Wildcard {
+        return this;
+    }
 }
 
-export class HandleException implements Expression {
+export class LayeredPattern extends Expression implements Pattern {
+// <op> identifier <:type> as pattern
+    constructor(public position: Position, public identifier: IdentifierToken, public typeAnnotation: Type | undefined,
+                public pattern: Pattern & Expression
+    ) { super(); }
+
+    getValue(state: State): Value {
+        throw new InternalInterpreterError(this.position, 'called getValue on a pattern');
+    }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+
+    simplify(): LayeredPattern {
+        if (this.typeAnnotation) {
+            return new LayeredPattern(this.position, this.identifier, this.typeAnnotation.simplify(),
+                this.pattern.simplify());
+        } else {
+            return new LayeredPattern(this.position, this.identifier, undefined, this.pattern.simplify());
+        }
+    }
+}
+
+
+export class Match extends ASTNode {
+// pat => exp or pat => exp | match
+    patternType: Type;
+    returnType: Type;
+
+    constructor(public position: Position, public matches: [Pattern, Expression][]) { super (); }
+
+    checkStaticSemantics(state: State) {
+        // TODO
+    }
+
+    prettyPrint(indentation: number = 0, oneLine: boolean = false): string {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+
+    evaluate(state: State): void {
+        // TODO: probably remove
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+
+    getValue(state: State, matchWith: Value): Value {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+
+    simplify(): Match {
+        let newMatches: [Pattern, Expression][] = [];
+        for (let i: number = 0; i < this.matches.length; ++i) {
+            let m: [Pattern, Expression] = this.matches[i];
+            newMatches.push([m[0].simplify(), m[1].simplify()]);
+        }
+        return new Match(this.position, newMatches);
+    }
+}
+
+export class TypedExpression extends Expression implements Pattern {
+// expression: type (L)
+    constructor(public position: Position, public expression: Expression, public typeAnnotation: Type) { super(); }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+
+    simplify(): TypedExpression {
+        return new TypedExpression(this.position, this.expression.simplify(), this.typeAnnotation.simplify());
+    }
+}
+
+export class HandleException extends Expression {
 // expression handle match
-    expression: Expression;
-    match: Match;
+    constructor(public position: Position, public expression: Expression, public match: Match) { super(); }
+
+    simplify(): HandleException {
+        return new HandleException(this.position, this.expression.simplify(), this.match.simplify());
+    }
 }
 
-export class RaiseException implements Expression {
+export class RaiseException extends Expression {
 // raise expression
-    expression: Expression;
+    constructor(public position: Position, public expression: Expression) { super(); }
+
+    simplify(): RaiseException {
+        return new RaiseException(this.position, this.expression.simplify());
+    }
 }
 
-export class Conditional implements Expression {
-// if condition then ifTrue else ifFalse
-    condition: Expression;
-    ifTrue: Expression;
-    ifFalse: Expression;
-}
-
-export class Iteration implements Expression {
-// while condition do body
-    condition: Expression;
-    body: Expression;
-}
-
-export class CaseAnalysis implements Expression {
-// case expression of match
-    expression: Expression;
-    match: Match;
-}
-
-export class Lambda implements Expression {
+export class Lambda extends Expression {
 // fn match
-    match: Match;
+    constructor(public position: Position, public match: Match) { super(); }
+
+    simplify(): Lambda {
+        return new Lambda(this.position, this.match.simplify());
+    }
 }
 
-// ApplicationExpression subclasses
-export class FunctionApplication implements Expression {
+// May represent either a function application or a constructor with an argument
+export class FunctionApplication extends Expression implements Pattern {
 // function argument
-    function: Expression;
-    argument: Expression;
+    constructor(public position: Position, public func: Expression, public argument: Expression) { super(); }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+
+    simplify(): FunctionApplication {
+        return new FunctionApplication(this.position, this.func.simplify(), this.argument.simplify());
+    }
 }
 
-export class Constant implements Expression {
-    token: Token;
+export class Constant extends Expression implements Pattern {
+    constructor(public position: Position, public token: Token) { super(); }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+
+    simplify(): Constant { return this; }
 }
 
-export class ValueIdentifier implements Expression {
+export class ValueIdentifier extends Expression implements Pattern {
 // op longvid or longvid
-    opPrefixed: boolean;
-    name: LongIdentifierToken;
+    constructor(public position: Position, public name: Token) { super(); }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+
+    simplify(): ValueIdentifier { return this; }
 }
 
-export class Record implements Expression {
+export class Record extends Expression implements Pattern {
 // { lab = exp, ... } or { }
-    entries: [Token, Expression][];
+    // a record(pattern) is incomplete if it ends with '...'
+    constructor(public position: Position, public complete: boolean, public entries: [string, Expression][]) {
+        super();
+    }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+
+    simplify(): Record {
+        let newEntries: [string, Expression][] = [];
+        for (let i: number = 0; i < this.entries.length; ++i) {
+            let e: [string, Expression] = this.entries[i];
+            newEntries.push([e[0], e[1].simplify()]);
+        }
+        return new Record(this.position, this.complete, newEntries);
+    }
 }
 
-export class RecordSelector implements Expression {
-// #label record
-    label: Token;
-    record: Expression;
-}
-
-export class Tuple implements Expression {
-// (exp1, ..., expn), n != 1
-    expressions: Expression[];
-}
-
-export class List implements Expression {
-// [exp1, ..., expn]
-    expressions: Expression[];
-}
-
-export class Sequence implements Expression {
-// (exp1; ...; expn), n >= 2
-    expressions: Expression[];
-}
-
-export class LocalDeclaration implements Expression {
+export class LocalDeclaration extends Expression {
 // let dec in exp1; ...; expn end
-    declaration: Declaration;
-    expressions: Expression[];
+// A sequential expression exp1; ... ; expn is represented as such, despite the potentially missing parentheses
+    constructor(public position: Position, public declaration: Declaration, public expression: Expression) { super(); }
+
+    simplify(): LocalDeclaration {
+        // TODO: should be
+        // return new LocalDeclaration(this.position, this.declaration.simplify(), this.expression.simplify());
+        return new LocalDeclaration(this.position, this.declaration, this.expression.simplify());
+    }
+}
+
+
+// The following classes are derived forms. They will not be present in the simplified AST and do not implement
+// checkSemantics/getType and evaluate.
+
+export class InfixExpression extends Expression implements Pattern {
+// leftOperand operator rightOperand
+    constructor(public position: Position, public leftOperand: Expression, public operator: ValueIdentifier,
+                public rightOperand: Expression) { super(); }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        throw new InternalInterpreterError(this.position, 'called matches on derived form');
+    }
+
+    simplify(): FunctionApplication {
+        let argument: Tuple = new Tuple(this.position, [this.leftOperand, this.rightOperand]);
+        return new FunctionApplication(this.position, this.operator, argument.simplify());
+    }
+}
+
+let falseConstant: Constant = new Constant(0, new KeywordToken('false', 0));
+let trueConstant: Constant = new Constant(0, new KeywordToken('true', 0));
+
+export class Conjunction extends Expression {
+// leftOperand andalso rightOperand
+    constructor(public position: Position, public leftOperand: Expression, public rightOperand: Expression) { super(); }
+
+    simplify(): FunctionApplication {
+        return new Conditional(this.position, this.leftOperand, this.rightOperand, falseConstant).simplify();
+    }
+}
+
+export class Disjunction extends Expression {
+// leftOperand orelse rightOperand
+    constructor(public position: Position, public leftOperand: Expression, public rightOperand: Expression) { super(); }
+
+    simplify(): FunctionApplication {
+        return new Conditional(this.position, this.leftOperand, trueConstant, this.rightOperand).simplify();
+    }
+}
+
+export class Tuple extends Expression implements Pattern {
+// (exp1, ..., expn), n > 1
+    constructor(public position: Position, public expressions: Expression[]) { super(); }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        throw new InternalInterpreterError(this.position, 'called matches on derived form');
+    }
+
+    simplify(): Record {
+        let entries: [string, Expression][] = [];
+        for (let i: number = 0; i < this.expressions.length; ++i) {
+            entries[String(i + 1)] = this.expressions[i].simplify();
+        }
+        return new Record(this.position, true, entries);
+    }
+}
+
+export class List extends Expression implements Pattern {
+// [exp1, ..., expn]
+    constructor(public position: Position, public expressions: Expression[]) { super(); }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        throw new InternalInterpreterError(this.position, 'called matches on derived form');
+    }
+
+    simplify(): FunctionApplication {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+}
+
+export class Sequence extends Expression {
+// (exp1; ...; expn), n >= 2
+    constructor(public position: Position, public expressions: Expression[]) { super(); }
+
+    simplify(): FunctionApplication {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+}
+
+export class RecordSelector extends Expression {
+// #label record
+    constructor(public position: Position, public label: Token) { super(); }
+
+    simplify(): FunctionApplication {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+}
+
+export class CaseAnalysis extends Expression {
+// case expression of match
+    constructor(public position: Position, public expression: Expression, public match: Match) { super(); }
+
+    simplify(): FunctionApplication {
+        return new FunctionApplication(this.position, new Lambda(this.position, this.match.simplify()),
+            this.expression.simplify());
+    }
+}
+
+export class Conditional extends Expression {
+// if condition then ifTrue else ifFalse
+    constructor(public position: Position, public condition: Expression, public ifTrue: Expression,
+                public ifFalse: Expression) { super(); }
+
+    simplify(): FunctionApplication {
+        let match: Match = new Match(this.position, [[trueConstant, this.ifTrue], [falseConstant, this.ifFalse]]);
+        return new CaseAnalysis(this.position, this.condition, match).simplify();
+    }
 }
