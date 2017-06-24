@@ -46,7 +46,7 @@ export interface Pattern {
     // Returns which bindings would be created by matching v to this Pattern,
     // or undefined, if v does not match this Pattern.
     matches(state: State, v: Value): [string, Value][] | undefined;
-    simplify(): Expression & Pattern;
+    simplify(): Pattern;
 }
 
 export class Wildcard extends Expression implements Pattern {
@@ -68,7 +68,7 @@ export class Wildcard extends Expression implements Pattern {
 export class LayeredPattern extends Expression implements Pattern {
 // <op> identifier <:type> as pattern
     constructor(public position: Position, public identifier: IdentifierToken, public typeAnnotation: Type | undefined,
-                public pattern: Pattern & Expression
+                public pattern: Pattern | Expression
     ) { super(); }
 
     getValue(state: State): Value {
@@ -209,7 +209,7 @@ export class ValueIdentifier extends Expression implements Pattern {
 export class Record extends Expression implements Pattern {
 // { lab = exp, ... } or { }
     // a record(pattern) is incomplete if it ends with '...'
-    constructor(public position: Position, public complete: boolean, public entries: [string, Expression][]) {
+    constructor(public position: Position, public complete: boolean, public entries: [string, (Pattern | Expression)][]) {
         super();
     }
 
@@ -219,9 +219,9 @@ export class Record extends Expression implements Pattern {
     }
 
     simplify(): Record {
-        let newEntries: [string, Expression][] = [];
+        let newEntries: [string, (Pattern | Expression)][] = [];
         for (let i: number = 0; i < this.entries.length; ++i) {
-            let e: [string, Expression] = this.entries[i];
+            let e: [string, (Pattern | Expression)] = this.entries[i];
             newEntries.push([e[0], e[1].simplify()]);
         }
         return new Record(this.position, this.complete, newEntries);
@@ -282,14 +282,14 @@ export class Disjunction extends Expression {
 
 export class Tuple extends Expression implements Pattern {
 // (exp1, ..., expn), n > 1
-    constructor(public position: Position, public expressions: Expression[]) { super(); }
+    constructor(public position: Position, public expressions: (Pattern | Expression)[]) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         throw new InternalInterpreterError(this.position, 'called matches on derived form');
     }
 
     simplify(): Record {
-        let entries: [string, Expression][] = [];
+        let entries: [string, (Pattern | Expression)][] = [];
         for (let i: number = 0; i < this.expressions.length; ++i) {
             entries[String(i + 1)] = this.expressions[i].simplify();
         }

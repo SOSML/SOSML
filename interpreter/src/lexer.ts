@@ -16,20 +16,35 @@ export interface Token {
 export class KeywordToken implements Token {
     constructor(public text: string, public position: Position) {}
 }
-export class IntegerConstantToken implements Token {
-    constructor(public text: string, public position: Position, public value: int) {}
+
+export abstract class ConstantToken implements Token {
+    text: string;
+    position: Position;
 }
-export class RealConstantToken implements Token {
-    constructor(public text: string, public position: Position, public value: number) {}
+export class IntegerConstantToken extends ConstantToken {
+    constructor(public text: string, public position: Position, public value: int) {
+        super();
+    }
 }
-export class WordConstantToken implements Token {
-    constructor(public text: string, public position: Position, public value: int) {}
+export class RealConstantToken extends ConstantToken {
+    constructor(public text: string, public position: Position, public value: number) {
+        super();
+    }
 }
-export class CharacterConstantToken implements Token {
-    constructor(public text: string, public position: Position, public value: char) {}
+export class WordConstantToken extends ConstantToken {
+    constructor(public text: string, public position: Position, public value: int) {
+        super();
+    }
 }
-export class StringConstantToken implements Token {
-    constructor(public text: string, public position: Position, public value: string) {}
+export class CharacterConstantToken extends ConstantToken {
+    constructor(public text: string, public position: Position, public value: char) {
+        super();
+    }
+}
+export class StringConstantToken extends ConstantToken {
+    constructor(public text: string, public position: Position, public value: string) {
+        super();
+    }
 }
 
 // Any identifier not starting with a prime (')
