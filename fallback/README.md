@@ -15,7 +15,7 @@ Download the dependencies via:
 
 To build the fallback and load it onto your dockerhub run:
 ```bash
-docker build . youraccount/image
+docker build -t youraccount/image .
 ```
 
 ## Run
