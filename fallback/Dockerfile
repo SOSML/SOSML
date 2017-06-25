@@ -15,7 +15,7 @@ RUN groupadd mosml && useradd -g mosml -d "/home/mosml" -m mosml
 
 COPY run.sh /home/mosml
 
-#COPY isolate /home/mosml
+#COPY isolate/isolate /home/mosml
 #RUN ["/home/mosml/isolate","--init"]
 
 USER mosml
