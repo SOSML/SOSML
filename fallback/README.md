@@ -1,12 +1,12 @@
 # MoscowML fallback Docker image
 
-This folder contains the source code and configuration to build the Docker image for the 
+This folder contains the source code and configuration to build the Docker image for the
 MoscowML fallback server.
 
 ## Prerequisites
 
 You should have Docker installed and the Docker daemon running.
-Download the dependencies via:
+Download and build the dependencies via:
 ```bash
 ./download.sh
 ```
@@ -30,3 +30,7 @@ Or use mine:
 docker run --rm -i derjesko/mosmlfallback
 ```
 
+If run available for public running you should propably limit its resources:
+```bash
+docker run --cpus=1 --memory=128m --rm -i derjesko/mosmlfallback
+```

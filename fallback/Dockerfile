@@ -15,16 +15,12 @@ RUN groupadd mosml && useradd -g mosml -d "/home/mosml" -m mosml
 
 COPY run.sh /home/mosml
 
-#COPY isolate/isolate /home/mosml
-#RUN ["/home/mosml/isolate","--init"]
-
 USER mosml
 WORKDIR "/home/mosml"
 CMD ["/bin/bash","./run.sh"]
-#CMD ["/home/mosml/isolate","--run", "--","run.sh"]
 
 # pipe into this command for terminating after first error
-# docker run --rm -i derjesko/test
+# docker run --memory=128m --cpus=1 --rm -i derjesko/test
 
 ## Security points
 # 1. don't run as root
