@@ -3,12 +3,13 @@
 const express = require('express');
 const cmd = require('node-cmd');
 const bodyparser = require('body-parser');
+const path = require('path');
 
 const server = express();
 server.use(bodyparser.json());
 server.use('/static/', express.static('frontend/static'));
 server.get('/', function (request, response) {
-    response.sendFile('frontend/index.html');
+    response.sendFile(path.resolve(__dirname+'/../frontend/index.html'));
 });
 
 server.post('/api/fallback/',

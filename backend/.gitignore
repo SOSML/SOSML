@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/frontend
 
 # testing
 /coverage
@@ -17,4 +18,3 @@ yarn-debug.log*
 yarn-error.log*
 
 \.idea/
-
