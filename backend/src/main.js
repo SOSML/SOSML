@@ -1,41 +1,31 @@
 'use strict';
 
-const Hapi = require('hapi');
+const express = require('express');
 const cmd = require('node-cmd');
+const bodyparser = require('body-parser');
 
-const server = new Hapi.Server();
-server.connection({ port: 3000, host: 'localhost' });
+const server = express();
+server.use(bodyparser.json());
+server.use('/static/', express.static('frontend/static'));
+server.get('/', function (request, response) {
+    response.sendFile('frontend/index.html');
+});
 
-server.route({
-    method: ['GET', 'POST'],
-    path: '/api/fallback/',
-    payload: {
-      output: 'data',
-      parse: true
-    },
-    handler: function (request, reply) {
-        var payload = request.payload.data;
+server.post('/api/fallback/',
+    function (request, response) {
+        var payload = request.body.data;
 
         console.log(payload);
 
-        const ret = new Promise(function (resolve, reject) {
-            let dockerrunner = cmd.get(
-                'docker run --cpus=1 --memory=128m --rm -i --read-only derjesko/mosmlfallback',
-                function(err, data, stderr){
-                    resolve(data);
-                }
-            );
-            dockerrunner.stdin.write(payload);
-        });
-
-        reply(ret).code(200);
+        let dockerrunner = cmd.get(
+            'docker run --cpus=1 --memory=128m --rm -i --read-only derjesko/mosmlfallback',
+            function(err, data, stderr){
+                response.set('Content-Type', 'text/plain');
+                response.end(data);
+            }
+        );
+        dockerrunner.stdin.write(payload);
     }
-});
+);
 
-server.start((err) => {
-
-    if (err) {
-        throw err;
-    }
-    console.log(`Server running at: ${server.info.uri}`);
-});
+server.listen(3000, () => {console.log('yay');} )
