@@ -10,17 +10,14 @@ RUN apt-get update -y && \
     dpkg -i /tmp/mosml*
 
 # user rights shit
-RUN groupadd mosml && useradd -g mosml -d "/home/mosml" -m mosml
+RUN groupadd mosml && useradd -g mosml -u 1000 -d "/home/mosml" -m mosml
 
 
-COPY run.sh /home/mosml
+COPY run.sh /bin
 
 USER mosml
 WORKDIR "/home/mosml"
-CMD ["/bin/bash","./run.sh"]
-
-# pipe into this command for terminating after first error
-# docker run --memory=128m --cpus=1 --rm -i derjesko/test
+CMD ["/bin/bash","/bin/run.sh"]
 
 ## Security points
 # 1. don't run as root
