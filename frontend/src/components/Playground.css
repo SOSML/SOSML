@@ -12,6 +12,7 @@
     position: absolute;
     left: 0px;
     height: calc(100% - 3px);
+    width: 100%;
 }
 
 .playground .window-content {
