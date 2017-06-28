@@ -1,2 +1,7 @@
 #!/bin/bash
-timeout 3 mosml | tail -n +3
+function rest_mosml {
+  timeout 3 mosml
+  echo $?
+}
+
+rest_mosml | tail -n +3
