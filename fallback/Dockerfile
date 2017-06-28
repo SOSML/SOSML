@@ -24,4 +24,5 @@ CMD ["/bin/bash","/bin/run.sh"]
 # 2. sanitize user input
 # 3. secure/up-to-date connection protocols
 
-# https://hmarr.com/2013/oct/16/codecube-runnable-gists/
+# if you want to write
+# --tmpfs /home/mosml:rw,noexec,nosuid,nodev,size=256k,uid=1000 

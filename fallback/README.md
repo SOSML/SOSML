@@ -33,5 +33,5 @@ docker run --rm -i derjesko/mosmlfallback
 
 If run available for public running you should propably limit its resources:
 ```bash
-docker run --cpus=1 --memory=128m --rm -i --tmpfs /home/mosml:rw,noexec,nosuid,nodev,size=256k,uid=1000 --read-only derjesko/mosmlfallback
+docker run --cpus=1 --memory=128m --rm -i --read-only derjesko/mosmlfallback
 ```
