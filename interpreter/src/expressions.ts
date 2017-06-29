@@ -209,7 +209,8 @@ export class ValueIdentifier extends Expression implements Pattern {
 export class Record extends Expression implements Pattern {
 // { lab = exp, ... } or { }
     // a record(pattern) is incomplete if it ends with '...'
-    constructor(public position: Position, public complete: boolean, public entries: [string, (Pattern | Expression)][]) {
+    constructor(public position: Position, public complete: boolean,
+                public entries: [string, (Pattern | Expression)][]) {
         super();
     }
 
