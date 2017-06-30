@@ -14,9 +14,7 @@ server.get('/', function (request, response) {
 
 server.post('/api/fallback/',
     function (request, response) {
-        var payload = request.body.data;
-
-        console.log(payload);
+        var payload = request.body.code;
 
         let dockerrunner = cmd.get(
             'docker run --cpus=1 --memory=128m --rm -i --read-only derjesko/mosmlfallback',
