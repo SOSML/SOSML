@@ -15,7 +15,7 @@ export interface Type {
 export enum PrimitiveTypes { int, real, word, string, char, bool }
 
 export class PrimitiveType implements Type {
-    constructor(public type: PrimitiveTypes) {}
+    constructor(public position: Position, public type: PrimitiveTypes) {}
 
     prettyPrint(): string {
         return PrimitiveTypes[this.type];
@@ -30,7 +30,7 @@ export class PrimitiveType implements Type {
 }
 
 export class TypeVariable implements Type {
-    constructor(public name: string) {}
+    constructor(public position: Position, public name: string) {}
 
     prettyPrint(): string {
         return name;
@@ -44,20 +44,21 @@ export class TypeVariable implements Type {
 }
 
 export class RecordType implements Type {
-    constructor(public elements: Map<string, Type>, public complete: boolean = true) {}
+    constructor(public position: Position,
+                public complete: boolean,
+                public entries: [string, Type][]) {}
 
     prettyPrint(): string {
         // TODO: print as Tuple if possible
         let result: string = '{';
         let first: boolean = true;
-        this.elements.forEach((type: Type, key: string) => {
+        for (let i: number = 0; i < this.entries.length; ++i) {
             if (!first) {
                 result += ', ';
-            } else {
-                first = false;
             }
-            result += key + ' : ' + type.prettyPrint();
-        });
+            first = false;
+            result += this.entries[i][0] + ': ' + this.entries[i][1].prettyPrint();
+        }
         if (!this.complete) {
             if (!first) {
                 result += ', ';
@@ -73,16 +74,19 @@ export class RecordType implements Type {
     }
 
     simplify(): Type {
-        let newElements: Map<string, Type> = new Map<string, Type>();
-        this.elements.forEach((type: Type, key: string) => {
-            newElements[key] = type.simplify();
-        });
-        return new RecordType(newElements, this.complete);
+        let newEntries: [string, Type][] = [];
+        for (let i: number = 0; i < this.entries.length; ++i) {
+            let e: [string, Type] = this.entries[i];
+            newEntries.push([e[0], e[1].simplify()]);
+        }
+        return new RecordType(this.position, this.complete, newEntries);
     }
 }
 
 export class Function implements Type {
-    constructor(public parameterType: Type, public returnType: Type) {}
+    constructor(public position: Position,
+                public parameterType: Type,
+                public returnType: Type) {}
 
     prettyPrint(): string {
         return '(' + this.parameterType + ' -> ' + this.returnType + ')';
@@ -94,7 +98,7 @@ export class Function implements Type {
     }
 
     simplify(): Type {
-        return new Function(this.parameterType.simplify(), this.returnType.simplify());
+        return new Function(this.position, this.parameterType.simplify(), this.returnType.simplify());
     }
 }
 
@@ -102,7 +106,9 @@ export class Function implements Type {
 export class CustomType implements Type {
     // fullName: a unique name for this type
     // typeArguments: instantiations for any type variables this datatype may have
-    constructor(public fullName: string, public typeArguments: TypeVariable[]) {}
+    constructor(public position: Position,
+                public fullName: string,
+                public typeArguments: TypeVariable[]) {}
 
     prettyPrint(): string {
         let result: string = '';
@@ -130,8 +136,9 @@ export class CustomType implements Type {
 }
 
 // this is a derived form used only for type annotations
-export class Tuple implements Type {
-    constructor(public elements: Type[]) {}
+export class TupleType implements Type {
+    constructor(public position: Position,
+                public elements: [string, Type][]) {}
 
     prettyPrint(): string {
         let result: string = '(';
@@ -139,7 +146,7 @@ export class Tuple implements Type {
             if (i > 0) {
                 result += ' * ';
             }
-            result += ' ' + this.elements[i].prettyPrint();
+            result += this.elements[i][1].prettyPrint();
         }
         return result + ')';
     }
@@ -149,10 +156,10 @@ export class Tuple implements Type {
     }
 
     simplify(): Type {
-        let entries: Map<string, Type> = new Map<string, Type>();
+        let entries: [string, Type][] = [];
         for (let i: number = 0; i < this.elements.length; ++i) {
-            entries[String(i + 1)] = this.elements[i].simplify();
+            entries[String(i + 1)] = this.elements[i][1].simplify();
         }
-        return new RecordType(entries, true);
+        return new RecordType(this.position, true, entries);
     }
 }

@@ -284,7 +284,7 @@ export class Tuple extends Expression implements Pattern {
     simplify(): Record {
         let entries: [string, (Pattern | Expression), Type|undefined][] = [];
         for (let i: number = 0; i < this.expressions.length; ++i) {
-            entries[String(i + 1)] = [this.expressions[i].simplify(), undefined];
+            entries[String(i + 1)] = [this.expressions[i][1].simplify(), undefined];
         }
         return new Record(this.position, true, entries);
     }

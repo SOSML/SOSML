@@ -1,6 +1,6 @@
 import { ASTNode } from './ast';
 import { Expression, Pattern, Tuple, Constant, ValueIdentifier, Wildcard,
-         LayeredPattern, FunctionApplication, TypedExpression, Record } from './expressions';
+         LayeredPattern, FunctionApplication, TypedExpression, Record, List } from './expressions';
 import { Type, RecordType } from './types';
 import { InternalInterpreterError, InterpreterError, Position } from './errors';
 import { Token, KeywordToken, IdentifierToken, ConstantToken } from './lexer';
@@ -46,11 +46,43 @@ export class Parser {
 
     parseExpressionRow(): Expression {
         /*
+         * Parses Record expression, munches closing }
          * exprow ::= lab = exp [, exprow]  Record(position, complete: boolean,
          *                                         entries: [string, (Pattern|Expression)][])
          *              IdentifierToken KeywordToken exp [KeywordToken exp]*
          */
-        throw new InternalInterpreterError(0, 'not yet implemented');
+        let curTok = this.currentToken();
+        let res = new Record(curTok.position, true, []);
+        let firstIt = true;
+        while (true) {
+            curTok = this.currentToken();
+            if (curTok instanceof KeywordToken && curTok.text === '}') {
+                ++this.position;
+                return res;
+            }
+            if (!firstIt && curTok instanceof KeywordToken && curTok.text === ',') {
+                ++this.position;
+                continue;
+            }
+            firstIt = false;
+
+            if (curTok instanceof IdentifierToken) {
+                ++this.position;
+                let nextTok = this.currentToken();
+                if (!(nextTok instanceof KeywordToken)) {
+                    throw new ParserError('Expected "=".', nextTok.position);
+                }
+
+                if (nextTok.text === '=') {
+                    // lab = pat
+                    ++this.position;
+                    res.entries.push([curTok.text, this.parsePattern(), undefined]);
+                    continue;
+                }
+                throw new ParserError('Expected "=".', nextTok.position);
+            }
+            throw new ParserError('Expected "}", or identifier', curTok.position);
+        }
     }
 
     parseApplicationExpression(): Expression {
@@ -61,7 +93,6 @@ export class Parser {
         throw new InternalInterpreterError(0, 'not yet implemented');
     }
 
-    // TODO Consider merging this with parseApplicationExpression
     parseInfixExpression(): Expression {
         /*
          * infexp ::= appexp
@@ -259,7 +290,7 @@ export class Parser {
                         } else if (nextCurTok.text === ']') {
                             ++this.position;
                             // TODO this oughtn't be a tuple
-                            return new Tuple(curTok.position, results);
+                            return new List(curTok.position, results);
                         } else {
                             throw new ParserError('Expected "," or "]".', nextCurTok.position);
                         }
@@ -437,7 +468,8 @@ export class Parser {
     }
     parseTypeRow(): RecordType {
         /*
-         * tyrow ::= lab : ty [, tyrow]     types.Record(elem:Map<string,Type>, comp:boolean)
+         * Parses Record type, munches closing }
+         * tyrow ::= lab : ty [, tyrow]     Record(comp:boolean, entries: [string, Type])
          */
         throw new InternalInterpreterError(0, 'not det implemented');
     }
