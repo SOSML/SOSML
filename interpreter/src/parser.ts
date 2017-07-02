@@ -1,9 +1,10 @@
 import { ASTNode } from './ast';
 import { Expression, Pattern, Tuple, Constant, ValueIdentifier, Wildcard,
          LayeredPattern, FunctionApplication, TypedExpression, Record, List } from './expressions';
-import { Type, RecordType } from './types';
+import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } from './types';
 import { InternalInterpreterError, InterpreterError, Position } from './errors';
-import { Token, KeywordToken, IdentifierToken, ConstantToken } from './lexer';
+import { Token, KeywordToken, IdentifierToken, ConstantToken,
+         TypeVariableToken } from './lexer';
 import { State } from './state';
 
 export class ParserError extends InterpreterError {
@@ -466,24 +467,123 @@ export class Parser {
         }
         return pats[0];
     }
+
     parseTypeRow(): RecordType {
         /*
          * Parses Record type, munches closing }
          * tyrow ::= lab : ty [, tyrow]     Record(comp:boolean, entries: [string, Type])
          */
-        throw new InternalInterpreterError(0, 'not det implemented');
+        let curTok = this.currentToken();
+        let res = new RecordType(curTok.position, true, []);
+        let firstIt = true;
+        while (true) {
+            curTok = this.currentToken();
+            if (curTok instanceof KeywordToken && curTok.text === '}') {
+                ++this.position;
+                return res;
+            }
+            if (!firstIt && curTok instanceof KeywordToken && curTok.text === ',') {
+                ++this.position;
+                continue;
+            }
+            firstIt = false;
+
+            if (curTok instanceof IdentifierToken) {
+                ++this.position;
+                let nextTok = this.currentToken();
+                if (!(nextTok instanceof KeywordToken)) {
+                    throw new ParserError('Expected ":".', nextTok.position);
+                }
+
+                if (nextTok.text === ':') {
+                    // lab = pat
+                    ++this.position;
+                    res.entries.push([curTok.text, this.parseType()]);
+                    continue;
+                }
+                throw new ParserError('Expected ":".', nextTok.position);
+            }
+            throw new ParserError('Expected "}", or identifier', curTok.position);
+        }
+    }
+
+    parseSimpleType(): Type {
+        /*
+         * ty ::= tyvar             TypeVariable(name:string)
+         *        ty[] longtycon    CustomType(fullName:String, tyArg:TypeVariable[])
+         *        { [tyrow] }
+         *        ( ty )
+         */
+        let curTok = this.currentToken();
+        if (curTok instanceof TypeVariableToken) {
+            let tyvars: TypeVariable[] = [new TypeVariable(curTok.position, curTok.text)];
+            ++this.position;
+            curTok = this.currentToken();
+            while (curTok instanceof TypeVariableToken) {
+                tyvars.push(new TypeVariable(curTok.position, curTok.text));
+                ++this.position;
+                curTok = this.currentToken();
+            }
+            if (tyvars.length === 1) {
+                return tyvars[0];
+            }
+            // TODO Nicely handle long identifiers
+            if (!(curTok instanceof IdentifierToken)) {
+                throw new ParserError('Expected an identifier', curTok.position);
+            }
+            ++this.position;
+            // TODO replace the string arg with something more sensible
+            return new CustomType(curTok.position, curTok.text, tyvars);
+        }
+
+        if (curTok instanceof KeywordToken) {
+            if (curTok.text === '{') {
+                ++this.position;
+                return this.parseTypeRow();
+            }
+            if (curTok.text === '(') {
+                ++this.position;
+                let res = this.parseType();
+                curTok = this.currentToken();
+                if (!(curTok instanceof KeywordToken)
+                    || curTok.text !== ')') {
+                    throw new ParserError('Missing closing ")"', curTok.position);
+                }
+                ++this.position;
+                return res;
+            }
+            throw new ParserError('Expected either "(" or "{".', curTok.position);
+        }
+        throw new ParserError('Expected a simple type.', curTok.position);
+    }
+
+    parseArrowType(): Type {
+        /*
+         * ty ::= ty1 -> ty2        Function(param:Type, return:Type)
+         */
+        let curTy = this.parseSimpleType();
+        let curTok = this.currentToken();
+        if (!(curTok instanceof KeywordToken)
+            || curTok.text !== '->') {
+            return curTy;
+        }
+        ++this.position;
+        let tgTy = this.parseType();
+        return new FunctionType(curTok.position, curTy, tgTy);
     }
 
     parseType(): Type {
         /*
-         * ty ::= tyvar             TypeVariable(name:string)
-         *        { [tyrow] }
-         *        ty[] longtycon    CustomType(fullName:String, tyArg:TypeVariable[])
-         *        ty1 * … * tyn     Tuple(types:Type[])
-         *        ty1 -> ty2        Function(param:Type, return:Type)
-         *        ( ty )
+         * ty ::= ty1 * … * tyn     TupleType(types:Type[])
          */
-        throw new InternalInterpreterError(0, 'not yet implemented');
+        let curTy = [this.parseArrowType()];
+        let curTok = this.currentToken();
+        let pos = curTok.position;
+        while (curTok instanceof KeywordToken && curTok.text === '*') {
+            ++this.position;
+            curTy.push(this.parseArrowType());
+        }
+        return new TupleType(pos, curTy);
     }
 
     parseDeclaration(): ASTNode {

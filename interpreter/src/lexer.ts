@@ -71,17 +71,19 @@ export class EqualityTypeVariableToken extends TypeVariableToken {
 
 // A star (*) can be used as value identifier or record label, but not as a type constructor and thus must be separated.
 // See SML definition, chapter 2.4 Identifiers
-export class StarToken implements Token {
-    public text: string = '*';
-    constructor(public position: Position) {}
+export class StarToken extends KeywordToken {
+    constructor(public position: Position) {
+        super('*', position);
+    }
 }
 
 // Reserved words are generally not allowed as identifiers. "The only exception to this rule is that the symbol = ,
 // which is a reserved word, is also allowed as an identifier to stand for the equality predicate.
 // The identifier = may not be re-bound; this precludes any syntactic ambiguity." (Definition of SML, page 5)
-export class EqualsToken implements Token {
-    public text: string = '=';
-    constructor(public position: Position) {}
+export class EqualsToken extends KeywordToken {
+    constructor(public position: Position) {
+        super('=', position);
+    }
 }
 
 // A numeric token (a positive, decimal integer not starting with '0') can be used either as an integer constant or as

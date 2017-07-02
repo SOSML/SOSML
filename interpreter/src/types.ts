@@ -1,4 +1,4 @@
-import { InternalInterpreterError } from './errors';
+import { InternalInterpreterError, Position } from './errors';
 
 export interface Type {
     prettyPrint(): string;
@@ -83,7 +83,7 @@ export class RecordType implements Type {
     }
 }
 
-export class Function implements Type {
+export class FunctionType implements Type {
     constructor(public position: Position,
                 public parameterType: Type,
                 public returnType: Type) {}
@@ -98,7 +98,7 @@ export class Function implements Type {
     }
 
     simplify(): Type {
-        return new Function(this.position, this.parameterType.simplify(), this.returnType.simplify());
+        return new FunctionType(this.position, this.parameterType.simplify(), this.returnType.simplify());
     }
 }
 
@@ -138,7 +138,7 @@ export class CustomType implements Type {
 // this is a derived form used only for type annotations
 export class TupleType implements Type {
     constructor(public position: Position,
-                public elements: [string, Type][]) {}
+                public elements: Type[]) {}
 
     prettyPrint(): string {
         let result: string = '(';
@@ -146,7 +146,7 @@ export class TupleType implements Type {
             if (i > 0) {
                 result += ' * ';
             }
-            result += this.elements[i][1].prettyPrint();
+            result += this.elements[i].prettyPrint();
         }
         return result + ')';
     }
@@ -158,7 +158,7 @@ export class TupleType implements Type {
     simplify(): Type {
         let entries: [string, Type][] = [];
         for (let i: number = 0; i < this.elements.length; ++i) {
-            entries[String(i + 1)] = this.elements[i][1].simplify();
+            entries[String(i + 1)] = this.elements[i].simplify();
         }
         return new RecordType(this.position, true, entries);
     }
