@@ -43,7 +43,7 @@ export class TypeVariable implements Type {
     simplify(): Type { return this; }
 }
 
-export class Record implements Type {
+export class RecordType implements Type {
     constructor(public elements: Map<string, Type>, public complete: boolean = true) {}
 
     prettyPrint(): string {
@@ -77,7 +77,7 @@ export class Record implements Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements[key] = type.simplify();
         });
-        return new Record(newElements, this.complete);
+        return new RecordType(newElements, this.complete);
     }
 }
 
@@ -153,6 +153,6 @@ export class Tuple implements Type {
         for (let i: number = 0; i < this.elements.length; ++i) {
             entries[String(i + 1)] = this.elements[i].simplify();
         }
-        return new Record(entries, true);
+        return new RecordType(entries, true);
     }
 }

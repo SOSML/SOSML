@@ -5,6 +5,7 @@
 // TODO Remove stuff not needed for our subset of SML
 
 import { Type } from './types';
+import { IdentifierToken } from './lexer';
 
 export enum IdentifierStatus {
     CONSTANT,
@@ -61,4 +62,8 @@ export class State {
     functorEnvironment:     any;         // Functor environment TODO
     signatureEnvironment:   any;         // Signature environment TODO
     environment:            Environment;
+
+    getIdentifierInformation(id: IdentifierToken): IdentifierInformation {
+        return this.environment.valueEnvironment[id.text];
+    }
 }
