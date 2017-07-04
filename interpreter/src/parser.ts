@@ -91,7 +91,19 @@ export class Parser {
          *            appexp atexp      FunctionApplication(position, func:exp, arg:exp)
          *              exp exp
          */
-        throw new InternalInterpreterError(0, 'not yet implemented');
+        let res = this.parseAtomicExpression();
+        while (true) {
+            let oldPos = this.position;
+            try {
+                let newExp = this.parseAtomicExpression();
+                // TODO position
+                res = new FunctionApplication(-1, res, newExp);
+            } catch (ParserError) {
+                this.position = oldPos;
+                break;
+            }
+        }
+        return res;
     }
 
     parseInfixExpression(): Expression {
@@ -100,7 +112,65 @@ export class Parser {
          *            infexp1 vid infexp2   FunctionApplication(pos, ValueIdentifier, (exp1,exp2))
          *              exp IdentifierToken exp
          */
-        throw new InternalInterpreterError(0, 'not yet implemented');
+        let exps: Expression[] = [];
+        let ops: [IdentifierToken, number][] = [];
+        let cnt: number = 0;
+
+        while (true) {
+            exps.push(this.parseApplicationExpression());
+
+            let curTok = this.currentToken();
+            if (curTok instanceof IdentifierToken) {
+                if (!this.state.getIdentifierInformation(curTok).infix) {
+                    // TODO handle case where the identifier doesn't exist
+                    break;
+                } else {
+                    ++this.position;
+                    ops.push([curTok, cnt++]);
+                }
+            } else {
+                break;
+            }
+        }
+
+        ops.sort(([a, p1], [b, p2]) => {
+            let sta = this.state.getIdentifierInformation(a);
+            let stb = this.state.getIdentifierInformation(b);
+            if (sta.precedence > stb.precedence) {
+                return -1;
+            }
+            if (sta.precedence < stb.precedence) {
+                return 1;
+            }
+            if (sta.rightAssociative) {
+                if (p1 < p2) {
+                    return -1;
+                }
+                if (p1 > p2) {
+                    return 1;
+                }
+            } else {
+                if (p1 < p2) {
+                    return 1;
+                }
+                if (p1 > p2) {
+                    return -1;
+                }
+            }
+            return 0;
+        });
+
+        // Using copy by reference to make this work whithout shrinking the array
+        for (let i = 0; i < ops.length; ++i) {
+            let left = exps[ops[i][1]];
+            let right = exps[ops[i][1] + 1];
+            let com = new FunctionApplication(ops[i][0].position,
+                                              new ValueIdentifier(ops[i][0].position, ops[i][0]),
+                                              new Tuple(ops[i][0].position, [left, right]));
+            exps[ops[i][1]] = com;
+            exps[ops[i][1] + 1] = com;
+        }
+        return exps[0];
     }
 
     parseExpression(): Expression {
