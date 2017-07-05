@@ -3,7 +3,7 @@ import { Expression } from './expressions';
 import { IdentifierToken, Token } from './lexer';
 import { Type, TypeVariable } from './types';
 import { State } from './state';
-import { InternalInterpreterError } from './errors';
+import { InternalInterpreterError, Position } from './errors';
 import { ASTNode } from './ast';
 
 
@@ -23,119 +23,130 @@ export abstract class Declaration extends ASTNode {
 }
 
 export class ExceptionDeclaration extends Declaration {
+    constructor(public position: Position) {
+        super();
+    }
 }
 
 export class ValueBinding {
 // <rec> pattern = expression
-    isRecursive: boolean;
-    pattern: Pattern;
-    expression: Expression;
+    constructor(public position: Position, public isRecursive: boolean,
+                public pattern: Pattern, public expression: Expression) {
+    }
 }
 
 // TODO: derived form
 export class FunctionValueBinding {
-    name: IdentifierToken;
-    parameters: Pattern[][];
-    type: Type | undefined;
-    bodies: Expression[];
+    constructor(public position: Position, public name: IdentifierToken,
+                public parameters: Pattern[][], public type: Type | undefined,
+                public bodies: Expression[]) {
+    }
 }
 
 export class TypeBinding {
 // typeVariableSequence name = type
-    typeVariableSequence: TypeVariable[];
-    name: IdentifierToken;
-    type: Type;
+    constructor(public position: Position, public typeVariableSequence: TypeVariable[],
+                public name: IdentifierToken, public type: Type) {
+    }
 }
 
 export class DatatypeBinding {
 // typeVariableSequence name = <op> constructor <of type>
-    typeVariableSequence: TypeVariable[];
-    name: IdentifierToken;
     // type: [constructorName, <type>]
-    type: [IdentifierToken, Type | undefined][];
+    constructor(public position: Position, public typeVariableSequence: TypeVariable[],
+                public name: IdentifierToken, public type: [IdentifierToken, Type | undefined][]) {
+    }
 }
 
 export class DirectExceptionBinding extends ExceptionDeclaration {
 // <op> name <of type>
-    name: IdentifierToken;
-    type: Type | undefined;
+    constructor(public position: Position, public name: IdentifierToken, public type: Type | undefined) {
+        super(position);
+    }
 }
 
 export class ExceptionAlias extends ExceptionDeclaration {
 // <op> name = <op> oldname
-    name: IdentifierToken;
-    oldname: Token;
+    constructor(public position: Position, public name: IdentifierToken, public oldname: Token) {
+        super(position);
+    }
 }
 
 // Declaration subclasses
 export class ValueDeclaration extends Declaration {
 // val typeVariableSequence valueBinding
-    typeVariableSequence: TypeVariable[];
-    valueBinding: ValueBinding[];
+    constructor(public position: Position, public typeVariableSequence: TypeVariable[],
+                public valueBinding: ValueBinding[]) {
+        super();
+    }
 }
 
 // TODO: derived form
 export class FunctionDeclaration extends Declaration {
 // fun typeVariableSequence functionValueBinding
-    typeVariableSequence: TypeVariable[];
-    functionValueBinding: FunctionValueBinding[];
+    constructor(public position: Position, public typeVariableSequence: TypeVariable[],
+                public functionValueBinding: FunctionValueBinding[]) {
+        super();
+    }
 }
 
 // TODO: derived form
 export class TypeDeclaration extends Declaration {
 // type typeBinding
-    typeBinding: TypeBinding[];
+    constructor(public position: Position, public typeBinding: TypeBinding[]) {
+        super();
+    }
 }
 
 // TODO: maybe merge with DatatypeBinding? <withtype typeBinding> is a derived form
 export class DatatypeDeclaration extends Declaration {
 // datatype datatypeBinding <withtype typeBinding>
-    datatypeBinding: DatatypeBinding[];
-    typeBinding: (TypeBinding[]) | undefined;
+    constructor(public position: Position, public datatypeBinding: DatatypeBinding[],
+                public typeBinding: (TypeBinding[]) | undefined) {
+        super();
+    }
 }
 
 export class DatatypeReplication extends Declaration {
 // datatype name -=- datatype oldname
-    name: IdentifierToken;
-    oldname: Token;
+    constructor(public position: Position, public name: IdentifierToken,
+                public oldname: Token) {
+        super();
+    }
 }
 
 export class AbstypeDeclaration extends Declaration {
 // abstype datatypeBinding <withtype typeBinding> with declaration end
-    datatypeBinding: DatatypeBinding[];
-    typeBinding: (TypeBinding[]) | undefined;
-    declaration: Declaration;
+    constructor(public position: Position, public datatypeBinding: DatatypeBinding[],
+                public typeBinding: (TypeBinding[]) | undefined, public declaration: Declaration) {
+        super();
+    }
 }
 
 export class LocalDeclaration extends Declaration {
 // local declaration in body end
-    declaration: Declaration;
-    body: Declaration;
+    constructor(public position: Position, public declaration: Declaration, public body: Declaration) {
+        super();
+    }
 }
 
 export class OpenDeclaration extends Declaration {
 // open name_1 ... name_n
-    names: Token; // longstrid
+    constructor(public position: Position, public names: Token[]) {
+        super();
+    }
 }
 
 export class SequentialDeclarations extends Declaration {
 // declaration1 <;> declaration2
-    declarations: Declaration[];
+    constructor(public position: Position, public declarations: Declaration[]) {
+        super();
+    }
 }
 
-export class InfixLDirective extends Declaration {
-// infix <level> name_1 ... name_n
-    level: number;
-    names: IdentifierToken[];
-}
-
-export class InfixRDirective extends Declaration {
-// infixr <level> name_1 ... name_n
-    level: number;
-    names: IdentifierToken[];
-}
-
-export class NonfixDirective extends Declaration {
-// nonfix name_1 ... name_n
-    names: IdentifierToken[];
+export class EmptyDeclaration extends Declaration {
+// exactly what it sais on the tin.
+    constructor(public position: Position) {
+        super();
+    }
 }

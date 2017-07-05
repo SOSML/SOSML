@@ -395,20 +395,20 @@ export class Parser {
         let firstIt = true;
         while (true) {
             curTok = this.currentToken();
-            if (curTok instanceof KeywordToken && curTok.text === '}') {
+            if (this.checkKeywordToken(curTok, '}')) {
                 ++this.position;
                 return res;
             }
             if (!res.complete) {
                 throw new ParserError('Record wildcard must appear as last element of the record.', curTok.position);
             }
-            if (!firstIt && curTok instanceof KeywordToken && curTok.text === ',') {
+            if (!firstIt && this.checkKeywordToken(curTok, ',')) {
                 ++this.position;
                 continue;
             }
             firstIt = false;
 
-            if (curTok instanceof KeywordToken && curTok.text === '...') {
+            if (this.checkKeywordToken(curTok, '...')) {
                 // A wildcard may only occur as the last entry of a record.
                 res.complete = false;
                 ++this.position;
@@ -475,87 +475,81 @@ export class Parser {
             throw new ParserError('Unexpected end of token stream', -1);
         }
         let curTok = this.currentToken();
-        if (curTok instanceof KeywordToken) {
-            if (curTok.text === 'op') {
-                ++this.position;
-                let nextCurTok = this.currentToken();
+        if (this.checkKeywordToken(curTok, 'op')) {
+            ++this.position;
+            let nextCurTok = this.currentToken();
 
-                if (nextCurTok instanceof IdentifierToken) {
-                    // TODO check wath happens if the identifier doesn't exist.
-                    let idInf = this.state.getIdentifierInformation(nextCurTok);
-                    if (!idInf.infix) {
-                        throw new ParserError('Cannot use "op" on non-infix identifier', nextCurTok.position);
-                    }
-                    return new ValueIdentifier(curTok.position, nextCurTok);
+            if (nextCurTok instanceof IdentifierToken) {
+                // TODO check wath happens if the identifier doesn't exist.
+                let idInf = this.state.getIdentifierInformation(nextCurTok);
+                if (!idInf.infix) {
+                    throw new ParserError('Cannot use "op" on non-infix identifier', nextCurTok.position);
                 }
-                throw new ParserError('Expected identifier after op',
-                                      nextCurTok.position);
+                return new ValueIdentifier(curTok.position, nextCurTok);
             }
-            if (curTok.text === '_') {
-                // Wildcard pattern
-                ++this.position;
-                return new Wildcard(curTok.position);
-            }
-            if (curTok.text === '{') {
-                // Record pattern
-                ++this.position;
-                let result = this.parsePatternRow();
-                return result;
-            }
-            if (curTok.text === '(') {
-                // Tuple pattern
-                let results: Pattern[] = [];
-                let length: number = 0;
-                while (true) {
-                    let nextCurTok = this.currentToken();
-                    if (nextCurTok instanceof KeywordToken) {
-                        if (nextCurTok.text === '('
-                            && length === 0) {
-                            ++this.position;
-                        } else if (nextCurTok.text === ','
-                            && length > 0) {
-                            ++this.position;
-                        } else if (nextCurTok.text === ')') {
-                            ++this.position;
-                            if (length === 1) {
-                                return results[0];
-                            } else {
-                                return new Tuple(curTok.position, results);
-                            }
-                        } else {
-                            throw new ParserError('Expected "," or ")".', nextCurTok.position);
-                        }
+            throw new ParserError('Expected identifier after op',
+                nextCurTok.position);
+        }
+        if (this.checkKeywordToken(curTok, '_')) {
+            // Wildcard pattern
+            ++this.position;
+            return new Wildcard(curTok.position);
+        }
+        if (this.checkKeywordToken(curTok, '{')) {
+            // Record pattern
+            ++this.position;
+            let result = this.parsePatternRow();
+            return result;
+        }
+        if (this.checkKeywordToken(curTok, '(')) {
+            // Tuple pattern
+            let results: Pattern[] = [];
+            let length: number = 0;
+            while (true) {
+                let nextCurTok = this.currentToken();
+                if (this.checkKeywordToken(nextCurTok, '(')
+                    && length === 0) {
+                    ++this.position;
+                } else if (this.checkKeywordToken(nextCurTok, ',')
+                    && length > 0) {
+                    ++this.position;
+                } else if (this.checkKeywordToken(nextCurTok, ')')) {
+                    ++this.position;
+                    if (length === 1) {
+                        return results[0];
                     } else {
-                        throw new ParserError('Expected "," or ")".', nextCurTok.position);
+                        return new Tuple(curTok.position, results);
                     }
-                    results.push(this.parsePattern());
-                    length++;
+                } else {
+                    throw new ParserError('Expected "," or ")".', nextCurTok.position);
                 }
+                results.push(this.parsePattern());
+                length++;
             }
-            if (curTok.text === '[') {
-                // List pattern
-                let results: Pattern[] = [];
-                while (true) {
-                    let nextCurTok = this.currentToken();
-                    if (nextCurTok instanceof KeywordToken) {
-                        if (nextCurTok.text === '[' && length === 0) {
-                            ++this.position;
-                        } else if (nextCurTok.text === ',' && length > 0) {
-                            ++this.position;
-                        } else if (nextCurTok.text === ']') {
-                            ++this.position;
-                            // TODO this oughtn't be a tuple
-                            return new List(curTok.position, results);
-                        } else {
-                            throw new ParserError('Expected "," or "]".', nextCurTok.position);
-                        }
+        }
+        if (this.checkKeywordToken(curTok, '[')) {
+            // List pattern
+            let results: Pattern[] = [];
+            while (true) {
+                let nextCurTok = this.currentToken();
+                if (nextCurTok instanceof KeywordToken) {
+                    if (nextCurTok.text === '[' && length === 0) {
+                        ++this.position;
+                    } else if (nextCurTok.text === ',' && length > 0) {
+                        ++this.position;
+                    } else if (nextCurTok.text === ']') {
+                        ++this.position;
+                        // TODO this oughtn't be a tuple
+                        return new List(curTok.position, results);
                     } else {
                         throw new ParserError('Expected "," or "]".', nextCurTok.position);
                     }
-                    results.push(this.parsePattern());
+                } else {
+                    throw new ParserError('Expected "," or "]".', nextCurTok.position);
                 }
+                results.push(this.parsePattern());
             }
-        }else if (curTok instanceof ConstantToken) {
+        } else if (curTok instanceof ConstantToken) {
             return new Constant(curTok.position, curTok);
         } else if (curTok instanceof IdentifierToken) {
             return new ValueIdentifier(curTok.position, curTok);
@@ -571,46 +565,44 @@ export class Parser {
          *          [op] vid [:ty] as pat   LayeredPattern(pos, IdentifierToken, type, pattern)
          */
         let curTok = this.currentToken();
-        if (curTok instanceof KeywordToken) {
-            if (curTok.text === 'op') {
-                let oldPos = this.position;
-                ++this.position;
-                let nextTok = this.currentToken();
-                if (!(nextTok instanceof IdentifierToken)) {
-                    throw new ParserError('Expected identifier after "op".', nextTok.position);
-                } else if (!this.state.getIdentifierInformation(nextTok).infix) {
-                    throw new ParserError('Cannot "op" prefix non-infix id.', nextTok.position);
-                }
-                ++this.position;
-                try {
-                    // Check whether layered pattern
-                    let newTok = this.currentToken();
-                    if (newTok instanceof KeywordToken) {
-                        let tp: Type | undefined;
-                        if (newTok.text === ':') {
-                            ++this.position;
-                            tp = this.parseType();
-                            newTok = this.currentToken();
-                        }
-                        if (!(newTok instanceof KeywordToken)
-                            || !(newTok.text === 'as')) {
-                            throw new ParserError('Expected "as" keyword.', newTok.position);
-                        }
+        if (this.checkKeywordToken(curTok, 'op')) {
+            let oldPos = this.position;
+            ++this.position;
+            let nextTok = this.currentToken();
+            if (!(nextTok instanceof IdentifierToken)) {
+                throw new ParserError('Expected identifier after "op".', nextTok.position);
+            } else if (!this.state.getIdentifierInformation(nextTok).infix) {
+                throw new ParserError('Cannot "op" prefix non-infix id.', nextTok.position);
+            }
+            ++this.position;
+            try {
+                // Check whether layered pattern
+                let newTok = this.currentToken();
+                if (newTok instanceof KeywordToken) {
+                    let tp: Type | undefined;
+                    if (newTok.text === ':') {
                         ++this.position;
-                        return new LayeredPattern(curTok.position,
-                                                  nextTok,
-                                                  tp,
-                                                  this.parsePattern());
+                        tp = this.parseType();
+                        newTok = this.currentToken();
                     }
-
-                    // Try if it is a FunctionApplication instead
-                    return new FunctionApplication(curTok.position,
-                                                   new ValueIdentifier(nextTok.position, nextTok),
-                                                   this.parseAtomicPattern());
-                } catch (ParserError) {
-                    this.position = oldPos;
-                    return this.parseAtomicPattern();
+                    if (!(newTok instanceof KeywordToken)
+                        || !(newTok.text === 'as')) {
+                        throw new ParserError('Expected "as" keyword.', newTok.position);
+                    }
+                    ++this.position;
+                    return new LayeredPattern(curTok.position,
+                        nextTok,
+                        tp,
+                        this.parsePattern());
                 }
+
+                // Try if it is a FunctionApplication instead
+                return new FunctionApplication(curTok.position,
+                                               new ValueIdentifier(nextTok.position, nextTok),
+                                               this.parseAtomicPattern());
+            } catch (ParserError) {
+                this.position = oldPos;
+                return this.parseAtomicPattern();
             }
         }
         if (curTok instanceof IdentifierToken) {
@@ -732,11 +724,11 @@ export class Parser {
         let firstIt = true;
         while (true) {
             curTok = this.currentToken();
-            if (curTok instanceof KeywordToken && curTok.text === '}') {
+            if (this.checkKeywordToken(curTok, '}')) {
                 ++this.position;
                 return res;
             }
-            if (!firstIt && curTok instanceof KeywordToken && curTok.text === ',') {
+            if (!firstIt && this.checkKeywordToken(curTok, ',')) {
                 ++this.position;
                 continue;
             }
@@ -790,25 +782,22 @@ export class Parser {
             return new CustomType(curTok.position, curTok.text, tyvars);
         }
 
-        if (curTok instanceof KeywordToken) {
-            if (curTok.text === '{') {
-                ++this.position;
-                return this.parseTypeRow();
-            }
-            if (curTok.text === '(') {
-                ++this.position;
-                let res = this.parseType();
-                curTok = this.currentToken();
-                if (!(curTok instanceof KeywordToken)
-                    || curTok.text !== ')') {
-                    throw new ParserError('Missing closing ")"', curTok.position);
-                }
-                ++this.position;
-                return res;
-            }
-            throw new ParserError('Expected either "(" or "{".', curTok.position);
+        if (this.checkKeywordToken(curTok, '{')) {
+            ++this.position;
+            return this.parseTypeRow();
         }
-        throw new ParserError('Expected a simple type.', curTok.position);
+        if (this.checkKeywordToken(curTok, '(')) {
+            ++this.position;
+            let res = this.parseType();
+            curTok = this.currentToken();
+            if (!(curTok instanceof KeywordToken)
+                || curTok.text !== ')') {
+                throw new ParserError('Missing closing ")"', curTok.position);
+            }
+            ++this.position;
+            return res;
+        }
+        throw new ParserError('Expected either "(" or "{".', curTok.position);
     }
 
     parseArrowType(): Type {
@@ -817,8 +806,7 @@ export class Parser {
          */
         let curTy = this.parseSimpleType();
         let curTok = this.currentToken();
-        if (!(curTok instanceof KeywordToken)
-            || curTok.text !== '->') {
+        if (!this.checkKeywordToken(curTok, '->')) {
             return curTy;
         }
         ++this.position;
@@ -833,7 +821,7 @@ export class Parser {
         let curTy = [this.parseArrowType()];
         let curTok = this.currentToken();
         let pos = curTok.position;
-        while (curTok instanceof KeywordToken && curTok.text === '*') {
+        while (this.checkKeywordToken(curTok, '*')) {
             ++this.position;
             curTy.push(this.parseArrowType());
         }
@@ -842,18 +830,19 @@ export class Parser {
 
     parseDeclaration(): ASTNode {
         /*
-         * dec ::= val tyverseq valbind                 TODO value declaration
+         * dec ::= val tyvarseq valbind                 TODO value declaration
          *         fun tyvarseq fvalbind                TODO function declaration
          *         type typbind                         TODO type declaration
          *         datatype datbind [withtype typbind]  TODO datatype declaration
          *         abstype datbind [withtype typbind]
          *              with dec end                    TODO abstype declaration
-         *         exception axbind                     TODO exception declaration
+         *         exception exbind                     TODO exception declaration
          *         local dec1 in dec2 end               TODO local declaration
          *         open longstrid1 … longstr1dn         TODO open declaration
-         *         infix [d] vid1 … vidn                TODO infix L
-         *         infixr [d] vid1 … vidn               TODO infix R
-         *         nonfix vid1 … vidn                   TODO nonfix
+         *         infix [d] vid1 … vidn                TODO infix L (silent)
+         *         infixr [d] vid1 … vidn               TODO infix R (silent)
+         *         nonfix vid1 … vidn                   TODO nonfix  (silent)
+         *         (empty)                              TODO empty (should this be silent?)
          */
         throw new InternalInterpreterError(0, 'not yet implemented');
     }
