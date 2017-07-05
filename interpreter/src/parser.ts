@@ -361,8 +361,23 @@ export class Parser {
     }
 
     parseMatch(): Match {
-        // TODO
-        throw new Error('Not yet implemented');
+        /*
+         * match ::= pat => exp [| match]       Match(pos, [Pattern, Expression][])
+         */
+        let curTok = this.currentToken();
+        let res: [Pattern, Expression][] = [];
+        while (true) {
+            let pat = this.parsePattern();
+            this.assertKeywordToken(this.currentToken(), '=>');
+            ++this.position;
+            let exp = this.parseExpression();
+            res.push([pat, exp]);
+            if (!this.checkKeywordToken(this.currentToken(), '|')) {
+                break;
+            }
+            ++this.position;
+        }
+        return new Match(curTok.position, res);
     }
 
     parsePatternRow(): Record {
