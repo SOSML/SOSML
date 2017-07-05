@@ -63,6 +63,10 @@ export class State {
     signatureEnvironment:   any;         // Signature environment TODO
     environment:            Environment;
 
+    public clone(): State {
+        throw new Error('Not yet implemented');
+    }
+
     getIdentifierInformation(id: IdentifierToken): IdentifierInformation {
         return this.environment.valueEnvironment[id.text];
     }
