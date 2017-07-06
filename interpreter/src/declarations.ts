@@ -65,6 +65,7 @@ export class DirectExceptionBinding extends ExceptionDeclaration {
     }
 }
 
+// TODO: Why do you exist?
 export class ExceptionAlias extends ExceptionDeclaration {
 // <op> name = <op> oldname
     constructor(public position: Position, public name: IdentifierToken, public oldname: Token) {
@@ -137,7 +138,7 @@ export class OpenDeclaration extends Declaration {
     }
 }
 
-export class SequentialDeclarations extends Declaration {
+export class SequentialDeclaration extends Declaration {
 // declaration1 <;> declaration2
     constructor(public position: Position, public declarations: Declaration[]) {
         super();
@@ -146,7 +147,7 @@ export class SequentialDeclarations extends Declaration {
 
 export class EmptyDeclaration extends Declaration {
 // exactly what it sais on the tin.
-    constructor(public position: Position) {
+    constructor() {
         super();
     }
 }

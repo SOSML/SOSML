@@ -1,14 +1,18 @@
 import { ASTNode } from './ast';
 import { Expression, Pattern, Tuple, Constant, ValueIdentifier, Wildcard,
          LayeredPattern, FunctionApplication, TypedExpression, Record, List,
-         Sequence, LocalDeclaration, RecordSelector, Lambda, Conjunction,
+         Sequence, RecordSelector, Lambda, Conjunction, LocalDeclarationExpression,
          Disjunction, Conditional, CaseAnalysis, RaiseException,
          HandleException, Match } from './expressions';
 import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } from './types';
-import { InternalInterpreterError, InterpreterError, Position } from './errors';
+import { InterpreterError, Position } from './errors';
 import { Token, KeywordToken, IdentifierToken, ConstantToken,
          TypeVariableToken } from './lexer';
 import { State } from './state';
+import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
+         FunctionValueBinding, FunctionDeclaration, TypeDeclaration,
+         DatatypeReplication, DatatypeDeclaration, SequentialDeclaration,
+         DatatypeBinding, TypeBinding, AbstypeDeclaration, LocalDeclaration } from './declarations';
 
 export class ParserError extends InterpreterError {
     constructor(message: string, position: Position) {
@@ -63,7 +67,7 @@ export class Parser {
          *              KeywordToken exp [KeywordToken exp]* KeywordToken
          *           (exp1; …; expn)                Sequence(pos, exps:Exp[])
          *              KeywordToken exp [KeywordToken exp]* KeywordToken
-         *           let dec in exp1, …, expn end   LocalDeclaration(pos, decl:Decl, exp)
+         *           let dec in exp1, …, expn end   LocalDeclarationExpression(pos, decl:Decl, exp)
          *              KeywordToken dec KeywordToken exp [KeywordToken exp]* KeywordToken
          *           ( exp )                        Expression
          *              KeywordToken exp KeywordToken
@@ -167,7 +171,7 @@ export class Parser {
             this.assertKeywordToken(newTok, 'end');
             ++this.position;
             this.state = oldState;
-            return new LocalDeclaration(curTok.position, dec, new Sequence(curTok.position, res));
+            return new LocalDeclarationExpression(curTok.position, dec, new Sequence(curTok.position, res));
         } else if (curTok instanceof ConstantToken) {
             return new Constant(curTok.position, curTok);
         } else if (curTok instanceof IdentifierToken) {
@@ -828,23 +832,241 @@ export class Parser {
         return new TupleType(pos, curTy);
     }
 
-    parseDeclaration(): ASTNode {
+    parseValueBinding(): ValueBinding {
         /*
-         * dec ::= val tyvarseq valbind                 TODO value declaration
-         *         fun tyvarseq fvalbind                TODO function declaration
-         *         type typbind                         TODO type declaration
-         *         datatype datbind [withtype typbind]  TODO datatype declaration
+         *  valbind ::= pat = exp       ValueBinding(pos, isRec, pat, exp)
+         *              rec valbind     isRecursive = true
+         */
+        let curTok = this.currentToken();
+        if (this.checkKeywordToken(curTok, 'rec')) {
+            ++this.position;
+            let res = this.parseValueBinding();
+            res.position = curTok.position;
+            res.isRecursive = true;
+            return res;
+        }
+        let pat = this.parsePattern();
+        this.assertKeywordToken(this.currentToken(), '=');
+        ++this.position;
+        return new ValueBinding(curTok.position, false, pat, this.parseExpression());
+    }
+
+    parseFunctionValueBinding(): FunctionValueBinding {
+        /*
+         *  TODO this stuff if nasty
+         */
+        throw new Error('nyi\'an');
+    }
+
+    parseTypeBinding(): TypeBinding {
+        /*
+         * tybind ::= tyvarseq tycon = ty       TypeBinding(pos, TypeVariable[], IdentifierToken, Type)
+         */
+        let curTok = this.currentToken();
+        let tyvar  = this.parseTypeVarSequence();
+        this.assertIdentifierToken(this.currentToken());
+
+        let vid = this.currentToken();
+        ++this.position;
+
+        return new TypeBinding(curTok.position, tyvar, vid, this.parseType());
+    }
+
+    parseTypeBindingSeq(): TypeBinding[] {
+        let tybinds: TypeBinding[] = [];
+        while (true) {
+            tybinds.push(this.parseTypeBinding());
+            if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                ++this.position;
+            } else {
+                break;
+            }
+        }
+        return tybinds;
+    }
+
+    parseDatatypeBinding(): DatatypeBinding {
+        // TODO
+        throw new Error('nyi\'an');
+    }
+
+    parseDatatypeBindingSeq(): DatatypeBinding[] {
+        let datbinds: DatatypeBinding[] = [];
+        while (true) {
+            datbinds.push(this.parseDatatypeBinding());
+            if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                ++this.position;
+            } else {
+                break;
+            }
+        }
+        return datbinds;
+    }
+
+    parseTypeVarSequence(): TypeVariable[] {
+        /*
+         * ε                    []
+         * tyvar                [TypeVariable]
+         * (tyvar1,…,tyvarn)    TypeVariable[]
+         */
+        let curTok = this.currentToken();
+        let res: TypeVariable[] = [];
+        if (curTok instanceof TypeVariableToken) {
+            res.push(new TypeVariable(curTok.position, curTok.text));
+            ++this.position;
+            return res;
+        }
+        if (this.checkKeywordToken(curTok, '(')) {
+            ++this.position;
+            while (true) {
+                curTok = this.currentToken();
+                if (!(curTok instanceof TypeVariableToken)) {
+                    throw new ParserError('Expexted a type varible.', curTok.position);
+                }
+                res.push(new TypeVariable(curTok.position, curTok.text));
+                ++this.position;
+                curTok = this.currentToken();
+                if (this.checkKeywordToken(curTok, ',')) {
+                    ++this.position;
+                } else if (this.checkKeywordToken(curTok, ')')) {
+                    ++this.position;
+                    break;
+                }
+                throw new ParserError('Expected "(" or ","', curTok.position);
+            }
+        }
+        return res;
+    }
+
+    parseDeclaration(): Declaration {
+        /*
+         * dec ::= dec [;] dec                          SequentialDeclaration(pos, Declaration[])
+         */
+        let res: Declaration[] = [];
+        let curTok = this.currentToken();
+        while (true) {
+            let cur = this.parseSimpleDeclaration();
+            if (cur instanceof EmptyDeclaration) {
+                break;
+            }
+            res.push(cur);
+            if (this.checkKeywordToken(this.currentToken(), ';')) {
+                ++this.position;
+            }
+        }
+        return new SequentialDeclaration(curTok.position, res);
+    }
+
+    parseSimpleDeclaration(): Declaration {
+        /*
+         * dec ::= val tyvarseq valbind                 ValueDeclaration(pos, tyvarseq, ValueBinding[])
+         *         fun tyvarseq fvalbind                FunctionDeclaration(pos, tyvarseq, FunctionValueBinding[])
+         *         type typbind                         TypeDeclaration(pos, TypeBinding[])
+         *         datatype datbind [withtype typbind]  DatatypeDeclaration(pos, DTBind[], TypeBind[]|undefined)
+         *         datatype tycon -=- datatype ltycon   DatatypeReplication(pos, IdentifierToken, oldname: Token)
          *         abstype datbind [withtype typbind]
-         *              with dec end                    TODO abstype declaration
+         *              with dec end                    AbstypeDeclaration(pos, DTBind[], TypeBing[]|undef, Decl)
          *         exception exbind                     TODO exception declaration
-         *         local dec1 in dec2 end               TODO local declaration
-         *         open longstrid1 … longstr1dn         TODO open declaration
+         *         local dec1 in dec2 end               LocalDeclaration(pos, Declaration, body:Declaration)
+         *         open longstrid1 … longstr1dn         OpenDeclaration(pos, names: Token[])
          *         infix [d] vid1 … vidn                TODO infix L (silent)
          *         infixr [d] vid1 … vidn               TODO infix R (silent)
          *         nonfix vid1 … vidn                   TODO nonfix  (silent)
-         *         (empty)                              TODO empty (should this be silent?)
+         *         (empty)                              EmptyDeclaration()
          */
-        throw new InternalInterpreterError(0, 'not yet implemented');
+        let curTok = this.currentToken();
+
+        if (this.checkKeywordToken(curTok, 'val')) {
+            ++this.position;
+            let tyvar = this.parseTypeVarSequence();
+            let valbinds: ValueBinding[] = [];
+            while (true) {
+                valbinds.push(this.parseValueBinding());
+                if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                    ++this.position;
+                } else {
+                    break;
+                }
+            }
+            return new ValueDeclaration(curTok.position, tyvar, valbinds);
+        } else if (this.checkKeywordToken(curTok, 'fun')) {
+            ++this.position;
+            let tyvar = this.parseTypeVarSequence();
+            let fvalbinds: FunctionValueBinding[] = [];
+            while (true) {
+                fvalbinds.push(this.parseFunctionValueBinding());
+                if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                    ++this.position;
+                } else {
+                    break;
+                }
+            }
+            return new FunctionDeclaration(curTok.position, tyvar, fvalbinds);
+        } else if (this.checkKeywordToken(curTok, 'type')) {
+            ++this.position;
+            return new TypeDeclaration(curTok.position, this.parseTypeBindingSeq());
+        } else if (this.checkKeywordToken(curTok, 'datatype')) {
+            if (this.position + 2 < this.tokens.length &&
+                this.tokens[this.position + 2] instanceof IdentifierToken &&
+                this.tokens[this.position + 2].text === '-=-') {
+                ++this.position;
+                let nw = this.currentToken();
+                this.assertIdentifierToken(nw);
+                this.position += 2;
+                let old = this.currentToken();
+                // TODO long vids
+                this.assertIdentifierToken(old);
+                return new DatatypeReplication(curTok.position, nw, old);
+            } else {
+                ++this.position;
+                let datbind = this.parseDatatypeBindingSeq();
+                if (this.checkKeywordToken(this.currentToken(), 'withtype')) {
+                    ++this.position;
+                    let tp = this.parseTypeBindingSeq();
+                    return new DatatypeDeclaration(curTok.position, datbind, tp);
+                }
+                return new DatatypeDeclaration(curTok.position, datbind, undefined);
+            }
+        } else if (this.checkKeywordToken(curTok, 'abstype')) {
+            ++this.position;
+            let datbind = this.parseDatatypeBindingSeq();
+            let tybind: TypeBinding[]|undefined = undefined;
+            if (this.checkKeywordToken(this.currentToken(), 'withtype')) {
+                ++this.position;
+                tybind = this.parseTypeBindingSeq();
+            }
+            this.assertKeywordToken(this.currentToken(), 'with');
+            ++this.position;
+            // TODO state?
+            let dec = this.parseDeclaration();
+            this.assertKeywordToken(this.currentToken(), 'end');
+            ++this.position;
+            return new AbstypeDeclaration(curTok.position, datbind, tybind, dec);
+        } else if (this.checkKeywordToken(curTok, 'exception')) {
+            // TODO
+        } else if (this.checkKeywordToken(curTok, 'local')) {
+            // TODO think about how to handle the state changes
+            let st = this.state.clone();
+            let dec: Declaration = this.parseDeclaration();
+            this.assertKeywordToken(this.currentToken(), 'in');
+            ++this.position;
+            let dec2: Declaration = this.parseDeclaration();
+            this.assertKeywordToken(this.currentToken(), 'end');
+            ++this.position;
+            this.state = st;
+            return new LocalDeclaration(curTok.position, dec, dec2);
+        } else if (this.checkKeywordToken(curTok, 'open')) {
+            // TODO
+            // TODO (What does this even do?)
+        } else if (this.checkKeywordToken(curTok, 'infix')) {
+            // TODO
+        } else if (this.checkKeywordToken(curTok, 'infixr')) {
+            // TODO
+        } else if (this.checkKeywordToken(curTok, 'nonfix')) {
+            // TODO
+        }
+
+        return new EmptyDeclaration();
     }
 
     finished(): boolean {

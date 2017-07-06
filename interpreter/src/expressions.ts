@@ -236,15 +236,15 @@ export class Record extends Expression implements Pattern {
     }
 }
 
-export class LocalDeclaration extends Expression {
+export class LocalDeclarationExpression extends Expression {
 // let dec in exp1; ...; expn end
 // A sequential expression exp1; ... ; expn is represented as such, despite the potentially missing parentheses
     constructor(public position: Position, public declaration: Declaration, public expression: Expression) { super(); }
 
-    simplify(): LocalDeclaration {
+    simplify(): LocalDeclarationExpression {
         // TODO: should be
         // return new LocalDeclaration(this.position, this.declaration.simplify(), this.expression.simplify());
-        return new LocalDeclaration(this.position, this.declaration, this.expression.simplify());
+        return new LocalDeclarationExpression(this.position, this.declaration, this.expression.simplify());
     }
 }
 
