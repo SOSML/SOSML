@@ -9,6 +9,10 @@ The dependencies of this package must be installed to test or build.
 npm install
 ```
 
+**WARNING**: For some reason builds have been failing with errors which seem to be a problem with dependencies (and possibly NPM itself). A way to resolve this seems to be:
+1. Use NPM 5 or higher (to use the `package-lock.json`)
+2. If dependencies are missing, install them manually with `npm install <dependency>`
+
 ## Test
 
 To run the tests use:
