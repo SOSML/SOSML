@@ -14,10 +14,10 @@ const server = express();
 server.use(helmet())
 server.use(compression())
 server.use(bodyparser.json());
-server.use('/static/', express.static('frontend/static'));
-server.use('/share/', express.static(path.join(__dirname, 'shares'));
+server.use('/static/', express.static('../frontend/build/static'));
+server.use('/share/', express.static(path.join(__dirname, 'shares')));
 server.get('/', function (request, response) {
-    response.sendFile(path.resolve(__dirname+'/../frontend/index.html'));
+    response.sendFile(path.resolve('../frontend/build/index.html'));
 });
 
 
@@ -51,4 +51,4 @@ server.put('/api/share/',
     }
 );
 
-server.listen(3000, () => {console.log('yay');} )
+server.listen(80, () => {console.log('yay');} )
