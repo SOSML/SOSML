@@ -9,6 +9,7 @@ import './CodeMirrorWrapper.css';
 export interface Props {
     flex?: boolean;
     onChange?: (x: string) => void;
+    code?: string;
 }
 
 class CodeMirrorWrapper extends React.Component<Props, any> {
@@ -32,10 +33,14 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
         if (this.props.flex) {
             classAdd = 'flexy flexcomponent';
         }
+        let value = '';
+        if (this.props.code) {
+            value = this.props.code;
+        }
         return (
             <CodeMirror className={classAdd} ref={(editor: any) => {this.editor = editor; }}
                 onChange={this.handleChange}
-                value="fun test x = x + 1;" options={options}/>
+                value={value} options={options}/>
         );
     }
 
