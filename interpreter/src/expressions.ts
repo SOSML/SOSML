@@ -39,6 +39,7 @@ export abstract class Expression extends ASTNode {
     }
 
     abstract simplify(): Expression;
+    abstract reParse(state: State): Expression;
 }
 
 
@@ -62,6 +63,10 @@ export class Wildcard extends Expression implements Pattern {
 
     simplify(): Wildcard {
         return this;
+    }
+
+    reParse(state: State): Wildcard {
+        throw new InternalInterpreterError(this.position, 'Tried re-parsing a pattern.');
     }
 }
 
@@ -87,6 +92,10 @@ export class LayeredPattern extends Expression implements Pattern {
         } else {
             return new LayeredPattern(this.position, this.identifier, undefined, this.pattern.simplify());
         }
+    }
+
+    reParse(state: State): LayeredPattern {
+        throw new InternalInterpreterError(this.position, 'Tried re-parsing a pattern.');
     }
 }
 
@@ -125,6 +134,10 @@ export class Match extends ASTNode {
         }
         return new Match(this.position, newMatches);
     }
+
+    reParse(state: State): Match {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+    }
 }
 
 export class TypedExpression extends Expression implements Pattern {
@@ -140,6 +153,10 @@ export class TypedExpression extends Expression implements Pattern {
     simplify(): TypedExpression {
         return new TypedExpression(this.position, this.expression.simplify(), this.typeAnnotation.simplify());
     }
+
+    reParse(state: State): TypedExpression {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+    }
 }
 
 export class HandleException extends Expression {
@@ -148,6 +165,10 @@ export class HandleException extends Expression {
 
     simplify(): HandleException {
         return new HandleException(this.position, this.expression.simplify(), this.match.simplify());
+    }
+
+    reParse(state: State): HandleException {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
     }
 }
 
@@ -158,6 +179,10 @@ export class RaiseException extends Expression {
     simplify(): RaiseException {
         return new RaiseException(this.position, this.expression.simplify());
     }
+
+    reParse(state: State): RaiseException {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+    }
 }
 
 export class Lambda extends Expression {
@@ -166,6 +191,10 @@ export class Lambda extends Expression {
 
     simplify(): Lambda {
         return new Lambda(this.position, this.match.simplify());
+    }
+
+    reParse(state: State): Lambda {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
     }
 }
 
@@ -184,6 +213,10 @@ export class FunctionApplication extends Expression implements Pattern {
     simplify(): FunctionApplication {
         return new FunctionApplication(this.position, this.func.simplify(), this.argument.simplify());
     }
+
+    reParse(state: State): FunctionApplication {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+    }
 }
 
 export class Constant extends Expression implements Pattern {
@@ -195,6 +228,10 @@ export class Constant extends Expression implements Pattern {
     }
 
     simplify(): Constant { return this; }
+
+    reParse(state: State): Constant {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+    }
 }
 
 export class ValueIdentifier extends Expression implements Pattern {
@@ -207,6 +244,10 @@ export class ValueIdentifier extends Expression implements Pattern {
     }
 
     simplify(): ValueIdentifier { return this; }
+
+    reParse(state: State): ValueIdentifier {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+    }
 }
 
 export class Record extends Expression implements Pattern {
@@ -234,6 +275,10 @@ export class Record extends Expression implements Pattern {
         }
         return new Record(this.position, this.complete, newEntries);
     }
+
+    reParse(state: State): Record {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+    }
 }
 
 export class LocalDeclarationExpression extends Expression {
@@ -246,8 +291,70 @@ export class LocalDeclarationExpression extends Expression {
         // return new LocalDeclaration(this.position, this.declaration.simplify(), this.expression.simplify());
         return new LocalDeclarationExpression(this.position, this.declaration, this.expression.simplify());
     }
+
+    reParse(state: State): LocalDeclarationExpression {
+        // TODO this stuff here is work
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+    }
 }
 
+export class InfixExpression extends Expression implements Pattern {
+    // operators: (op, idx), to simplify simplify
+    constructor(public expressions: (Expression|Pattern)[], public operators: [IdentifierToken, number][]) {
+        super();
+    }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        return this.simplify().matches(state, v);
+    }
+
+    simplify(): FunctionApplication {
+        throw new InternalInterpreterError(this.position, 'Ouch, I\'m not fully parsed.');
+    }
+
+    reParse(state: State): FunctionApplication {
+        let ops = this.operators;
+        let exps = this.expressions;
+        ops.sort(([a, p1], [b, p2]) => {
+            let sta = state.getIdentifierInformation(a);
+            let stb = state.getIdentifierInformation(b);
+            if (sta.precedence > stb.precedence) {
+                return -1;
+            }
+            if (sta.precedence < stb.precedence) {
+                return 1;
+            }
+            if (sta.rightAssociative) {
+                if (p1 < p2) {
+                    return -1;
+                }
+                if (p1 > p2) {
+                    return 1;
+                }
+            } else {
+                if (p1 < p2) {
+                    return 1;
+                }
+                if (p1 > p2) {
+                    return -1;
+                }
+            }
+            return 0;
+        });
+
+        // Using copy by reference to make this work whithout shrinking the array
+        for (let i = 0; i < ops.length; ++i) {
+            let left = exps[ops[i][1]];
+            let right = exps[ops[i][1] + 1];
+            let com = new FunctionApplication(ops[i][0].position,
+                                              new ValueIdentifier(ops[i][0].position, ops[i][0]),
+                                              new Tuple(ops[i][0].position, [left, right]));
+            exps[ops[i][1]] = com;
+            exps[ops[i][1] + 1] = com;
+        }
+        return <FunctionApplication> exps[0];
+    }
+}
 
 // The following classes are derived forms. They will not be present in the simplified AST and do not implement
 // checkSemantics/getType and evaluate.
@@ -262,6 +369,10 @@ export class Conjunction extends Expression {
     simplify(): FunctionApplication {
         return new Conditional(this.position, this.leftOperand, this.rightOperand, falseConstant).simplify();
     }
+
+    reParse(state: State): Conjunction {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+    }
 }
 
 export class Disjunction extends Expression {
@@ -270,6 +381,10 @@ export class Disjunction extends Expression {
 
     simplify(): FunctionApplication {
         return new Conditional(this.position, this.leftOperand, trueConstant, this.rightOperand).simplify();
+    }
+
+    reParse(state: State): Disjunction {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
     }
 }
 
@@ -288,6 +403,10 @@ export class Tuple extends Expression implements Pattern {
         }
         return new Record(this.position, true, entries);
     }
+
+    reParse(state: State): Tuple {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+    }
 }
 
 export class List extends Expression implements Pattern {
@@ -302,6 +421,10 @@ export class List extends Expression implements Pattern {
         // TODO
         throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
+
+    reParse(state: State): List {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+    }
 }
 
 export class Sequence extends Expression {
@@ -311,6 +434,10 @@ export class Sequence extends Expression {
     simplify(): FunctionApplication {
         // TODO
         throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+
+    reParse(state: State): Sequence {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
     }
 }
 
@@ -322,6 +449,10 @@ export class RecordSelector extends Expression {
         // TODO
         throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
+
+    reParse(state: State): RecordSelector {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+    }
 }
 
 export class CaseAnalysis extends Expression {
@@ -331,6 +462,10 @@ export class CaseAnalysis extends Expression {
     simplify(): FunctionApplication {
         return new FunctionApplication(this.position, new Lambda(this.position, this.match.simplify()),
             this.expression.simplify());
+    }
+
+    reParse(state: State): CaseAnalysis {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
     }
 }
 
@@ -342,5 +477,9 @@ export class Conditional extends Expression {
     simplify(): FunctionApplication {
         let match: Match = new Match(this.position, [[trueConstant, this.ifTrue], [falseConstant, this.ifFalse]]);
         return new CaseAnalysis(this.position, this.condition, match).simplify();
+    }
+
+    reParse(state: State): Conditional {
+        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
     }
 }

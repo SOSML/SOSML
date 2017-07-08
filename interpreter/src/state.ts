@@ -19,6 +19,11 @@ export class IdentifierInformation {
     precedence: number;
     rightAssociative: boolean;
     infix: boolean;
+
+    clone(): IdentifierInformation {
+        // TODO
+        throw new Error('nyi\'an :/');
+    }
 }
 
 export interface ValueEnvironment {
@@ -29,6 +34,11 @@ export interface ValueEnvironment {
 export class ConstructorInformation {
     type: Type;
     identifierStatus: IdentifierStatus;
+
+    clone(): ConstructorInformation {
+        // TODO
+        throw new Error('nyi\'an :/');
+    }
 }
 
 export interface ConstructorSet {
@@ -38,6 +48,11 @@ export interface ConstructorSet {
 export class TypeDefinition {
     type: Type;
     constructors: ConstructorSet;
+
+    clone(): TypeEnvironment {
+        // TODO
+        throw new Error('nyi\'an :/');
+    }
 }
 
 export interface TypeEnvironment {
@@ -46,25 +61,42 @@ export interface TypeEnvironment {
 }
 
 export class Environment {
-    structEnvironment:  any; // TODO
-    typeEnvironment: TypeEnvironment;
-    valueEnvironment: ValueEnvironment;
+    // TODO structEnvironment
+    constructor(public structEnvironment: any, public typeEnvironment: TypeEnvironment,
+                public valueEnvironment: ValueEnvironment) {
+    }
+
+    clone(): Environment {
+        throw new Error('nyi\'an :/');
+    }
 }
 
 export class TypeName {
-    name: string;
-    arity: number;
-    allowsEquality: boolean;
+    constructor(public name: string, public arity: number, public allowsEquality: boolean) {
+    }
+
+    clone(): TypeName {
+        return new TypeName(this.name, this.arity, this.allowsEquality);
+    }
 }
 
 export class State {
-    typeNames:              TypeName[];         // Type names
-    functorEnvironment:     any;         // Functor environment TODO
-    signatureEnvironment:   any;         // Signature environment TODO
-    environment:            Environment;
+    // typeNames:              TypeName[];         // Type names
+    // functorEnvironment:     any;         // Functor environment TODO
+    // signatureEnvironment:   any;         // Signature environment TODO
+    // environment:            Environment;
 
-    public clone(): State {
-        throw new Error('Not yet implemented');
+    constructor(public typeNames: TypeName[], public functorEnvironment: any,
+                public signatureEnvironment: any, public environment: Environment) {
+    }
+
+    clone(): State {
+        let tns: TypeName[] = [];
+        for (let i = 0; i < this.typeNames.length; ++i) {
+            tns.push(this.typeNames[i].clone());
+        }
+        return new State(tns, this.functorEnvironment, this.signatureEnvironment,
+                         this.environment.clone());
     }
 
     getIdentifierInformation(id: IdentifierToken): IdentifierInformation {

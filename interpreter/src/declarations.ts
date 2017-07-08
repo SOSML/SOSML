@@ -20,12 +20,13 @@ export abstract class Declaration extends ASTNode {
     simplify(): ASTNode {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
+
+    reParse(state: State): ASTNode {
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
 }
 
-export class ExceptionDeclaration extends Declaration {
-    constructor(public position: Position) {
-        super();
-    }
+export interface ExceptionBinding {
 }
 
 export class ValueBinding {
@@ -37,9 +38,8 @@ export class ValueBinding {
 
 // TODO: derived form
 export class FunctionValueBinding {
-    constructor(public position: Position, public name: IdentifierToken,
-                public parameters: Pattern[][], public type: Type | undefined,
-                public bodies: Expression[]) {
+    constructor(public position: Position,
+                public parameters: [Pattern[], Type|undefined, Expression][]) {
     }
 }
 
@@ -58,18 +58,21 @@ export class DatatypeBinding {
     }
 }
 
-export class DirectExceptionBinding extends ExceptionDeclaration {
+export class DirectExceptionBinding implements ExceptionBinding {
 // <op> name <of type>
     constructor(public position: Position, public name: IdentifierToken, public type: Type | undefined) {
-        super(position);
     }
 }
 
-// TODO: Why do you exist?
-export class ExceptionAlias extends ExceptionDeclaration {
+export class ExceptionAlias implements ExceptionBinding {
 // <op> name = <op> oldname
     constructor(public position: Position, public name: IdentifierToken, public oldname: Token) {
-        super(position);
+    }
+}
+
+export class ExceptionDeclaration extends Declaration {
+    constructor(public position: Position, public bindings: ExceptionBinding[]) {
+        super();
     }
 }
 
@@ -83,6 +86,8 @@ export class ValueDeclaration extends Declaration {
 }
 
 // TODO: derived form
+//
+// TODO this Declaration needs a second parsing step.
 export class FunctionDeclaration extends Declaration {
 // fun typeVariableSequence functionValueBinding
     constructor(public position: Position, public typeVariableSequence: TypeVariable[],
@@ -141,6 +146,29 @@ export class OpenDeclaration extends Declaration {
 export class SequentialDeclaration extends Declaration {
 // declaration1 <;> declaration2
     constructor(public position: Position, public declarations: Declaration[]) {
+        super();
+    }
+}
+
+export class InfixDeclaration extends Declaration {
+// infix <d> vid1 .. vidn
+    constructor(public position: Position, public operators: IdentifierToken[],
+                public precedence: number = 0) {
+        super();
+    }
+}
+
+export class InfixRDeclaration extends Declaration {
+// infixr <d> vid1 .. vidn
+    constructor(public position: Position, public operators: IdentifierToken[],
+                public precedence: number = 0) {
+        super();
+    }
+}
+
+export class NonfixDeclaration extends Declaration {
+// infix <d> vid1 .. vidn
+    constructor(public position: Position, public operators: IdentifierToken[]) {
         super();
     }
 }

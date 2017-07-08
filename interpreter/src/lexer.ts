@@ -50,6 +50,7 @@ export class StringConstantToken extends ConstantToken {
 // Any identifier not starting with a prime (')
 // May represent value identifiers, type constructors and record labels
 export class IdentifierToken implements Token {
+    opPrefixed: boolean = false;
     constructor(public text: string, public position: Position) {}
 }
 
@@ -72,6 +73,7 @@ export class EqualityTypeVariableToken extends TypeVariableToken {
 // A star (*) can be used as value identifier or record label, but not as a type constructor and thus must be separated.
 // See SML definition, chapter 2.4 Identifiers
 export class StarToken extends KeywordToken {
+    opPrefixed: boolean = false;
     constructor(public position: Position) {
         super('*', position);
     }
@@ -97,6 +99,7 @@ export class NumericToken extends IntegerConstantToken {
 // (It is impossible in Typescript to inherit from a generic type parameter, thus the parser will need to distinguish
 // the different types of long identifiers based on the type of id.)
 export class LongIdentifierToken implements Token {
+    opPrefixed: boolean = false;
     constructor(public text: string, public position: Position, public qualifiers: AlphanumericIdentifierToken[],
                 public id: IdentifierToken) {}
 }

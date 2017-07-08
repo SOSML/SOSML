@@ -1,4 +1,5 @@
 import { InternalInterpreterError, Position } from './errors';
+import { Token } from './lexer';
 
 export interface Type {
     prettyPrint(): string;
@@ -107,7 +108,7 @@ export class CustomType implements Type {
     // fullName: a unique name for this type
     // typeArguments: instantiations for any type variables this datatype may have
     constructor(public position: Position,
-                public fullName: string,
+                public fullName: Token,
                 public typeArguments: TypeVariable[]) {}
 
     prettyPrint(): string {
@@ -118,7 +119,8 @@ export class CustomType implements Type {
         for (let i: number = 0; i < this.typeArguments.length; ++i) {
             result += ' ' + this.typeArguments[i].prettyPrint();
         }
-        result += this.fullName;
+        // TODO For long identifiers, text doesn't store the whole text.
+        result += this.fullName.text;
         if (this.typeArguments.length > 0) {
             result += ')';
         }
