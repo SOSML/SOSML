@@ -1,10 +1,11 @@
-import { Pattern } from './expressions';
-import { Expression } from './expressions';
+import { Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
+         Pattern, TypedExpression, Tuple } from './expressions';
 import { IdentifierToken, Token } from './lexer';
 import { Type, TypeVariable } from './types';
 import { State } from './state';
 import { InternalInterpreterError, Position } from './errors';
 import { ASTNode } from './ast';
+import { ParserError } from './parser';
 
 
 export abstract class Declaration extends ASTNode {
@@ -36,8 +37,73 @@ export class ValueBinding {
 }
 
 export class FunctionValueBinding {
+    public name: ValueIdentifier|undefined = undefined;
+
     constructor(public position: Position,
                 public parameters: [Pattern[], Type|undefined, Expression][]) {
+    }
+
+    simplify(): ValueBinding {
+        if (this.name === undefined) {
+            throw new InternalInterpreterError(this.position,
+                'This function isn\'t ready to be simplified yet.');
+        }
+
+        // Build the case analysis, starting with the (vid1,...,vidn)
+        let arr: ValueIdentifier[] = [];
+        let matches: [Pattern, Expression][] = [];
+        for (let i = 0; i < this.parameters.length; ++i) {
+            arr.push(new ValueIdentifier(-1, new IdentifierToken('__arg' + i, -1)));
+            if (this.parameters[i][1] === undefined) {
+                matches.push([new Tuple(-1, this.parameters[i][0]), this.parameters[i][2]]);
+            } else {
+                matches.push([new Tuple(-1, this.parameters[i][0]),
+                    new TypedExpression(-1, this.parameters[i][2], <Type> this.parameters[i][1])]);
+            }
+        }
+        let pat = new Tuple(-1, arr).simplify();
+        let mat = new Match(-1, matches);
+        let exp: Expression = new CaseAnalysis(-1, pat, mat);
+
+        // Now build the lambdas around
+        for (let i = this.parameters.length - 1; i >= 0; --i) {
+            exp = new Lambda(-1, new Match(-1, [[
+                new ValueIdentifier(-1, new IdentifierToken('__arg' + i, -1)),
+                exp]]));
+        }
+
+        return new ValueBinding(this.position, true, this.name, exp);
+    }
+
+    reParse(state: State): FunctionValueBinding {
+        if (this.name !== undefined) {
+            // This FnBnd is already fully parsed
+            return this;
+        }
+
+        let name: ValueIdentifier;
+
+        if (this.parameters[0][0].length !== 3
+            || !(this.parameters[0][0][1] instanceof ValueIdentifier)
+            || !state.getIdentifierInformation((<ValueIdentifier> this.parameters[0][0][1]).name).infix) {
+            // No infix stuff
+            if (!(this.parameters[0][0][0] instanceof ValueIdentifier)) {
+                throw new ParserError('Expected function name.', -1);
+            }
+            name = <ValueIdentifier> this.parameters[0][0][0];
+        } else {
+            name = <ValueIdentifier> this.parameters[0][0][1];
+        }
+
+        // Filter out the name everywhere.
+        // let params = [];
+
+        // TODO: fix bug that infix defs may have both id (a,b) and a id b params (of different length
+        // TODO actually do the filtering here. (tomorrow)
+
+        let res = new FunctionValueBinding(this.position, this.parameters/*params*/);
+        res.name = name;
+        return res;
     }
 }
 
@@ -74,12 +140,10 @@ export class ExceptionDeclaration extends Declaration {
     }
 
     simplify(): ASTNode {
-        // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        return this;
     }
     reParse(state: State): ExceptionDeclaration {
-        // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        return this;
     }
 }
 
@@ -92,18 +156,27 @@ export class ValueDeclaration extends Declaration {
     }
 
     simplify(): ASTNode {
-        // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        let valBnd: ValueBinding[] = [];
+        for (let i = 0; i < this.valueBinding.length; ++i) {
+            valBnd.push(new ValueBinding(this.valueBinding[i].position,
+                                         this.valueBinding[i].isRecursive,
+                                         this.valueBinding[i].pattern.simplify(),
+                                         this.valueBinding[i].expression.simplify()));
+        }
+        return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd);
     }
     reParse(state: State): ValueDeclaration {
-        // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        let valBnd: ValueBinding[] = [];
+        for (let i = 0; i < this.valueBinding.length; ++i) {
+            valBnd.push(new ValueBinding(this.valueBinding[i].position,
+                                         this.valueBinding[i].isRecursive,
+                                         this.valueBinding[i].pattern,
+                                         this.valueBinding[i].expression.reParse(state)));
+        }
+        return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd);
     }
 }
 
-// TODO: derived form
-//
-// TODO this Declaration needs a second parsing step.
 export class FunctionDeclaration extends Declaration {
 // fun typeVariableSequence functionValueBinding
     constructor(public position: Position, public typeVariableSequence: TypeVariable[],
@@ -111,35 +184,44 @@ export class FunctionDeclaration extends Declaration {
         super();
     }
 
-    simplify(): ASTNode {
-        // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    simplify(): ValueDeclaration {
+        let valbnd: ValueBinding[] = [];
+        for (let i = 0; i < this.functionValueBinding.length; ++i) {
+            valbnd.push(this.functionValueBinding[i].simplify());
+        }
+        return new ValueDeclaration(this.position, this.typeVariableSequence, valbnd);
     }
-    reParse(state: State): ASTNode {
-        // TODO this stuff here is work, need to check whether the stuff in fvalbind is
-        // infixd or not
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+
+    reParse(state: State): FunctionDeclaration {
+        let valbnd: FunctionValueBinding[] = [];
+        for (let i = 0; i < this.functionValueBinding.length; ++i) {
+            valbnd.push(this.functionValueBinding[i].reParse(state));
+        }
+        return new FunctionDeclaration(this.position, this.typeVariableSequence, valbnd);
     }
 }
 
-// TODO: derived form
 export class TypeDeclaration extends Declaration {
 // type typeBinding
     constructor(public position: Position, public typeBinding: TypeBinding[]) {
         super();
     }
 
-    simplify(): ASTNode {
-        // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    simplify(): TypeDeclaration {
+        let bnds: TypeBinding[] = [];
+        for (let i = 0; i < this.typeBinding.length; ++i) {
+            bnds.push(new TypeBinding(this.typeBinding[i].position,
+                                      this.typeBinding[i].typeVariableSequence,
+                                      this.typeBinding[i].name,
+                                      this.typeBinding[i].type.simplify()));
+        }
+        return new TypeDeclaration(this.position, bnds);
     }
     reParse(state: State): TypeDeclaration {
-        // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        return this;
     }
 }
 
-// TODO: maybe merge with DatatypeBinding? <withtype typeBinding> is a derived form
 export class DatatypeDeclaration extends Declaration {
 // datatype datatypeBinding <withtype typeBinding>
     constructor(public position: Position, public datatypeBinding: DatatypeBinding[],
@@ -147,13 +229,37 @@ export class DatatypeDeclaration extends Declaration {
         super();
     }
 
-    simplify(): ASTNode {
-        // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    simplify(): Declaration {
+        let datbnd: DatatypeBinding[] = [];
+
+        for (let i = 0; i < this.datatypeBinding.length; ++i) {
+            let ntype: [IdentifierToken, Type|undefined][] = [];
+            for (let j = 0; j < this.datatypeBinding[i].type.length; ++j) {
+                if (this.datatypeBinding[i].type[j][1] !== undefined) {
+                    ntype.push([this.datatypeBinding[i].type[j][0],
+                               (<Type> this.datatypeBinding[i].type[j][1]).simplify()]);
+                } else {
+                    ntype.push(this.datatypeBinding[i].type[j]);
+                }
+            }
+            datbnd.push(new DatatypeBinding(this.datatypeBinding[i].position,
+                this.datatypeBinding[i].typeVariableSequence,
+                this.datatypeBinding[i].name,
+                ntype));
+        }
+
+        // TODO Correctly implement the withtype ~> type transition
+        /*
+        if (this.typeBinding) {
+            return new SequentialDeclaration(this.position, [
+                new DatatypeDeclaration(this.position, datbnd, undefined),
+                new TypeDeclaration(this.position, this.typeBinding).simplify()]);
+        } else { */
+        return new DatatypeDeclaration(this.position, datbnd, undefined);
+        /* } */
     }
     reParse(state: State): DatatypeDeclaration {
-        // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        return this;
     }
 }
 
@@ -164,9 +270,8 @@ export class DatatypeReplication extends Declaration {
         super();
     }
 
-    simplify(): ASTNode {
-        // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    simplify(): DatatypeReplication {
+        return this;
     }
     reParse(state: State): DatatypeReplication {
         return this;
@@ -180,13 +285,40 @@ export class AbstypeDeclaration extends Declaration {
         super();
     }
 
-    simplify(): ASTNode {
-        // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    simplify(): AbstypeDeclaration {
+        let datbnd: DatatypeBinding[] = [];
+
+        for (let i = 0; i < this.datatypeBinding.length; ++i) {
+            let ntype: [IdentifierToken, Type|undefined][] = [];
+            for (let j = 0; j < this.datatypeBinding[i].type.length; ++j) {
+                if (this.datatypeBinding[i].type[j][1] !== undefined) {
+                    ntype.push([this.datatypeBinding[i].type[j][0],
+                               (<Type> this.datatypeBinding[i].type[j][1]).simplify()]);
+                } else {
+                    ntype.push(this.datatypeBinding[i].type[j]);
+                }
+            }
+            datbnd.push(new DatatypeBinding(this.datatypeBinding[i].position,
+                this.datatypeBinding[i].typeVariableSequence,
+                this.datatypeBinding[i].name,
+                ntype));
+        }
+
+        // TODO Correctly implement the withtype ~> type transition
+        /* if (this.typeBinding) {
+            return new AbstypeDeclaration(this.position, datbnd, undefined,
+                new SequentialDeclaration(this.position, [
+                    new TypeDeclaration(this.position, this.typeBinding).simplify(),
+                    this.declaration.simplify()]));
+        } else { */
+        return new AbstypeDeclaration(this.position, datbnd, this.typeBinding,
+            this.declaration.simplify());
+        /* } */
+
     }
     reParse(state: State): AbstypeDeclaration {
-        // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        return new AbstypeDeclaration(this.position, this.datatypeBinding, this.typeBinding,
+            this.declaration.reParse(state));
     }
 }
 

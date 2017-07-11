@@ -46,6 +46,7 @@ export abstract class Expression extends ASTNode {
 export interface Pattern {
     // Returns which bindings would be created by matching v to this Pattern,
     // or undefined, if v does not match this Pattern.
+    position: number;
     matches(state: State, v: Value): [string, Value][] | undefined;
     simplify(): Pattern;
     reParse(state: State): Pattern;
@@ -485,11 +486,10 @@ export class RecordSelector extends Expression {
 
     simplify(): Lambda {
         // TODO Token.text does not always contain the required text ~> .text() ?
-        // TODO think about something better than '__λ'
         return new Lambda(this.position, new Match(-1, [[
             new Record(-1, false, [[this.label.text,
-                new ValueIdentifier(-1, new IdentifierToken('__λ', -1)), undefined]]),
-            new ValueIdentifier(-1, new IdentifierToken('__λ', -1))]]));
+                new ValueIdentifier(-1, new IdentifierToken('__rs', -1)), undefined]]),
+            new ValueIdentifier(-1, new IdentifierToken('__rs', -1))]]));
     }
 
     reParse(state: State): RecordSelector {

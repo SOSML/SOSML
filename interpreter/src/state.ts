@@ -5,7 +5,8 @@
 // TODO Remove stuff not needed for our subset of SML
 
 import { Type } from './types';
-import { IdentifierToken } from './lexer';
+import { IdentifierToken, Token, LongIdentifierToken } from './lexer';
+import { InternalInterpreterError } from './errors.ts';
 
 export enum IdentifierStatus {
     CONSTANT,
@@ -99,8 +100,15 @@ export class State {
                          this.environment.clone());
     }
 
-    getIdentifierInformation(id: IdentifierToken): IdentifierInformation {
-        return this.environment.valueEnvironment[id.text];
+    getIdentifierInformation(id: Token): IdentifierInformation {
+        if (id instanceof IdentifierToken) {
+            return this.environment.valueEnvironment[id.text];
+        } else if (id instanceof LongIdentifierToken) {
+            // TODO
+            return this.environment.valueEnvironment[id.text];
+        } else {
+            throw new InternalInterpreterError(id.position, 'Not an identifier');
+        }
     }
 }
 
