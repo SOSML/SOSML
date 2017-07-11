@@ -1,5 +1,5 @@
 import { Type } from './types';
-import { Token, IdentifierToken, KeywordToken } from './lexer';
+import { Token, IdentifierToken } from './lexer';
 import { Declaration } from './declarations';
 import { ASTNode } from './ast';
 import { State } from './state';
@@ -48,6 +48,7 @@ export interface Pattern {
     // or undefined, if v does not match this Pattern.
     matches(state: State, v: Value): [string, Value][] | undefined;
     simplify(): Pattern;
+    reParse(state: State): Pattern;
 }
 
 export class Wildcard extends Expression implements Pattern {
@@ -66,7 +67,7 @@ export class Wildcard extends Expression implements Pattern {
     }
 
     reParse(state: State): Wildcard {
-        throw new InternalInterpreterError(this.position, 'Tried re-parsing a pattern.');
+        return this;
     }
 }
 
@@ -95,7 +96,12 @@ export class LayeredPattern extends Expression implements Pattern {
     }
 
     reParse(state: State): LayeredPattern {
-        throw new InternalInterpreterError(this.position, 'Tried re-parsing a pattern.');
+        if (this.typeAnnotation) {
+            return new LayeredPattern(this.position, this.identifier, this.typeAnnotation,
+                this.pattern.reParse(state));
+        } else {
+            return new LayeredPattern(this.position, this.identifier, undefined, this.pattern.reParse(state));
+        }
     }
 }
 
@@ -136,7 +142,12 @@ export class Match extends ASTNode {
     }
 
     reParse(state: State): Match {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        let newMatches: [Pattern, Expression][] = [];
+        for (let i: number = 0; i < this.matches.length; ++i) {
+            let m: [Pattern, Expression] = this.matches[i];
+            newMatches.push([m[0].reParse(state), m[1].reParse(state)]);
+        }
+        return new Match(this.position, newMatches);
     }
 }
 
@@ -155,7 +166,7 @@ export class TypedExpression extends Expression implements Pattern {
     }
 
     reParse(state: State): TypedExpression {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        return new TypedExpression(this.position, this.expression.reParse(state), this.typeAnnotation);
     }
 }
 
@@ -168,7 +179,7 @@ export class HandleException extends Expression {
     }
 
     reParse(state: State): HandleException {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        return new HandleException(this.position, this.expression.reParse(state), this.match.reParse(state));
     }
 }
 
@@ -181,7 +192,7 @@ export class RaiseException extends Expression {
     }
 
     reParse(state: State): RaiseException {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        return new RaiseException(this.position, this.expression.reParse(state));
     }
 }
 
@@ -194,7 +205,7 @@ export class Lambda extends Expression {
     }
 
     reParse(state: State): Lambda {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        return new Lambda(this.position, this.match.reParse(state));
     }
 }
 
@@ -215,7 +226,8 @@ export class FunctionApplication extends Expression implements Pattern {
     }
 
     reParse(state: State): FunctionApplication {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        // TODO check that this is indeed enough
+        return new FunctionApplication(this.position, this.func.reParse(state), this.argument.reParse(state));
     }
 }
 
@@ -229,9 +241,7 @@ export class Constant extends Expression implements Pattern {
 
     simplify(): Constant { return this; }
 
-    reParse(state: State): Constant {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
-    }
+    reParse(state: State): Constant { return this; }
 }
 
 export class ValueIdentifier extends Expression implements Pattern {
@@ -245,9 +255,7 @@ export class ValueIdentifier extends Expression implements Pattern {
 
     simplify(): ValueIdentifier { return this; }
 
-    reParse(state: State): ValueIdentifier {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
-    }
+    reParse(state: State): ValueIdentifier { return this; }
 }
 
 export class Record extends Expression implements Pattern {
@@ -277,7 +285,13 @@ export class Record extends Expression implements Pattern {
     }
 
     reParse(state: State): Record {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        let newEntries: [string, (Pattern | Expression), Type|undefined][] = [];
+        for (let i: number = 0; i < this.entries.length; ++i) {
+            let e: [string, (Pattern | Expression), Type|undefined] = this.entries[i];
+            let nt: Type|undefined = e[2];
+            newEntries.push([e[0], e[1].reParse(state), nt]);
+        }
+        return new Record(this.position, this.complete, newEntries);
     }
 }
 
@@ -287,14 +301,12 @@ export class LocalDeclarationExpression extends Expression {
     constructor(public position: Position, public declaration: Declaration, public expression: Expression) { super(); }
 
     simplify(): LocalDeclarationExpression {
-        // TODO: should be
-        // return new LocalDeclaration(this.position, this.declaration.simplify(), this.expression.simplify());
-        return new LocalDeclarationExpression(this.position, this.declaration, this.expression.simplify());
+        return new LocalDeclarationExpression(this.position, this.declaration.simplify(), this.expression.simplify());
     }
 
     reParse(state: State): LocalDeclarationExpression {
-        // TODO this stuff here is work
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        return new LocalDeclarationExpression(this.position, this.declaration.reParse(state),
+                                              this.expression.reParse(state));
     }
 }
 
@@ -359,8 +371,11 @@ export class InfixExpression extends Expression implements Pattern {
 // The following classes are derived forms. They will not be present in the simplified AST and do not implement
 // checkSemantics/getType and evaluate.
 
-let falseConstant: Constant = new Constant(0, new KeywordToken('false', 0));
-let trueConstant: Constant = new Constant(0, new KeywordToken('true', 0));
+// TODO move these constants to state
+let falseConstant = new ValueIdentifier(0, new IdentifierToken('false', 0));
+let trueConstant = new ValueIdentifier(0, new IdentifierToken('true', 0));
+let nilConstant = new ValueIdentifier(0, new IdentifierToken('nil', 0));
+let consConstant = new ValueIdentifier(0, new IdentifierToken('::', 0));
 
 export class Conjunction extends Expression {
 // leftOperand andalso rightOperand
@@ -371,7 +386,7 @@ export class Conjunction extends Expression {
     }
 
     reParse(state: State): Conjunction {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        return new Conjunction(this.position, this.leftOperand.reParse(state), this.rightOperand.reParse(state));
     }
 }
 
@@ -384,7 +399,7 @@ export class Disjunction extends Expression {
     }
 
     reParse(state: State): Disjunction {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        return new Disjunction(this.position, this.leftOperand.reParse(state), this.rightOperand.reParse(state));
     }
 }
 
@@ -393,7 +408,7 @@ export class Tuple extends Expression implements Pattern {
     constructor(public position: Position, public expressions: (Pattern | Expression)[]) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        throw new InternalInterpreterError(this.position, 'called matches on derived form');
+        return this.simplify().matches(state, v);
     }
 
     simplify(): Record {
@@ -405,7 +420,11 @@ export class Tuple extends Expression implements Pattern {
     }
 
     reParse(state: State): Tuple {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        let entries: (Pattern | Expression)[] = [];
+        for (let i = 0; i < this.expressions.length; ++i) {
+            entries.push(this.expressions[i].reParse(state));
+        }
+        return new Tuple(this.position, entries);
     }
 }
 
@@ -414,16 +433,24 @@ export class List extends Expression implements Pattern {
     constructor(public position: Position, public expressions: (Pattern | Expression)[]) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        throw new InternalInterpreterError(this.position, 'called matches on derived form');
+        return this.simplify().matches(state, v);
     }
 
     simplify(): FunctionApplication {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'not yet implemented');
+        let res: Expression|Pattern = nilConstant;
+        for (let i = this.expressions.length - 1; i >= 0; --i) {
+            let pair = new Tuple(-1, [this.expressions[i], res]).simplify();
+            res = new FunctionApplication(-1, consConstant, pair);
+        }
+        return <FunctionApplication> res;
     }
 
     reParse(state: State): List {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        let entries: (Pattern | Expression)[] = [];
+        for (let i = 0; i < this.expressions.length; ++i) {
+            entries.push(this.expressions[i].reParse(state));
+        }
+        return new List(this.position, entries);
     }
 }
 
@@ -432,12 +459,22 @@ export class Sequence extends Expression {
     constructor(public position: Position, public expressions: Expression[]) { super(); }
 
     simplify(): FunctionApplication {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'not yet implemented');
+        let pos = this.expressions.length - 1;
+        let match = new Match(-1, [[new Wildcard(0), this.expressions[pos]]]);
+        let res = new CaseAnalysis(-1, this.expressions[pos - 1], match);
+        for (let i = pos - 2; i >= 0; --i) {
+            match = new Match(-1, [[new Wildcard(0), res]]);
+            res = new CaseAnalysis(-1, this.expressions[i], match);
+        }
+        return res.simplify();
     }
 
     reParse(state: State): Sequence {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        let entries: Expression[] = [];
+        for (let i = 0; i < this.expressions.length; ++i) {
+            entries.push(this.expressions[i].reParse(state));
+        }
+        return new Sequence(this.position, entries);
     }
 }
 
@@ -445,13 +482,17 @@ export class RecordSelector extends Expression {
 // #label record
     constructor(public position: Position, public label: Token) { super(); }
 
-    simplify(): FunctionApplication {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'not yet implemented');
+    simplify(): Lambda {
+        // TODO Token.text does not always contain the required text ~> .text() ?
+        // TODO think about something better than '__λ'
+        return new Lambda(this.position, new Match(-1, [[
+            new Record(-1, false, [[this.label.text,
+                new ValueIdentifier(-1, new IdentifierToken('__λ', -1)), undefined]]),
+            new ValueIdentifier(-1, new IdentifierToken('__λ', -1))]]));
     }
 
     reParse(state: State): RecordSelector {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        return this;
     }
 }
 
@@ -465,21 +506,23 @@ export class CaseAnalysis extends Expression {
     }
 
     reParse(state: State): CaseAnalysis {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        return new CaseAnalysis(this.position, this.expression.reParse(state), this.match.reParse(state));
     }
 }
 
 export class Conditional extends Expression {
-// if condition then ifTrue else ifFalse
-    constructor(public position: Position, public condition: Expression, public ifTrue: Expression,
-                public ifFalse: Expression) { super(); }
+// if condition then consequence else alternative
+    constructor(public position: Position, public condition: Expression, public consequence: Expression,
+                public alternative: Expression) { super(); }
 
     simplify(): FunctionApplication {
-        let match: Match = new Match(this.position, [[trueConstant, this.ifTrue], [falseConstant, this.ifFalse]]);
+        let match: Match = new Match(this.position, [[trueConstant, this.consequence],
+                                                    [falseConstant, this.alternative]]);
         return new CaseAnalysis(this.position, this.condition, match).simplify();
     }
 
     reParse(state: State): Conditional {
-        throw new InternalInterpreterError(this.position, 'Nyi\'an.');
+        return new Conditional(this.position, this.condition.reParse(state), this.consequence.reParse(state),
+                               this.alternative.reParse(state));
     }
 }

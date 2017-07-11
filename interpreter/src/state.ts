@@ -103,3 +103,7 @@ export class State {
         return this.environment.valueEnvironment[id.text];
     }
 }
+
+export function initialState(): State {
+    throw new Error('nyi\'an');
+}

@@ -1,4 +1,3 @@
-import { ASTNode } from './ast';
 import { Expression, Pattern, Tuple, Constant, ValueIdentifier, Wildcard,
          LayeredPattern, FunctionApplication, TypedExpression, Record, List,
          Sequence, RecordSelector, Lambda, Conjunction, LocalDeclarationExpression,
@@ -937,6 +936,7 @@ export class Parser {
          *         infixr [d] vid1 … vidn               InfixRDeclaration(pos, ValueIdentifier[], d=0)
          *         nonfix vid1 … vidn                   NonfixDeclaration(pos, ValueIdentifier[])
          *         (empty)                              EmptyDeclaration()
+         *         exp                                  val it = exp
          */
         let curTok = this.currentToken();
 
@@ -1088,11 +1088,15 @@ export class Parser {
             return new NonfixDeclaration(curTok.position, res);
         }
 
-        return new EmptyDeclaration();
-    }
+        try {
+            let exp = this.parseExpression();
 
-    finished(): boolean {
-        return this.position === this.tokens.length;
+            let valbnd = new ValueBinding(curTok.position, false,
+                new ValueIdentifier(-1, new IdentifierToken('it', -1)), exp);
+            return new ValueDeclaration(curTok.position, [], [valbnd]);
+        } catch (ParserError) {
+            return new EmptyDeclaration();
+        }
     }
 
     private currentToken(): Token {
@@ -1103,11 +1107,7 @@ export class Parser {
     }
 }
 
-export function parse(tokens: Token[]): ASTNode[] {
+export function parse(tokens: Token[]): Declaration {
     let p: Parser = new Parser(tokens);
-    let result: ASTNode[] = [];
-    while (!p.finished()) {
-        result.push(p.parseDeclaration());
-    }
-    return result;
+    return p.parseDeclaration();
 }

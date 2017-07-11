@@ -14,34 +14,28 @@ let AST = instance.lexParse(..code..);
 */
 
 import { State } from './state';
-// import * as Lexer from "./lexer";
-// . . .
-
-/*
- * Map identifier ->
- *      - unique id (int)
- *      - value (string, int, tuple, etc)
- *      - type (SML type)
- */
+import * as Lexer from './lexer';
+import { Parser } from './parser';
 
 export class API {
     /* Think of some additional flags n stuff etc */
     static interpret(oldState: State, nextInstruction: string): State {
         // TODO
         // TODO copy old state
-        // let tkn = Lexer.lex(nextInstruction);
+        // Do we need to clone?
+        let state = oldState.clone();
+        let tkn = Lexer.lex(nextInstruction);
 
-        // Parser parser = Parser();
-        // ast = parser.parse(tkn);
-        //
-        // Analyzer analyzer = Analyzer();
-        // analyzer.analyze(oldState, ast);
-        //
-        // Interpreter interpreter = Interpreter();
-        // let newState = interpreter.interpret(oldState, ast);
+        let parser = new Parser(tkn);
+        let ast = parser.parseDeclaration();
+        ast = ast.reParse(state);
 
-        // return newState;
-        return oldState;
+        state = oldState.clone();
+        ast.simplify();
+        ast.checkStaticSemantics(state);
+        ast.evaluate(state);
+
+        return state;
     }
 
     static interpretFurther(oldState: State, currentPartialInstruction: string,
