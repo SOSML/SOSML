@@ -20,7 +20,6 @@ export abstract class Declaration extends ASTNode {
     simplify(): ASTNode {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
-
     reParse(state: State): ASTNode {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
@@ -36,7 +35,6 @@ export class ValueBinding {
     }
 }
 
-// TODO: derived form
 export class FunctionValueBinding {
     constructor(public position: Position,
                 public parameters: [Pattern[], Type|undefined, Expression][]) {
@@ -74,6 +72,15 @@ export class ExceptionDeclaration extends Declaration {
     constructor(public position: Position, public bindings: ExceptionBinding[]) {
         super();
     }
+
+    simplify(): ASTNode {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
+    reParse(state: State): ExceptionDeclaration {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
 }
 
 // Declaration subclasses
@@ -82,6 +89,15 @@ export class ValueDeclaration extends Declaration {
     constructor(public position: Position, public typeVariableSequence: TypeVariable[],
                 public valueBinding: ValueBinding[]) {
         super();
+    }
+
+    simplify(): ASTNode {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
+    reParse(state: State): ValueDeclaration {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 }
 
@@ -94,6 +110,16 @@ export class FunctionDeclaration extends Declaration {
                 public functionValueBinding: FunctionValueBinding[]) {
         super();
     }
+
+    simplify(): ASTNode {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
+    reParse(state: State): ASTNode {
+        // TODO this stuff here is work, need to check whether the stuff in fvalbind is
+        // infixd or not
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
 }
 
 // TODO: derived form
@@ -101,6 +127,15 @@ export class TypeDeclaration extends Declaration {
 // type typeBinding
     constructor(public position: Position, public typeBinding: TypeBinding[]) {
         super();
+    }
+
+    simplify(): ASTNode {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
+    reParse(state: State): TypeDeclaration {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 }
 
@@ -111,6 +146,15 @@ export class DatatypeDeclaration extends Declaration {
                 public typeBinding: (TypeBinding[]) | undefined) {
         super();
     }
+
+    simplify(): ASTNode {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
+    reParse(state: State): DatatypeDeclaration {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
 }
 
 export class DatatypeReplication extends Declaration {
@@ -118,6 +162,14 @@ export class DatatypeReplication extends Declaration {
     constructor(public position: Position, public name: IdentifierToken,
                 public oldname: Token) {
         super();
+    }
+
+    simplify(): ASTNode {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
+    reParse(state: State): DatatypeReplication {
+        return this;
     }
 }
 
@@ -127,12 +179,29 @@ export class AbstypeDeclaration extends Declaration {
                 public typeBinding: (TypeBinding[]) | undefined, public declaration: Declaration) {
         super();
     }
+
+    simplify(): ASTNode {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
+    reParse(state: State): AbstypeDeclaration {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
 }
 
 export class LocalDeclaration extends Declaration {
 // local declaration in body end
     constructor(public position: Position, public declaration: Declaration, public body: Declaration) {
         super();
+    }
+
+    simplify(): LocalDeclaration {
+        return new LocalDeclaration(this.position, this.declaration.simplify(), this.body.simplify());
+    }
+    reParse(state: State): LocalDeclaration {
+        let nstate = state.clone();
+        return new LocalDeclaration(this.position, this.declaration.reParse(nstate), this.body.reParse(nstate));
     }
 }
 
@@ -141,12 +210,37 @@ export class OpenDeclaration extends Declaration {
     constructor(public position: Position, public names: Token[]) {
         super();
     }
+
+    simplify(): OpenDeclaration {
+        return this;
+    }
+    reParse(state: State): OpenDeclaration {
+        return this;
+    }
 }
 
 export class SequentialDeclaration extends Declaration {
 // declaration1 <;> declaration2
     constructor(public position: Position, public declarations: Declaration[]) {
         super();
+    }
+
+    simplify(): SequentialDeclaration {
+        let decls: Declaration[] = [];
+        for (let i = 0; i < this.declarations.length; ++i) {
+            decls.push(this.declarations[i].simplify());
+        }
+        return new SequentialDeclaration(this.position, decls);
+    }
+    reParse(state: State): SequentialDeclaration {
+        let decls: Declaration[] = [];
+        for (let i = 0; i < this.declarations.length; ++i) {
+            decls.push(this.declarations[i].reParse(state));
+            let decl = this.declarations[i].simplify();
+            decl.checkStaticSemantics(state);
+            decl.evaluate(state);
+        }
+        return new SequentialDeclaration(this.position, decls);
     }
 }
 
@@ -156,6 +250,13 @@ export class InfixDeclaration extends Declaration {
                 public precedence: number = 0) {
         super();
     }
+
+    simplify(): InfixDeclaration {
+        return this;
+    }
+    reParse(state: State): InfixDeclaration {
+        return this;
+    }
 }
 
 export class InfixRDeclaration extends Declaration {
@@ -164,6 +265,13 @@ export class InfixRDeclaration extends Declaration {
                 public precedence: number = 0) {
         super();
     }
+
+    simplify(): InfixRDeclaration {
+        return this;
+    }
+    reParse(state: State): InfixRDeclaration {
+        return this;
+    }
 }
 
 export class NonfixDeclaration extends Declaration {
@@ -171,11 +279,25 @@ export class NonfixDeclaration extends Declaration {
     constructor(public position: Position, public operators: IdentifierToken[]) {
         super();
     }
+
+    simplify(): NonfixDeclaration {
+        return this;
+    }
+    reParse(state: State): NonfixDeclaration {
+        return this;
+    }
 }
 
 export class EmptyDeclaration extends Declaration {
 // exactly what it sais on the tin.
     constructor() {
         super();
+    }
+
+    simplify(): EmptyDeclaration {
+        return this;
+    }
+    reParse(state: State): EmptyDeclaration {
+        return this;
     }
 }

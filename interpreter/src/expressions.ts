@@ -305,8 +305,9 @@ export class LocalDeclarationExpression extends Expression {
     }
 
     reParse(state: State): LocalDeclarationExpression {
-        return new LocalDeclarationExpression(this.position, this.declaration.reParse(state),
-                                              this.expression.reParse(state));
+        let nstate = state.clone();
+        return new LocalDeclarationExpression(this.position, this.declaration.reParse(nstate),
+                                              this.expression.reParse(nstate));
     }
 }
 

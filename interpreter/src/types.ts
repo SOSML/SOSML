@@ -12,6 +12,7 @@ export interface Type {
     simplify(): Type;
 }
 
+    /*
 // TODO: better name
 export enum PrimitiveTypes { int, real, word, string, char, bool }
 
@@ -29,6 +30,7 @@ export class PrimitiveType implements Type {
 
     simplify(): Type { return this; }
 }
+     */
 
 export class TypeVariable implements Type {
     constructor(public position: Position, public name: string) {}
