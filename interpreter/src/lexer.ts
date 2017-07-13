@@ -11,39 +11,64 @@ export type int = number;
 export interface Token {
     text: string;
     position: Position;
+
+    getText(): string;
 }
 
 export class KeywordToken implements Token {
     constructor(public text: string, public position: Position) {}
+
+    getText(): string {
+        return this.text;
+    }
 }
 
 export abstract class ConstantToken implements Token {
     text: string;
     position: Position;
+
+    abstract getText(): string;
 }
 export class IntegerConstantToken extends ConstantToken {
     constructor(public text: string, public position: Position, public value: int) {
         super();
+    }
+
+    getText(): string {
+        return '' + this.value;
     }
 }
 export class RealConstantToken extends ConstantToken {
     constructor(public text: string, public position: Position, public value: number) {
         super();
     }
+
+    getText(): string {
+        return '' + this.value;
+    }
 }
 export class WordConstantToken extends ConstantToken {
     constructor(public text: string, public position: Position, public value: int) {
         super();
+    }
+    getText(): string {
+        return '' + this.value;
     }
 }
 export class CharacterConstantToken extends ConstantToken {
     constructor(public text: string, public position: Position, public value: char) {
         super();
     }
+    getText(): string {
+        return '' + this.value;
+    }
 }
 export class StringConstantToken extends ConstantToken {
     constructor(public text: string, public position: Position, public value: string) {
         super();
+    }
+    getText(): string {
+        return '' + this.value;
     }
 }
 
@@ -52,22 +77,34 @@ export class StringConstantToken extends ConstantToken {
 export class IdentifierToken implements Token {
     opPrefixed: boolean = false;
     constructor(public text: string, public position: Position) {}
+    getText(): string {
+        return this.text;
+    }
 }
 
 // Alphanumeric identifiers not starting with a prime may represent structure identifiers, signature identifiers
 // and functor identifiers
 export class AlphanumericIdentifierToken extends IdentifierToken {
     constructor(text: string, position: Position) { super(text, position); }
+    getText(): string {
+        return this.text;
+    }
 }
 
 // An alphanumeric identifier that starts with a prime
 export class TypeVariableToken implements Token {
     constructor(public text: string, public position: Position) {}
+    getText(): string {
+        return this.text;
+    }
 }
 
 // An alphanumeric identifier that starts with two primes
 export class EqualityTypeVariableToken extends TypeVariableToken {
     constructor(text: string, position: Position) { super(text, position); }
+    getText(): string {
+        return this.text;
+    }
 }
 
 // A star (*) can be used as value identifier or record label, but not as a type constructor and thus must be separated.
@@ -76,6 +113,9 @@ export class StarToken extends KeywordToken {
     opPrefixed: boolean = false;
     constructor(public position: Position) {
         super('*', position);
+    }
+    getText(): string {
+        return this.text;
     }
 }
 
@@ -86,12 +126,18 @@ export class EqualsToken extends KeywordToken {
     constructor(public position: Position) {
         super('=', position);
     }
+    getText(): string {
+        return this.text;
+    }
 }
 
 // A numeric token (a positive, decimal integer not starting with '0') can be used either as an integer constant or as
 // a record label.
 export class NumericToken extends IntegerConstantToken {
     constructor(text: string, position: Position, value: int) { super(text, position, value); }
+    getText(): string {
+        return this.text;
+    }
 }
 
 // A long identifier is a sequence str_1.str_2. … .str_n.id of n > 0 structure identifiers and one Identifier
@@ -102,6 +148,16 @@ export class LongIdentifierToken implements Token {
     opPrefixed: boolean = false;
     constructor(public text: string, public position: Position, public qualifiers: AlphanumericIdentifierToken[],
                 public id: IdentifierToken) {}
+    getText(): string {
+        let res: string = '';
+        for (let i = 0; i < this.qualifiers.length; ++i) {
+            if (i > 0) {
+                res += '.';
+            }
+            res += this.qualifiers[i].getText();
+        }
+        return res + this.text;
+    }
 }
 
 export class LexerError extends InterpreterError {

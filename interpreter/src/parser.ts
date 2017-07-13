@@ -765,7 +765,7 @@ export class Parser {
 
             if (argcnt === -1) {
                 argcnt = args.length;
-            } else if (argcnt !== args.length) {
+            } else if (argcnt !== 2 && argcnt !== 3 && argcnt !== args.length) {
                 throw new ParserError('Different number of arguments.', curTok.position);
             }
 

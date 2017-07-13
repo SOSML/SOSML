@@ -1,6 +1,6 @@
 import { Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
          Pattern, TypedExpression, Tuple } from './expressions';
-import { IdentifierToken, Token } from './lexer';
+import { IdentifierToken, LongIdentifierToken, Token } from './lexer';
 import { Type, TypeVariable } from './types';
 import { State } from './state';
 import { InternalInterpreterError, Position } from './errors';
@@ -82,6 +82,7 @@ export class FunctionValueBinding {
         }
 
         let name: ValueIdentifier;
+        let isInfix = false;
 
         if (this.parameters[0][0].length !== 3
             || !(this.parameters[0][0][1] instanceof ValueIdentifier)
@@ -96,12 +97,67 @@ export class FunctionValueBinding {
         }
 
         // Filter out the name everywhere.
-        // let params = [];
+        let params: [Pattern[], Type|undefined, Expression][] = [];
 
-        // TODO: fix bug that infix defs may have both id (a,b) and a id b params (of different length
-        // TODO actually do the filtering here. (tomorrow)
+        for (let i = 0; i < this.parameters.length; ++i) {
+            let nwargs: Pattern[] = [];
 
-        let res = new FunctionValueBinding(this.position, this.parameters/*params*/);
+            if (this.parameters[i][0].length === 3) {
+                // Could be infixed
+                if (this.parameters[i][0][1] instanceof ValueIdentifier
+                    && (<ValueIdentifier> this.parameters[i][0][1]).name.getText()
+                        === name.name.getText()) {
+                    if (!state.getIdentifierInformation((<ValueIdentifier> this.parameters[0][0][1]).name).infix) {
+                        throw new ParserError('Cannot use \"' + name.name.getText()
+                            + '\" as infix op.', this.parameters[0][0][1].position);
+                    }
+                    params.push([
+                        [new Tuple(-1, [this.parameters[0][0][0], this.parameters[0][0][2]])],
+                        this.parameters[0][1], this.parameters[0][2].reParse(state)
+                    ]);
+                    isInfix = true;
+                    continue;
+                }
+            }
+
+            if (!(this.parameters[i][0][0] instanceof ValueIdentifier)) {
+                throw new ParserError('Expected an identifier.', this.parameters[i][0][0].position);
+            }
+            if (isInfix && !(<IdentifierToken|LongIdentifierToken>
+                (<ValueIdentifier> this.parameters[i][0][0]).name).opPrefixed) {
+                throw new ParserError('Expected an op-prefixed identifier.',
+                    this.parameters[i][0][0].position);
+            }
+            if ((<ValueIdentifier> this.parameters[i][0][0]).name.getText() === name.name.getText()) {
+                if (state.getIdentifierInformation((<ValueIdentifier> this.parameters[0][0][0]).name).infix) {
+                    if (this.parameters[i][0].length !== 2) {
+                        throw new ParserError('Invalid number of arguments.',
+                            this.parameters[0][0][1].position);
+                    }
+                    isInfix = true;
+                    if (!(<IdentifierToken|LongIdentifierToken>
+                        (<ValueIdentifier> this.parameters[i][0][0]).name).opPrefixed) {
+                        throw new ParserError('Expected an op-prefixed identifier.',
+                            this.parameters[i][0][0].position);
+                    }
+
+                    params.push([[this.parameters[0][0][1]],
+                        this.parameters[0][1],
+                        this.parameters[0][2].reParse(state)]);
+                    continue;
+                }
+                for (let j = 1; j < this.parameters[i][0].length; ++j) {
+                    nwargs.push(this.parameters[i][0][j]);
+                }
+                params.push([nwargs, this.parameters[0][1], this.parameters[0][2].reParse(state)]);
+                continue;
+            }
+            throw new ParserError('Expected the identifier \"' + name.name.getText() + '\" but got \"'
+                + (<ValueIdentifier> this.parameters[i][0][0]).name.getText() + '\" instead.',
+                this.parameters[i][0][0].position);
+        }
+
+        let res = new FunctionValueBinding(this.position, params);
         res.name = name;
         return res;
     }
