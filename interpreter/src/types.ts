@@ -36,7 +36,7 @@ export class TypeVariable implements Type {
     constructor(public position: Position, public name: string) {}
 
     prettyPrint(): string {
-        return name;
+        return this.name;
     }
 
     unify(other: Type): Type | undefined {
