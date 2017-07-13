@@ -338,7 +338,7 @@ export class Parser {
             ++this.position;
             return new HandleException(curTok.position, exp, this.parseMatch());
         }
-        throw new ParserError('Expected "orelse", "andalso" or "handle".', nextTok.position);
+        return exp;
     }
 
     parseMatch(): Match {
@@ -911,7 +911,7 @@ export class Parser {
          */
         let res: Declaration[] = [];
         let curTok = this.currentToken();
-        while (true) {
+        while (this.position < this.tokens.length) {
             let cur = this.parseSimpleDeclaration();
             if (cur instanceof EmptyDeclaration) {
                 break;
