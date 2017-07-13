@@ -45,6 +45,7 @@ server.post('/api/fallback/',
             }
         );
         dockerrunner.stdin.write(payload);
+        dockerrunner.stdin.destroy();
     }
 );
 
