@@ -34,6 +34,17 @@ export class ValueBinding {
     constructor(public position: Position, public isRecursive: boolean,
                 public pattern: Pattern, public expression: Expression) {
     }
+
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO nicify this
+        let res = '';
+        if (this.isRecursive) {
+            res += 'rec ';
+        }
+        res += this.pattern.prettyPrint(indentation, oneLine);
+        res += ' = ';
+        return res + this.expression.prettyPrint(indentation, oneLine);
+    }
 }
 
 export class FunctionValueBinding {
@@ -201,6 +212,10 @@ export class ExceptionDeclaration extends Declaration {
     reParse(state: State): ExceptionDeclaration {
         return this;
     }
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
 }
 
 // Declaration subclasses
@@ -231,6 +246,17 @@ export class ValueDeclaration extends Declaration {
         }
         return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd);
     }
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO
+        let res = 'val <stuff>';
+        for (let i = 0; i < this.valueBinding.length; ++i) {
+            if (i > 0) {
+                res += ' and';
+            }
+            res += ' ' + this.valueBinding[i].prettyPrint(indentation, oneLine);
+        }
+        return res += ';';
+    }
 }
 
 export class FunctionDeclaration extends Declaration {
@@ -255,6 +281,10 @@ export class FunctionDeclaration extends Declaration {
         }
         return new FunctionDeclaration(this.position, this.typeVariableSequence, valbnd);
     }
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
 }
 
 export class TypeDeclaration extends Declaration {
@@ -275,6 +305,10 @@ export class TypeDeclaration extends Declaration {
     }
     reParse(state: State): TypeDeclaration {
         return this;
+    }
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 }
 
@@ -317,6 +351,10 @@ export class DatatypeDeclaration extends Declaration {
     reParse(state: State): DatatypeDeclaration {
         return this;
     }
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
 }
 
 export class DatatypeReplication extends Declaration {
@@ -331,6 +369,10 @@ export class DatatypeReplication extends Declaration {
     }
     reParse(state: State): DatatypeReplication {
         return this;
+    }
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 }
 
@@ -376,6 +418,10 @@ export class AbstypeDeclaration extends Declaration {
         return new AbstypeDeclaration(this.position, this.datatypeBinding, this.typeBinding,
             this.declaration.reParse(state));
     }
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
 }
 
 export class LocalDeclaration extends Declaration {
@@ -391,6 +437,14 @@ export class LocalDeclaration extends Declaration {
         let nstate = state.clone();
         return new LocalDeclaration(this.position, this.declaration.reParse(nstate), this.body.reParse(nstate));
     }
+
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO this is just something that works but not pretty
+        let res = 'local ' + this.declaration.prettyPrint(indentation, oneLine);
+        res += ' in ' + this.body.prettyPrint(indentation, oneLine);
+        res += ' end;';
+        return res;
+    }
 }
 
 export class OpenDeclaration extends Declaration {
@@ -404,6 +458,14 @@ export class OpenDeclaration extends Declaration {
     }
     reParse(state: State): OpenDeclaration {
         return this;
+    }
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO this is just something that works but not pretty
+        let res = 'open';
+        for (let i = 0; i < this.names.length; ++i) {
+            res += ' ' + this.names[i].getText();
+        }
+        return res + ';';
     }
 }
 
@@ -430,6 +492,17 @@ export class SequentialDeclaration extends Declaration {
         }
         return new SequentialDeclaration(this.position, decls);
     }
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO this is just something that works but not pretty
+        let res = '';
+        for (let i = 0; i < this.declarations.length; ++i) {
+            if (i > 0) {
+                res += ' ';
+            }
+            res += this.declarations[i].prettyPrint(indentation, oneLine);
+        }
+        return res;
+    }
 }
 
 export class InfixDeclaration extends Declaration {
@@ -444,6 +517,15 @@ export class InfixDeclaration extends Declaration {
     }
     reParse(state: State): InfixDeclaration {
         return this;
+    }
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO this is just something that works but not pretty
+        let res = 'infix';
+        res += ' ' + this.precedence;
+        for (let i = 0; i < this.operators.length; ++i) {
+            res += ' ' + this.operators[i].getText();
+        }
+        return res + ';';
     }
 }
 
@@ -460,6 +542,15 @@ export class InfixRDeclaration extends Declaration {
     reParse(state: State): InfixRDeclaration {
         return this;
     }
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO this is just something that works but not pretty
+        let res = 'infixr';
+        res += ' ' + this.precedence;
+        for (let i = 0; i < this.operators.length; ++i) {
+            res += ' ' + this.operators[i].getText();
+        }
+        return res + ';';
+    }
 }
 
 export class NonfixDeclaration extends Declaration {
@@ -474,6 +565,14 @@ export class NonfixDeclaration extends Declaration {
     reParse(state: State): NonfixDeclaration {
         return this;
     }
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO use the params
+        let res = 'nonfix';
+        for (let i = 0; i < this.operators.length; ++i) {
+            res += ' ' + this.operators[i].getText();
+        }
+        return res + ';';
+    }
 }
 
 export class EmptyDeclaration extends Declaration {
@@ -487,5 +586,8 @@ export class EmptyDeclaration extends Declaration {
     }
     reParse(state: State): EmptyDeclaration {
         return this;
+    }
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        return ' ;';
     }
 }
