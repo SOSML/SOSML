@@ -36,7 +36,7 @@ function evalSMLCode(payload, response) {
         function (err, data, stderr) {
             var last_line = data.split(/\r?\n/).pop();
             var error_code = parseInt(last_line.substring(2));
-            error_text = '';
+            var error_text = '';
             if (error_code > 0) {
                 if (error_code == 124) {
                     error_text = 'SML hit the time limit of 3 seconds.';
