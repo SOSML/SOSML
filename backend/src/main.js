@@ -34,8 +34,8 @@ function evalSMLCode(payload, response) {
     let dockerrunner = cmd.get(
         'docker run --cpus=1 --memory=128m --rm -i --read-only derjesko/mosmlfallback',
         function (err, data, stderr) {
-            var last_line = data.split(/\r?\n/).pop();
-            var error_code = parseInt(last_line.substring(2));
+            var last_line = data.split(/\r?\n-?/).reverse()[1];
+            var error_code = parseInt(last_line);
             var error_text = '';
             if (error_code > 0) {
                 if (error_code == 124) {
