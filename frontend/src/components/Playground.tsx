@@ -18,7 +18,11 @@ interface State {
     sizeAnchor: any;
 }
 
-class Playground extends React.Component<any, State> {
+interface Props {
+    readOnly: boolean;
+}
+
+class Playground extends React.Component<Props, State> {
     constructor(props: any) {
         super(props);
 
@@ -49,8 +53,10 @@ class Playground extends React.Component<any, State> {
             <div className="playground">
                 <SplitterLayout onUpdate={this.handleSplitterUpdate}>
                     <div className="flexcomponent flexy">
-                        <MiniWindow content={
-                            <CodeMirrorWrapper flex={true} onChange={this.handleCodeChange} code={code} />}
+                        <MiniWindow content={(
+                                <CodeMirrorWrapper flex={true} onChange={this.handleCodeChange} code={code}
+                                readOnly={this.props.readOnly} />
+                            )}
                             footer={(
                             <ButtonToolbar>
                                 <Button bsSize="small" bsStyle="primary" onClick={this.handleRun}>Ausführen</Button>

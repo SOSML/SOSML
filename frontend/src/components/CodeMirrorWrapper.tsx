@@ -10,6 +10,7 @@ export interface Props {
     flex?: boolean;
     onChange?: (x: string) => void;
     code?: string;
+    readOnly?: boolean;
 }
 
 class CodeMirrorWrapper extends React.Component<Props, any> {
@@ -27,7 +28,8 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
             mode: 'mllike',
             indentUnit: 4,
             matchBrackets: true,
-            lineWrapping: true
+            lineWrapping: true,
+            readOnly: this.props.readOnly ? true : false
         };
         let classAdd = '';
         if (this.props.flex) {

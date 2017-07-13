@@ -26,6 +26,11 @@ class MenuBar extends React.Component<any, any> {
                             <NavItem>Editor</NavItem>
                         </LinkContainer>
                     </Nav>
+                    <Nav>
+                        <LinkContainer to="/files">
+                            <NavItem>Dateien</NavItem>
+                        </LinkContainer>
+                    </Nav>
                     <Nav pullRight={true}>
                         <LinkContainer to="/help">
                             <NavItem>Hilfe</NavItem>
