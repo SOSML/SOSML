@@ -58,6 +58,9 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
             }
         };
         this.editor.getCodeMirror().refresh();
+
+        // TODO: propagate value
+        this.handleChange(this.editor.getCodeMirror().getValue());
     }
 
     handleChange(newValue: string) {

@@ -8,14 +8,11 @@ import {
     BrowserRouter as Router,
     Route
 } from 'react-router-dom';
-import { Database } from '../API';
 import './RootPage.css';
 
 class RootPage extends React.Component<any, any> {
     constructor() {
         super();
-        
-        Database.getInstance().init();
     }
 
     render() {

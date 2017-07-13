@@ -20,6 +20,7 @@ interface State {
 
 interface Props {
     readOnly: boolean;
+    onCodeChange?: (x: string) => void;
 }
 
 class Playground extends React.Component<Props, State> {
@@ -122,6 +123,9 @@ class Playground extends React.Component<Props, State> {
             return {code: newCode};
         });
         localStorage.setItem('tmpCode', newCode);
+        if (this.props.onCodeChange) {
+            this.props.onCodeChange(newCode);
+        }
     }
 }
 

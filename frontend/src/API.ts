@@ -5,13 +5,14 @@ Interfaces with both the client side interpreter and the server side fallback.
 
 */
 
-export enum Location {
-    LOCAL = 1
+export enum FileType {
+    LOCAL = 1,
+    SERVER
 }
 
 export interface File {
     name: string;
-    location: Location;
+    type: FileType;
 }
 
 export class API {
@@ -69,23 +70,30 @@ export class API {
 export class Database {
     private static instance: Database;
     private database: IDBDatabase;
+    private dbRequest: any;
 
-    static getInstance(): Database {
+    static getInstance(): Promise<Database> {
         if (Database.instance == null) {
             Database.instance = new Database();
         }
-        return Database.instance;
+        return Database.instance.getReady();
     }
 
-    init(): void {
-        let request = window.indexedDB.open('FilesDB', 1);
-        request.onupgradeneeded = (event: any) => {
-            let db = event.target.result;
-            db.createObjectStore('files', { keyPath: 'name'});
-        };
-        request.onsuccess = (event: any) => {
-            this.database = event.target.result;
-        };
+    getReady(): Promise<Database> {
+        return new Promise((resolve: (val: any) => void, reject: (err: any) => void) => {
+            if (this.database != null) {
+                resolve(this);
+            } else if (this.dbRequest == null) {
+                this.init();
+            }
+            this.dbRequest.onsuccess = (event: any) => {
+                this.database = event.target.result;
+                resolve(this);
+            };
+            this.dbRequest.onerror = (error: any) => {
+                reject('Database could not be loaded');
+            };
+        });
     }
 
     getFiles(): Promise<File[]> {
@@ -100,8 +108,9 @@ export class Database {
                 if (cursor) {
                     files.push({
                         name: cursor.key,
-                        location: Location.LOCAL
+                        type: FileType.LOCAL
                     });
+                    cursor.continue();
                 } else {
                     resolve(files);
                 }
@@ -133,5 +142,16 @@ export class Database {
                 resolve(event.target.result.value);
             };
         });
+    }
+
+    private init(): void {
+        this.dbRequest = window.indexedDB.open('FilesDB', 1);
+        this.dbRequest.onupgradeneeded = (event: any) => {
+            let db = event.target.result;
+            db.createObjectStore('files', { keyPath: 'name'});
+        };
+        this.dbRequest.onsuccess = (event: any) => {
+            this.database = event.target.result;
+        };
     }
 }
