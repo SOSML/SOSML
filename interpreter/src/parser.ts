@@ -188,9 +188,11 @@ export class Parser {
             ++this.position;
             return new LocalDeclarationExpression(curTok.position, dec, new Sequence(curTok.position, res));
         } else if (curTok instanceof ConstantToken) {
+            ++this.position;
             return new Constant(curTok.position, curTok);
         } else if (curTok instanceof IdentifierToken
                    || curTok instanceof LongIdentifierToken) {
+            ++this.position;
             return new ValueIdentifier(curTok.position, curTok);
         }
         throw new ParserError('Expected atomic expression.', curTok.position);
@@ -520,9 +522,11 @@ export class Parser {
                 results.push(this.parsePattern());
             }
         } else if (curTok instanceof ConstantToken) {
+            ++this.position;
             return new Constant(curTok.position, curTok);
         } else if (curTok instanceof IdentifierToken
                    || curTok instanceof LongIdentifierToken) {
+            ++this.position;
             return new ValueIdentifier(curTok.position, curTok);
         }
         throw new ParserError('Expected atomic pattern.', curTok.position);
