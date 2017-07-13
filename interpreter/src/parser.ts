@@ -283,7 +283,7 @@ export class Parser {
             }
         }
 
-        if (exps.length === 1) {
+        if (cnt === 0) {
             return exps[0];
         }
 
@@ -619,6 +619,9 @@ export class Parser {
             } else {
                 break;
             }
+        }
+        if (cnt === 0) {
+            return pats[0];
         }
         return new InfixExpression(pats, ops);
     }
