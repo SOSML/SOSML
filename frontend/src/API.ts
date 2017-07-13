@@ -33,4 +33,26 @@ export class API {
             return response.text();
         });
     }
+
+    static shareCode(code: string): Promise<string> {
+        if (API.EMULATE) {
+            return new Promise(
+                (resolve: (val: any) => void, reject: (err: any) => void) => {
+                    resolve('0123456');
+                }
+            );
+        }
+        return fetch('/api/share/',
+            {
+                headers: {
+                  'Accept': 'text/plain',
+                  'Content-Type': 'application/json'
+                },
+                method: 'POST',
+                body: JSON.stringify({'code': code})
+            }
+        ).then(function(response: any){
+            return response.text();
+        });
+    }
 }
