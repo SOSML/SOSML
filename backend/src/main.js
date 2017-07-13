@@ -44,7 +44,7 @@ function evalSMLCode(payload, response) {
                     data = data.replace(last_line, 'SML exited with ' + error_code);
                 }
             }
-            data = data.replace(last_line, error_text);
+            data = data.split(/\r?\n/).reverse().splice(2).reverse().join("\n");
             response.set('Content-Type', 'text/plain');
             response.end(data);
         }
