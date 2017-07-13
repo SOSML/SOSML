@@ -361,7 +361,23 @@ export class DatatypeDeclaration extends Declaration {
     }
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        let res = 'datatype';
+        for (let i = 0; i < this.datatypeBinding.length; ++i) {
+            if (i > 0) {
+                res += ' and';
+            }
+            res += ' <stuff> ' + this.datatypeBinding[i].name.getText() + ' =';
+            for (let j = 0; j < this.datatypeBinding[i].type.length; ++j) {
+                if (j > 0) {
+                    res += ' | ';
+                }
+                res += ' ' + this.datatypeBinding[i].type[j][0].getText();
+                if (this.datatypeBinding[i].type[j][1] !== undefined) {
+                    res += ' of ' + this.datatypeBinding[i].type[j][1].prettyPrint();
+                }
+            }
+        }
+        return res;
     }
 }
 
