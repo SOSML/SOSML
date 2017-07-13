@@ -8,6 +8,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const fs = require('fs');
 const crypto = require('crypto');
+const RateLimit = require('express-rate-limit');
 
 
 const server = express();
@@ -19,6 +20,14 @@ server.use('/static/', express.static('../frontend/build/static'));
 // server.use('/code/', express.static('code'));
 server.get('/', function (request, response) {
     response.sendFile(path.resolve('../frontend/build/index.html'));
+});
+
+var callDockerLimiter = new RateLimit({
+    windowMs: 10*60*1000, // 1 hour window
+    delayAfter: 10, // begin slowing down responses after the first 10 requests
+    delayMs: 100, // slow down subsequent responses by 100 milliseconds per request
+    max: 50, // start blocking after 50 requests
+    message: "Too many requests made from this IP, please try again in a few minutes"
 });
 
 function evalSMLCode(payload, response) {
@@ -67,14 +76,14 @@ function listDir(name, response) {
     });
 }
 
-server.post('/api/fallback/',
+server.post('/api/fallback/', callDockerLimiter,
     function (request, response) {
         var payload = request.body.code;
         evalSMLCode(payload, response);
     }
 );
 
-server.post('/api/validate/',
+server.post('/api/validate/', callDockerLimiter,
     function (request, response) {
         var payload = request.body.code;
         var name = request.body.name
@@ -133,6 +142,6 @@ server.get('/code/:code',
     }
 );
 
-server.listen(80, function () {
+server.listen(8000, function () {
     console.log('yay');
 });
