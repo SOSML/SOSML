@@ -37,13 +37,17 @@ export class Parser {
     }
     assertIdentifierToken(tok: Token) {
         if (!(tok instanceof IdentifierToken)) {
-            throw new ParserError('Expected an identifier.', tok.position);
+            throw new ParserError('Expected an identifier, got \"'
+                + tok.getText() + '\" ('
+                + tok.constructor.name + ').', tok.position);
         }
     }
     assertIdentifierOrLongToken(tok: Token) {
         if (!(tok instanceof IdentifierToken)
             && !(tok instanceof LongIdentifierToken)) {
-            throw new ParserError('Expected a (long) identifier.', tok.position);
+            throw new ParserError('Expected an identifier, got \"'
+                + tok.getText() + '\" ('
+                + tok.constructor.name + ').', tok.position);
         }
     }
     checkIdentifierOrLongToken(tok: Token) {
@@ -660,26 +664,22 @@ export class Parser {
 
     parseSimpleType(): Type {
         /*
-         * ty ::= tyvar             TypeVariable(name:string)
-         *        ty[] longtycon    CustomType(fullName:String, tyArg:TypeVariable[])
+         * ty ::= tyvar                     TypeVariable(name:string)
+         *        longtycon                 CustomType
+         *        (ty1,..., tyn) longtycon  CustomType
          *        { [tyrow] }
          *        ( ty )
          */
         let curTok = this.currentToken();
 
-        let tyvars = this.parseTypeVarSequence();
-
-        if (this.checkIdentifierOrLongToken(this.currentToken())) {
-            let nextTok = this.currentToken();
+        if (curTok instanceof TypeVariableToken) {
             ++this.position;
-            return new CustomType(curTok.position, nextTok, tyvars);
+            return new TypeVariable(curTok.position, curTok.getText());
         }
-        if (tyvars.length === 1) {
-            return tyvars[0];
-        }
-        if (tyvars.length > 1) {
-            throw new ParserError('Expected identifier after type variable, got \"'
-                + this.currentToken().getText() + '\".', this.currentToken().position);
+
+        if (this.checkIdentifierOrLongToken(curTok)) {
+            ++this.position;
+            return new CustomType(curTok.position, curTok, []);
         }
 
         if (this.checkKeywordToken(curTok, '{')) {
@@ -688,25 +688,41 @@ export class Parser {
         }
         if (this.checkKeywordToken(curTok, '(')) {
             ++this.position;
-            let res = this.parseType();
-            curTok = this.currentToken();
-            if (!(curTok instanceof KeywordToken)
-                || curTok.text !== ')') {
-                throw new ParserError('Missing closing ")"', curTok.position);
+            let res = [this.parseType()];
+            while (true) {
+                let nextTok = this.currentToken();
+                if (this.checkKeywordToken(nextTok, ',')) {
+                    ++this.position;
+                    res.push(this.parseType());
+                    continue;
+                }
+                if (this.checkKeywordToken(nextTok, ')')) {
+                    ++this.position;
+                    if (res.length === 0) {
+                        return new TupleType(curTok.position, []);
+                    }
+                    if (res.length === 1) {
+                        return res[0];
+                    }
+                    this.assertIdentifierOrLongToken(this.currentToken());
+                    let name = this.currentToken();
+                    ++this.position;
+                    return new CustomType(curTok,position, name, res);
+                }
+                throw new ParserError('Expected "," or ")", got "' +
+                    nextTok.getText() + '".', nextTok.position);
             }
-            ++this.position;
-            return res;
         }
 
         throw new ParserError('Expected either "(" or "{" got \"'
             + curTok.getText() + '\".', curTok.position);
     }
 
-    parseArrowType(): Type {
+    parseType(): Type {
         /*
          * ty ::= ty1 -> ty2        Function(param:Type, return:Type)
          */
-        let curTy = this.parseSimpleType();
+        let curTy = this.parseTupleType();
         let curTok = this.currentToken();
         if (!this.checkKeywordToken(curTok, '->')) {
             return curTy;
@@ -716,21 +732,39 @@ export class Parser {
         return new FunctionType(curTok.position, curTy, tgTy);
     }
 
-    parseType(): Type {
+    parseTupleType(): Type {
         /*
          * ty ::= ty1 * … * tyn     TupleType(types:Type[])
          */
-        let curTy = [this.parseArrowType()];
+        let curTy = [this.parseCustomType()];
         let curTok = this.currentToken();
         let pos = curTok.position;
-        while (this.checkKeywordToken(curTok, '*')) {
+        while (this.checkKeywordToken(this.currentToken(), '*')) {
             ++this.position;
-            curTy.push(this.parseArrowType());
+            curTy.push(this.parseCustomType());
         }
         if (curTy.length === 1) {
             return curTy[0];
         }
         return new TupleType(pos, curTy);
+    }
+
+    parseCustomType(): Type {
+        /*
+         * ty ::= ty longtycon    CustomType(fullName:String, tyArg:Type[])
+         */
+        let curTok = this.currentToken();
+        let ty = this.parseSimpleType();
+        while (this.position < this.tokens.length) {
+            let nextTok = this.currentToken();
+            if (this.checkIdentifierOrLongToken(nextTok)) {
+                ++this.position;
+                ty = new CustomType(curTok.position, nextTok, [ty]);
+                continue;
+            }
+            return ty;
+        }
+        return ty;
     }
 
     parseValueBinding(): ValueBinding {
@@ -804,6 +838,8 @@ export class Parser {
 
         let vid = this.currentToken();
         ++this.position;
+        this.assertKeywordToken(this.currentToken(), '=');
+        ++this.position;
 
         return new TypeBinding(curTok.position, tyvar, <IdentifierToken> vid, this.parseType());
     }
@@ -842,7 +878,7 @@ export class Parser {
     parseDatatypeBinding(): DatatypeBinding {
         let curTok = this.currentToken();
         let tyvars = this.parseTypeVarSequence();
-        this.assertIdentifierToken(curTok);
+        this.assertIdentifierToken(this.currentToken());
         let tycon = this.currentToken();
         ++this.position;
         this.assertKeywordToken(this.currentToken(), '=');

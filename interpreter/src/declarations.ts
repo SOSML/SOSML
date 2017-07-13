@@ -308,7 +308,15 @@ export class TypeDeclaration extends Declaration {
     }
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        let res = 'type';
+        for (let i = 0; i < this.typeBinding.length; ++i) {
+            if (i > 0) {
+                res += ' and';
+            }
+            res += ' <stuff> ' + this.typeBinding[i].name.getText();
+            res += ' = ' + this.typeBinding[i].type.prettyPrint();
+        }
+        return res + ';';
     }
 }
 

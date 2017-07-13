@@ -112,20 +112,26 @@ export class CustomType implements Type {
     // typeArguments: instantiations for any type variables this datatype may have
     constructor(public position: Position,
                 public fullName: Token,
-                public typeArguments: TypeVariable[]) {}
+                public typeArguments: Type[]) {}
 
     prettyPrint(): string {
         let result: string = '';
-        if (this.typeArguments.length > 0) {
+        if (this.typeArguments.length > 1) {
             result += '( ';
         }
-        for (let i: number = 0; i < this.typeArguments.length; ++i) {
-            result += ' ' + this.typeArguments[i].prettyPrint();
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            if (i > 0) {
+                result += ', ';
+            }
+            result += this.typeArguments[i].prettyPrint();
         }
-        result += this.fullName.getText();
-        if (this.typeArguments.length > 0) {
+        if (this.typeArguments.length > 1) {
             result += ' )';
         }
+        if (this.typeArguments.length > 0) {
+            result += ' ';
+        }
+        result += this.fullName.getText();
         return result;
     }
 
@@ -135,7 +141,11 @@ export class CustomType implements Type {
     }
 
     simplify(): Type {
-        return this;
+        let ntypes: Type[] = [];
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            ntypes.push(this.typeArguments[i].simplify());
+        }
+        return new CustomType(this.position, this.fullName, ntypes);
     }
 }
 
