@@ -142,6 +142,6 @@ server.get('/code/:code',
     }
 );
 
-server.listen(8000, function () {
+server.listen(80, function () {
     console.log('yay');
 });
