@@ -144,6 +144,18 @@ export class Database {
         });
     }
 
+    deleteFile(name: string): Promise<boolean> {
+        return new Promise( (resolve: (val: any) => void, reject: (err: any) => void) => {
+            let request = this.database.transaction(['files'], 'readwrite').objectStore('files').delete(name);
+            request.onerror = (event) => {
+                reject(false);
+            };
+            request.onsuccess = (event) => {
+                resolve(true);
+            };
+        });
+    }
+
     private init(): void {
         this.dbRequest = window.indexedDB.open('FilesDB', 1);
         this.dbRequest.onupgradeneeded = (event: any) => {

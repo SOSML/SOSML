@@ -21,6 +21,7 @@ interface State {
 interface Props {
     readOnly: boolean;
     onCodeChange?: (x: string) => void;
+    initialCode: string;
 }
 
 class Playground extends React.Component<Props, State> {
@@ -45,11 +46,11 @@ class Playground extends React.Component<Props, State> {
         let lineItems = lines.map((line) =>
             <div>{line}</div>
         );
-        let codeNull: string | null = localStorage.getItem('tmpCode');
-        let code: string = '';
-        if (typeof codeNull === 'string') {
+        // let codeNull: string | null = localStorage.getItem('tmpCode');
+        let code: string = this.props.initialCode;
+        /* if (typeof codeNull === 'string') {
             code = codeNull;
-        }
+        } */
         return (
             <div className="playground">
                 <SplitterLayout onUpdate={this.handleSplitterUpdate}>
@@ -122,7 +123,6 @@ class Playground extends React.Component<Props, State> {
         this.setState(prevState => {
             return {code: newCode};
         });
-        localStorage.setItem('tmpCode', newCode);
         if (this.props.onCodeChange) {
             this.props.onCodeChange(newCode);
         }

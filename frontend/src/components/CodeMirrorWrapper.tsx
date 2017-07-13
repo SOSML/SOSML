@@ -46,6 +46,14 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
         );
     }
 
+    componentDidUpdate(prevProps: Props, prevState: any) {
+        if (prevProps.code !== this.props.code) {
+            if (this.editor) {
+                this.editor.getCodeMirror().setValue(this.props.code);
+            }
+        }
+    }
+
     componentDidMount() {
         var GCodeMirror = this.editor.getCodeMirrorInstance();
         let keyMap = GCodeMirror.keyMap;

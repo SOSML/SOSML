@@ -4,6 +4,7 @@ import MenuBar from './MenuBar';
 import Editor from './Editor';
 import Files from './Files';
 import Help from './Help';
+import FileIntermediate from './FileIntermediate';
 import {
     BrowserRouter as Router,
     Route
@@ -23,6 +24,8 @@ class RootPage extends React.Component<any, any> {
                     <Route exact={true} path="/" component={Editor} />
                     <Route path="/files" component={Files} />
                     <Route path="/help" component={Help} />
+
+                    <Route path="/file/:name" component={FileIntermediate} />
                 </div>
             </Router>);
     }

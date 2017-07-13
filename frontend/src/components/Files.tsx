@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Grid , Table, Button, Glyphicon } from 'react-bootstrap';
 import { File, Database } from '../API';
 import './Files.css';
+import { Link } from 'react-router-dom';
 
 interface State {
     files: File[];
@@ -16,21 +17,30 @@ class Files extends React.Component<any, State> {
     }
 
     componentDidMount() {
-        Database.getInstance().then((db: Database) => {
-            return db.getFiles();
-        }).then((data: File[]) => {
-            this.setState({files: data});
-        });
+        this.refreshFiles();
     }
 
     render() {
+        let handlerFor = (fileName: string) => {
+            return (evt: any) => {
+                Database.getInstance().then((db: Database) => {
+                    return db.deleteFile(fileName);
+                }).then((ok: boolean) => {
+                    if (ok) {
+                        this.refreshFiles();
+                    }
+                });
+            };
+        };
         let filesView = this.state.files.map((file) => {
             return (
                 <tr key={file.name}>
-                    <td>{file.name}</td>
+                    <td>
+                        <Link to={'/file/' + file.name}>{file.name}</Link>
+                    </td>
                     <td>Lokal</td>
                     <td>
-                        <Button bsStyle="danger"><Glyphicon glyph={'trash'} /></Button>
+                        <Button bsStyle="danger" onClick={handlerFor(file.name)} ><Glyphicon glyph={'trash'} /></Button>
                     </td>
                 </tr>
             );
@@ -54,6 +64,13 @@ class Files extends React.Component<any, State> {
         );
     }
 
+    private refreshFiles() {
+        Database.getInstance().then((db: Database) => {
+            return db.getFiles();
+        }).then((data: File[]) => {
+            this.setState({files: data});
+        });
+    }
 }
 
 export default Files;
