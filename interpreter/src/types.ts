@@ -92,7 +92,8 @@ export class FunctionType implements Type {
                 public returnType: Type) {}
 
     prettyPrint(): string {
-        return '(' + this.parameterType + ' -> ' + this.returnType + ')';
+        return '( ' + this.parameterType.prettyPrint()
+            + ' -> ' + this.returnType.prettyPrint() + ' )';
     }
 
     unify(other: Type): Type | undefined {
@@ -116,15 +117,14 @@ export class CustomType implements Type {
     prettyPrint(): string {
         let result: string = '';
         if (this.typeArguments.length > 0) {
-            result += '(';
+            result += '( ';
         }
         for (let i: number = 0; i < this.typeArguments.length; ++i) {
             result += ' ' + this.typeArguments[i].prettyPrint();
         }
-        // TODO For long identifiers, text doesn't store the whole text.
-        result += this.fullName.text;
+        result += this.fullName.getText();
         if (this.typeArguments.length > 0) {
-            result += ')';
+            result += ' )';
         }
         return result;
     }
@@ -145,14 +145,14 @@ export class TupleType implements Type {
                 public elements: Type[]) {}
 
     prettyPrint(): string {
-        let result: string = '(';
+        let result: string = '( ';
         for (let i: number = 0; i < this.elements.length; ++i) {
             if (i > 0) {
                 result += ' * ';
             }
             result += this.elements[i].prettyPrint();
         }
-        return result + ')';
+        return result + ' )';
     }
 
     unify(other: Type): Type | undefined {

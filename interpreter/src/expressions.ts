@@ -191,7 +191,7 @@ export class TypedExpression extends Expression implements Pattern {
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO
         let res = '( ' + this.expression.prettyPrint(indentation, oneLine);
-        res += ': ' + this.type.prettyPrint();
+        res += ': ' + this.typeAnnotation.prettyPrint();
         return res + ' )';
     }
 }

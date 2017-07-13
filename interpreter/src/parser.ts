@@ -121,15 +121,15 @@ export class Parser {
             let isTuple = false;
             while (true) {
                 let nextCurTok = this.currentToken();
-                if (this.checkKeywordToken(curTok, '(') && length === 0) {
+                if (this.checkKeywordToken(nextCurTok, '(') && length === 0) {
                     ++this.position;
-                } else if (this.checkKeywordToken(curTok, ',') && length > 0 && !isSequence) {
+                } else if (this.checkKeywordToken(nextCurTok, ',') && length > 0 && !isSequence) {
                     ++this.position;
                     isTuple = true;
-                } else if (this.checkKeywordToken(curTok, ';') && length > 0 && !isTuple) {
+                } else if (this.checkKeywordToken(nextCurTok, ';') && length > 0 && !isTuple) {
                     ++this.position;
                     isSequence = true;
-                } else if (this.checkKeywordToken(curTok, ')')) {
+                } else if (this.checkKeywordToken(nextCurTok, ')')) {
                     ++this.position;
                     if (length === 1) {
                         return results[0];
@@ -141,8 +141,8 @@ export class Parser {
                         }
                     }
                 } else {
-                    // TODO more specific error messages
-                    throw new ParserError('Expected ",",";" or ")".', nextCurTok.position);
+                    throw new ParserError('Expected ",", ";" or ")" but got \"' +
+                        nextCurTok.getText() + '\".', nextCurTok.position);
                 }
                 results.push(this.parseExpression());
                 length++;
@@ -240,6 +240,9 @@ export class Parser {
          */
         let curTok = this.currentToken();
         let res = this.parseAtomicExpression();
+        if (!(res instanceof ValueIdentifier)) {
+            return res;
+        }
         while (true) {
             let oldPos = this.position;
             try {
@@ -274,6 +277,10 @@ export class Parser {
             } else {
                 break;
             }
+        }
+
+        if (exps.length === 1) {
+            return exps[0];
         }
 
         return new InfixExpression(exps, ops);
@@ -659,21 +666,20 @@ export class Parser {
          *        ( ty )
          */
         let curTok = this.currentToken();
-        if (curTok instanceof TypeVariableToken) {
-            let tyvars: TypeVariable[] = [new TypeVariable(curTok.position, curTok.text)];
+
+        let tyvars = this.parseTypeVarSequence();
+
+        if (this.checkIdentifierOrLongToken(this.currentToken())) {
+            let nextTok = this.currentToken();
             ++this.position;
-            curTok = this.currentToken();
-            while (curTok instanceof TypeVariableToken) {
-                tyvars.push(new TypeVariable(curTok.position, curTok.text));
-                ++this.position;
-                curTok = this.currentToken();
-            }
-            if (tyvars.length === 1) {
-                return tyvars[0];
-            }
-            this.assertIdentifierOrLongToken(curTok);
-            ++this.position;
-            return new CustomType(curTok.position, curTok, tyvars);
+            return new CustomType(curTok.position, nextTok, tyvars);
+        }
+        if (tyvars.length === 1) {
+            return tyvars[0];
+        }
+        if (tyvars.length > 1) {
+            throw new ParserError('Expected identifier after type variable, got \"'
+                + this.currentToken().getText() + '\".', this.currentToken().position);
         }
 
         if (this.checkKeywordToken(curTok, '{')) {
@@ -691,7 +697,9 @@ export class Parser {
             ++this.position;
             return res;
         }
-        throw new ParserError('Expected either "(" or "{".', curTok.position);
+
+        throw new ParserError('Expected either "(" or "{" got \"'
+            + curTok.getText() + '\".', curTok.position);
     }
 
     parseArrowType(): Type {
@@ -718,6 +726,9 @@ export class Parser {
         while (this.checkKeywordToken(curTok, '*')) {
             ++this.position;
             curTy.push(this.parseArrowType());
+        }
+        if (curTy.length === 1) {
+            return curTy[0];
         }
         return new TupleType(pos, curTy);
     }
