@@ -373,7 +373,7 @@ export class DatatypeDeclaration extends Declaration {
                 }
                 res += ' ' + this.datatypeBinding[i].type[j][0].getText();
                 if (this.datatypeBinding[i].type[j][1] !== undefined) {
-                    res += ' of ' + this.datatypeBinding[i].type[j][1].prettyPrint();
+                    res += ' of ' + (<Type> this.datatypeBinding[i].type[j][1]).prettyPrint();
                 }
             }
         }

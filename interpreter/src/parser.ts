@@ -6,7 +6,8 @@ import { Expression, Pattern, Tuple, Constant, ValueIdentifier, Wildcard,
 import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } from './types';
 import { InterpreterError, IncompleteError, Position } from './errors';
 import { Token, KeywordToken, IdentifierToken, ConstantToken,
-         TypeVariableToken, LongIdentifierToken, IntegerConstantToken } from './lexer';
+         TypeVariableToken, LongIdentifierToken, IntegerConstantToken,
+         AlphanumericIdentifierToken } from './lexer';
 import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
          FunctionValueBinding, FunctionDeclaration, TypeDeclaration,
          DatatypeReplication, DatatypeDeclaration, SequentialDeclaration,
@@ -710,7 +711,7 @@ export class Parser {
                     this.assertIdentifierOrLongToken(this.currentToken());
                     let name = this.currentToken();
                     ++this.position;
-                    return new CustomType(curTok,position, name, res);
+                    return new CustomType(curTok.position, name, res);
                 }
                 throw new ParserError('Expected "," or ")", got "' +
                     nextTok.getText() + '".', nextTok.position);
@@ -1142,13 +1143,24 @@ export class Parser {
             return new NonfixDeclaration(curTok.position, res);
         }
 
+        let throwError = false;
         try {
             let exp = this.parseExpression();
 
             let valbnd = new ValueBinding(curTok.position, false,
-                new ValueIdentifier(-1, new IdentifierToken('it', -1)), exp);
+                new ValueIdentifier(-1, new AlphanumericIdentifierToken('it', -1)), exp);
+            try {
+                this.assertKeywordToken(this.currentToken(), ';');
+            } catch (e: ParserError) {
+                throwError = true;
+                throw e;
+            }
+            ++this.position;
             return new ValueDeclaration(curTok.position, [], [valbnd]);
-        } catch (ParserError) {
+        } catch (e: ParserError) {
+            if (throwError) {
+                throw e;
+            }
             return new EmptyDeclaration();
         }
     }
