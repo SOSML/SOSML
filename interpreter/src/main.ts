@@ -13,13 +13,14 @@ let AST = instance.lexParse(..code..);
 
 */
 
-import { State } from './state';
+import { getInitialState, State } from './state';
 import * as Lexer from './lexer';
 import { Parser } from './parser';
+import { Settings } from './settings';
 
-export class API {
+export class Interpreter {
     /* Think of some additional flags n stuff etc */
-    static interpret(oldState: State, nextInstruction: string): State {
+    static interpret(nextInstruction: string, oldState: State = getInitialState()): State {
         // TODO
         // TODO copy old state
         // Do we need to clone?
@@ -38,7 +39,7 @@ export class API {
         return state;
     }
 
-    static interpretFurther(oldState: State, currentPartialInstruction: string,
+    /*static interpretFurther(oldState: State, currentPartialInstruction: string,
                             nextInstructionPart: string): [State, string] | Error {
         try {
             return [API.interpret(oldState, currentPartialInstruction + nextInstructionPart), ''];
@@ -48,5 +49,7 @@ export class API {
             // }
             throw e;
         }
-    }
+    }*/
+
+    constructor(public settings: Settings) {}
 }

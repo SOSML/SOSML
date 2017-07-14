@@ -4,10 +4,11 @@
 //
 // TODO Remove stuff not needed for our subset of SML
 
-import { Type } from './types';
+import { FunctionType, PrimitiveType, PrimitiveTypes, TupleType, Type } from './types';
 import { IdentifierToken, Token, LongIdentifierToken } from './lexer';
 import { InternalInterpreterError } from './errors.ts';
 
+// ???
 export enum IdentifierStatus {
     CONSTANT,
     VALUE,
@@ -15,11 +16,12 @@ export enum IdentifierStatus {
 }
 
 export class IdentifierInformation {
-    type: Type;
-    identifierStatus: IdentifierStatus;
-    precedence: number;
-    rightAssociative: boolean;
-    infix: boolean;
+    constructor(
+        public type: Type,
+        public identifierStatus: IdentifierStatus,
+        public precedence: number,
+        public rightAssociative: boolean,
+        public infix: boolean) {}
 
     clone(): IdentifierInformation {
         // TODO
@@ -112,6 +114,52 @@ export class State {
     }
 }
 
-export function initialState(): State {
-    throw new Error('nyi\'an');
+
+// Initial static basis (see SML Definition, appendix C through E)
+// currently (very) incomplete
+
+let int = new PrimitiveType(PrimitiveTypes.int);
+let real = new PrimitiveType(PrimitiveTypes.real);
+// let word = new PrimitiveType(PrimitiveTypes.word);
+// let string = new PrimitiveType(PrimitiveTypes.string);
+// let char = new PrimitiveType(PrimitiveTypes.char);
+let bool = new PrimitiveType(PrimitiveTypes.bool);
+
+// TODO: overloading is not yet implemented. Change these types once it is.
+let wordInt = int;
+// let realInt = int;
+let num = int;
+let numTxt = int;
+
+let wordIntFunction = new FunctionType(new TupleType([wordInt, wordInt]), wordInt);
+let numFunction = new FunctionType(new TupleType([num, num]), num);
+let realFunction = new FunctionType(new TupleType([real, real]), real);
+let numTxtBoolFunction = new FunctionType(new TupleType([numTxt, numTxt]), bool);
+
+let initialState: State = new State(
+    [],
+    undefined,
+    undefined,
+    new Environment(
+        undefined,
+        {},
+        {
+            'div': new IdentifierInformation(wordIntFunction, IdentifierStatus.VALUE, 7, false, true),
+            'mod': new IdentifierInformation(wordIntFunction, IdentifierStatus.VALUE, 7, false, true),
+            '*': new IdentifierInformation(numFunction, IdentifierStatus.VALUE, 7, false, true),
+            '/': new IdentifierInformation(realFunction, IdentifierStatus.VALUE, 7, false, true),
+
+            '+': new IdentifierInformation(numFunction, IdentifierStatus.VALUE, 6, false, true),
+            '-': new IdentifierInformation(numFunction, IdentifierStatus.VALUE, 6, false, true),
+
+            '<': new IdentifierInformation(numTxtBoolFunction, IdentifierStatus.VALUE, 4, false, true),
+            '>': new IdentifierInformation(numTxtBoolFunction, IdentifierStatus.VALUE, 4, false, true),
+            '<=': new IdentifierInformation(numTxtBoolFunction, IdentifierStatus.VALUE, 4, false, true),
+            '>=': new IdentifierInformation(numTxtBoolFunction, IdentifierStatus.VALUE, 4, false, true),
+        }
+    )
+);
+
+export function getInitialState(): State {
+    return initialState;
 }
