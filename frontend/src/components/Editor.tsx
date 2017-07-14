@@ -34,6 +34,7 @@ class Editor extends React.Component<any, State> {
                     this.setState((oldState) => {
                         return {initialCode: content, fileName: state.fileName};
                     });
+                    this.props.history.replace('/', {});
                 });
             }
         }
