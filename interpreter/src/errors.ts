@@ -48,3 +48,10 @@ export class IncompleteError extends InterpreterError {
         Object.setPrototypeOf(this, IncompleteError.prototype);
     }
 }
+
+export class SemanticError extends InterpreterError {
+    constructor(message: string, position: Position) {
+        super(message, position);
+        Object.setPrototypeOf(this, SemanticError.prototype);
+    }
+}

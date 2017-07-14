@@ -75,6 +75,7 @@ export abstract class Type {
 
     abstract unifyImpl(other: Type): Type;
 
+    // TODO: allow differently named Type Variables?
     abstract equals(other: any): boolean;
 
     findFreeTypeVariables(names: Set<string>, boundVariables: Set<string>): void {
