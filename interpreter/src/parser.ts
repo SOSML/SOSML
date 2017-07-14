@@ -219,6 +219,11 @@ export class Parser {
         } else if (curTok instanceof IdentifierToken
                    || curTok instanceof LongIdentifierToken) {
             ++this.position;
+            if (this.state.getIdentifierInformation(curTok) !== undefined
+                && this.state.getIdentifierInformation(curTok).infix) {
+                throw new ParserError('Infix operator "' + curTok.getText()
+                    + '" appeared in non-infix context without "op".', curTok.position);
+            }
             return new ValueIdentifier(curTok.position, curTok);
         }
         throw new ParserError('Expected atomic expression, "' +
@@ -247,13 +252,14 @@ export class Parser {
             }
             firstIt = false;
 
-            if (curTok instanceof IdentifierToken) {
+            if (curTok instanceof IdentifierToken
+                || curTok instanceof NumericToken) {
                 ++this.position;
                 let nextTok = this.currentToken();
                 this.assertKeywordToken(nextTok, '=');
 
                 ++this.position;
-                res.entries.push([curTok.text, this.parsePattern()]);
+                res.entries.push([curTok.text, this.parseExpression()]);
                 continue;
             }
             throw new ParserError('Expected "}", or identifier', curTok.position);
@@ -1277,26 +1283,11 @@ export class Parser {
             return new EmptyDeclaration();
         }
 
-        // let throwError = false;
-        //try {
-            let exp = this.parseExpression();
-
-            let valbnd = new ValueBinding(curTok.position, false,
-                new ValueIdentifier(-1, new AlphanumericIdentifierToken('it', -1)), exp);
-        //  try {
-                this.assertKeywordToken(this.currentToken(), ';');
-        //  } catch (e) {
-        //      throwError = e instanceof ParserError;
-        //      throw e;
-        //  }
-            return new ValueDeclaration(curTok.position, [], [valbnd]);
-            /* } catch (e) {
-            if (throwError && e instanceof ParserError) {
-                throw e;
-            }
-            throw e;
-        }
-        return new EmptyDeclaration();*/
+        let exp = this.parseExpression();
+        let valbnd = new ValueBinding(curTok.position, false,
+            new ValueIdentifier(-1, new AlphanumericIdentifierToken('it', -1)), exp);
+        this.assertKeywordToken(this.currentToken(), ';');
+        return new ValueDeclaration(curTok.position, [], [valbnd]);
     }
 
     private currentToken(): Token {

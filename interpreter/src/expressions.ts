@@ -216,7 +216,7 @@ export class Lambda extends Expression {
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
-        return 'fn ' + this.match.prettyPrint(indentation, oneLine);
+        return '( fn ' + this.match.prettyPrint(indentation, oneLine) + ' )';
     }
 }
 
@@ -250,8 +250,8 @@ export class FunctionApplication extends Expression implements Pattern {
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
-        let res = '( ' + this.func.prettyPrint(indentation, oneLine);
-        res += ' ' + this.argument.prettyPrint(indentation, oneLine) + ' )';
+        let res = this.func.prettyPrint(indentation, oneLine);
+        res += ' ' + this.argument.prettyPrint(indentation, oneLine);
         return res;
     }
 }
@@ -350,7 +350,7 @@ export class Record extends Expression implements Pattern {
                 result += ', ';
             }
             first = false;
-            result += this.entries[i][0] + ': '
+            result += this.entries[i][0] + ' = '
                 + this.entries[i][1].prettyPrint(indentation, oneLine);
         }
         if (!this.complete) {
