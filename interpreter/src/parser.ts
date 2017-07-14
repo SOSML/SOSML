@@ -1163,7 +1163,7 @@ export class Parser {
             ++this.position;
             return new ValueDeclaration(curTok.position, [], [valbnd]);
         } catch (e) {
-            if (throwError || e instanceof ParserError) {
+            if (throwError && e instanceof ParserError) {
                 throw e;
             }
         }
