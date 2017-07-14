@@ -8,7 +8,7 @@ import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } f
 import { InterpreterError, IncompleteError, Position } from './errors';
 import { Token, KeywordToken, IdentifierToken, ConstantToken,
          TypeVariableToken, LongIdentifierToken, IntegerConstantToken,
-         AlphanumericIdentifierToken } from './lexer';
+         AlphanumericIdentifierToken, NumericToken } from './lexer';
 import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
          FunctionValueBinding, FunctionDeclaration, TypeDeclaration,
          DatatypeReplication, DatatypeDeclaration, SequentialDeclaration,
@@ -47,6 +47,14 @@ export class Parser {
     assertIdentifierOrLongToken(tok: Token) {
         if (!(tok instanceof IdentifierToken)
             && !(tok instanceof LongIdentifierToken)) {
+            throw new ParserError('Expected an identifier, got \"'
+                + tok.getText() + '\" ('
+                + tok.constructor.name + ').', tok.position);
+        }
+    }
+    assertIdentifierOrNumericToken(tok: Token) {
+        if (!(tok instanceof IdentifierToken)
+            && !(tok instanceof NumericToken)) {
             throw new ParserError('Expected an identifier, got \"'
                 + tok.getText() + '\" ('
                 + tok.constructor.name + ').', tok.position);
@@ -175,8 +183,9 @@ export class Parser {
         if (this.checkKeywordToken(curTok, '#')) {
             ++this.position;
             let nextTok = this.currentToken();
-            this.assertIdentifierToken(nextTok);
-            return new RecordSelector(curTok.position, nextTok as IdentifierToken);
+            this.assertIdentifierOrNumericToken(nextTok);
+            ++this.position;
+            return new RecordSelector(curTok.position, <NumericToken | IdentifierToke> nextTok);
         }
         if (this.checkKeywordToken(curTok, 'let')) {
             ++this.position;
