@@ -201,5 +201,5 @@ let initialState: State = new State(
 );
 
 export function getInitialState(): State {
-    return initialState;
+    return initialState.getNestedState();
 }
