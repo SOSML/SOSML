@@ -35,3 +35,11 @@ If run available for public running you should propably limit its resources:
 ```bash
 docker run --cpus=1 --memory=128m --rm -i --read-only derjesko/mosmlfallback
 ```
+
+If don't want the user running this to have dockerrights make shure docker is in the docker group 
+then change the ownership of dockerrun like this:
+```bash
+chown docker:docker dockerrun.sh
+chmod 755 dockerrun.sh
+chmod u+s dockerrun.sh 
+```
