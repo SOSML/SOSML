@@ -99,7 +99,7 @@ export class FunctionValueBinding {
 
         if (this.parameters[0][0].length !== 3
             || !(this.parameters[0][0][1] instanceof ValueIdentifier)
-            || !state.getIdentifierInformation((<ValueIdentifier> this.parameters[0][0][1]).name).infix) {
+            || !state.lookupInfixStatus((<ValueIdentifier> this.parameters[0][0][1]).name.text).infix) {
             // No infix stuff
             if (!(this.parameters[0][0][0] instanceof ValueIdentifier)) {
                 throw new ParserError('Expected function name.', -1);
@@ -120,7 +120,7 @@ export class FunctionValueBinding {
                 if (this.parameters[i][0][1] instanceof ValueIdentifier
                     && (<ValueIdentifier> this.parameters[i][0][1]).name.getText()
                         === name.name.getText()) {
-                    if (!state.getIdentifierInformation((<ValueIdentifier> this.parameters[0][0][1]).name).infix) {
+                    if (!state.lookupInfixStatus((<ValueIdentifier> this.parameters[0][0][1]).name.text).infix) {
                         throw new ParserError('Cannot use \"' + name.name.getText()
                             + '\" as infix op.', this.parameters[0][0][1].position);
                     }
@@ -142,7 +142,7 @@ export class FunctionValueBinding {
                     this.parameters[i][0][0].position);
             }
             if ((<ValueIdentifier> this.parameters[i][0][0]).name.getText() === name.name.getText()) {
-                if (state.getIdentifierInformation((<ValueIdentifier> this.parameters[0][0][0]).name).infix) {
+                if (state.lookupInfixStatus((<ValueIdentifier> this.parameters[0][0][0]).name.text).infix) {
                     if (this.parameters[i][0].length !== 2) {
                         throw new ParserError('Invalid number of arguments.',
                             this.parameters[0][0][1].position);
@@ -460,7 +460,7 @@ export class LocalDeclaration extends Declaration {
         return new LocalDeclaration(this.position, this.declaration.simplify(), this.body.simplify());
     }
     reParse(state: State): LocalDeclaration {
-        let nstate = state.clone();
+        let nstate = state.getNestedState();
         return new LocalDeclaration(this.position, this.declaration.reParse(nstate), this.body.reParse(nstate));
     }
 

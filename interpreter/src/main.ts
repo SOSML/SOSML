@@ -22,16 +22,14 @@ export class Interpreter {
     /* Think of some additional flags n stuff etc */
     static interpret(nextInstruction: string, oldState: State = getInitialState()): State {
         // TODO
-        // TODO copy old state
-        // Do we need to clone?
-        let state = oldState.clone();
+        let state = oldState.getNestedState();
         let tkn = Lexer.lex(nextInstruction);
 
         let parser = new Parser(tkn);
         let ast = parser.parseDeclaration();
         ast = ast.reParse(state);
 
-        state = oldState.clone();
+        state = oldState.getNestedState();
         ast.simplify();
         ast.checkStaticSemantics(state);
         ast.evaluate(state);
