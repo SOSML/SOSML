@@ -5,6 +5,7 @@ import Editor from './Editor';
 import Files from './Files';
 import Help from './Help';
 import FileIntermediate from './FileIntermediate';
+// import ShareIntermediate from './ShareIntermediate';
 import {
     BrowserRouter as Router,
     Route
@@ -26,6 +27,7 @@ class RootPage extends React.Component<any, any> {
                     <Route path="/help" component={Help} />
 
                     <Route path="/file/:name" component={FileIntermediate} />
+                    <Route path="/share/:hash" component={Editor} />
                 </div>
             </Router>);
     }

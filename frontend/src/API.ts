@@ -65,6 +65,27 @@ export class API {
             return response.text();
         });
     }
+
+    static loadSharedCode(hash: string): Promise<string> {
+        if (API.EMULATE) {
+            return new Promise(
+                (resolve: (val: any) => void, reject: (err: any) => void) => {
+                    resolve('fun f x = x + 1;');
+                }
+            );
+        }
+        return fetch('/share/' + hash,
+            {
+                headers: {
+                  'Accept': 'text/plain',
+                  'Content-Type': 'application/json'
+                },
+                method: 'GET'
+            }
+        ).then(function(response: any){
+            return response.text();
+        });
+    }
 }
 
 export class Database {
