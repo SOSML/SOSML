@@ -5,8 +5,6 @@
 // TODO Remove stuff not needed for our subset of SML
 
 import { FunctionType, PrimitiveType, PrimitiveTypes, TupleType, Type } from './types';
-import { IdentifierToken, Token, LongIdentifierToken } from './lexer';
-import { InternalInterpreterError } from './errors';
 import { Value } from './values';
 
 // ???
@@ -23,9 +21,9 @@ export class IdentifierInformation {
 }
 
 export class ConstructorInformation {
-    type: Type;
-    arguments: Type[];
     identifierStatus: IdentifierStatus = IdentifierStatus.CONSTRUCTOR; // move to Value?
+
+    constructor(public type: Type, public args: Type[]) {}
 }
 
 type TypeEnvironment = { [name: string]: ConstructorInformation }; // maps constructors to arguments and type
@@ -33,8 +31,8 @@ type ValueEnvironment = { [name: string]: IdentifierInformation }; // maps ident
 
 export class Environment {
     // TODO structEnvironment
-    constructor(public structEnvironment: any, public typeEnvironment: TypeEnvironment,
-                public valueEnvironment: ValueEnvironment ) {
+    constructor(public /*private*/ structEnvironment: any, private typeEnvironment: TypeEnvironment,
+                private valueEnvironment: ValueEnvironment ) {
 
     }
 
@@ -45,6 +43,14 @@ export class Environment {
         } else {
             return this.valueEnvironment[name];
         }
+    }
+
+    addValue(name: string, type: Type, value: Value | undefined = undefined) {
+        this.valueEnvironment[name] = new IdentifierInformation(type, value);
+    }
+
+    addConstructor(name: string, type: Type, args: Type[]) {
+        this.typeEnvironment[name] = new ConstructorInformation(type, args);
     }
 }
 
@@ -58,20 +64,9 @@ export class InfixStatus {
 type InfixEnvironment = { [name: string]: InfixStatus };
 
 export class State {
-    constructor(public parent: State | undefined, public typeNames: TypeNames, public functorEnvironment: any,
-                public signatureEnvironment: any, public environment: Environment,
-                public infixEnvironment: InfixEnvironment) {
-    }
-
-    getIdentifierInformation(id: Token): IdentifierInformation {
-        if (id instanceof IdentifierToken) {
-            return this.environment.valueEnvironment[id.text];
-        } else if (id instanceof LongIdentifierToken) {
-            // TODO
-            return this.environment.valueEnvironment[id.text];
-        } else {
-            throw new InternalInterpreterError(id.position, 'Not an identifier');
-        }
+    constructor(public parent: State | undefined, private typeNames: TypeNames,
+                public /*private*/ functorEnvironment: any, public /*private*/ signatureEnvironment: any,
+                private environment: Environment, private infixEnvironment: InfixEnvironment) {
     }
 
     getNestedState() {
@@ -89,6 +84,14 @@ export class State {
         }
     }
 
+    addValue(name: string, type: Type, value: Value | undefined = undefined) {
+        this.environment.addValue(name, type, value);
+    }
+
+    addConstructor(name: string, type: Type, args: Type[]) {
+        this.environment.addConstructor(name, type, args);
+    }
+
     lookupInfixStatus(name: string): InfixStatus {
         if (this.infixEnvironment.hasOwnProperty(name) || !this.parent) {
             return this.infixEnvironment[name];
@@ -97,12 +100,20 @@ export class State {
         }
     }
 
+    addInfix(name: string, infix: boolean = true, precedence: number = 0, rightAssociative: boolean = false) {
+        this.infixEnvironment[name] = new InfixStatus(infix, precedence, rightAssociative);
+    }
+
     lookupType(name: string): Type | undefined {
         if (this.typeNames.hasOwnProperty(name) || !this.parent) {
             return this.typeNames[name];
         } else {
             return this.parent.lookupType(name);
         }
+    }
+
+    addType(name: string, type: Type) {
+        this.typeNames[name] = type;
     }
 }
 
