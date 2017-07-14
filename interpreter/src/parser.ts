@@ -557,7 +557,7 @@ export class Parser {
                 let nextCurTok = this.currentToken();
                 if (this.checkKeywordToken(nextCurTok, '[') && length === 0) {
                     ++this.position;
-                } else if (this.checkKeywordToke(nextCurTok, ',') && length > 0) {
+                } else if (this.checkKeywordToken(nextCurTok, ',') && length > 0) {
                     ++this.position;
                 } else if (this.checkKeywordToken(nextCurTok, ']')) {
                     ++this.position;
