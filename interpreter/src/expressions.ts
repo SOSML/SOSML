@@ -509,7 +509,7 @@ export class Tuple extends Expression implements Pattern {
     simplify(): Record {
         let entries: [string, Expression][] = [];
         for (let i = 0; i < this.expressions.length; ++i) {
-            entries[String(i + 1)] = this.expressions[i].simplify();
+            entries.push(['' + (i+1), this.expressions[i].simplify()]);
         }
         return new Record(this.position, true, entries);
     }
