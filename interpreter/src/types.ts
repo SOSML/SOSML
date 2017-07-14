@@ -359,7 +359,6 @@ export class CustomType extends Type {
         if (this.typeArguments.length > 1) {
             result += ' )';
         }
-        result += this.fullName;
         if (this.typeArguments.length > 0) {
             result += ' ';
         }
