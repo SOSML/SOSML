@@ -3,7 +3,7 @@
  */
 
 import { State } from './state';
-import { ASTNode } from './ast';
+import { Declaration } from './declarations.ts';
 import { InternalInterpreterError } from './errors';
 
 export abstract class Value {
@@ -38,7 +38,7 @@ export class Record extends Value {
 export class Lambda extends Value {
     // TODO: we only need part of the state
     state: State;
-    body: ASTNode;
+    body: Declaration;
 
     prettyPrint(): string {
         // TODO

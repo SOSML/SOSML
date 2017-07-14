@@ -6,10 +6,9 @@ import { IdentifierToken, Token } from './lexer';
 import { Type, TypeVariable } from './types';
 import { State } from './state';
 import { InternalInterpreterError, Position } from './errors';
-import { ASTNode } from './ast';
 
 
-export abstract class Declaration extends ASTNode {
+export abstract class Declaration {
     checkStaticSemantics(state: State): void {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
@@ -19,7 +18,7 @@ export abstract class Declaration extends ASTNode {
     prettyPrint(indentation: number, oneLine: boolean): string {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
-    simplify(): ASTNode {
+    simplify(): Declaration {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 }
@@ -137,7 +136,7 @@ export class ExceptionDeclaration extends Declaration {
         super();
     }
 
-    simplify(): ASTNode {
+    simplify(): ExceptionDeclaration {
         return this;
     }
 
@@ -155,7 +154,7 @@ export class ValueDeclaration extends Declaration {
         super();
     }
 
-    simplify(): ASTNode {
+    simplify(): ValueDeclaration {
         let valBnd: ValueBinding[] = [];
         for (let i = 0; i < this.valueBinding.length; ++i) {
             valBnd.push(new ValueBinding(this.valueBinding[i].position,

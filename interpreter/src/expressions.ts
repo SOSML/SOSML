@@ -4,14 +4,14 @@ import {
     WordConstantToken, CharacterConstantToken, StringConstantToken
 } from './lexer';
 import { Declaration } from './declarations';
-import { ASTNode } from './ast';
 import { State } from './state';
 import { InternalInterpreterError, Position, SemanticError } from './errors';
 import { Value } from './values';
 
 
-export abstract class Expression extends ASTNode {
+export abstract class Expression {
     type: Type | undefined;
+    position: Position;
 
     // It is not necessary to call checkStaticSemantics on Expressions. getType may be called instead.
     checkStaticSemantics(state: State): void {
@@ -27,10 +27,6 @@ export abstract class Expression extends ASTNode {
 
     computeType(state: State): Type {
         throw new InternalInterpreterError(this.position, 'called computeType on derived form');
-    }
-
-    evaluate(state: State): void {
-        // TODO: should create a binding for the variable it to this expression value
     }
 
     getValue(state: State): Value {
@@ -108,12 +104,12 @@ export class LayeredPattern extends Expression implements Pattern {
 }
 
 
-export class Match extends ASTNode {
+export class Match {
 // pat => exp or pat => exp | match
     patternType: Type;
     returnType: Type;
 
-    constructor(public position: Position, public matches: [PatternExpression, Expression][]) { super (); }
+    constructor(public position: Position, public matches: [PatternExpression, Expression][]) { }
 
     checkStaticSemantics(state: State) {
         // TODO
@@ -130,11 +126,6 @@ export class Match extends ASTNode {
             res += ' => ' + this.matches[i][1].prettyPrint(indentation, oneLine);
         }
         return res;
-    }
-
-    evaluate(state: State): void {
-        // TODO: probably remove
-        throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 
     getValue(state: State, matchWith: Value): Value {
@@ -460,7 +451,7 @@ export class InfixExpression extends Expression implements Pattern {
 }
 
 // The following classes are derived forms. They will not be present in the simplified AST and do not implement
-// checkSemantics/getType and evaluate.
+// checkSemantics/getType
 
 // TODO move these constants to state
 let falseConstant = new ValueIdentifier(0, new IdentifierToken('false', 0));

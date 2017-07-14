@@ -129,23 +129,25 @@ export class Parser {
         }
         if (this.checkKeywordToken(curTok, '(')) {
             // Tuple pattern
-            let results: Expression[] = [];
-            let length: number = 0;
+            ++this.position;
+            if (this.checkKeywordToken(this.currentToken(), ')')) {
+                ++this.position;
+                return new Tuple(curTok.position, []);
+            }
+            let results: Expression[] = [this.parseExpression()];
             let isSequence = false;
             let isTuple = false;
             while (true) {
                 let nextCurTok = this.currentToken();
-                if (this.checkKeywordToken(nextCurTok, '(') && length === 0) {
-                    ++this.position;
-                } else if (this.checkKeywordToken(nextCurTok, ',') && length > 0 && !isSequence) {
+                if (this.checkKeywordToken(nextCurTok, ',') && !isSequence) {
                     ++this.position;
                     isTuple = true;
-                } else if (this.checkKeywordToken(nextCurTok, ';') && length > 0 && !isTuple) {
+                } else if (this.checkKeywordToken(nextCurTok, ';') && !isTuple) {
                     ++this.position;
                     isSequence = true;
                 } else if (this.checkKeywordToken(nextCurTok, ')')) {
                     ++this.position;
-                    if (length === 1) {
+                    if (results.length === 1) {
                         return results[0];
                     } else {
                         if (isTuple) {
@@ -159,24 +161,26 @@ export class Parser {
                         nextCurTok.getText() + '\".', nextCurTok.position);
                 }
                 results.push(this.parseExpression());
-                length++;
             }
         }
         if (this.checkKeywordToken(curTok, '[')) {
             // List pattern
             let results: Expression[] = [];
+            let length = 0;
             while (true) {
                 let nextCurTok = this.currentToken();
-                if (this.checkKeywordToken(curTok, '[') && length === 0) {
+                if (this.checkKeywordToken(nextCurTok, '[') && length === 0) {
                     ++this.position;
-                } else if (this.checkKeywordToken(curTok, ',') && length > 0) {
+                } else if (this.checkKeywordToken(nextCurTok, ',') && length > 0) {
                     ++this.position;
-                } else if (this.checkKeywordToken(curTok, ']')) {
+                } else if (this.checkKeywordToken(nextCurTok, ']')) {
                     ++this.position;
                     return new List(curTok.position, results);
                 } else {
-                    throw new ParserError('Expected "," or "]".', nextCurTok.position);
+                    throw new ParserError('Expected "," or "]" but found "' +
+                        nextCurTok.getText() + '".', nextCurTok.position);
                 }
+                ++length;
                 results.push(this.parseExpression());
             }
         }
@@ -185,7 +189,7 @@ export class Parser {
             let nextTok = this.currentToken();
             this.assertIdentifierOrNumericToken(nextTok);
             ++this.position;
-            return new RecordSelector(curTok.position, <NumericToken | IdentifierToke> nextTok);
+            return new RecordSelector(curTok.position, <NumericToken | IdentifierToken> nextTok);
         }
         if (this.checkKeywordToken(curTok, 'let')) {
             ++this.position;
@@ -217,7 +221,8 @@ export class Parser {
             ++this.position;
             return new ValueIdentifier(curTok.position, curTok);
         }
-        throw new ParserError('Expected atomic expression.', curTok.position);
+        throw new ParserError('Expected atomic expression, "' +
+            curTok.getText() + '" found.', curTok.position);
     }
 
     parseExpressionRow(): Expression {
@@ -540,30 +545,29 @@ export class Parser {
         }
         if (this.checkKeywordToken(curTok, '[')) {
             // List pattern
+            let length = 0;
             let results: PatternExpression[] = [];
             while (true) {
                 let nextCurTok = this.currentToken();
-                if (nextCurTok instanceof KeywordToken) {
-                    if (nextCurTok.text === '[' && length === 0) {
-                        ++this.position;
-                    } else if (nextCurTok.text === ',' && length > 0) {
-                        ++this.position;
-                    } else if (nextCurTok.text === ']') {
-                        ++this.position;
-                        return new List(curTok.position, results);
-                    } else {
-                        throw new ParserError('Expected "," or "]".', nextCurTok.position);
-                    }
+                if (this.checkKeywordToken(nextCurTok, '[') && length === 0) {
+                    ++this.position;
+                } else if (this.checkKeywordToke(nextCurTok, ',') && length > 0) {
+                    ++this.position;
+                } else if (this.checkKeywordToken(nextCurTok, ']')) {
+                    ++this.position;
+                    return new List(curTok.position, results);
                 } else {
-                    throw new ParserError('Expected "," or "]".', nextCurTok.position);
+                    throw new ParserError('Expected "," or "]" but found "' +
+                        nextCurTok.getText() + '".', nextCurTok.position);
                 }
                 results.push(this.parsePattern());
+                ++length;
             }
         } else if (curTok instanceof ConstantToken) {
             ++this.position;
             return new Constant(curTok.position, curTok);
         } else if (curTok instanceof IdentifierToken
-                   || curTok instanceof LongIdentifierToken) {
+            || curTok instanceof LongIdentifierToken) {
             ++this.position;
             return new ValueIdentifier(curTok.position, curTok);
         }
@@ -721,6 +725,10 @@ export class Parser {
         }
         if (this.checkKeywordToken(curTok, '(')) {
             ++this.position;
+            if (this.checkKeywordToken(this.currentToken(), ')')) {
+                throw new ParserError('Use "{}" or "unit" to denote the unit type.',
+                    this.currentToken().position);
+            }
             let res = [this.parseType()];
             while (true) {
                 let nextTok = this.currentToken();
@@ -731,9 +739,6 @@ export class Parser {
                 }
                 if (this.checkKeywordToken(nextTok, ')')) {
                     ++this.position;
-                    if (res.length === 0) {
-                        return new TupleType([], curTok.position);
-                    }
                     if (res.length === 1) {
                         return res[0];
                     }
@@ -1267,25 +1272,31 @@ export class Parser {
             return new NonfixDeclaration(curTok.position, res);
         }
 
-        let throwError = false;
-        try {
+        if (this.checkKeywordToken(curTok, ';')) {
+            ++this.position;
+            return new EmptyDeclaration();
+        }
+
+        // let throwError = false;
+        //try {
             let exp = this.parseExpression();
 
             let valbnd = new ValueBinding(curTok.position, false,
                 new ValueIdentifier(-1, new AlphanumericIdentifierToken('it', -1)), exp);
-            try {
+        //  try {
                 this.assertKeywordToken(this.currentToken(), ';');
-            } catch (e) {
-                throwError = e instanceof ParserError;
-                throw e;
-            }
+        //  } catch (e) {
+        //      throwError = e instanceof ParserError;
+        //      throw e;
+        //  }
             return new ValueDeclaration(curTok.position, [], [valbnd]);
-        } catch (e) {
+            /* } catch (e) {
             if (throwError && e instanceof ParserError) {
                 throw e;
             }
+            throw e;
         }
-        return new EmptyDeclaration();
+        return new EmptyDeclaration();*/
     }
 
     private currentToken(): Token {
@@ -1296,6 +1307,7 @@ export class Parser {
     }
 }
 
+// TODO deprecated.
 export function parse(tokens: Token[], state: State): Declaration {
     let p: Parser = new Parser(tokens, state);
     return p.parseDeclaration();
