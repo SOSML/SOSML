@@ -431,7 +431,7 @@ export class TupleType extends Type {
             if (i > 0) {
                 result += ' * ';
             }
-            result += ' ' + this.elements[i].prettyPrint();
+            result += this.elements[i].prettyPrint();
         }
         return result + ' )';
     }

@@ -2,12 +2,11 @@ import {
     Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
     Pattern, TypedExpression, Tuple, PatternExpression
 } from './expressions';
-import { IdentifierToken, LongIdentifierToken, Token } from './lexer';
+import { IdentifierToken, Token } from './lexer';
 import { Type, TypeVariable } from './types';
 import { State } from './state';
 import { InternalInterpreterError, Position } from './errors';
 import { ASTNode } from './ast';
-import { ParserError } from './parser';
 
 
 export abstract class Declaration extends ASTNode {
@@ -21,9 +20,6 @@ export abstract class Declaration extends ASTNode {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
     simplify(): ASTNode {
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
-    }
-    reParse(state: State): ASTNode {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 }
@@ -50,10 +46,10 @@ export class ValueBinding {
 }
 
 export class FunctionValueBinding {
-    public name: ValueIdentifier|undefined = undefined;
 
     constructor(public position: Position,
-                public parameters: [PatternExpression[], Type|undefined, Expression][]) {
+                public parameters: [PatternExpression[], Type|undefined, Expression][],
+                public name: ValueIdentifier) {
     }
 
     simplify(): ValueBinding {
@@ -88,90 +84,23 @@ export class FunctionValueBinding {
         return new ValueBinding(this.position, true, this.name, exp);
     }
 
-    reParse(state: State): FunctionValueBinding {
-        if (this.name !== undefined) {
-            // This FnBnd is already fully parsed
-            return this;
-        }
-
-        let name: ValueIdentifier;
-        let isInfix = false;
-
-        if (this.parameters[0][0].length !== 3
-            || !(this.parameters[0][0][1] instanceof ValueIdentifier)
-            || !state.getIdentifierInformation((<ValueIdentifier> this.parameters[0][0][1]).name).infix) {
-            // No infix stuff
-            if (!(this.parameters[0][0][0] instanceof ValueIdentifier)) {
-                throw new ParserError('Expected function name.', -1);
-            }
-            name = <ValueIdentifier> this.parameters[0][0][0];
-        } else {
-            name = <ValueIdentifier> this.parameters[0][0][1];
-        }
-
-        // Filter out the name everywhere.
-        let params: [PatternExpression[], Type|undefined, Expression][] = [];
-
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO
+        // public parameters: [PatternExpression[], Type|undefined, Expression][]
+        let res = '';
         for (let i = 0; i < this.parameters.length; ++i) {
-            let nwargs: PatternExpression[] = [];
-
-            if (this.parameters[i][0].length === 3) {
-                // Could be infixed
-                if (this.parameters[i][0][1] instanceof ValueIdentifier
-                    && (<ValueIdentifier> this.parameters[i][0][1]).name.getText()
-                        === name.name.getText()) {
-                    if (!state.getIdentifierInformation((<ValueIdentifier> this.parameters[0][0][1]).name).infix) {
-                        throw new ParserError('Cannot use \"' + name.name.getText()
-                            + '\" as infix op.', this.parameters[0][0][1].position);
-                    }
-                    params.push([
-                        [new Tuple(-1, [this.parameters[0][0][0], this.parameters[0][0][2]])],
-                        this.parameters[0][1], this.parameters[0][2].reParse(state)
-                    ]);
-                    isInfix = true;
-                    continue;
-                }
+            if (i > 0) {
+                res += ' | ';
             }
-
-            if (!(this.parameters[i][0][0] instanceof ValueIdentifier)) {
-                throw new ParserError('Expected an identifier.', this.parameters[i][0][0].position);
+            res += this.name.name.getText();
+            for (let j = 0; j < this.parameters[i][0].length; ++j) {
+                res += ' ' + this.parameters[i][0][j].prettyPrint(indentation, oneLine);
             }
-            if (isInfix && !(<IdentifierToken|LongIdentifierToken>
-                (<ValueIdentifier> this.parameters[i][0][0]).name).opPrefixed) {
-                throw new ParserError('Expected an op-prefixed identifier.',
-                    this.parameters[i][0][0].position);
+            if (this.parameters[i][1] !== undefined) {
+                res += ': ' + (<Type> this.parameters[i][1]).prettyPrint();
             }
-            if ((<ValueIdentifier> this.parameters[i][0][0]).name.getText() === name.name.getText()) {
-                if (state.getIdentifierInformation((<ValueIdentifier> this.parameters[0][0][0]).name).infix) {
-                    if (this.parameters[i][0].length !== 2) {
-                        throw new ParserError('Invalid number of arguments.',
-                            this.parameters[0][0][1].position);
-                    }
-                    isInfix = true;
-                    if (!(<IdentifierToken|LongIdentifierToken>
-                        (<ValueIdentifier> this.parameters[i][0][0]).name).opPrefixed) {
-                        throw new ParserError('Expected an op-prefixed identifier.',
-                            this.parameters[i][0][0].position);
-                    }
-
-                    params.push([[this.parameters[0][0][1]],
-                        this.parameters[0][1],
-                        this.parameters[0][2].reParse(state)]);
-                    continue;
-                }
-                for (let j = 1; j < this.parameters[i][0].length; ++j) {
-                    nwargs.push(this.parameters[i][0][j]);
-                }
-                params.push([nwargs, this.parameters[0][1], this.parameters[0][2].reParse(state)]);
-                continue;
-            }
-            throw new ParserError('Expected the identifier \"' + name.name.getText() + '\" but got \"'
-                + (<ValueIdentifier> this.parameters[i][0][0]).name.getText() + '\" instead.',
-                this.parameters[i][0][0].position);
+            res += ' = ' + this.parameters[i][2].prettyPrint(indentation, oneLine);
         }
-
-        let res = new FunctionValueBinding(this.position, params);
-        res.name = name;
         return res;
     }
 }
@@ -211,9 +140,7 @@ export class ExceptionDeclaration extends Declaration {
     simplify(): ASTNode {
         return this;
     }
-    reParse(state: State): ExceptionDeclaration {
-        return this;
-    }
+
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
@@ -238,16 +165,7 @@ export class ValueDeclaration extends Declaration {
         }
         return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd);
     }
-    reParse(state: State): ValueDeclaration {
-        let valBnd: ValueBinding[] = [];
-        for (let i = 0; i < this.valueBinding.length; ++i) {
-            valBnd.push(new ValueBinding(this.valueBinding[i].position,
-                                         this.valueBinding[i].isRecursive,
-                                         this.valueBinding[i].pattern,
-                                         this.valueBinding[i].expression.reParse(state)));
-        }
-        return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd);
-    }
+
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO
         let res = 'val <stuff>';
@@ -276,16 +194,16 @@ export class FunctionDeclaration extends Declaration {
         return new ValueDeclaration(this.position, this.typeVariableSequence, valbnd);
     }
 
-    reParse(state: State): FunctionDeclaration {
-        let valbnd: FunctionValueBinding[] = [];
-        for (let i = 0; i < this.functionValueBinding.length; ++i) {
-            valbnd.push(this.functionValueBinding[i].reParse(state));
-        }
-        return new FunctionDeclaration(this.position, this.typeVariableSequence, valbnd);
-    }
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        let res = 'fun <stuff>';
+        for (let i = 0; i < this.functionValueBinding.length; ++i) {
+            if (i > 0) {
+                res += ' and';
+            }
+            res += ' ' + this.functionValueBinding[i].prettyPrint(indentation, oneLine);
+        }
+        return res + ';';
     }
 }
 
@@ -305,9 +223,7 @@ export class TypeDeclaration extends Declaration {
         }
         return new TypeDeclaration(this.position, bnds);
     }
-    reParse(state: State): TypeDeclaration {
-        return this;
-    }
+
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO
         let res = 'type';
@@ -358,9 +274,7 @@ export class DatatypeDeclaration extends Declaration {
         return new DatatypeDeclaration(this.position, datbnd, undefined);
         /* } */
     }
-    reParse(state: State): DatatypeDeclaration {
-        return this;
-    }
+
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO
         let res = 'datatype';
@@ -393,9 +307,7 @@ export class DatatypeReplication extends Declaration {
     simplify(): DatatypeReplication {
         return this;
     }
-    reParse(state: State): DatatypeReplication {
-        return this;
-    }
+
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
@@ -440,10 +352,7 @@ export class AbstypeDeclaration extends Declaration {
         /* } */
 
     }
-    reParse(state: State): AbstypeDeclaration {
-        return new AbstypeDeclaration(this.position, this.datatypeBinding, this.typeBinding,
-            this.declaration.reParse(state));
-    }
+
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
@@ -458,10 +367,6 @@ export class LocalDeclaration extends Declaration {
 
     simplify(): LocalDeclaration {
         return new LocalDeclaration(this.position, this.declaration.simplify(), this.body.simplify());
-    }
-    reParse(state: State): LocalDeclaration {
-        let nstate = state.clone();
-        return new LocalDeclaration(this.position, this.declaration.reParse(nstate), this.body.reParse(nstate));
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -482,9 +387,7 @@ export class OpenDeclaration extends Declaration {
     simplify(): OpenDeclaration {
         return this;
     }
-    reParse(state: State): OpenDeclaration {
-        return this;
-    }
+
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO this is just something that works but not pretty
         let res = 'open';
@@ -508,16 +411,7 @@ export class SequentialDeclaration extends Declaration {
         }
         return new SequentialDeclaration(this.position, decls);
     }
-    reParse(state: State): SequentialDeclaration {
-        let decls: Declaration[] = [];
-        for (let i = 0; i < this.declarations.length; ++i) {
-            decls.push(this.declarations[i].reParse(state));
-            let decl = this.declarations[i].simplify();
-            decl.checkStaticSemantics(state);
-            decl.evaluate(state);
-        }
-        return new SequentialDeclaration(this.position, decls);
-    }
+
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO this is just something that works but not pretty
         let res = '';
@@ -541,9 +435,7 @@ export class InfixDeclaration extends Declaration {
     simplify(): InfixDeclaration {
         return this;
     }
-    reParse(state: State): InfixDeclaration {
-        return this;
-    }
+
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO this is just something that works but not pretty
         let res = 'infix';
@@ -565,9 +457,7 @@ export class InfixRDeclaration extends Declaration {
     simplify(): InfixRDeclaration {
         return this;
     }
-    reParse(state: State): InfixRDeclaration {
-        return this;
-    }
+
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO this is just something that works but not pretty
         let res = 'infixr';
@@ -588,9 +478,7 @@ export class NonfixDeclaration extends Declaration {
     simplify(): NonfixDeclaration {
         return this;
     }
-    reParse(state: State): NonfixDeclaration {
-        return this;
-    }
+
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO use the params
         let res = 'nonfix';
@@ -610,9 +498,7 @@ export class EmptyDeclaration extends Declaration {
     simplify(): EmptyDeclaration {
         return this;
     }
-    reParse(state: State): EmptyDeclaration {
-        return this;
-    }
+
     prettyPrint(indentation: number, oneLine: boolean): string {
         return ' ;';
     }

@@ -43,7 +43,6 @@ export abstract class Expression extends ASTNode {
     }
 
     abstract simplify(): Expression;
-    abstract reParse(state: State): Expression;
 }
 
 
@@ -53,7 +52,6 @@ export interface Pattern {
     position: number;
     matches(state: State, v: Value): [string, Value][] | undefined;
     simplify(): PatternExpression;
-    reParse(state: State): PatternExpression;
     prettyPrint(indentation: number, oneLine: boolean): string;
 }
 
@@ -71,10 +69,6 @@ export class Wildcard extends Expression implements Pattern {
     }
 
     simplify(): Wildcard {
-        return this;
-    }
-
-    reParse(state: State): Wildcard {
         return this;
     }
 
@@ -104,15 +98,6 @@ export class LayeredPattern extends Expression implements Pattern {
                 this.pattern.simplify());
         } else {
             return new LayeredPattern(this.position, this.identifier, undefined, this.pattern.simplify());
-        }
-    }
-
-    reParse(state: State): LayeredPattern {
-        if (this.typeAnnotation) {
-            return new LayeredPattern(this.position, this.identifier, this.typeAnnotation,
-                this.pattern.reParse(state));
-        } else {
-            return new LayeredPattern(this.position, this.identifier, undefined, this.pattern.reParse(state));
         }
     }
 
@@ -165,15 +150,6 @@ export class Match extends ASTNode {
         }
         return new Match(this.position, newMatches);
     }
-
-    reParse(state: State): Match {
-        let newMatches: [PatternExpression, Expression][] = [];
-        for (let i = 0; i < this.matches.length; ++i) {
-            let m: [PatternExpression, Expression] = this.matches[i];
-            newMatches.push([m[0].reParse(state), m[1].reParse(state)]);
-        }
-        return new Match(this.position, newMatches);
-    }
 }
 
 export class TypedExpression extends Expression implements Pattern {
@@ -201,10 +177,6 @@ export class TypedExpression extends Expression implements Pattern {
         return new TypedExpression(this.position, this.expression.simplify(), this.typeAnnotation.simplify());
     }
 
-    reParse(state: State): TypedExpression {
-        return new TypedExpression(this.position, this.expression.reParse(state), this.typeAnnotation);
-    }
-
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let res = '( ' + this.expression.prettyPrint(indentation, oneLine);
@@ -219,10 +191,6 @@ export class HandleException extends Expression {
 
     simplify(): HandleException {
         return new HandleException(this.position, this.expression.simplify(), this.match.simplify());
-    }
-
-    reParse(state: State): HandleException {
-        return new HandleException(this.position, this.expression.reParse(state), this.match.reParse(state));
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
@@ -241,10 +209,6 @@ export class RaiseException extends Expression {
         return new RaiseException(this.position, this.expression.simplify());
     }
 
-    reParse(state: State): RaiseException {
-        return new RaiseException(this.position, this.expression.reParse(state));
-    }
-
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         return 'raise ' + this.expression.prettyPrint(indentation, oneLine);
@@ -257,10 +221,6 @@ export class Lambda extends Expression {
 
     simplify(): Lambda {
         return new Lambda(this.position, this.match.simplify());
-    }
-
-    reParse(state: State): Lambda {
-        return new Lambda(this.position, this.match.reParse(state));
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
@@ -297,11 +257,6 @@ export class FunctionApplication extends Expression implements Pattern {
         return new FunctionApplication(this.position, this.func.simplify(), this.argument.simplify());
     }
 
-    reParse(state: State): FunctionApplication {
-        // TODO check that this is indeed enough
-        return new FunctionApplication(this.position, this.func.reParse(state), this.argument.reParse(state));
-    }
-
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let res = '( ' + this.func.prettyPrint(indentation, oneLine);
@@ -336,8 +291,6 @@ export class Constant extends Expression implements Pattern {
 
     simplify(): Constant { return this; }
 
-    reParse(state: State): Constant { return this; }
-
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         return this.token.getText();
@@ -354,8 +307,6 @@ export class ValueIdentifier extends Expression implements Pattern {
     }
 
     simplify(): ValueIdentifier { return this; }
-
-    reParse(state: State): ValueIdentifier { return this; }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
@@ -399,15 +350,6 @@ export class Record extends Expression implements Pattern {
         return new Record(this.position, this.complete, newEntries);
     }
 
-    reParse(state: State): Record {
-        let newEntries: [string, Expression][] = [];
-        for (let i = 0; i < this.entries.length; ++i) {
-            let e: [string, Expression] = this.entries[i];
-            newEntries.push([e[0], e[1].reParse(state)]);
-        }
-        return new Record(this.position, this.complete, newEntries);
-    }
-
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let result: string = '{';
@@ -437,12 +379,6 @@ export class LocalDeclarationExpression extends Expression {
 
     simplify(): LocalDeclarationExpression {
         return new LocalDeclarationExpression(this.position, this.declaration.simplify(), this.expression.simplify());
-    }
-
-    reParse(state: State): LocalDeclarationExpression {
-        let nstate = state.clone();
-        return new LocalDeclarationExpression(this.position, this.declaration.reParse(nstate),
-                                              this.expression.reParse(nstate));
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
@@ -480,17 +416,17 @@ export class InfixExpression extends Expression implements Pattern {
                 return 1;
             }
             if (sta.rightAssociative) {
-                if (p1 < p2) {
+                if (p1 > p2) {
                     return -1;
                 }
-                if (p1 > p2) {
+                if (p1 < p2) {
                     return 1;
                 }
             } else {
-                if (p1 < p2) {
+                if (p1 > p2) {
                     return 1;
                 }
-                if (p1 > p2) {
+                if (p1 < p2) {
                     return -1;
                 }
             }
@@ -498,6 +434,7 @@ export class InfixExpression extends Expression implements Pattern {
         });
 
         // Using copy by reference to make this work whithout shrinking the array
+        let last = 0;
         for (let i = 0; i < ops.length; ++i) {
             let left = exps[ops[i][1]];
             let right = exps[ops[i][1] + 1];
@@ -506,8 +443,9 @@ export class InfixExpression extends Expression implements Pattern {
                                               new Tuple(ops[i][0].position, [left, right]));
             exps[ops[i][1]] = com;
             exps[ops[i][1] + 1] = com;
+            last = ops[i][1];
         }
-        return <FunctionApplication> exps[0];
+        return <FunctionApplication> exps[last];
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
@@ -538,10 +476,6 @@ export class Conjunction extends Expression {
         return new Conditional(this.position, this.leftOperand, this.rightOperand, falseConstant).simplify();
     }
 
-    reParse(state: State): Conjunction {
-        return new Conjunction(this.position, this.leftOperand.reParse(state), this.rightOperand.reParse(state));
-    }
-
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         return this.leftOperand.prettyPrint(indentation, oneLine) + ' andalso '
@@ -555,10 +489,6 @@ export class Disjunction extends Expression {
 
     simplify(): FunctionApplication {
         return new Conditional(this.position, this.leftOperand, trueConstant, this.rightOperand).simplify();
-    }
-
-    reParse(state: State): Disjunction {
-        return new Disjunction(this.position, this.leftOperand.reParse(state), this.rightOperand.reParse(state));
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
@@ -582,14 +512,6 @@ export class Tuple extends Expression implements Pattern {
             entries[String(i + 1)] = this.expressions[i].simplify();
         }
         return new Record(this.position, true, entries);
-    }
-
-    reParse(state: State): Tuple {
-        let entries: Expression[] = [];
-        for (let i = 0; i < this.expressions.length; ++i) {
-            entries.push(this.expressions[i].reParse(state));
-        }
-        return new Tuple(this.position, entries);
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
@@ -622,14 +544,6 @@ export class List extends Expression implements Pattern {
         return res;
     }
 
-    reParse(state: State): List {
-        let entries: Expression[] = [];
-        for (let i = 0; i < this.expressions.length; ++i) {
-            entries.push(this.expressions[i].reParse(state));
-        }
-        return new List(this.position, entries);
-    }
-
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let res = '[ ';
@@ -658,14 +572,6 @@ export class Sequence extends Expression {
         return res.simplify();
     }
 
-    reParse(state: State): Sequence {
-        let entries: Expression[] = [];
-        for (let i = 0; i < this.expressions.length; ++i) {
-            entries.push(this.expressions[i].reParse(state));
-        }
-        return new Sequence(this.position, entries);
-    }
-
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let res = '( ';
@@ -689,10 +595,6 @@ export class RecordSelector extends Expression {
             new ValueIdentifier(-1, new IdentifierToken('__rs', -1))]]));
     }
 
-    reParse(state: State): RecordSelector {
-        return this;
-    }
-
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         return '#' + this.label.getText();
@@ -706,10 +608,6 @@ export class CaseAnalysis extends Expression {
     simplify(): FunctionApplication {
         return new FunctionApplication(this.position, new Lambda(this.position, this.match.simplify()),
             this.expression.simplify());
-    }
-
-    reParse(state: State): CaseAnalysis {
-        return new CaseAnalysis(this.position, this.expression.reParse(state), this.match.reParse(state));
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
@@ -729,11 +627,6 @@ export class Conditional extends Expression {
         let match: Match = new Match(this.position, [[trueConstant, this.consequence],
                                                     [falseConstant, this.alternative]]);
         return new CaseAnalysis(this.position, this.condition, match).simplify();
-    }
-
-    reParse(state: State): Conditional {
-        return new Conditional(this.position, this.condition.reParse(state), this.consequence.reParse(state),
-                               this.alternative.reParse(state));
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {

@@ -27,9 +27,8 @@ export class Interpreter {
         let state = oldState.clone();
         let tkn = Lexer.lex(nextInstruction);
 
-        let parser = new Parser(tkn);
+        let parser = new Parser(tkn, state);
         let ast = parser.parseDeclaration();
-        ast = ast.reParse(state);
 
         state = oldState.clone();
         ast.simplify();

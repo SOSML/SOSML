@@ -17,8 +17,8 @@ export enum IdentifierStatus {
 
 export class IdentifierInformation {
     constructor(
-        public type: Type,
-        public identifierStatus: IdentifierStatus,
+        public type: Type | undefined,
+        public identifierStatus: IdentifierStatus | undefined,
         public precedence: number,
         public rightAssociative: boolean,
         public infix: boolean) {}
@@ -103,13 +103,31 @@ export class State {
     }
 
     getIdentifierInformation(id: Token): IdentifierInformation {
-        if (id instanceof IdentifierToken) {
-            return this.environment.valueEnvironment[id.text];
-        } else if (id instanceof LongIdentifierToken) {
-            // TODO
-            return this.environment.valueEnvironment[id.text];
+        if (id instanceof IdentifierToken
+            || id instanceof LongIdentifierToken ) {
+            return this.environment.valueEnvironment[id.getText()];
         } else {
-            throw new InternalInterpreterError(id.position, 'Not an identifier');
+            throw new InternalInterpreterError(id.position,
+                'You gave me some "' + id.getText() + '" (' + id.constructor.name
+                + ') but I only want (Long)IdentifierToken.');
+        }
+    }
+
+    addIdentifierInformation(id: Token, precedence: number,
+                             rightAssociative: boolean, infix: boolean): void {
+        if (id instanceof IdentifierToken
+            || id instanceof LongIdentifierToken) {
+
+            if (this.environment.valueEnvironment[id.getText()] !== undefined) {
+                this.environment.valueEnvironment[id.getText()].precedence = precedence;
+                this.environment.valueEnvironment[id.getText()].infix = infix;
+                this.environment.valueEnvironment[id.getText()].rightAssociative
+                    = rightAssociative;
+            } else {
+                this.environment.valueEnvironment[id.getText()]
+                    = new IdentifierInformation(undefined, undefined,
+                        precedence, rightAssociative, infix);
+            }
         }
     }
 }

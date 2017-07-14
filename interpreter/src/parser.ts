@@ -1,9 +1,8 @@
-import {
-    Expression, Tuple, Constant, ValueIdentifier, Wildcard,
-    LayeredPattern, FunctionApplication, TypedExpression, Record, List,
-    Sequence, RecordSelector, Lambda, Conjunction, LocalDeclarationExpression,
-    Disjunction, Conditional, CaseAnalysis, RaiseException,
-    HandleException, Match, InfixExpression, PatternExpression
+import { Expression, Tuple, Constant, ValueIdentifier, Wildcard,
+         LayeredPattern, FunctionApplication, TypedExpression, Record, List,
+         Sequence, RecordSelector, Lambda, Conjunction, LocalDeclarationExpression,
+         Disjunction, Conditional, CaseAnalysis, RaiseException,
+         HandleException, Match, InfixExpression, PatternExpression
 } from './expressions';
 import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } from './types';
 import { InterpreterError, IncompleteError, Position } from './errors';
@@ -16,6 +15,7 @@ import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
          DatatypeBinding, TypeBinding, AbstypeDeclaration, LocalDeclaration,
          ExceptionBinding, DirectExceptionBinding, ExceptionAlias, NonfixDeclaration,
          ExceptionDeclaration, OpenDeclaration, InfixDeclaration, InfixRDeclaration } from './declarations';
+import { State } from './state';
 
 export class ParserError extends InterpreterError {
     constructor(message: string, position: Position) {
@@ -26,9 +26,8 @@ export class ParserError extends InterpreterError {
 
 export class Parser {
     private position: number = 0; // position of the next not yet parsed token
-    //    private tmpTree: ASTNode; // Temporary storage for a subtree.
 
-    constructor(private tokens: Token[]) {}
+    constructor(private tokens: Token[], private state: State) {}
 
     assertKeywordToken(tok: Token, text: string | undefined = undefined) {
         if (!(tok instanceof KeywordToken)) {
@@ -181,6 +180,9 @@ export class Parser {
         }
         if (this.checkKeywordToken(curTok, 'let')) {
             ++this.position;
+
+            let nstate = this.state.clone();
+
             let dec = this.parseDeclaration();
             this.assertKeywordToken(this.currentToken(), 'in');
             ++this.position;
@@ -193,6 +195,9 @@ export class Parser {
             }
             this.assertKeywordToken(newTok, 'end');
             ++this.position;
+
+            this.state = nstate;
+
             return new LocalDeclarationExpression(curTok.position, dec, new Sequence(curTok.position, res));
         } else if (curTok instanceof ConstantToken) {
             ++this.position;
@@ -247,15 +252,19 @@ export class Parser {
          */
         let curTok = this.currentToken();
         let res = this.parseAtomicExpression();
-        if (!(res instanceof ValueIdentifier)) {
-            return res;
-        }
         while (true) {
             let oldPos = this.position;
+            let nextTok = this.currentToken();
+            if (this.checkIdentifierOrLongToken(nextTok)
+                && this.state.getIdentifierInformation(nextTok) !== undefined
+                && this.state.getIdentifierInformation(nextTok).infix) {
+                break;
+            }
+
             try {
                 let newExp = this.parseAtomicExpression();
                 res = new FunctionApplication(curTok.position, res, newExp);
-            } catch (ParserError) {
+            } catch (e) {
                 this.position = oldPos;
                 break;
             }
@@ -277,10 +286,12 @@ export class Parser {
             exps.push(this.parseApplicationExpression());
 
             let curTok = this.currentToken();
-            if (curTok instanceof IdentifierToken) {
+            if (this.checkIdentifierOrLongToken(curTok)
+                && this.state.getIdentifierInformation(curTok) !== undefined
+                && this.state.getIdentifierInformation(curTok).infix) {
                 // We don't know anything about identifiers yet, so just assume they are infix
                 ++this.position;
-                ops.push([curTok, cnt++]);
+                ops.push([<IdentifierToken> curTok, cnt++]);
             } else {
                 break;
             }
@@ -290,7 +301,7 @@ export class Parser {
             return exps[0];
         }
 
-        return new InfixExpression(exps, ops);
+        return new InfixExpression(exps, ops).reParse(this.state);
     }
 
     parseExpression(): Expression {
@@ -546,7 +557,8 @@ export class Parser {
             ++this.position;
             return new ValueIdentifier(curTok.position, curTok);
         }
-        throw new ParserError('Expected atomic pattern.', curTok.position);
+        throw new ParserError('Expected atomic pattern but got "'
+            + curTok.getText() + '".', curTok.position);
     }
 
     parseSimplePattern(): PatternExpression {
@@ -619,9 +631,11 @@ export class Parser {
             pats.push(this.parseSimplePattern());
 
             let curTok = this.currentToken();
-            if (curTok instanceof IdentifierToken) {
+            if (this.checkIdentifierOrLongToken(curTok)
+                && this.state.getIdentifierInformation(curTok) !== undefined
+                && this.state.getIdentifierInformation(curTok).infix) {
                 ++this.position;
-                ops.push([curTok, cnt++]);
+                ops.push([<IdentifierToken> curTok, cnt++]);
             } else {
                 break;
             }
@@ -629,7 +643,7 @@ export class Parser {
         if (cnt === 0) {
             return pats[0];
         }
-        return new InfixExpression(pats, ops);
+        return new InfixExpression(pats, ops).reParse(this.state);
     }
 
     parseTypeRow(): RecordType {
@@ -799,19 +813,73 @@ export class Parser {
         let curTok = this.currentToken();
         let result: [PatternExpression[], Type|undefined, Expression][] = [];
         let argcnt = -1;
+        let name: ValueIdentifier|undefined = undefined;
         while (true) {
-            // We cannot decide which of the arguments is the name yet
-            // ([op]vid is also an atomic pattern.)
-            // Thus we will do this later, in the second parsing step.
             let args: PatternExpression[] = [];
             let ty: Type | undefined = undefined;
-            while (true) {
-                if (this.checkKeywordToken(this.currentToken(), '=')
-                    || this.checkKeywordToken(this.currentToken(), ':')) {
-                    break;
+            let nm: ValueIdentifier;
+
+            if (this.checkKeywordToken(this.currentToken(), '(')) {
+                ++this.position;
+                let left = this.parseAtomicPattern();
+
+                this.assertIdentifierOrLongToken(this.currentToken());
+                nm = new ValueIdentifier(this.currentToken().position, this.currentToken());
+
+                if (this.state.getIdentifierInformation(this.currentToken()) === undefined
+                    || !this.state.getIdentifierInformation(this.currentToken()).infix) {
+                    throw new ParserError('"' + this.currentToken().getText()
+                        + '" does not have infix status.', this.currentToken().position);
                 }
-                let pat = this.parseAtomicPattern();
-                args.push(pat);
+                ++this.position;
+
+                let right = this.parseAtomicPattern();
+                args.push(new Tuple(-1, [left, right]));
+                this.assertKeywordToken(this.currentToken(), ')');
+                ++this.position;
+            } else {
+                let oldPos = this.position;
+                let throwError = false;
+                try {
+                    let tok = this.parseOpIdentifierToken();
+                    nm = new ValueIdentifier(tok.position, tok);
+                    if (this.state.getIdentifierInformation(nm.name) !== undefined
+                        && this.state.getIdentifierInformation(nm.name).infix
+                        && !(<IdentifierToken | LongIdentifierToken> nm.name).opPrefixed) {
+                        throwError = true;
+                        throw new ParserError('Missing "op".', nm.name.position);
+                    }
+                    while (true) {
+                        if (this.checkKeywordToken(this.currentToken(), '=')
+                            || this.checkKeywordToken(this.currentToken(), ':')) {
+                            break;
+                        }
+                        let pat = this.parseAtomicPattern();
+                        args.push(pat);
+                    }
+                } catch (e) {
+                    if (throwError) {
+                        throw e;
+                    }
+
+                    // Again infix
+                    this.position = oldPos;
+                    let left = this.parseAtomicPattern();
+
+                    this.assertIdentifierOrLongToken(this.currentToken());
+                    nm = new ValueIdentifier(this.currentToken().position, this.currentToken());
+
+                    if (this.state.getIdentifierInformation(this.currentToken()) === undefined
+                        || !this.state.getIdentifierInformation(this.currentToken()).infix) {
+                        throw new ParserError(
+                            '"' + this.currentToken().getText() + '" does not have infix status.',
+                            this.currentToken().position);
+                    }
+                    ++this.position;
+
+                    let right = this.parseAtomicPattern();
+                    args.push(new Tuple(-1, [left, right]));
+                }
             }
             if (this.checkKeywordToken(this.currentToken(), ':')) {
                 ++this.position;
@@ -827,6 +895,14 @@ export class Parser {
                 throw new ParserError('Different number of arguments.', curTok.position);
             }
 
+            if (name === undefined) {
+                name = nm;
+            } else if (nm.name.getText() !== name.name.getText()) {
+                throw new ParserError(
+                    'Different function names in different cases ("' + nm.name.getText()
+                    + '" vs. "' + name.name.getText() + '")', curTok.position);
+            }
+
             result.push([args, ty, this.parseExpression()]);
             if (this.checkKeywordToken(this.currentToken(), '|')) {
                 ++this.position;
@@ -834,7 +910,7 @@ export class Parser {
             }
             break;
         }
-        return new FunctionValueBinding(curTok.position, result);
+        return new FunctionValueBinding(curTok.position, result, name);
     }
 
     parseTypeBinding(): TypeBinding {
@@ -842,7 +918,7 @@ export class Parser {
          * tybind ::= tyvarseq tycon = ty       TypeBinding(pos, TypeVariable[], IdentifierToken, Type)
          */
         let curTok = this.currentToken();
-        let tyvar  = this.parseTypeVarSequence();
+        let tyvar  = <TypeVariable[]> this.parseTypeVarSequence();
         this.assertIdentifierToken(this.currentToken());
 
         let vid = this.currentToken();
@@ -886,7 +962,7 @@ export class Parser {
 
     parseDatatypeBinding(): DatatypeBinding {
         let curTok = this.currentToken();
-        let tyvars = this.parseTypeVarSequence();
+        let tyvars = <TypeVariable[]> this.parseTypeVarSequence();
         this.assertIdentifierToken(this.currentToken());
         let tycon = this.currentToken();
         ++this.position;
@@ -926,7 +1002,7 @@ export class Parser {
         return datbinds;
     }
 
-    parseTypeVarSequence(): TypeVariable[] {
+    parseTypeVarSequence(allowFail: boolean = false): TypeVariable[] | undefined {
         /*
          * ε                    []
          * tyvar                [TypeVariable]
@@ -944,7 +1020,10 @@ export class Parser {
             while (true) {
                 curTok = this.currentToken();
                 if (!(curTok instanceof TypeVariableToken)) {
-                    throw new ParserError('Expexted a type varible.', curTok.position);
+                    if (allowFail) {
+                        return undefined;
+                    }
+                    throw new ParserError('Expected a type varible.', curTok.position);
                 }
                 res.push(new TypeVariable(curTok.text, curTok.position));
                 ++this.position;
@@ -1002,7 +1081,7 @@ export class Parser {
 
         if (this.checkKeywordToken(curTok, 'val')) {
             ++this.position;
-            let tyvar = this.parseTypeVarSequence();
+            let tyvar = <TypeVariable[]> this.parseTypeVarSequence();
             let valbinds: ValueBinding[] = [];
             while (true) {
                 valbinds.push(this.parseValueBinding());
@@ -1015,7 +1094,11 @@ export class Parser {
             return new ValueDeclaration(curTok.position, tyvar, valbinds);
         } else if (this.checkKeywordToken(curTok, 'fun')) {
             ++this.position;
-            let tyvar = this.parseTypeVarSequence();
+            let tyvar = this.parseTypeVarSequence(true);
+            if (tyvar === undefined) {
+                --this.position;
+                tyvar = [];
+            }
             let fvalbinds: FunctionValueBinding[] = [];
             while (true) {
                 fvalbinds.push(this.parseFunctionValueBinding());
@@ -1053,6 +1136,9 @@ export class Parser {
             }
         } else if (this.checkKeywordToken(curTok, 'abstype')) {
             ++this.position;
+
+            let nstate = this.state.clone();
+
             let datbind = this.parseDatatypeBindingSeq();
             let tybind: TypeBinding[]|undefined = undefined;
             if (this.checkKeywordToken(this.currentToken(), 'withtype')) {
@@ -1064,6 +1150,9 @@ export class Parser {
             let dec = this.parseDeclaration();
             this.assertKeywordToken(this.currentToken(), 'end');
             ++this.position;
+
+            this.state = nstate;
+
             return new AbstypeDeclaration(curTok.position, datbind, tybind, dec);
         } else if (this.checkKeywordToken(curTok, 'exception')) {
             ++this.position;
@@ -1079,12 +1168,18 @@ export class Parser {
             return new ExceptionDeclaration(curTok.position, bnds);
         } else if (this.checkKeywordToken(curTok, 'local')) {
             ++this.position;
+
+            let nstate = this.state.clone();
+
             let dec: Declaration = this.parseDeclaration();
             this.assertKeywordToken(this.currentToken(), 'in');
             ++this.position;
             let dec2: Declaration = this.parseDeclaration();
             this.assertKeywordToken(this.currentToken(), 'end');
             ++this.position;
+
+            this.state = nstate;
+
             return new LocalDeclaration(curTok.position, dec, dec2);
         } else if (this.checkKeywordToken(curTok, 'open')) {
             ++this.position;
@@ -1108,6 +1203,10 @@ export class Parser {
             let res: IdentifierToken[] = [];
             while (this.currentToken() instanceof IdentifierToken) {
                 res.push(<IdentifierToken> this.currentToken());
+
+                this.state.addIdentifierInformation(
+                    <IdentifierToken> this.currentToken(), precedence, false, true);
+
                 ++this.position;
             }
 
@@ -1125,6 +1224,10 @@ export class Parser {
             let res: IdentifierToken[] = [];
             while (this.currentToken() instanceof IdentifierToken) {
                 res.push(<IdentifierToken> this.currentToken());
+
+                this.state.addIdentifierInformation(
+                    <IdentifierToken> this.currentToken(), precedence, true, true);
+
                 ++this.position;
             }
 
@@ -1138,6 +1241,10 @@ export class Parser {
             let res: IdentifierToken[] = [];
             while (this.currentToken() instanceof IdentifierToken) {
                 res.push(<IdentifierToken> this.currentToken());
+
+                this.state.addIdentifierInformation(
+                    <IdentifierToken> this.currentToken(), 0, true, false);
+
                 ++this.position;
             }
 
@@ -1177,7 +1284,7 @@ export class Parser {
     }
 }
 
-export function parse(tokens: Token[]): Declaration {
-    let p: Parser = new Parser(tokens);
+export function parse(tokens: Token[], state: State): Declaration {
+    let p: Parser = new Parser(tokens, state);
     return p.parseDeclaration();
 }

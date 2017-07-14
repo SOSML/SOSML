@@ -7,5 +7,4 @@ export abstract class ASTNode {
     abstract evaluate(state: State): void;
     abstract prettyPrint(indentation: number, oneLine: boolean): string;
     abstract simplify(): ASTNode;
-    abstract reParse(state: State): ASTNode;
 }
