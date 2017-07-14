@@ -11,7 +11,7 @@ import { Value } from './values';
 
 
 export abstract class Expression extends ASTNode {
-    type: Type;
+    type: Type | undefined;
 
     // It is not necessary to call checkStaticSemantics on Expressions. getType may be called instead.
     checkStaticSemantics(state: State): void {
@@ -19,7 +19,7 @@ export abstract class Expression extends ASTNode {
     }
 
     getType(state: State): Type {
-        if (this.type === undefined) {
+        if (!this.type) {
             this.type = this.computeType(state);
         }
         return this.type;
@@ -407,8 +407,8 @@ export class InfixExpression extends Expression implements Pattern {
         let ops = this.operators;
         let exps = this.expressions;
         ops.sort(([a, p1], [b, p2]) => {
-            let sta = state.getIdentifierInformation(a);
-            let stb = state.getIdentifierInformation(b);
+            let sta = state.lookupInfixStatus(a.text);
+            let stb = state.lookupInfixStatus(b.text);
             if (sta.precedence > stb.precedence) {
                 return -1;
             }

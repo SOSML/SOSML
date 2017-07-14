@@ -181,7 +181,8 @@ export class Parser {
         if (this.checkKeywordToken(curTok, 'let')) {
             ++this.position;
 
-            let nstate = this.state.clone();
+            let nstate = this.state;
+            this.state = this.state.getNestedState();
 
             let dec = this.parseDeclaration();
             this.assertKeywordToken(this.currentToken(), 'in');
@@ -1137,7 +1138,8 @@ export class Parser {
         } else if (this.checkKeywordToken(curTok, 'abstype')) {
             ++this.position;
 
-            let nstate = this.state.clone();
+            let nstate = this.state;
+            this.state = this.state.getNestedState();
 
             let datbind = this.parseDatatypeBindingSeq();
             let tybind: TypeBinding[]|undefined = undefined;
@@ -1169,7 +1171,8 @@ export class Parser {
         } else if (this.checkKeywordToken(curTok, 'local')) {
             ++this.position;
 
-            let nstate = this.state.clone();
+            let nstate = this.state;
+            this.state = this.state.getNestedState();
 
             let dec: Declaration = this.parseDeclaration();
             this.assertKeywordToken(this.currentToken(), 'in');

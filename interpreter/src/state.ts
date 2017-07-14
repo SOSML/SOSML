@@ -5,107 +5,107 @@
 // TODO Remove stuff not needed for our subset of SML
 
 import { FunctionType, PrimitiveType, PrimitiveTypes, TupleType, Type } from './types';
-import { IdentifierToken, Token, LongIdentifierToken } from './lexer';
-import { InternalInterpreterError } from './errors.ts';
+import { Value } from './values';
+import { Token, IdentifierToken, LongIdentifierToken } from './lexer';
+import { InternalInterpreterError } from './errors';
 
 // ???
 export enum IdentifierStatus {
-    CONSTANT,
+    CONSTRUCTOR,
     VALUE,
     EXCEPTION
 }
 
 export class IdentifierInformation {
-    constructor(
-        public type: Type | undefined,
-        public identifierStatus: IdentifierStatus | undefined,
-        public precedence: number,
-        public rightAssociative: boolean,
-        public infix: boolean) {}
-
-    clone(): IdentifierInformation {
-        // TODO
-        throw new Error('nyi\'an :/');
-    }
-}
-
-export interface ValueEnvironment {
-    // maps value identifiers to (type scheme, identifier status)
-    [name: string]: IdentifierInformation;
+    constructor(public type: Type,
+                public value: Value | undefined = undefined,
+                public identifierStatus: IdentifierStatus = IdentifierStatus.VALUE) {} // move to Value?
 }
 
 export class ConstructorInformation {
-    type: Type;
-    identifierStatus: IdentifierStatus;
+    identifierStatus: IdentifierStatus = IdentifierStatus.CONSTRUCTOR; // move to Value?
 
-    clone(): ConstructorInformation {
-        // TODO
-        throw new Error('nyi\'an :/');
-    }
+    constructor(public type: Type, public args: Type[]) {}
 }
 
-export interface ConstructorSet {
-    [name: string]: ConstructorInformation;
-}
-
-export class TypeDefinition {
-    type: Type;
-    constructors: ConstructorSet;
-
-    clone(): TypeEnvironment {
-        // TODO
-        throw new Error('nyi\'an :/');
-    }
-}
-
-export interface TypeEnvironment {
-    // maps type name to (type, [constructor])
-    [name: string]: TypeDefinition;
-}
+type TypeEnvironment = { [name: string]: ConstructorInformation }; // maps constructors to arguments and type
+type ValueEnvironment = { [name: string]: IdentifierInformation }; // maps identifiers to type, value, etc.
 
 export class Environment {
     // TODO structEnvironment
-    constructor(public structEnvironment: any, public typeEnvironment: TypeEnvironment,
-                public valueEnvironment: ValueEnvironment) {
+    constructor(public /*private*/ structEnvironment: any, private typeEnvironment: TypeEnvironment,
+                private valueEnvironment: ValueEnvironment ) {
+
     }
 
-    clone(): Environment {
-        throw new Error('nyi\'an :/');
+    // TODO: structures?
+    lookup(name: string): IdentifierInformation | ConstructorInformation | undefined {
+        if (this.typeEnvironment.hasOwnProperty(name)) {
+            return this.typeEnvironment[name];
+        } else {
+            return this.valueEnvironment[name];
+        }
+    }
+
+    addValue(name: string, type: Type, value: Value | undefined = undefined) {
+        this.valueEnvironment[name] = new IdentifierInformation(type, value);
+    }
+
+    addConstructor(name: string, type: Type, args: Type[]) {
+        this.typeEnvironment[name] = new ConstructorInformation(type, args);
     }
 }
 
-export class TypeName {
-    constructor(public name: string, public arity: number, public allowsEquality: boolean) {
-    }
 
-    clone(): TypeName {
-        return new TypeName(this.name, this.arity, this.allowsEquality);
-    }
+type TypeNames = { [name: string]: Type };
+
+export class InfixStatus {
+    constructor(public infix: boolean, public precedence: number = 0, public rightAssociative: boolean = false) {}
 }
+
+type InfixEnvironment = { [name: string]: InfixStatus };
 
 export class State {
-    // typeNames:              TypeName[];         // Type names
-    // functorEnvironment:     any;         // Functor environment TODO
-    // signatureEnvironment:   any;         // Signature environment TODO
-    // environment:            Environment;
-
-    constructor(public typeNames: TypeName[], public functorEnvironment: any,
-                public signatureEnvironment: any, public environment: Environment) {
+    constructor(public parent: State | undefined, private typeNames: TypeNames,
+                public /*private*/ functorEnvironment: any, public /*private*/ signatureEnvironment: any,
+                private environment: Environment, private infixEnvironment: InfixEnvironment) {
     }
 
-    clone(): State {
-        let tns: TypeName[] = [];
-        for (let i = 0; i < this.typeNames.length; ++i) {
-            tns.push(this.typeNames[i].clone());
+    getNestedState() {
+        return new State(this, {}, {}, {} , new Environment({}, {}, {}), {});
+    }
+
+    // looks up values, constructors (and structures?)
+    lookupValue(name: string): IdentifierInformation | ConstructorInformation | undefined {
+        let result: IdentifierInformation | ConstructorInformation | undefined;
+        result = this.environment.lookup(name);
+        if (result !== undefined || !this.parent) {
+            return result;
+        } else {
+            return this.parent.lookupValue(name);
         }
-        return new State(tns, this.functorEnvironment, this.signatureEnvironment,
-                         this.environment.clone());
     }
 
-    getIdentifierInformation(id: Token): IdentifierInformation {
+    addValue(name: string, type: Type, value: Value | undefined = undefined) {
+        this.environment.addValue(name, type, value);
+    }
+
+    addConstructor(name: string, type: Type, args: Type[]) {
+        this.environment.addConstructor(name, type, args);
+    }
+
+    lookupInfixStatus(name: string): InfixStatus {
+        if (this.infixEnvironment.hasOwnProperty(name) || !this.parent) {
+            return this.infixEnvironment[name];
+        } else {
+            return this.parent.lookupInfixStatus(name);
+        }
+    }
+
+    getIdentifierInformation(id: Token): InfixStatus {
         if (id instanceof IdentifierToken
             || id instanceof LongIdentifierToken ) {
-            return this.environment.valueEnvironment[id.getText()];
+            return this.lookupInfixStatus(id.getText());
         } else {
             throw new InternalInterpreterError(id.position,
                 'You gave me some "' + id.getText() + '" (' + id.constructor.name
@@ -117,18 +117,24 @@ export class State {
                              rightAssociative: boolean, infix: boolean): void {
         if (id instanceof IdentifierToken
             || id instanceof LongIdentifierToken) {
-
-            if (this.environment.valueEnvironment[id.getText()] !== undefined) {
-                this.environment.valueEnvironment[id.getText()].precedence = precedence;
-                this.environment.valueEnvironment[id.getText()].infix = infix;
-                this.environment.valueEnvironment[id.getText()].rightAssociative
-                    = rightAssociative;
-            } else {
-                this.environment.valueEnvironment[id.getText()]
-                    = new IdentifierInformation(undefined, undefined,
-                        precedence, rightAssociative, infix);
-            }
+            this.addInfix(id.getText(), infix, precedence, rightAssociative);
         }
+    }
+
+    addInfix(name: string, infix: boolean = true, precedence: number = 0, rightAssociative: boolean = false) {
+        this.infixEnvironment[name] = new InfixStatus(infix, precedence, rightAssociative);
+    }
+
+    lookupType(name: string): Type | undefined {
+        if (this.typeNames.hasOwnProperty(name) || !this.parent) {
+            return this.typeNames[name];
+        } else {
+            return this.parent.lookupType(name);
+        }
+    }
+
+    addType(name: string, type: Type) {
+        this.typeNames[name] = type;
     }
 }
 
@@ -154,28 +160,44 @@ let numFunction = new FunctionType(new TupleType([num, num]), num);
 let realFunction = new FunctionType(new TupleType([real, real]), real);
 let numTxtBoolFunction = new FunctionType(new TupleType([numTxt, numTxt]), bool);
 
+// TODO: very incomplet
 let initialState: State = new State(
-    [],
+    undefined,
+    {},
     undefined,
     undefined,
     new Environment(
         undefined,
         {},
         {
-            'div': new IdentifierInformation(wordIntFunction, IdentifierStatus.VALUE, 7, false, true),
-            'mod': new IdentifierInformation(wordIntFunction, IdentifierStatus.VALUE, 7, false, true),
-            '*': new IdentifierInformation(numFunction, IdentifierStatus.VALUE, 7, false, true),
-            '/': new IdentifierInformation(realFunction, IdentifierStatus.VALUE, 7, false, true),
+            'div': new IdentifierInformation(wordIntFunction),
+            'mod': new IdentifierInformation(wordIntFunction),
+            '*': new IdentifierInformation(numFunction),
+            '/': new IdentifierInformation(realFunction),
 
-            '+': new IdentifierInformation(numFunction, IdentifierStatus.VALUE, 6, false, true),
-            '-': new IdentifierInformation(numFunction, IdentifierStatus.VALUE, 6, false, true),
+            '+': new IdentifierInformation(numFunction),
+            '-': new IdentifierInformation(numFunction),
 
-            '<': new IdentifierInformation(numTxtBoolFunction, IdentifierStatus.VALUE, 4, false, true),
-            '>': new IdentifierInformation(numTxtBoolFunction, IdentifierStatus.VALUE, 4, false, true),
-            '<=': new IdentifierInformation(numTxtBoolFunction, IdentifierStatus.VALUE, 4, false, true),
-            '>=': new IdentifierInformation(numTxtBoolFunction, IdentifierStatus.VALUE, 4, false, true),
+            '<': new IdentifierInformation(numTxtBoolFunction),
+            '>': new IdentifierInformation(numTxtBoolFunction),
+            '<=': new IdentifierInformation(numTxtBoolFunction),
+            '>=': new IdentifierInformation(numTxtBoolFunction),
         }
-    )
+    ),
+    {
+        'div': new InfixStatus(true, 7, false),
+        'mod': new InfixStatus(true, 7, false),
+        '*': new InfixStatus(true, 7, false),
+        '/': new InfixStatus(true, 7, false),
+
+        '+': new InfixStatus(true, 6, false),
+        '-': new InfixStatus(true, 6, false),
+
+        '<': new InfixStatus(true, 4, false),
+        '>': new InfixStatus(true, 4, false),
+        '<=': new InfixStatus(true, 4, false),
+        '>=': new InfixStatus(true, 4, false)
+    }
 );
 
 export function getInitialState(): State {
