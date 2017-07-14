@@ -1151,17 +1151,25 @@ export class Parser {
                 new ValueIdentifier(-1, new AlphanumericIdentifierToken('it', -1)), exp);
             try {
                 this.assertKeywordToken(this.currentToken(), ';');
-            } catch (e: ParserError) {
-                throwError = true;
-                throw e;
+            } catch (e) {
+                if (e instanceof ParserError) {
+                    throwError = true;
+                    throw e;
+                } else {
+                    throw e;
+                }
             }
             ++this.position;
             return new ValueDeclaration(curTok.position, [], [valbnd]);
-        } catch (e: ParserError) {
-            if (throwError) {
+        } catch (e) {
+            if (e instanceof ParserError) {
+                if (throwError) {
+                    throw e;
+                }
+                return new EmptyDeclaration();
+            } else {
                 throw e;
             }
-            return new EmptyDeclaration();
         }
     }
 
