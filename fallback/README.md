@@ -43,3 +43,8 @@ chown docker:docker dockerrun.sh
 chmod 755 dockerrun.sh
 chmod u+s dockerrun.sh 
 ```
+
+Now you can start a mosml docker container via:
+```bash
+./sockerrun.sh
+```
