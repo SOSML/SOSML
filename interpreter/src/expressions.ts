@@ -191,8 +191,8 @@ export class TypedExpression extends Expression implements Pattern {
         // TODO: check semantics of typeAnnotation
         // TODO: equals is not correct here. result must generalise typeAnnotation
         if (!result.equals(this.typeAnnotation)) {
-            throw new SemanticError('expression cannot have explicit type ' + this.typeAnnotation.toString(),
-                this.position);
+            throw new SemanticError(this.position,
+                'expression cannot have explicit type ' + this.typeAnnotation.toString());
         }
         return this.typeAnnotation;
     }
@@ -289,7 +289,7 @@ export class FunctionApplication extends Expression implements Pattern {
             return f.returnType;
         } else {
             // TODO: do we need a special case for constructors?
-            throw new SemanticError(this.func.prettyPrint() + ' is not a function.', this.func.position);
+            throw new SemanticError(this.func.position, this.func.prettyPrint() + ' is not a function.');
         }
     }
 
@@ -382,8 +382,8 @@ export class Record extends Expression implements Pattern {
             let name: string = this.entries[i][0];
             let exp: Expression = this.entries[i][1];
             if (e.has(name)) {
-                throw new SemanticError('Label ' + name + ' occurs more than once in record expression.',
-                    this.position);
+                throw new SemanticError(this.position,
+                    'Label ' + name + ' occurs more than once in record expression.');
             }
             e.set(name, exp.getType(state));
         }

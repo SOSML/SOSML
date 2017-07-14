@@ -4,7 +4,7 @@ import { State } from './state';
 
 export class TypeUnificationError extends InterpreterError {
     constructor(public type1: Type, public type2: Type) {
-        super('cannot unify ' + type2.prettyPrint() + ' with ' + type1.prettyPrint(), 0);
+        super(0, 'cannot unify ' + type2.prettyPrint() + ' with ' + type1.prettyPrint());
         Object.setPrototypeOf(this, TypeUnificationError.prototype);
     }
 }

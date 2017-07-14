@@ -19,7 +19,7 @@ import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
 
 export class ParserError extends InterpreterError {
     constructor(message: string, position: Position) {
-        super(message, position);
+        super(position, message);
         Object.setPrototypeOf(this, ParserError.prototype);
     }
 }
