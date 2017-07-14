@@ -633,7 +633,7 @@ export class Parser {
          * tyrow ::= lab : ty [, tyrow]     Record(comp:boolean, entries: [string, Type])
          */
         let curTok = this.currentToken();
-        let res = new RecordType(curTok.position, true, []);
+        let res = new RecordType(new Map<string, Type>(), true, curTok.position);
         let firstIt = true;
         while (true) {
             curTok = this.currentToken();
@@ -657,7 +657,7 @@ export class Parser {
                 if (nextTok.text === ':') {
                     // lab = pat
                     ++this.position;
-                    res.entries.push([curTok.text, this.parseType()]);
+                    res.elements.set(curTok.text, this.parseType());
                     continue;
                 }
                 throw new ParserError('Expected ":".', nextTok.position);
@@ -678,12 +678,12 @@ export class Parser {
 
         if (curTok instanceof TypeVariableToken) {
             ++this.position;
-            return new TypeVariable(curTok.position, curTok.getText());
+            return new TypeVariable(curTok.getText(), curTok.position);
         }
 
         if (this.checkIdentifierOrLongToken(curTok)) {
             ++this.position;
-            return new CustomType(curTok.position, curTok, []);
+            return new CustomType(curTok as (IdentifierToken | LongIdentifierToken), [], curTok.position);
         }
 
         if (this.checkKeywordToken(curTok, '{')) {
@@ -703,7 +703,7 @@ export class Parser {
                 if (this.checkKeywordToken(nextTok, ')')) {
                     ++this.position;
                     if (res.length === 0) {
-                        return new TupleType(curTok.position, []);
+                        return new TupleType([], curTok.position);
                     }
                     if (res.length === 1) {
                         return res[0];
@@ -711,7 +711,7 @@ export class Parser {
                     this.assertIdentifierOrLongToken(this.currentToken());
                     let name = this.currentToken();
                     ++this.position;
-                    return new CustomType(curTok.position, name, res);
+                    return new CustomType(name as (IdentifierToken | LongIdentifierToken), res, curTok.position);
                 }
                 throw new ParserError('Expected "," or ")", got "' +
                     nextTok.getText() + '".', nextTok.position);
@@ -733,7 +733,7 @@ export class Parser {
         }
         ++this.position;
         let tgTy = this.parseType();
-        return new FunctionType(curTok.position, curTy, tgTy);
+        return new FunctionType(curTy, tgTy, curTok.position);
     }
 
     parseTupleType(): Type {
@@ -750,7 +750,7 @@ export class Parser {
         if (curTy.length === 1) {
             return curTy[0];
         }
-        return new TupleType(pos, curTy);
+        return new TupleType(curTy, pos);
     }
 
     parseCustomType(): Type {
@@ -763,7 +763,7 @@ export class Parser {
             let nextTok = this.currentToken();
             if (this.checkIdentifierOrLongToken(nextTok)) {
                 ++this.position;
-                ty = new CustomType(curTok.position, nextTok, [ty]);
+                ty = new CustomType(nextTok as (IdentifierToken | LongIdentifierToken), [ty], curTok.position);
                 continue;
             }
             return ty;
@@ -930,7 +930,7 @@ export class Parser {
         let curTok = this.currentToken();
         let res: TypeVariable[] = [];
         if (curTok instanceof TypeVariableToken) {
-            res.push(new TypeVariable(curTok.position, curTok.text));
+            res.push(new TypeVariable(curTok.text, curTok.position));
             ++this.position;
             return res;
         }
@@ -941,7 +941,7 @@ export class Parser {
                 if (!(curTok instanceof TypeVariableToken)) {
                     throw new ParserError('Expexted a type varible.', curTok.position);
                 }
-                res.push(new TypeVariable(curTok.position, curTok.text));
+                res.push(new TypeVariable(curTok.text, curTok.position));
                 ++this.position;
                 curTok = this.currentToken();
                 if (this.checkKeywordToken(curTok, ',')) {
@@ -1151,14 +1151,14 @@ export class Parser {
                 new ValueIdentifier(-1, new AlphanumericIdentifierToken('it', -1)), exp);
             try {
                 this.assertKeywordToken(this.currentToken(), ';');
-            } catch (e: ParserError) {
-                throwError = true;
+            } catch (e) {
+                throwError = e instanceof ParserError;
                 throw e;
             }
             ++this.position;
             return new ValueDeclaration(curTok.position, [], [valbnd]);
-        } catch (e: ParserError) {
-            if (throwError) {
+        } catch (e) {
+            if (throwError || e instanceof ParserError) {
                 throw e;
             }
             return new EmptyDeclaration();
