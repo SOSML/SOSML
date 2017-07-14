@@ -1,22 +1,26 @@
-import { Type } from './types';
-import { Token, IdentifierToken } from './lexer';
+import { FunctionType, PrimitiveType, PrimitiveTypes, RecordType, Type } from './types';
+import {
+    Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConstantToken, NumericToken,
+    WordConstantToken, CharacterConstantToken, StringConstantToken
+} from './lexer';
 import { Declaration } from './declarations';
 import { ASTNode } from './ast';
 import { State } from './state';
-import { InternalInterpreterError, Position } from './errors';
+import { InternalInterpreterError, Position, SemanticError } from './errors';
 import { Value } from './values';
 
 
 export abstract class Expression extends ASTNode {
     type: Type;
 
+    // It is not necessary to call checkStaticSemantics on Expressions. getType may be called instead.
     checkStaticSemantics(state: State): void {
-        this.type = this.computeType(state);
+        this.getType(state);
     }
 
     getType(state: State): Type {
-        if (this.type === undefined) { // TODO: is this.type really undefined if we never assign anything?
-            throw new InternalInterpreterError(this.position, 'didn\'t call checkStaticSemantics before getType');
+        if (this.type === undefined) {
+            this.type = this.computeType(state);
         }
         return this.type;
     }
@@ -33,7 +37,7 @@ export abstract class Expression extends ASTNode {
         throw new InternalInterpreterError(this.position, 'called getValue on derived form');
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO: move to subclasses
         throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
@@ -48,10 +52,12 @@ export interface Pattern {
     // or undefined, if v does not match this Pattern.
     position: number;
     matches(state: State, v: Value): [string, Value][] | undefined;
-    simplify(): Pattern;
-    reParse(state: State): Pattern;
+    simplify(): PatternExpression;
+    reParse(state: State): PatternExpression;
     prettyPrint(indentation: number, oneLine: boolean): string;
 }
+
+export type PatternExpression = Pattern & Expression;
 
 export class Wildcard extends Expression implements Pattern {
     constructor(public position: Position) { super(); }
@@ -72,7 +78,7 @@ export class Wildcard extends Expression implements Pattern {
         return this;
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         return '_';
     }
 }
@@ -80,7 +86,7 @@ export class Wildcard extends Expression implements Pattern {
 export class LayeredPattern extends Expression implements Pattern {
 // <op> identifier <:type> as pattern
     constructor(public position: Position, public identifier: IdentifierToken, public typeAnnotation: Type | undefined,
-                public pattern: Pattern | Expression
+                public pattern: Expression
     ) { super(); }
 
     getValue(state: State): Value {
@@ -110,7 +116,7 @@ export class LayeredPattern extends Expression implements Pattern {
         }
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
@@ -122,13 +128,13 @@ export class Match extends ASTNode {
     patternType: Type;
     returnType: Type;
 
-    constructor(public position: Position, public matches: [Pattern, Expression][]) { super (); }
+    constructor(public position: Position, public matches: [PatternExpression, Expression][]) { super (); }
 
     checkStaticSemantics(state: State) {
         // TODO
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let res = '';
         for (let i = 0; i < this.matches.length; ++i) {
@@ -152,18 +158,18 @@ export class Match extends ASTNode {
     }
 
     simplify(): Match {
-        let newMatches: [Pattern, Expression][] = [];
+        let newMatches: [PatternExpression, Expression][] = [];
         for (let i = 0; i < this.matches.length; ++i) {
-            let m: [Pattern, Expression] = this.matches[i];
+            let m: [PatternExpression, Expression] = this.matches[i];
             newMatches.push([m[0].simplify(), m[1].simplify()]);
         }
         return new Match(this.position, newMatches);
     }
 
     reParse(state: State): Match {
-        let newMatches: [Pattern, Expression][] = [];
+        let newMatches: [PatternExpression, Expression][] = [];
         for (let i = 0; i < this.matches.length; ++i) {
-            let m: [Pattern, Expression] = this.matches[i];
+            let m: [PatternExpression, Expression] = this.matches[i];
             newMatches.push([m[0].reParse(state), m[1].reParse(state)]);
         }
         return new Match(this.position, newMatches);
@@ -172,12 +178,23 @@ export class Match extends ASTNode {
 
 export class TypedExpression extends Expression implements Pattern {
 // expression: type (L)
-    constructor(public position: Position, public expression: Expression|Pattern,
+    constructor(public position: Position, public expression: Expression,
                 public typeAnnotation: Type) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
         throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+
+    computeType(state: State): Type {
+        let result: Type = this.expression.getType(state);
+        // TODO: check semantics of typeAnnotation
+        // TODO: equals is not correct here. result must generalise typeAnnotation
+        if (!result.equals(this.typeAnnotation)) {
+            throw new SemanticError(this.position,
+                'expression cannot have explicit type ' + this.typeAnnotation.toString());
+        }
+        return this.typeAnnotation;
     }
 
     simplify(): TypedExpression {
@@ -188,7 +205,7 @@ export class TypedExpression extends Expression implements Pattern {
         return new TypedExpression(this.position, this.expression.reParse(state), this.typeAnnotation);
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let res = '( ' + this.expression.prettyPrint(indentation, oneLine);
         res += ': ' + this.typeAnnotation.prettyPrint();
@@ -208,7 +225,7 @@ export class HandleException extends Expression {
         return new HandleException(this.position, this.expression.reParse(state), this.match.reParse(state));
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let res = '( ' + this.expression.prettyPrint(indentation, oneLine) + ' )';
         res += ' handle ' + this.match.prettyPrint(indentation, oneLine);
@@ -228,7 +245,7 @@ export class RaiseException extends Expression {
         return new RaiseException(this.position, this.expression.reParse(state));
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         return 'raise ' + this.expression.prettyPrint(indentation, oneLine);
     }
@@ -246,7 +263,7 @@ export class Lambda extends Expression {
         return new Lambda(this.position, this.match.reParse(state));
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         return 'fn ' + this.match.prettyPrint(indentation, oneLine);
     }
@@ -256,12 +273,24 @@ export class Lambda extends Expression {
 export class FunctionApplication extends Expression implements Pattern {
 // function argument
     constructor(public position: Position,
-                public func: Expression|Pattern,
-                public argument: Expression|Pattern) { super(); }
+                public func: Expression,
+                public argument: Expression) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
         throw new InternalInterpreterError(this.position, 'not yet implemented');
+    }
+
+    computeType(state: State): Type {
+        let f: Type = this.func.getType(state);
+        let arg: Type = this.argument.getType(state);
+        if (f instanceof FunctionType) {
+            f.parameterType.unify(arg, state, this.argument.position);
+            return f.returnType;
+        } else {
+            // TODO: do we need a special case for constructors?
+            throw new SemanticError(this.func.position, this.func.prettyPrint() + ' is not a function.');
+        }
     }
 
     simplify(): FunctionApplication {
@@ -273,7 +302,7 @@ export class FunctionApplication extends Expression implements Pattern {
         return new FunctionApplication(this.position, this.func.reParse(state), this.argument.reParse(state));
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let res = '( ' + this.func.prettyPrint(indentation, oneLine);
         res += ' ' + this.argument.prettyPrint(indentation, oneLine) + ' )';
@@ -282,18 +311,34 @@ export class FunctionApplication extends Expression implements Pattern {
 }
 
 export class Constant extends Expression implements Pattern {
-    constructor(public position: Position, public token: Token) { super(); }
+    constructor(public position: Position, public token: ConstantToken) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         // TODO
         throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 
+    computeType(state: State): Type {
+        if (this.token instanceof IntegerConstantToken || this.token instanceof NumericToken) {
+            return new PrimitiveType(PrimitiveTypes.int);
+        } else if (this.token instanceof RealConstantToken) {
+            return new PrimitiveType(PrimitiveTypes.real);
+        } else if (this.token instanceof WordConstantToken) {
+            return new PrimitiveType(PrimitiveTypes.word);
+        } else if (this.token instanceof CharacterConstantToken) {
+            return new PrimitiveType(PrimitiveTypes.char);
+        } else if (this.token instanceof StringConstantToken) {
+            return new PrimitiveType(PrimitiveTypes.string);
+        } else {
+            throw new InternalInterpreterError(this.token.position, 'invalid Constant ' + this.prettyPrint());
+        }
+    }
+
     simplify(): Constant { return this; }
 
     reParse(state: State): Constant { return this; }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         return this.token.getText();
     }
@@ -312,7 +357,7 @@ export class ValueIdentifier extends Expression implements Pattern {
 
     reParse(state: State): ValueIdentifier { return this; }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         return this.name.getText();
     }
@@ -322,7 +367,7 @@ export class Record extends Expression implements Pattern {
 // { lab = exp, ... } or { }
     // a record(pattern) is incomplete if it ends with '...'
     constructor(public position: Position, public complete: boolean,
-                public entries: [string, (Pattern | Expression), (Type|undefined)][]) {
+                public entries: [string, Expression][]) {
         super();
     }
 
@@ -331,30 +376,39 @@ export class Record extends Expression implements Pattern {
         throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 
-    simplify(): Record {
-        let newEntries: [string, (Pattern | Expression), Type|undefined][] = [];
-        for (let i = 0; i < this.entries.length; ++i) {
-            let e: [string, (Pattern | Expression), Type|undefined] = this.entries[i];
-            let nt: Type|undefined = e[2];
-            if (nt !== undefined) {
-                nt = nt.simplify();
+    computeType(state: State): RecordType {
+        let e: Map<string, Type> = new Map<string, Type>();
+        for (let i: number = 0; i < this.entries.length; ++i) {
+            let name: string = this.entries[i][0];
+            let exp: Expression = this.entries[i][1];
+            if (e.has(name)) {
+                throw new SemanticError(this.position,
+                    'Label ' + name + ' occurs more than once in record expression.');
             }
-            newEntries.push([e[0], e[1].simplify(), nt]);
+            e.set(name, exp.getType(state));
+        }
+        return new RecordType(e, this.complete);
+    }
+
+    simplify(): Record {
+        let newEntries: [string, Expression][] = [];
+        for (let i = 0; i < this.entries.length; ++i) {
+            let e: [string, Expression] = this.entries[i];
+            newEntries.push([e[0], e[1].simplify()]);
         }
         return new Record(this.position, this.complete, newEntries);
     }
 
     reParse(state: State): Record {
-        let newEntries: [string, (Pattern | Expression), Type|undefined][] = [];
+        let newEntries: [string, Expression][] = [];
         for (let i = 0; i < this.entries.length; ++i) {
-            let e: [string, (Pattern | Expression), Type|undefined] = this.entries[i];
-            let nt: Type|undefined = e[2];
-            newEntries.push([e[0], e[1].reParse(state), nt]);
+            let e: [string, Expression] = this.entries[i];
+            newEntries.push([e[0], e[1].reParse(state)]);
         }
         return new Record(this.position, this.complete, newEntries);
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let result: string = '{';
         let first: boolean = true;
@@ -391,7 +445,7 @@ export class LocalDeclarationExpression extends Expression {
                                               this.expression.reParse(nstate));
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let res = 'let ' + this.declaration.prettyPrint(indentation, oneLine);
         res += ' in ' + this.expression.prettyPrint(indentation, oneLine) + ' end';
@@ -401,7 +455,7 @@ export class LocalDeclarationExpression extends Expression {
 
 export class InfixExpression extends Expression implements Pattern {
     // operators: (op, idx), to simplify simplify
-    constructor(public expressions: (Expression|Pattern)[], public operators: [IdentifierToken, number][]) {
+    constructor(public expressions: Expression[], public operators: [IdentifierToken, number][]) {
         super();
     }
 
@@ -456,14 +510,14 @@ export class InfixExpression extends Expression implements Pattern {
         return <FunctionApplication> exps[0];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let res = '{{ ' + this.expressions[0].prettyPrint(indentation, oneLine);
         for (let i = 1; i < this.expressions.length; ++i) {
             res += ' ' + this.operators[i - 1][0].getText();
             res += ' ' + this.expressions[i].prettyPrint(indentation, oneLine);
         }
-        return res += ' }}';
+        return res + ' }}';
     }
 }
 
@@ -488,7 +542,7 @@ export class Conjunction extends Expression {
         return new Conjunction(this.position, this.leftOperand.reParse(state), this.rightOperand.reParse(state));
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         return this.leftOperand.prettyPrint(indentation, oneLine) + ' andalso '
         + this.rightOperand.prettyPrint(indentation, oneLine);
@@ -507,7 +561,7 @@ export class Disjunction extends Expression {
         return new Disjunction(this.position, this.leftOperand.reParse(state), this.rightOperand.reParse(state));
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         return this.leftOperand.prettyPrint(indentation, oneLine) + ' orelse '
         + this.rightOperand.prettyPrint(indentation, oneLine);
@@ -516,29 +570,29 @@ export class Disjunction extends Expression {
 
 export class Tuple extends Expression implements Pattern {
 // (exp1, ..., expn), n > 1
-    constructor(public position: Position, public expressions: (Pattern | Expression)[]) { super(); }
+    constructor(public position: Position, public expressions: Expression[]) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         return this.simplify().matches(state, v);
     }
 
     simplify(): Record {
-        let entries: [string, (Pattern | Expression), Type|undefined][] = [];
+        let entries: [string, Expression][] = [];
         for (let i = 0; i < this.expressions.length; ++i) {
-            entries[String(i + 1)] = [this.expressions[i].simplify(), undefined];
+            entries[String(i + 1)] = this.expressions[i].simplify();
         }
         return new Record(this.position, true, entries);
     }
 
     reParse(state: State): Tuple {
-        let entries: (Pattern | Expression)[] = [];
+        let entries: Expression[] = [];
         for (let i = 0; i < this.expressions.length; ++i) {
             entries.push(this.expressions[i].reParse(state));
         }
         return new Tuple(this.position, entries);
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let res = '( ';
         for (let i = 0; i < this.expressions.length; ++i) {
@@ -553,30 +607,30 @@ export class Tuple extends Expression implements Pattern {
 
 export class List extends Expression implements Pattern {
 // [exp1, ..., expn]
-    constructor(public position: Position, public expressions: (Pattern | Expression)[]) { super(); }
+    constructor(public position: Position, public expressions: Expression[]) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         return this.simplify().matches(state, v);
     }
 
-    simplify(): FunctionApplication {
-        let res: Expression|Pattern = nilConstant;
+    simplify(): PatternExpression {
+        let res: PatternExpression = nilConstant;
         for (let i = this.expressions.length - 1; i >= 0; --i) {
             let pair = new Tuple(-1, [this.expressions[i], res]).simplify();
             res = new FunctionApplication(-1, consConstant, pair);
         }
-        return <FunctionApplication> res;
+        return res;
     }
 
     reParse(state: State): List {
-        let entries: (Pattern | Expression)[] = [];
+        let entries: Expression[] = [];
         for (let i = 0; i < this.expressions.length; ++i) {
             entries.push(this.expressions[i].reParse(state));
         }
         return new List(this.position, entries);
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let res = '[ ';
         for (let i = 0; i < this.expressions.length; ++i) {
@@ -612,7 +666,7 @@ export class Sequence extends Expression {
         return new Sequence(this.position, entries);
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let res = '( ';
         for (let i = 0; i < this.expressions.length; ++i) {
@@ -627,13 +681,11 @@ export class Sequence extends Expression {
 
 export class RecordSelector extends Expression {
 // #label record
-    constructor(public position: Position, public label: Token) { super(); }
+    constructor(public position: Position, public label: IdentifierToken | NumericToken) { super(); }
 
     simplify(): Lambda {
-        // TODO Token.text does not always contain the required text ~> .text() ?
         return new Lambda(this.position, new Match(-1, [[
-            new Record(-1, false, [[this.label.text,
-                new ValueIdentifier(-1, new IdentifierToken('__rs', -1)), undefined]]),
+            new Record(-1, false, [[this.label.text, new ValueIdentifier(-1, new IdentifierToken('__rs', -1))]]),
             new ValueIdentifier(-1, new IdentifierToken('__rs', -1))]]));
     }
 
@@ -641,7 +693,7 @@ export class RecordSelector extends Expression {
         return this;
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         return '#' + this.label.getText();
     }
@@ -660,7 +712,7 @@ export class CaseAnalysis extends Expression {
         return new CaseAnalysis(this.position, this.expression.reParse(state), this.match.reParse(state));
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let res = 'case ' + this.expression.prettyPrint(indentation, oneLine);
         res += ' of ' + this.match.prettyPrint(indentation, oneLine);
@@ -684,7 +736,7 @@ export class Conditional extends Expression {
                                this.alternative.reParse(state));
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         let res = 'if ' + this.condition.prettyPrint(indentation, oneLine);
         res += ' then ' + this.consequence.prettyPrint(indentation, oneLine);

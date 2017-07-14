@@ -1,5 +1,7 @@
-import { Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
-         Pattern, TypedExpression, Tuple } from './expressions';
+import {
+    Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
+    Pattern, TypedExpression, Tuple, PatternExpression
+} from './expressions';
 import { IdentifierToken, LongIdentifierToken, Token } from './lexer';
 import { Type, TypeVariable } from './types';
 import { State } from './state';
@@ -51,7 +53,7 @@ export class FunctionValueBinding {
     public name: ValueIdentifier|undefined = undefined;
 
     constructor(public position: Position,
-                public parameters: [Pattern[], Type|undefined, Expression][]) {
+                public parameters: [PatternExpression[], Type|undefined, Expression][]) {
     }
 
     simplify(): ValueBinding {
@@ -62,7 +64,7 @@ export class FunctionValueBinding {
 
         // Build the case analysis, starting with the (vid1,...,vidn)
         let arr: ValueIdentifier[] = [];
-        let matches: [Pattern, Expression][] = [];
+        let matches: [PatternExpression, Expression][] = [];
         for (let i = 0; i < this.parameters.length; ++i) {
             arr.push(new ValueIdentifier(-1, new IdentifierToken('__arg' + i, -1)));
             if (this.parameters[i][1] === undefined) {
@@ -108,10 +110,10 @@ export class FunctionValueBinding {
         }
 
         // Filter out the name everywhere.
-        let params: [Pattern[], Type|undefined, Expression][] = [];
+        let params: [PatternExpression[], Type|undefined, Expression][] = [];
 
         for (let i = 0; i < this.parameters.length; ++i) {
-            let nwargs: Pattern[] = [];
+            let nwargs: PatternExpression[] = [];
 
             if (this.parameters[i][0].length === 3) {
                 // Could be infixed
@@ -361,7 +363,23 @@ export class DatatypeDeclaration extends Declaration {
     }
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        let res = 'datatype';
+        for (let i = 0; i < this.datatypeBinding.length; ++i) {
+            if (i > 0) {
+                res += ' and';
+            }
+            res += ' <stuff> ' + this.datatypeBinding[i].name.getText() + ' =';
+            for (let j = 0; j < this.datatypeBinding[i].type.length; ++j) {
+                if (j > 0) {
+                    res += ' | ';
+                }
+                res += ' ' + this.datatypeBinding[i].type[j][0].getText();
+                if (this.datatypeBinding[i].type[j][1] !== undefined) {
+                    res += ' of ' + (<Type> this.datatypeBinding[i].type[j][1]).prettyPrint();
+                }
+            }
+        }
+        return res;
     }
 }
 
