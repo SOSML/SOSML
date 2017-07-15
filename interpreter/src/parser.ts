@@ -262,7 +262,7 @@ export class Parser {
                 continue;
             }
             throw new ParserError('Expected "}", or identifier, got "'
-                + nextTok.getText() + '".', curTok.position);
+                + curTok.getText() + '".', curTok.position);
         }
     }
 
@@ -672,14 +672,14 @@ export class Parser {
          * Parses Record type, munches closing }
          * tyrow ::= lab : ty [, tyrow]     Record(comp:boolean, entries: [string, Type])
          */
-        let curTok = this.currentToken();
-        let res = new RecordType(new Map<string, Type>(), true, curTok.position);
+        let firstTok = this.currentToken();
+        let elements = new Map<string, Type>();
         let firstIt = true;
         while (true) {
-            curTok = this.currentToken();
+            let curTok = this.currentToken();
             if (this.checkKeywordToken(curTok, '}')) {
                 ++this.position;
-                return res;
+                return new RecordType(elements, true, firstTok.position);
             }
             if (!firstIt && this.checkKeywordToken(curTok, ',')) {
                 ++this.position;
@@ -697,7 +697,7 @@ export class Parser {
                 if (nextTok.text === ':') {
                     // lab: type
                     ++this.position;
-                    res.elements.set(curTok.getText(), this.parseType());
+                    elements.set(curTok.getText(), this.parseType());
                     continue;
                 }
                 throw new ParserError('Expected ":".', nextTok.position);
