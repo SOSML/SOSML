@@ -357,6 +357,7 @@ export class Parser {
             ++this.position;
             let cons = this.parseExpression();
             this.assertKeywordToken(this.currentToken(), 'else');
+            ++this.position;
             return new Conditional(curTok.position, cond, cons, this.parseExpression());
         } else if (this.checkKeywordToken(curTok, 'case')) {
             ++this.position;
