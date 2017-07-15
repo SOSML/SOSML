@@ -540,15 +540,15 @@ export class Parser {
         }
         if (this.checkKeywordToken(curTok, '(')) {
             // Tuple pattern
-            let results: PatternExpression[] = [];
-            let length: number = 0;
+            ++this.position;
+            if (this.checkKeywordToken(this.currentToken(), ')')) {
+                ++this.position;
+                return new Tuple(curTok.position, []);
+            }
+            let results: PatternExpression[] = [this.parsePattern()];
             while (true) {
                 let nextCurTok = this.currentToken();
-                if (this.checkKeywordToken(nextCurTok, '(')
-                    && length === 0) {
-                    ++this.position;
-                } else if (this.checkKeywordToken(nextCurTok, ',')
-                    && length > 0) {
+                if (this.checkKeywordToken(nextCurTok, ',')) {
                     ++this.position;
                 } else if (this.checkKeywordToken(nextCurTok, ')')) {
                     ++this.position;
@@ -558,21 +558,23 @@ export class Parser {
                         return new Tuple(curTok.position, results);
                     }
                 } else {
-                    throw new ParserError('Expected "," or ")".', nextCurTok.position);
+                    throw new ParserError('Expected "," or ")", but got "'
+                        + nextCurTok.getText() + '".', nextCurTok.position);
                 }
                 results.push(this.parsePattern());
-                length++;
             }
         }
         if (this.checkKeywordToken(curTok, '[')) {
             // List pattern
-            let length = 0;
-            let results: PatternExpression[] = [];
+            ++this.position;
+            if (this.checkKeywordToken(this.currentToken(), ']')) {
+                ++this.position;
+                return new List(curTok.position, []);
+            }
+            let results: PatternExpression[] = [this.parsePattern()];
             while (true) {
                 let nextCurTok = this.currentToken();
-                if (this.checkKeywordToken(nextCurTok, '[') && length === 0) {
-                    ++this.position;
-                } else if (this.checkKeywordToken(nextCurTok, ',') && length > 0) {
+                if (this.checkKeywordToken(nextCurTok, ',')) {
                     ++this.position;
                 } else if (this.checkKeywordToken(nextCurTok, ']')) {
                     ++this.position;
@@ -582,7 +584,6 @@ export class Parser {
                         nextCurTok.getText() + '".', nextCurTok.position);
                 }
                 results.push(this.parsePattern());
-                ++length;
             }
         } else if (curTok instanceof ConstantToken) {
             ++this.position;
@@ -616,7 +617,8 @@ export class Parser {
             isLong = true;
         }
         if (this.checkIdentifierOrLongToken(nextTok)) {
-            let name: IdentifierToken|LongIdentifierToken = nextTok;
+            let name: IdentifierToken|LongIdentifierToken
+                = <IdentifierToken|LongIdentifierToken> nextTok;
             name.opPrefixed = opPrefixed;
             ++this.position;
             try {
@@ -1132,7 +1134,11 @@ export class Parser {
 
         if (this.checkKeywordToken(curTok, 'val')) {
             ++this.position;
-            let tyvar = <TypeVariable[]> this.parseTypeVarSequence();
+            let tyvar = this.parseTypeVarSequence(true);
+            if (tyvar === undefined) {
+                --this.position;
+                tyvar = [];
+            }
             let valbinds: ValueBinding[] = [];
             while (true) {
                 valbinds.push(this.parseValueBinding());
@@ -1142,7 +1148,7 @@ export class Parser {
                     break;
                 }
             }
-            return new ValueDeclaration(curTok.position, tyvar, valbinds);
+            return new ValueDeclaration(curTok.position, <TypeVariable[]> tyvar, valbinds);
         } else if (this.checkKeywordToken(curTok, 'fun')) {
             ++this.position;
             let tyvar = this.parseTypeVarSequence(true);
