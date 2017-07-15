@@ -311,6 +311,13 @@ export class Record extends Expression implements Pattern {
     constructor(public position: Position, public complete: boolean,
                 public entries: [string, Expression][]) {
         super();
+        this.entries.sort();
+        for (let i = 1; i < this.entries.length; ++i) {
+            if (this.entries[i][0] === this.entries[i - 1][0]) {
+                throw new SemanticError(this.position,
+                    'Label "' + this.entries[i][0] + '" occurs more than once in the same record.');
+            }
+        }
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -325,7 +332,7 @@ export class Record extends Expression implements Pattern {
             let exp: Expression = this.entries[i][1];
             if (e.has(name)) {
                 throw new SemanticError(this.position,
-                    'Label ' + name + ' occurs more than once in record expression.');
+                    'Label "' + name + '" occurs more than once in the same record.');
             }
             e.set(name, exp.getType(state));
         }
@@ -597,7 +604,8 @@ export class CaseAnalysis extends Expression {
     constructor(public position: Position, public expression: Expression, public match: Match) { super(); }
 
     simplify(): FunctionApplication {
-        return new FunctionApplication(this.position, new Lambda(this.position, this.match.simplify()),
+        return new FunctionApplication(this.position, new Lambda(this.position,
+            this.match.simplify()),
             this.expression.simplify());
     }
 

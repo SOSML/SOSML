@@ -80,7 +80,7 @@ export class FunctionValueBinding {
                 exp]]));
         }
 
-        return new ValueBinding(this.position, true, this.name, exp);
+        return new ValueBinding(this.position, true, this.name, exp.simplify());
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {

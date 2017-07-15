@@ -13,6 +13,7 @@ export interface Token {
     position: Position;
 
     getText(): string;
+    isValidRecordLabel(): boolean;
 }
 
 export class KeywordToken implements Token {
@@ -21,6 +22,7 @@ export class KeywordToken implements Token {
     getText(): string {
         return this.text;
     }
+    isValidRecordLabel(): boolean { return false; }
 }
 
 export abstract class ConstantToken implements Token {
@@ -28,6 +30,7 @@ export abstract class ConstantToken implements Token {
     position: Position;
 
     abstract getText(): string;
+    abstract isValidRecordLabel(): boolean;
 }
 export class IntegerConstantToken extends ConstantToken {
     constructor(public text: string, public position: Position, public value: int) {
@@ -37,6 +40,7 @@ export class IntegerConstantToken extends ConstantToken {
     getText(): string {
         return '' + this.value;
     }
+    isValidRecordLabel(): boolean { return false; }
 }
 export class RealConstantToken extends ConstantToken {
     constructor(public text: string, public position: Position, public value: number) {
@@ -46,6 +50,7 @@ export class RealConstantToken extends ConstantToken {
     getText(): string {
         return '' + this.value;
     }
+    isValidRecordLabel(): boolean { return false; }
 }
 export class WordConstantToken extends ConstantToken {
     constructor(public text: string, public position: Position, public value: int) {
@@ -54,6 +59,7 @@ export class WordConstantToken extends ConstantToken {
     getText(): string {
         return '' + this.value;
     }
+    isValidRecordLabel(): boolean { return false; }
 }
 export class CharacterConstantToken extends ConstantToken {
     constructor(public text: string, public position: Position, public value: char) {
@@ -62,6 +68,7 @@ export class CharacterConstantToken extends ConstantToken {
     getText(): string {
         return '' + this.value;
     }
+    isValidRecordLabel(): boolean { return false; }
 }
 export class StringConstantToken extends ConstantToken {
     constructor(public text: string, public position: Position, public value: string) {
@@ -70,6 +77,7 @@ export class StringConstantToken extends ConstantToken {
     getText(): string {
         return '' + this.value;
     }
+    isValidRecordLabel(): boolean { return false; }
 }
 
 // Any identifier not starting with a prime (')
@@ -80,6 +88,7 @@ export class IdentifierToken implements Token {
     getText(): string {
         return this.text;
     }
+    isValidRecordLabel(): boolean { return true; }
 }
 
 // Alphanumeric identifiers not starting with a prime may represent structure identifiers, signature identifiers
@@ -89,6 +98,7 @@ export class AlphanumericIdentifierToken extends IdentifierToken {
     getText(): string {
         return this.text;
     }
+    isValidRecordLabel(): boolean { return true; }
 }
 
 // An alphanumeric identifier that starts with a prime
@@ -97,6 +107,7 @@ export class TypeVariableToken implements Token {
     getText(): string {
         return this.text;
     }
+    isValidRecordLabel(): boolean { return false; }
 }
 
 // An alphanumeric identifier that starts with two primes
@@ -105,6 +116,7 @@ export class EqualityTypeVariableToken extends TypeVariableToken {
     getText(): string {
         return this.text;
     }
+    isValidRecordLabel(): boolean { return false; }
 }
 
 // A star (*) can be used as value identifier or record label, but not as a type constructor and thus must be separated.
@@ -117,6 +129,7 @@ export class StarToken extends KeywordToken {
     getText(): string {
         return this.text;
     }
+    isValidRecordLabel(): boolean { return true; }
 }
 
 // Reserved words are generally not allowed as identifiers. "The only exception to this rule is that the symbol = ,
@@ -129,6 +142,7 @@ export class EqualsToken extends KeywordToken {
     getText(): string {
         return this.text;
     }
+    isValidRecordLabel(): boolean { return false; }
 }
 
 // A numeric token (a positive, decimal integer not starting with '0') can be used either as an integer constant or as
@@ -138,12 +152,11 @@ export class NumericToken extends IntegerConstantToken {
     getText(): string {
         return this.text;
     }
+    isValidRecordLabel(): boolean { return true; }
 }
 
 // A long identifier is a sequence str_1.str_2. … .str_n.id of n > 0 structure identifiers and one Identifier
 // separated by '.'s. The identifier may a value identifier, type constructor or structure identifier
-// (It is impossible in Typescript to inherit from a generic type parameter, thus the parser will need to distinguish
-// the different types of long identifiers based on the type of id.)
 export class LongIdentifierToken implements Token {
     opPrefixed: boolean = false;
     constructor(public text: string, public position: Position, public qualifiers: AlphanumericIdentifierToken[],
@@ -158,6 +171,7 @@ export class LongIdentifierToken implements Token {
         }
         return res + this.text;
     }
+    isValidRecordLabel(): boolean { return false; }
 }
 
 
