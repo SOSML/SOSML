@@ -25,13 +25,24 @@ function prefixWithOp(tok: Lexer.IdentifierToken): Lexer.IdentifierToken {
     return tok;
 }
 
-function get42(pos: position): Expr.Expresion {
+function get42(pos: Errors.Position): Expr.Expresion {
     return new Expr.Constant(pos, new Lexer.NumericToken('42', pos, 42));
+}
+
+const sampleExpression: string = 'if 5 then 9 else 7';
+function createSampleExpression(pos: Errors.Position): Expr.Expression {
+    return new Expr.Conditional(pos,
+            new Expr.Constant(pos, new Lexer.NumericToken('5', pos+3, 5)),
+            new Expr.Constant(pos, new Lexer.NumericToken('9', pos+10, 9)),
+            new Expr.Constant(pos, new Lexer.NumericToken('7', pos+17, 7))
+        );
+    );
 }
 
 it("basic", () => {
     let testcase_empty: string = ';';
     let testcase_simple1: string = 'val x = 42;';
+    let testcase_sample_expr: string = sampleExpression + ';';
 
     expect(Parser.parse(Lexer.lex(testcase_empty))).toEqualWithType(
         new Decl.SequentialDeclaration(0, [])
@@ -46,6 +57,9 @@ it("basic", () => {
             ])
         ])
     );
+    expect(Parser.parse(Lexer.lex(testcase_sample_expr))).toEqualWithType(createItExpression(
+        createSampleExpression(0)
+    ));
 });
 
 it("atomic expression - special constant", () => {
