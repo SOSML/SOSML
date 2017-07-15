@@ -342,7 +342,7 @@ it("expression row", () => {
     let testcase_non_alphanum: string = '{ ### = ' + sampleExpression1 + '};';
     let testcase_star: string = '{ * = ' + sampleExpression2 + ' };';
     let testcase_zero: string = '{ 0 = 42};';
-    let testcase_reserved_word: string = '{ val = \42};';
+    let testcase_reserved_word: string = '{ val = 42};';
     let testcase_equals: string = '{ = = 42};';
 
     //expect(parse(testcase_alphanum)).toEqualWithType(createItExpression(

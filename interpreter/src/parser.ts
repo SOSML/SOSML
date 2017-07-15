@@ -524,6 +524,7 @@ export class Parser {
             let nextCurTok = this.currentToken();
             this.assertIdentifierOrLongToken(nextCurTok);
             (<IdentifierToken|LongIdentifierToken> nextCurTok).opPrefixed = true;
+            ++this.position;
             return new ValueIdentifier(curTok.position, nextCurTok);
         }
         if (this.checkKeywordToken(curTok, '_')) {
@@ -614,7 +615,7 @@ export class Parser {
         if (nextTok instanceof LongIdentifierToken) {
             isLong = true;
         }
-        if (nextTok instanceof IdentifierToken || nextTok instanceof LongIdentifierToken) {
+        if (this.checkIdentifierOrLongToken(nextTok)) {
             let name: IdentifierToken|LongIdentifierToken = nextTok;
             name.opPrefixed = opPrefixed;
             ++this.position;
