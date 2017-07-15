@@ -57,10 +57,9 @@ export class Parser {
                 + tok.constructor.name + ').', tok.position);
         }
     }
-    assertIdentifierOrNumericToken(tok: Token) {
-        if (!(tok instanceof IdentifierToken)
-            && !(tok instanceof NumericToken)) {
-            throw new ParserError('Expected an identifier, got \"'
+    assertRecordLabelToken(tok: Token) {
+        if (!tok.isValidRecordLabel()) {
+            throw new ParserError('Expected a record label \"'
                 + tok.getText() + '\" ('
                 + tok.constructor.name + ').', tok.position);
         }
@@ -192,7 +191,7 @@ export class Parser {
         if (this.checkKeywordToken(curTok, '#')) {
             ++this.position;
             let nextTok = this.currentToken();
-            this.assertIdentifierOrNumericToken(nextTok);
+            this.assertRecordLabelToken(nextTok);
             ++this.position;
             return new RecordSelector(curTok.position, <NumericToken | IdentifierToken> nextTok);
         }
