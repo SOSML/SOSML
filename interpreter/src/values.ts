@@ -8,13 +8,13 @@ import { InternalInterpreterError } from './errors';
 
 export abstract class Value {
     abstract prettyPrint(): string;
+    equals(other: Value): boolean {
+        throw new InternalInterpreterError(-1,
+            'Tried comparing incomparable things.');
+    }
 }
 
-export interface AllowsEquality {
-    equals(other: Value): boolean;
-}
-
-export class Integer extends Value implements AllowsEquality {
+export class Integer extends Value {
     constructor(public value: number) {
         super();
     }
@@ -34,8 +34,7 @@ export class Integer extends Value implements AllowsEquality {
                 return 0;
             }
         }
-        throw new InternalInterpreterError(0, 'Cannot compare "int" to "'
-            + val.constructor.name + '".');
+        return false;
     }
 
     equals(value: Value): boolean {
@@ -43,13 +42,14 @@ export class Integer extends Value implements AllowsEquality {
     }
 }
 
-export class Real extends Value implements AllowsEquality {
+export class Real extends Value {
     constructor(public value: number) {
         super();
     }
 
     prettyPrint(): string {
-        return String(this.value);
+        // TODO in TS this may produce ints
+        return '' + this.value;
     }
 
     compareTo(val: Value) {
@@ -63,8 +63,7 @@ export class Real extends Value implements AllowsEquality {
                 return 0;
             }
         }
-        throw new InternalInterpreterError(0, 'Cannot compare "real" to "'
-            + val.constructor.name + '".');
+        return false;
     }
 
     equals(value: Value): boolean {
@@ -72,7 +71,7 @@ export class Real extends Value implements AllowsEquality {
     }
 }
 
-export class Record extends Value implements AllowsEquality {
+export class RecordValue extends Value {
     constructor(public entries: Map<string, Value>) {
         super();
     }
@@ -82,9 +81,33 @@ export class Record extends Value implements AllowsEquality {
         throw new InternalInterpreterError(0, 'not yet implemented');
     }
 
-    equals(value: Value): boolean {
-
-        throw new InternalInterpreterError(0, 'not yet implemented');
+    equals(other: Value): boolean {
+        if (!(other instanceof RecordValue)) {
+            return false;
+        }
+        if (!this.entries.forEach((j: Value, i: string) => {
+            if (!(<RecordValue> other).entries.has(i)) {
+                return false;
+            }
+            if (!this.entries[i].equals((<RecordValue> other).entries[i])) {
+                return false;
+            }
+            return true;
+        })) {
+            return false;
+        }
+        if (!(<RecordValue> other).entries.forEach((j: Value, i: string) => {
+            if (!this.entries.has(i)) {
+                return false;
+            }
+            if (!this.entries[i].equals((<RecordValue> other).entries[i])) {
+                return false;
+            }
+            return true;
+        })) {
+            return false;
+        }
+        return true;
     }
 }
 
@@ -100,7 +123,7 @@ export class FunctionValue extends Value {
 }
 
 // Values that were constructed from type constructors
-export class CustomValue extends Value implements AllowsEquality {
+export class CustomValue extends Value {
     constructor(public constructorName: string, public argument: Value) {
         super();
     }
@@ -113,8 +136,13 @@ export class CustomValue extends Value implements AllowsEquality {
         return result + ')';
     }
 
-    equals(value: Value): boolean {
-
-        throw new InternalInterpreterError(0, 'not yet implemented');
+    equals(other: Value): boolean {
+        if (!(other instanceof CustomValue)) {
+            return false;
+        }
+        if (this.constructorName !== (<CustomValue> other).constructorName) {
+            return false;
+        }
+        return this.argument.equals((<CustomValue> other).argument);
     }
 }
