@@ -15,7 +15,7 @@ let AST = instance.lexParse(..code..);
 
 import { getInitialState, State } from './state';
 import * as Lexer from './lexer';
-import { Parser } from './parser';
+import * as Parser from './parser';
 import { Settings } from './settings';
 
 export class Interpreter {
@@ -25,8 +25,7 @@ export class Interpreter {
         let state = oldState.getNestedState();
         let tkn = Lexer.lex(nextInstruction);
 
-        let parser = new Parser(tkn, state);
-        let ast = parser.parseDeclaration();
+        let ast = Parser.parse(tkn, state);
 
         state = oldState.getNestedState();
         ast.simplify();
