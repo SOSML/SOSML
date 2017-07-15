@@ -5,7 +5,7 @@ import { Expression, Tuple, Constant, ValueIdentifier, Wildcard,
          HandleException, Match, InfixExpression, PatternExpression
 } from './expressions';
 import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } from './types';
-import { InterpreterError, IncompleteError, Position } from './errors';
+import { InterpreterError, InternalInterpreterError, IncompleteError, Position } from './errors';
 import { Token, KeywordToken, IdentifierToken, ConstantToken,
          TypeVariableToken, LongIdentifierToken, IntegerConstantToken,
          AlphanumericIdentifierToken, NumericToken } from './lexer';
@@ -27,7 +27,12 @@ export class ParserError extends InterpreterError {
 export class Parser {
     private position: number = 0; // position of the next not yet parsed token
 
-    constructor(private tokens: Token[], private state: State) {}
+    constructor(private tokens: Token[], private state: State) {
+        if (this.state === undefined) {
+            throw new InternalInterpreterError(-1, 'What are you, stupid? Hurry up and give me ' +
+                'a state already!');
+        }
+    }
 
     assertKeywordToken(tok: Token, text: string | undefined = undefined) {
         if (!(tok instanceof KeywordToken)) {
@@ -1301,7 +1306,6 @@ export class Parser {
     }
 }
 
-// TODO deprecated.
 export function parse(tokens: Token[], state: State): Declaration {
     let p: Parser = new Parser(tokens, state);
     return p.parseDeclaration();
