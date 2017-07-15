@@ -4,6 +4,7 @@ const Errors = require("../src/errors");
 
 const Expr = require("../src/expressions.ts");
 const Decl = require("../src/declarations.ts");
+const Type = require("../src/types.ts");
 
 const TestHelper = require("./test_helper.ts");
 TestHelper.init();
@@ -24,6 +25,10 @@ function prefixWithOp(tok: Lexer.IdentifierToken): Lexer.IdentifierToken {
     return tok;
 }
 
+function get42(pos: position): Expr.Expresion {
+    return new Expr.Constant(pos, new Lexer.NumericToken('42', pos, 42));
+}
+
 it("basic", () => {
     let testcase_empty: string = ';';
     let testcase_simple1: string = 'val x = 42;';
@@ -36,7 +41,7 @@ it("basic", () => {
             new Decl.ValueDeclaration(0, [], [
                 new Decl.ValueBinding(4, false,
                     new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('x', 4)),
-                    new Expr.Constant(8, new Lexer.NumericToken('42', 8, 42))
+                    get42(8)
                 )
             ])
         ])
@@ -47,7 +52,7 @@ it("atomic expression - special constant", () => {
     let testcase_special_const: string = '42;';
 
     expect(Parser.parse(Lexer.lex(testcase_special_const))).toEqualWithType(createItExpression(
-        new Expr.Constant(0, new Lexer.NumericToken('42', 0, 42))
+        get42(0)
     ));
 
     //TODO maybe more?
@@ -60,12 +65,12 @@ it("atomic expression - value identifier", () => {
     let testcase_vid_without_op_long: string = 'Reals.nan;';
 
     expect(Parser.parse(Lexer.lex(testcase_vid_with_op))).toEqualWithType(createItExpression(
-        new Expr.ValueIdentifier(0, 
+        new Expr.ValueIdentifier(0,
             prefixWithOp(new Lexer.IdentifierToken('+', 3))
         )
     ));
     expect(Parser.parse(Lexer.lex(testcase_vid_with_op_long))).toEqualWithType(createItExpression(
-        new Expr.ValueIdentifier(0, 
+        new Expr.ValueIdentifier(0,
             prefixWithOp(new Lexer.LongIdentifierToken('Math.pow', 3, [
                     new Lexer.AlphanumericIdentifierToken('Math', 3)
                 ],
@@ -323,30 +328,324 @@ it("pattern - layered", () => {
 });
 
 it("type - type variable", () => {
-    //TODO tests
+    let testcase_tyvar: string = '42: \'a;';
+    let testcase_etyvar: string = '42: \'\'meaningoflive;';
+
+    expect(Parser.parse(Lexer.lex(testcase_tyvar))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.TypeVariable('\'a', 4)
+        )
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_etyvar))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.TypeVariable('\'\'meaningoflive', 4)
+        )
+    ));
 });
 
 it("type - record type expression", () => {
-    //TODO tests
+    let testcase_empty: string = '42: {};';
+    let testcase_single: string = '42: { hi : \'int };';
+    let testcase_multiple: string = '42: { hello: \'a, world: \'b };';
+    let testcase_no_unit: string = '42: ();';
+    let testcase_no_same_label: string = '42: { hi: \'a, hi: \'a };';
+
+    expect(Parser.parse(Lexer.lex(testcase_empty))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.RecordType(
+                new Map([]),
+                true,
+                5
+            )
+        )
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_single))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.RecordType(
+                new Map([
+                    ["hi", new Type.TypeVariable('\'int', 11)]
+                ]),
+                true,
+                6
+            )
+        )
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_multiple))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.RecordType(
+                new Map([
+                    ["hello", new Type.TypeVariable('\'a', 13)],
+                    ["world", new Type.TypeVariable('\'b', 24)]
+                ]),
+                true,
+                6
+            )
+        )
+    ));
+    expect(() => { Parser.parse(Lexer.lex(testcase_no_unit)); }).toThrow(Parser.ParserError);
+    expect(() => { Parser.parse(Lexer.lex(testcase_no_same_label)); }).toThrow(Parser.ParserError);
 });
 
 it("type - type construction", () => {
-    //TODO tests
+    let testcase_small: string = '42: list;';
+    let testcase_single: string = '42: \'a list;';
+    let testcase_multiple: string = '42: (\'a * \'b, \'c) list;';
+
+    expect(Parser.parse(Lexer.lex(testcase_small))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('list', 4), [], 4)
+        )
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_single))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.CustomType(
+                new Lexer.AlphanumericIdentifierToken('list', 7), [
+                    new Type.TypeVariable('\'a', 4),
+                ],
+                4
+            )
+        )
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_multiple))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.CustomType(
+                new Lexer.AlphanumericIdentifierToken('list', 18), [
+                    new Type.TupleType([
+                            new Type.TypeVariable('\'a', 5),
+                            new Type.TypeVariable('\'b', 10)
+                        ],
+                        8
+                    ),
+                    new Type.TypeVariable('\'c', 14),
+                ],
+                4
+            )
+        )
+    ));
 });
 
 it("type - tuple type", () => {
-    //TODO tests
+    let testcase_simple: string = '42: \'a * \'b;';
+    let testcase_multiple: string = '42: \'a * \'b * \'c;';
+    let testcase_bracketed: string = '42: \'a * (\'b * \'c);';
+
+    expect(Parser.parse(Lexer.lex(testcase_simple))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.TupleType([
+                    new Type.TypeVariable('\'a', 4),
+                    new Type.TypeVariable('\'b', 9)
+                ],
+                7
+            )
+        )
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_multiple))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.TupleType([
+                    new Type.TypeVariable('\'a', 4),
+                    new Type.TypeVariable('\'b', 9),
+                    new Type.TypeVariable('\'c', 14)
+                ],
+                7
+            )
+        )
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_bracketed))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.TupleType([
+                    new Type.TypeVariable('\'a', 4),
+                    new Type.TupleType([
+                            new Type.TypeVariable('\'b', 10),
+                            new Type.TypeVariable('\'c', 15)
+                        ],
+                        13
+                    )
+                ],
+                7
+            )
+        )
+    ));
 });
 
 it("type - function type expression", () => {
-    //TODO tests
+    let testcase_simple: string = '42: \'a -> \'b;';
+    let testcase_multiple: string = '42: \'a -> \'b -> \'c;';
+    let testcase_multiple_bracketed: string = '42: (\'a -> \'b) -> \'c;';
+
+    expect(Parser.parse(Lexer.lex(testcase_simple))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.FunctionType(
+                new Type.TypeVariable('\'a', 4),
+                new Type.TypeVariable('\'b', 10),
+                7
+            )
+        )
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_multiple))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.FunctionType(
+                new Type.TypeVariable('\'a', 4),
+                new Type.FunctionType(
+                    new Type.TypeVariable('\'b', 10),
+                    new Type.TypeVariable('\'c', 16),
+                    13
+                ),
+                7
+            )
+        )
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_multiple_bracketed))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.FunctionType(
+                new Type.FunctionType(
+                    new Type.TypeVariable('\'a', 5),
+                    new Type.TypeVariable('\'b', 11),
+                    8
+                ),
+                new Type.TypeVariable('\'c', 18),
+                15
+            )
+        )
+    ));
 });
 
 it("type - bracketed", () => {
-    //TODO tests
+    let testcase_simple: string = '42: (\'a);';
+    let testcase_multiple_nested: string = '42: ((((\'a -> \'b))));';
+    let testcase_nested_complex = '42: ({ hi: (\'a)});';
+
+    expect(Parser.parse(Lexer.lex(testcase_simple))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.TypeVariable('\'a', 5)]
+        )
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_multiple_nested))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.FunctionType(
+                new Type.TypeVariable('\'a', 8),
+                new Type.TypeVariable('\'b', 14),
+                11
+            )
+        )
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_nested_complex))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.RecordType(
+                new Map([
+                    ["hi", new Type.TypeVariable('\'a', 12)]
+                ]),
+                true,
+                7
+            )
+        )
+    ));
 });
 
 it("type row", () => {
-    //TODO tests
+    let testcase_alphanum: string = '42: { hi: \'a};';
+    let testcase_numeric: string = '42: { 1337: \'a};';
+    let testcase_non_alphanum: string = '42: { ### : \'a};';
+    let testcase_zero: string = '42: { 0: \'a};';
+    let testcase_reserved_word: string = '42: { val: \'a};';
+    let testcase_equals: string = '42: { =: \'a};';
+    let testcase_ident: string = '42: { hi: a};';
+    let testcase_tyvar: string = '42: { hi: \'a};';
+    let testcase_etyvar: string = '42: { hi: \'\'a};';
+
+    expect(Parser.parse(Lexer.lex(testcase_alphanum))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.RecordType(
+                new Map([
+                    ["hi", new Type.TypeVariable('\'a', 10)]
+                ]),
+                true,
+                6
+            )
+        )
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_numeric))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.RecordType(
+                new Map([
+                    ["1337", new Type.TypeVariable('\'a', 12)]
+                ]),
+                true,
+                6
+            )
+        )
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_non_alphanum))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.RecordType(
+                new Map([
+                    ["###", new Type.TypeVariable('\'a', 12)]
+                ]),
+                true,
+                6
+            )
+        )
+    ));
+
+    expect(() => { Parser.parse(Lexer.lex(testcase_zero)); }).toThrow(Parser.ParserError);
+    expect(() => { Parser.parse(Lexer.lex(testcase_reserved_word)); }).toThrow(Parser.ParserError);
+    expect(() => { Parser.parse(Lexer.lex(testcase_equals)); }).toThrow(Parser.ParserError);
+
+    expect(Parser.parse(Lexer.lex(testcase_ident))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.RecordType(
+                new Map([
+                    ["hi", new Type.CustomType(
+                        new Lexer.AlphanumericIdentifierToken('a', 10), [], 10)]
+                ]),
+                true,
+                6
+            )
+        )
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_tyvar))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.RecordType(
+                new Map([
+                    ["hi", new Type.TypeVariable('\'a', 10)]
+                ]),
+                true,
+                6
+            )
+        )
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_etyvar))).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.RecordType(
+                new Map([
+                    ["hi", new Type.TypeVariable('\'\'a', 10)]
+                ]),
+                true,
+                6
+            )
+        )
+    ));
 });
 
