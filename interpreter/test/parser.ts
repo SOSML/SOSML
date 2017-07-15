@@ -49,13 +49,31 @@ it("basic", () => {
 });
 
 it("atomic expression - special constant", () => {
-    let testcase_special_const: string = '42;';
+    let testcase_special_zero: string = '0;';
+    let testcase_special_int: string = '42;';
+    let testcase_special_real: string = '42.0;';
+    let testcase_special_word: string = '0w42;';
+    let testcase_special_char: string = '#"c";';
+    let testcase_special_string: string = '"str";';
 
-    expect(Parser.parse(Lexer.lex(testcase_special_const))).toEqualWithType(createItExpression(
+    expect(Parser.parse(Lexer.lex(testcase_special_zero))).toEqualWithType(createItExpression(
+        new Expr.Constant(0, new Lexer.IntegerConstantToken('0', 0, 0))
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_special_int))).toEqualWithType(createItExpression(
         get42(0)
     ));
-
-    //TODO maybe more?
+    expect(Parser.parse(Lexer.lex(testcase_special_real))).toEqualWithType(createItExpression(
+        new Expr.Constant(0, new Lexer.RealConstantToken('42.0', 0, 42.0))
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_special_word))).toEqualWithType(createItExpression(
+        new Expr.Constant(0, new Lexer.WordConstantToken('0w42', 0, 42))
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_special_char))).toEqualWithType(createItExpression(
+        new Expr.Constant(0, new Lexer.CharacterConstantToken('#"c"', 0, 'c'))
+    ));
+    expect(Parser.parse(Lexer.lex(testcase_special_string))).toEqualWithType(createItExpression(
+        new Expr.Constant(0, new Lexer.StringConstantToken('"str"', 0, 'str'))
+    ));
 });
 
 it("atomic expression - value identifier", () => {
