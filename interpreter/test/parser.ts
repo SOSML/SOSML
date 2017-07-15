@@ -2,6 +2,7 @@ const Lexer = require("../src/lexer");
 const Parser = require("../src/parser");
 const Errors = require("../src/errors");
 
+const State = require("../src/state.ts");
 const Expr = require("../src/expressions.ts");
 const Decl = require("../src/declarations.ts");
 const Type = require("../src/types.ts");
@@ -29,25 +30,39 @@ function get42(pos: Errors.Position): Expr.Expresion {
     return new Expr.Constant(pos, new Lexer.NumericToken('42', pos, 42));
 }
 
-const sampleExpression: string = 'if 5 then 9 else 7';
-function createSampleExpression(pos: Errors.Position): Expr.Expression {
+const sampleExpression1: string = 'if 5 then 9 else 7';
+function createSampleExpression1(pos: Errors.Position): Expr.Expression {
     return new Expr.Conditional(pos,
-            new Expr.Constant(pos, new Lexer.NumericToken('5', pos+3, 5)),
-            new Expr.Constant(pos, new Lexer.NumericToken('9', pos+10, 9)),
-            new Expr.Constant(pos, new Lexer.NumericToken('7', pos+17, 7))
+            new Expr.Constant(pos+3, new Lexer.NumericToken('5', pos+3, 5)),
+            new Expr.Constant(pos+10, new Lexer.NumericToken('9', pos+10, 9)),
+            new Expr.Constant(pos+17, new Lexer.NumericToken('7', pos+17, 7))
         );
     );
+}
+const sampleExpression2: string = 'if 1 then 2 else 3';
+function createSampleExpression2(pos: Errors.Position): Expr.Expression {
+    return new Expr.Conditional(pos,
+            new Expr.Constant(pos+3, new Lexer.NumericToken('1', pos+3, 1)),
+            new Expr.Constant(pos+10, new Lexer.NumericToken('2', pos+10, 2)),
+            new Expr.Constant(pos+17, new Lexer.NumericToken('3', pos+17, 3))
+        );
+    );
+}
+
+function parse(str: string): Decl.Declaration {
+    return Parser.parse(Lexer.lex(str), State.getInitialState());
 }
 
 it("basic", () => {
     let testcase_empty: string = ';';
     let testcase_simple1: string = 'val x = 42;';
-    let testcase_sample_expr: string = sampleExpression + ';';
+    let testcase_sample_expr1: string = sampleExpression1 + ';';
+    let testcase_sample_expr2: string = sampleExpression2 + ';';
 
-    expect(Parser.parse(Lexer.lex(testcase_empty))).toEqualWithType(
+    expect(parse(testcase_empty)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [])
     );
-    expect(Parser.parse(Lexer.lex(testcase_simple1))).toEqualWithType(
+    expect(parse(testcase_simple1)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.ValueDeclaration(0, [], [
                 new Decl.ValueBinding(4, false,
@@ -57,8 +72,11 @@ it("basic", () => {
             ])
         ])
     );
-    expect(Parser.parse(Lexer.lex(testcase_sample_expr))).toEqualWithType(createItExpression(
-        createSampleExpression(0)
+    expect(parse(testcase_sample_expr1)).toEqualWithType(createItExpression(
+        createSampleExpression1(0)
+    ));
+    expect(parse(testcase_sample_expr2)).toEqualWithType(createItExpression(
+        createSampleExpression2(0)
     ));
 });
 
@@ -70,22 +88,22 @@ it("atomic expression - special constant", () => {
     let testcase_special_char: string = '#"c";';
     let testcase_special_string: string = '"str";';
 
-    expect(Parser.parse(Lexer.lex(testcase_special_zero))).toEqualWithType(createItExpression(
+    expect(parse(testcase_special_zero)).toEqualWithType(createItExpression(
         new Expr.Constant(0, new Lexer.IntegerConstantToken('0', 0, 0))
     ));
-    expect(Parser.parse(Lexer.lex(testcase_special_int))).toEqualWithType(createItExpression(
+    expect(parse(testcase_special_int)).toEqualWithType(createItExpression(
         get42(0)
     ));
-    expect(Parser.parse(Lexer.lex(testcase_special_real))).toEqualWithType(createItExpression(
+    expect(parse(testcase_special_real)).toEqualWithType(createItExpression(
         new Expr.Constant(0, new Lexer.RealConstantToken('42.0', 0, 42.0))
     ));
-    expect(Parser.parse(Lexer.lex(testcase_special_word))).toEqualWithType(createItExpression(
+    expect(parse(testcase_special_word)).toEqualWithType(createItExpression(
         new Expr.Constant(0, new Lexer.WordConstantToken('0w42', 0, 42))
     ));
-    expect(Parser.parse(Lexer.lex(testcase_special_char))).toEqualWithType(createItExpression(
+    expect(parse(testcase_special_char)).toEqualWithType(createItExpression(
         new Expr.Constant(0, new Lexer.CharacterConstantToken('#"c"', 0, 'c'))
     ));
-    expect(Parser.parse(Lexer.lex(testcase_special_string))).toEqualWithType(createItExpression(
+    expect(parse(testcase_special_string)).toEqualWithType(createItExpression(
         new Expr.Constant(0, new Lexer.StringConstantToken('"str"', 0, 'str'))
     ));
 });
@@ -96,12 +114,12 @@ it("atomic expression - value identifier", () => {
     let testcase_vid_without_op: string = 'blub;';
     let testcase_vid_without_op_long: string = 'Reals.nan;';
 
-    expect(Parser.parse(Lexer.lex(testcase_vid_with_op))).toEqualWithType(createItExpression(
+    expect(parse(testcase_vid_with_op)).toEqualWithType(createItExpression(
         new Expr.ValueIdentifier(0,
             prefixWithOp(new Lexer.IdentifierToken('+', 3))
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_vid_with_op_long))).toEqualWithType(createItExpression(
+    expect(parse(testcase_vid_with_op_long)).toEqualWithType(createItExpression(
         new Expr.ValueIdentifier(0,
             prefixWithOp(new Lexer.LongIdentifierToken('Math.pow', 3, [
                     new Lexer.AlphanumericIdentifierToken('Math', 3)
@@ -363,13 +381,13 @@ it("type - type variable", () => {
     let testcase_tyvar: string = '42: \'a;';
     let testcase_etyvar: string = '42: \'\'meaningoflive;';
 
-    expect(Parser.parse(Lexer.lex(testcase_tyvar))).toEqualWithType(createItExpression(
+    expect(parse(testcase_tyvar)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.TypeVariable('\'a', 4)
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_etyvar))).toEqualWithType(createItExpression(
+    expect(parse(testcase_etyvar)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.TypeVariable('\'\'meaningoflive', 4)
@@ -384,7 +402,7 @@ it("type - record type expression", () => {
     let testcase_no_unit: string = '42: ();';
     let testcase_no_same_label: string = '42: { hi: \'a, hi: \'a };';
 
-    expect(Parser.parse(Lexer.lex(testcase_empty))).toEqualWithType(createItExpression(
+    expect(parse(testcase_empty)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.RecordType(
@@ -394,7 +412,7 @@ it("type - record type expression", () => {
             )
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_single))).toEqualWithType(createItExpression(
+    expect(parse(testcase_single)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.RecordType(
@@ -406,7 +424,7 @@ it("type - record type expression", () => {
             )
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_multiple))).toEqualWithType(createItExpression(
+    expect(parse(testcase_multiple)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.RecordType(
@@ -419,8 +437,8 @@ it("type - record type expression", () => {
             )
         )
     ));
-    expect(() => { Parser.parse(Lexer.lex(testcase_no_unit)); }).toThrow(Parser.ParserError);
-    expect(() => { Parser.parse(Lexer.lex(testcase_no_same_label)); }).toThrow(Parser.ParserError);
+    expect(() => { parse(testcase_no_unit); }).toThrow(Parser.ParserError);
+    expect(() => { parse(testcase_no_same_label); }).toThrow(Parser.ParserError);
 });
 
 it("type - type construction", () => {
@@ -428,13 +446,13 @@ it("type - type construction", () => {
     let testcase_single: string = '42: \'a list;';
     let testcase_multiple: string = '42: (\'a * \'b, \'c) list;';
 
-    expect(Parser.parse(Lexer.lex(testcase_small))).toEqualWithType(createItExpression(
+    expect(parse(testcase_small)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.CustomType(new Lexer.AlphanumericIdentifierToken('list', 4), [], 4)
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_single))).toEqualWithType(createItExpression(
+    expect(parse(testcase_single)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.CustomType(
@@ -445,7 +463,7 @@ it("type - type construction", () => {
             )
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_multiple))).toEqualWithType(createItExpression(
+    expect(parse(testcase_multiple)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.CustomType(
@@ -469,7 +487,7 @@ it("type - tuple type", () => {
     let testcase_multiple: string = '42: \'a * \'b * \'c;';
     let testcase_bracketed: string = '42: \'a * (\'b * \'c);';
 
-    expect(Parser.parse(Lexer.lex(testcase_simple))).toEqualWithType(createItExpression(
+    expect(parse(testcase_simple)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.TupleType([
@@ -480,7 +498,7 @@ it("type - tuple type", () => {
             )
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_multiple))).toEqualWithType(createItExpression(
+    expect(parse(testcase_multiple)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.TupleType([
@@ -492,7 +510,7 @@ it("type - tuple type", () => {
             )
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_bracketed))).toEqualWithType(createItExpression(
+    expect(parse(testcase_bracketed)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.TupleType([
@@ -515,7 +533,7 @@ it("type - function type expression", () => {
     let testcase_multiple: string = '42: \'a -> \'b -> \'c;';
     let testcase_multiple_bracketed: string = '42: (\'a -> \'b) -> \'c;';
 
-    expect(Parser.parse(Lexer.lex(testcase_simple))).toEqualWithType(createItExpression(
+    expect(parse(testcase_simple)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.FunctionType(
@@ -525,7 +543,7 @@ it("type - function type expression", () => {
             )
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_multiple))).toEqualWithType(createItExpression(
+    expect(parse(testcase_multiple)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.FunctionType(
@@ -539,7 +557,7 @@ it("type - function type expression", () => {
             )
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_multiple_bracketed))).toEqualWithType(createItExpression(
+    expect(parse(testcase_multiple_bracketed)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.FunctionType(
@@ -560,13 +578,13 @@ it("type - bracketed", () => {
     let testcase_multiple_nested: string = '42: ((((\'a -> \'b))));';
     let testcase_nested_complex = '42: ({ hi: (\'a)});';
 
-    expect(Parser.parse(Lexer.lex(testcase_simple))).toEqualWithType(createItExpression(
+    expect(parse(testcase_simple)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.TypeVariable('\'a', 5)]
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_multiple_nested))).toEqualWithType(createItExpression(
+    expect(parse(testcase_multiple_nested)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.FunctionType(
@@ -576,7 +594,7 @@ it("type - bracketed", () => {
             )
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_nested_complex))).toEqualWithType(createItExpression(
+    expect(parse(testcase_nested_complex)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.RecordType(
@@ -601,7 +619,7 @@ it("type row", () => {
     let testcase_tyvar: string = '42: { hi: \'a};';
     let testcase_etyvar: string = '42: { hi: \'\'a};';
 
-    expect(Parser.parse(Lexer.lex(testcase_alphanum))).toEqualWithType(createItExpression(
+    expect(parse(testcase_alphanum)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.RecordType(
@@ -613,7 +631,7 @@ it("type row", () => {
             )
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_numeric))).toEqualWithType(createItExpression(
+    expect(parse(testcase_numeric)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.RecordType(
@@ -625,7 +643,7 @@ it("type row", () => {
             )
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_non_alphanum))).toEqualWithType(createItExpression(
+    expect(parse(testcase_non_alphanum)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.RecordType(
@@ -638,11 +656,11 @@ it("type row", () => {
         )
     ));
 
-    expect(() => { Parser.parse(Lexer.lex(testcase_zero)); }).toThrow(Parser.ParserError);
-    expect(() => { Parser.parse(Lexer.lex(testcase_reserved_word)); }).toThrow(Parser.ParserError);
-    expect(() => { Parser.parse(Lexer.lex(testcase_equals)); }).toThrow(Parser.ParserError);
+    expect(() => { parse(testcase_zero); }).toThrow(Parser.ParserError);
+    expect(() => { parse(testcase_reserved_word); }).toThrow(Parser.ParserError);
+    expect(() => { parse(testcase_equals); }).toThrow(Parser.ParserError);
 
-    expect(Parser.parse(Lexer.lex(testcase_ident))).toEqualWithType(createItExpression(
+    expect(parse(testcase_ident)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.RecordType(
@@ -655,7 +673,7 @@ it("type row", () => {
             )
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_tyvar))).toEqualWithType(createItExpression(
+    expect(parse(testcase_tyvar)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.RecordType(
@@ -667,7 +685,7 @@ it("type row", () => {
             )
         )
     ));
-    expect(Parser.parse(Lexer.lex(testcase_etyvar))).toEqualWithType(createItExpression(
+    expect(parse(testcase_etyvar)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.RecordType(
