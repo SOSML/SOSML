@@ -168,14 +168,16 @@ export class Parser {
             }
         }
         if (this.checkKeywordToken(curTok, '[')) {
-            // List pattern
-            let results: Expression[] = [];
-            let length = 0;
+            // List expression
+            ++this.position;
+            if (this.checkKeywordToken(this.currentToken(), ']')) {
+                ++this.position;
+                return new List(curTok.position, []);
+            }
+            let results: Expression[] = [this.parseExpression()];
             while (true) {
                 let nextCurTok = this.currentToken();
-                if (this.checkKeywordToken(nextCurTok, '[') && length === 0) {
-                    ++this.position;
-                } else if (this.checkKeywordToken(nextCurTok, ',') && length > 0) {
+                if (this.checkKeywordToken(nextCurTok, ',')) {
                     ++this.position;
                 } else if (this.checkKeywordToken(nextCurTok, ']')) {
                     ++this.position;
@@ -184,7 +186,6 @@ export class Parser {
                     throw new ParserError('Expected "," or "]" but found "' +
                         nextCurTok.getText() + '".', nextCurTok.position);
                 }
-                ++length;
                 results.push(this.parseExpression());
             }
         }
