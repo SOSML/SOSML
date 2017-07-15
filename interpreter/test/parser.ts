@@ -22,9 +22,11 @@ function createItExpression(exp: Expr.Expression): void {
 }
 
 function pattern_tester(pattern: Expr.Pattern, pos42: Errors.Position): Decl.Declaration {
-    return new Decl.ValueDeclaration(0, [], [
-        new Decl.ValueBinding(4, false, pattern, get42(pos42))
-    ] )
+    return new Decl.SequentialDeclaration(0, [
+        new Decl.ValueDeclaration(0, [], [
+            new Decl.ValueBinding(4, false, pattern, get42(pos42))
+        ])
+    ]);
 }
 
 function prefixWithOp(tok: Lexer.IdentifierToken): Lexer.IdentifierToken {
@@ -45,6 +47,7 @@ function createSampleExpression1(pos: Errors.Position): Expr.Expression {
         );
     );
 }
+
 const sampleExpression2: string = 'if 1 then 2 else 3';
 function createSampleExpression2(pos: Errors.Position): Expr.Expression {
     return new Expr.Conditional(pos,
@@ -134,49 +137,301 @@ it("atomic expression - value identifier", () => {
             ))
         )
     ));
-
-    //TODO last 2 testcases
+    expect(parse(testcase_vid_without_op)).toEqualWithType(createItExpression(
+        new Expr.ValueIdentifier(0,
+            new Lexer.AlphanumericIdentifierToken('blub', 0)
+        )
+    ))
+    expect(parse(testcase_vid_without_op_long)).toEqualWithType(createItExpression(
+        new Expr.ValueIdentifier(0,
+            new Lexer.LongIdentifierToken('Reals.nan', 0, [
+                    new Lexer.AlphanumericIdentifierToken('Reals', 0)
+                ],
+                new Lexer.AlphanumericIdentifierToken('nan', 6)
+            )
+        )
+    ));
 });
 
 it("atomic expression - records", () => {
-    let testcase_rec_empty: string = '{}';
-    let testcase_rec_single: string = '{ 0 = hello }';
-    let testcase_rec_multiple: string = '{ 0 = hello, world = 42, what = ever}';
+    let testcase_rec_empty: string = '{};';
+    let testcase_rec_single: string = '{ 1 = hello };';
+    let testcase_rec_multiple: string = '{ 1 = hello, world = 42, what = ever};';
 
-    //TODO test the testcases
+    expect(parse(testcase_rec_empty)).toEqualWithType(createItExpression(
+        new Expr.Record(1,
+            true,
+            []
+        )
+    ));
+    expect(parse(testcase_rec_single)).toEqualWithType(createItExpression(
+        new Expr.Record(2,
+            true,[
+                ['1', new Expr.ValueIdentifier(6, new Lexer.AlphanumericIdentifierToken('hello', 6)]
+            ]
+        )
+    ));
+    expect(parse(testcase_rec_multiple)).toEqualWithType(createItExpression(
+        new Expr.Record(2,
+            true,[
+                ['1', new Expr.ValueIdentifier(6, new Lexer.AlphanumericIdentifierToken('hello', 6)],
+                ['world', get42(21)],
+                ['what', new Expr.ValueIdentifier(32, new Lexer.AlphanumericIdentifierToken('ever', 32)]
+            ]
+        )
+    ));
 });
 
 
 it("atomic expression - record selector", () => {
-    //TODO tests
+    let testcase_sel_alphanum: string = '#hi;';
+    let testcase_sel_numeric: string = '#42;';
+    let testcase_sel_non_alphanum: string = '# ###;';
+    let testcase_sel_star: string = '# *;';
+
+    expect(parse(testcase_sel_alphanum)).toEqualWithType(createItExpression(
+        new Expr.RecordSelector(0, new Lexer.AlphanumericIdentifierToken('hi', 1))
+    ));
+    expect(parse(testcase_sel_numeric)).toEqualWithType(createItExpression(
+        new Expr.RecordSelector(0, new Lexer.NumericToken('42', 1. 42))
+    ));
+    expect(parse(testcase_sel_non_alphanum)).toEqualWithType(createItExpression(
+        new Expr.RecordSelector(0, new Lexer.IdentifierToken('###', 2))
+    ));
+    expect(parse(testcase_sel_star)).toEqualWithType(createItExpression(
+        new Expr.RecordSelector(0, new Lexer.StarToken(2))
+    ));
 });
 
 it("atomic expression - 0 tuple", () => {
-    //TODO tests
+    let testcase_empty_tuple: string = '();';
+
+    expect(parse(testcase_empty_tuple)).toEqualWithType(createItExpression(
+        new Expr.Tuple(0, [])
+    ));
 });
 
 it("atomic expression - n tuple", () => {
-    //TODO tests
+    let testcase_no_single_tuple: string = '(42);';
+    let testcase_2_tuple: string = '(42, ' + sampleExpression1 + ');';
+    let testcase_3_tuple: string = '(42, ' + sampleExpression1 + ', ' + sampleExpression2 + ');';
+
+    expect(parse(testcase_no_single_tuple)).toEqualWithType(createItExpression(
+        get42(1)
+    ));
+    expect(parse(testcase_2_tuple)).toEqualWithType(createItExpression(
+        new Expr.Tuple(0, [
+            get42(1),
+            createSampleExpression1(5)
+        ])
+    ));
+    expect(parse(testcase_3_tuple)).toEqualWithType(createItExpression(
+        new Expr.Tuple(0, [
+            get42(1),
+            createSampleExpression1(5)
+            createSampleExpression2(25)
+        ])
+    ));
 });
 
 it("atomic expression - list", () => {
-    //TODO tests
+    let testcase_empty_list: string = '[];';
+    let testcase_1_list: string = '[42];';
+    let testcase_2_list: string = '[42, ' + sampleExpression1 + '];';
+    let testcase_3_list: string = '[42, ' + sampleExpression1 + ', ' + sampleExpression2 + '];';
+
+    expect(parse(testcase_empty_list)).toEqualWithType(createItExpression(
+        new Expr.List(0, [
+        ])
+    ));
+    expect(parse(testcase_1_list)).toEqualWithType(createItExpression(
+        new Expr.List(0, [
+            get42(1)
+        ])
+    ));
+    expect(parse(testcase_2_list)).toEqualWithType(createItExpression(
+        new Expr.List(0, [
+            get42(1),
+            createSampleExpression1(5)
+        ])
+    ));
+    expect(parse(testcase_3_list)).toEqualWithType(createItExpression(
+        new Expr.List(0, [
+            get42(1),
+            createSampleExpression1(5)
+            createSampleExpression2(25)
+        ])
+    ));
 });
 
 it("atomic expression - sequence", () => {
-    //TODO tests
+    let testcase_2_seq: string = '(42; ' + sampleExpression1 + ');';
+    let testcase_3_seq: string = '(42; ' + sampleExpression1 + '; ' + sampleExpression2 + ');';
+
+    expect(parse(testcase_2_seq)).toEqualWithType(createItExpression(
+        new Expr.Sequence(0, [
+            get42(1),
+            createSampleExpression1(5)
+        ])
+    ));
+    expect(parse(testcase_3_seq)).toEqualWithType(createItExpression(
+        new Expr.Sequence(0, [
+            get42(1),
+            createSampleExpression1(5)
+            createSampleExpression2(25)
+        ])
+    ));
 });
 
 it("atomic expression - local declaration", () => {
-    //TODO tests
+    let testcase_single_exp = 'let val it = 42 in 42 end;';
+    let testcase_multiple: string = 'let val it = 42; in 42; ' + sampleExpression1 + '; ' + sampleExpression2 + ' end;';
+    let testcase_surplus_semicolon = 'let 42 in 42; end;';
+
+    expect(parse(testcase_single_exp)).toEqualWithType(createItExpression(
+        new Expr.LocalDeclarationExpression(0,
+            new Decl.SequentialDeclaration(4, [
+                new Decl.ValueDeclaration(4, [], [
+                    new Decl.ValueBinding(8, false,
+                        new Expr.ValueIdentifier(8, new Lexer.AlphanumericIdentifierToken('it', 8)),
+                        get42(13)
+                    ])
+            ])
+            get42(19)
+        )
+    ));
+    expect(parse(testcase_multiple)).toEqualWithType(createItExpression(
+        new Expr.LocalDeclarationExpression(0,
+            new Decl.SequentialDeclaration(4, [
+                new Decl.ValueDeclaration(4, [], [
+                    new Decl.ValueBinding(8, false,
+                        new Expr.ValueIdentifier(8, new Lexer.AlphanumericIdentifierToken('it', 8)),
+                        get42(13)
+                    ])
+            ])
+            new Expr.Sequence(10, [
+                get42(10),
+                createSampleExpression1(10),
+                createSampleExpression2(10)
+            ])
+        )
+    ));
+
+    expect(() => { parse(testcase_surplus_semicolon); }).toThrow(Parser.ParserError);
 });
 
 it("atomic expression - bracketed expression", () => {
-    //TODO tests
+    let testcase_bracket1: string = '(42);';
+    let testcase_bracket2: string = '(' + sampleExpression1 + ');';
+    let testcase_bracket3: string = '(' + sampleExpression2 + ');';
+
+    expect(parse(testcase_bracket1)).toEqualWithType(createItExpression(
+        get42(1)
+    ));
+    expect(parse(testcase_bracket2)).toEqualWithType(createItExpression(
+        createSampleExpression1(1)
+    ));
+    expect(parse(testcase_bracket3)).toEqualWithType(createItExpression(
+        createSampleExpression2(1)
+    ));
 });
 
 it("expression row", () => {
-    //TODO tests
+    let testcase_alphanum: string = '{ hi = 42};';
+    let testcase_numeric: string = '{ 1337 = 42};';
+    let testcase_non_alphanum: string = '{ ### = ' + sampleExpression1 + '};';
+    let testcase_star: string = '{ * = ' + sampleExpression2 + ' };';
+    let testcase_zero: string = '{ 0 = 42};';
+    let testcase_reserved_word: string = '{ val = \42};';
+    let testcase_equals: string = '{ = = 42};';
+
+    //expect(parse(testcase_alphanum)).toEqualWithType(createItExpression(
+        //new Expr.TypedExpression(0,
+            //get42(0),
+            //new Expr.Record(2, true, [
+                    //["hi", get42(7)]
+                //]),
+            //)
+        //)
+    //));
+    //expect(parse(testcase_numeric)).toEqualWithType(createItExpression(
+        //new Expr.TypedExpression(0,
+            //get42(0),
+            //new Type.RecordType(
+                //new Map([
+                    //["1337", new Type.TypeVariable('\'a', 12)]
+                //]),
+                //true,
+                //6
+            //)
+        //)
+    //));
+    //expect(parse(testcase_non_alphanum)).toEqualWithType(createItExpression(
+        //new Expr.TypedExpression(0,
+            //get42(0),
+            //new Type.RecordType(
+                //new Map([
+                    //["###", new Type.TypeVariable('\'a', 12)]
+                //]),
+                //true,
+                //6
+            //)
+        //)
+    //));
+    //expect(parse(testcase_star)).toEqualWithType(createItExpression(
+        //new Expr.TypedExpression(0,
+            //get42(0),
+            //new Type.RecordType(
+                //new Map([
+                    //["*", new Type.TypeVariable('\'a', 10)]
+                //]),
+                //true,
+                //6
+            //)
+        //)
+    //));
+
+    //expect(() => { parse(testcase_zero); }).toThrow(Parser.ParserError);
+    //expect(() => { parse(testcase_reserved_word); }).toThrow(Parser.ParserError);
+    //expect(() => { parse(testcase_equals); }).toThrow(Parser.ParserError);
+
+    //expect(parse(testcase_ident)).toEqualWithType(createItExpression(
+        //new Expr.TypedExpression(0,
+            //get42(0),
+            //new Type.RecordType(
+                //new Map([
+                    //["hi", new Type.CustomType(
+                        //new Lexer.AlphanumericIdentifierToken('a', 10), [], 10)]
+                //]),
+                //true,
+                //6
+            //)
+        //)
+    //));
+    //expect(parse(testcase_tyvar)).toEqualWithType(createItExpression(
+        //new Expr.TypedExpression(0,
+            //get42(0),
+            //new Type.RecordType(
+                //new Map([
+                    //["hi", new Type.TypeVariable('\'a', 10)]
+                //]),
+                //true,
+                //6
+            //)
+        //)
+    //));
+    //expect(parse(testcase_etyvar)).toEqualWithType(createItExpression(
+        //new Expr.TypedExpression(0,
+            //get42(0),
+            //new Type.RecordType(
+                //new Map([
+                    //["hi", new Type.TypeVariable('\'\'a', 10)]
+                //]),
+                //true,
+                //6
+            //)
+        //)
+    //));
 });
 
 it("application expression", () => {
@@ -321,94 +576,90 @@ it("constructor bindings", () => {
 
 it("atomic pattern - wildcard", () => {
     let wildcard_test:string = "val _ = 42;";
-    expect(parse(wildcard_test).toEqualWithType(pattern_tester(
-        new Expr.Wildcard(4), 8)));
+    expect(parse(wildcard_test)).toEqualWithType(pattern_tester(
+        new Expr.Wildcard(4), 8));
 });
 
 it("atomic pattern - special constant", () => {
     let special_constant:string = "val 42 = 42;";
-    expect(parse(special_constant).toEqualWithType(pattern_tester(
-        new Expr.Constant(4,
-        new Lexer.IntegerConstantToken("42", 4, 42))
-    , 9)));
+    expect(parse(special_constant)).toEqualWithType(pattern_tester(
+        get42(4)
+    , 9));
 });
 
 it("atomic pattern - value identifier", () => {
     let atomic_pattern_vid_no_op: string = "val x = 42;";
     let atomic_pattern_vid_with_op: string = "val op x = 42;";
-    expect(parse(atomic_pattern_vid_no_op).toEqualWithType(pattern_tester(
+    expect(parse(atomic_pattern_vid_no_op)).toEqualWithType(pattern_tester(
         new Expr.ValueIdentifier(4,
-        new Lexer.LongIdentifierToken("x", 4, [], new Lexer.IdentifierToken("x", 4)))
-    , 8)));
-    expect(parse(atomic_pattern_vid_with_op).toEqualWithType(pattern_tester(
+        new Lexer.AlphanumericIdentifierToken("x", 4))
+    , 8));
+    expect(parse(atomic_pattern_vid_with_op)).toEqualWithType(pattern_tester(
         new Expr.ValueIdentifier(4,
-        new Lexer.LongIdentifierToken("x", 4, [], new Lexer.IdentifierToken("x", 4)))
-    , 8)));
+        new Lexer.AlphanumericIdentifierToken("x", 4))
+    , 8));
 });
 
 it("atomic pattern - record", () => {
     let atomic_pattern_record: string = "val { x = _ } = 42;";
-    expect(parse(atomic_pattern_record).toEqualWithType(pattern_tester(
-        new Expr.Record(4, true, [["x", new Expr.Wildcard(10)]])
-    , 16)))
+    expect(parse(atomic_pattern_record)).toEqualWithType(pattern_tester(
+        new Expr.Record(6, true, [["x", new Expr.Wildcard(10)]])
+    , 16))
 });
 
 it("atomic pattern - 0-tuple", () => {
     let atomic_pattern_0_tuple: string = "val () = 42;";
-    expect(parse(atomic_pattern_0_tuple).toEqualWithType(pattern_tester(
+    expect(parse(atomic_pattern_0_tuple)).toEqualWithType(pattern_tester(
         new Expr.Tuple(4, [])
-    , 9)));
+    , 9));
 });
 
 it("atomic pattern - n-tuple", () => {
 
     let atomic_pattern_2_tuple:string = "val (_,_) = 42;";
-    expect(parse(atomic_pattern_2_tuple).toEqualWithType(pattern_tester(
+    expect(parse(atomic_pattern_2_tuple)).toEqualWithType(pattern_tester(
         new Expr.Tuple(4, [
             new Expr.Wildcard(5),
             new Expr.Wildcard(7)
         ])
-    , 12)));
+    , 12));
 });
 
 it("atomic pattern - list", () => {
     let atomic_pattern_0_list:string = "val [] = 42;";
     let atomic_pattern_1_list:string = "val [_] = 42;";
     let atomic_pattern_2_list:string = "val [_,_] = 42;";
-    expect(parse(atomic_pattern_0_list).toEqualWithType(pattern_tester(
+    expect(parse(atomic_pattern_0_list)).toEqualWithType(pattern_tester(
         new Expr.List(4, [])
-    , 9)));
-    expect(parse(atomic_pattern_1_list).toEqualWithType(pattern_tester(
+    , 9));
+    expect(parse(atomic_pattern_1_list)).toEqualWithType(pattern_tester(
         new Expr.List(4, [new Expr.Wildcard(5)])
-    , 10)));
-    expect(parse(atomic_pattern_1_list).toEqualWithType(pattern_tester(
+    , 10));
+    expect(parse(atomic_pattern_1_list)).toEqualWithType(pattern_tester(
         new Expr.List(4, [new Expr.Wildcard(5), new Expr.Wildcard(7)])
-    , 12)));
+    , 12));
 });
 
 it("atomic pattern - bracketed", () => {
     let atomic_pattern_bracketed:string = "val (_) = 42;";
-    expect(parse(atomic_pattern_bracketed).toEqualWithType(pattern_tester(
+    expect(parse(atomic_pattern_bracketed)).toEqualWithType(pattern_tester(
         new Expr.Tuple(4, [new Expr.Wildcard(5)])
-    , 10)));
+    , 10));
 });
 
 it("pattern row - wildcard", () => {
     let patrow_wildcard:string = "val { ... } = 42;";
-    expect(parse(patrow_wildcard).toEqualWithType(pattern_tester(
-        new Expr.Record(4, false, [])
-    , 14)));
+    expect(parse(patrow_wildcard)).toEqualWithType(pattern_tester(
+        new Expr.Record(6, false, [])
+    , 14));
 });
 
 it("pattern row - pattern row", () => {
-    let patrow_patrow: string = "val { ... , ... } = 42;";
-    expect(parse(patrow_wildcard).toEqualWithType(pattern_tester(
-        new Expr.Record(4, false, [])
-    , 20)));
     let patrow_label: string = "val { l1 = _ } = 42;";
-    expect(parse(patrow_label).toEqualWithType(pattern_tester(
-        new Expr.Record(4, true, ["l1", new Wildcard(11)])
-    , 17)));
+    expect(parse(patrow_label)).toEqualWithType(pattern_tester(
+        new Expr.Record(6, true, [["l1", new Expr.Wildcard(11)]])
+    , 17));
+    // TODO test all valid and some invalid lab tokenclasses
 });
 
 it("pattern row - label as variable", () => {
@@ -435,12 +686,13 @@ it("pattern - constructed value (infix)", () => {
 
 it("pattern - typed", () => {
     let pattern_type:string = "val x : int = 42;";
-    expect(parse(pattern_type).toEqualWithType(pattern_tester(
+    expect(parse(pattern_type)).toEqualWithType(pattern_tester(
         new Expr.TypedExpression(4,
-        new Expr.ValueIdentifier(4, new Lexer.LongIdentifierToken("x", 4, [], new Lexer.IdentifierToken("x", 4))),
-        new Type.PrimitiveType(Type.PrimitiveTypes.int, 8)
+        new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
+        new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 8), [], 8)
     ), 14
-    )));
+    ));
+    // TODO more complex patterns with type to check whether this uses the correct rules
 });
 
 it("pattern - layered", () => {
@@ -686,6 +938,7 @@ it("type row", () => {
     let testcase_alphanum: string = '42: { hi: \'a};';
     let testcase_numeric: string = '42: { 1337: \'a};';
     let testcase_non_alphanum: string = '42: { ### : \'a};';
+    let testcase_star: string = '42: { * : \'a};';
     let testcase_zero: string = '42: { 0: \'a};';
     let testcase_reserved_word: string = '42: { val: \'a};';
     let testcase_equals: string = '42: { =: \'a};';
@@ -723,6 +976,18 @@ it("type row", () => {
             new Type.RecordType(
                 new Map([
                     ["###", new Type.TypeVariable('\'a', 12)]
+                ]),
+                true,
+                6
+            )
+        )
+    ));
+    expect(parse(testcase_star)).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.RecordType(
+                new Map([
+                    ["*", new Type.TypeVariable('\'a', 10)]
                 ]),
                 true,
                 6
