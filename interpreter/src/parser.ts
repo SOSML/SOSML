@@ -242,31 +242,31 @@ export class Parser {
          *              IdentifierToken KeywordToken exp [KeywordToken exp]*
          */
         let curTok = this.currentToken();
-        let res = new Record(curTok.position, true, []);
+        let res: [string, Expression][] = [];
         let firstIt = true;
         while (true) {
-            curTok = this.currentToken();
-            if (this.checkKeywordToken(curTok, '}')) {
+            let newTok = this.currentToken();
+            if (this.checkKeywordToken(newTok, '}')) {
                 ++this.position;
-                return res;
+                return new Record(curTok.position, true, res);
             }
-            if (!firstIt && this.checkKeywordToken(curTok, ',')) {
+            if (!firstIt && this.checkKeywordToken(newTok, ',')) {
                 ++this.position;
                 continue;
             }
             firstIt = false;
 
-            if (curTok.isValidRecordLabel()) {
+            if (newTok.isValidRecordLabel()) {
                 ++this.position;
                 let nextTok = this.currentToken();
                 this.assertKeywordToken(nextTok, '=');
 
                 ++this.position;
-                res.entries.push([curTok.getText(), this.parseExpression()]);
+                res.push([newTok.getText(), this.parseExpression()]);
                 continue;
             }
             throw new ParserError('Expected "}", or identifier, got "'
-                + curTok.getText() + '".', curTok.position);
+                + newTok.getText() + '".', newTok.position);
         }
     }
 
@@ -423,30 +423,31 @@ export class Parser {
          *              IdentifierToken [KeywordToken type] [KeywordToken pat]
          */
         let curTok = this.currentToken();
-        let res = new Record(curTok.position, true, []);
+        let res: [string, PatternExpression][] = [];
         let firstIt = true;
+        let complete = true;
         while (true) {
-            curTok = this.currentToken();
-            if (this.checkKeywordToken(curTok, '}')) {
+            let newTok = this.currentToken();
+            if (this.checkKeywordToken(newTok, '}')) {
                 ++this.position;
-                return res;
+                return new Record(curTok.position, complete, res);
             }
-            if (!res.complete) {
-                throw new ParserError('Record wildcard must appear as last element of the record.', curTok.position);
+            if (!complete) {
+                throw new ParserError('Record wildcard must appear as last element of the record.', newTok.position);
             }
-            if (!firstIt && this.checkKeywordToken(curTok, ',')) {
+            if (!firstIt && this.checkKeywordToken(newTok, ',')) {
                 ++this.position;
                 continue;
             }
             firstIt = false;
 
-            if (this.checkKeywordToken(curTok, '...')) {
+            if (this.checkKeywordToken(newTok, '...')) {
                 // A wildcard may only occur as the last entry of a record.
-                res.complete = false;
+                complete = false;
                 ++this.position;
                 continue;
             }
-            if (curTok.isValidRecordLabel()) {
+            if (newTok.isValidRecordLabel()) {
                 ++this.position;
                 let nextTok = this.currentToken();
                 if (!(nextTok instanceof KeywordToken)) {
@@ -457,12 +458,12 @@ export class Parser {
                 if (nextTok.text === '=') {
                     // lab = pat
                     ++this.position;
-                    res.entries.push([curTok.text, this.parsePattern()]);
+                    res.push([newTok.getText(), this.parsePattern()]);
                     continue;
                 }
 
                 let tp: Type|undefined = undefined;
-                let pat: PatternExpression = new Wildcard(curTok.position);
+                let pat: PatternExpression = new Wildcard(newTok.position);
                 let hasPat = false;
                 let hasType = false;
 
@@ -486,12 +487,12 @@ export class Parser {
                     }
                 }
                 if (tp !== undefined) {
-                    pat = new TypedExpression(curTok.position, pat, tp);
+                    pat = new TypedExpression(newTok.position, pat, tp);
                 }
-                res.entries.push([curTok.text, pat]);
+                res.push([newTok.getText(), pat]);
                 continue;
             }
-            throw new ParserError('Expected "}", "...", or identifier.', curTok.position);
+            throw new ParserError('Expected "}", "...", or identifier.', newTok.position);
         }
     }
 
@@ -702,6 +703,10 @@ export class Parser {
                 if (nextTok.text === ':') {
                     // lab: type
                     ++this.position;
+                    if (elements.has(curTok.getText())) {
+                        throw new ParserError('Duplicate record label "' + curTok.getText()
+                            + '".', curTok.position);
+                    }
                     elements.set(curTok.getText(), this.parseType());
                     continue;
                 }
@@ -890,23 +895,33 @@ export class Parser {
                         throw e;
                     }
 
-                    // Again infix
-                    this.position = oldPos;
-                    let left = this.parseAtomicPattern();
+                    throwError = false;
+                    try {
+                        // Again infix
+                        this.position = oldPos;
+                        let left = this.parseAtomicPattern();
 
-                    this.assertIdentifierOrLongToken(this.currentToken());
-                    nm = new ValueIdentifier(this.currentToken().position, this.currentToken());
+                        this.assertIdentifierOrLongToken(this.currentToken());
+                        nm = new ValueIdentifier(this.currentToken().position, this.currentToken());
 
-                    if (this.state.getIdentifierInformation(this.currentToken()) === undefined
-                        || !this.state.getIdentifierInformation(this.currentToken()).infix) {
-                        throw new ParserError(
-                            '"' + this.currentToken().getText() + '" does not have infix status.',
-                            this.currentToken().position);
+                        if (this.state.getIdentifierInformation(this.currentToken()) === undefined
+                            || !this.state.getIdentifierInformation(this.currentToken()).infix) {
+                            throwError = true;
+                            throw new ParserError('"' + this.currentToken().getText()
+                                + '" does not have infix status.',
+                                this.currentToken().position);
+                        }
+                        ++this.position;
+
+                        let right = this.parseAtomicPattern();
+                        args.push(new Tuple(-1, [left, right]));
+                    } catch (f) {
+                        if (throwError) {
+                            throw f;
+                        }
+                        // It wasn't infix at all, but simply wrong.
+                        throw e;
                     }
-                    ++this.position;
-
-                    let right = this.parseAtomicPattern();
-                    args.push(new Tuple(-1, [left, right]));
                 }
             }
             if (this.checkKeywordToken(this.currentToken(), ':')) {
