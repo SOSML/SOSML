@@ -20,6 +20,12 @@ function createItExpression(exp: Expr.Expression): void {
     ]);
 }
 
+function pattern_tester(pattern: Expr.Pattern, pos42: Errors.Position): Decl.Declaration {
+    return new Decl.ValueDeclaration(0, [], [
+        new Decl.ValueBinding(4, false, pattern, get42(pos42))
+    ] )
+}
+
 function prefixWithOp(tok: Lexer.IdentifierToken): Lexer.IdentifierToken {
     tok.opPrefixed = true;
     return tok;
@@ -296,67 +302,135 @@ it("constructor bindings", () => {
 });
 
 it("atomic pattern - wildcard", () => {
-    //TODO tests
+    let wildcard_test:string = "val _ = 42;";
+    expect(parse(wildcard_test).toEqualWithType(pattern_tester(
+        new Expr.Wildcard(4), 8)));
 });
 
 it("atomic pattern - special constant", () => {
-    //TODO tests
+    let special_constant:string = "val 42 = 42;";
+    expect(parse(special_constant).toEqualWithType(pattern_tester(
+        new Expr.Constant(4,
+        new Lexer.IntegerConstantToken("42", 4, 42))
+    , 9)));
 });
 
 it("atomic pattern - value identifier", () => {
-    //TODO tests
+    let atomic_pattern_vid_no_op: string = "val x = 42;";
+    let atomic_pattern_vid_with_op: string = "val op x = 42;";
+    expect(parse(atomic_pattern_vid_no_op).toEqualWithType(pattern_tester(
+        new Expr.ValueIdentifier(4,
+        new Lexer.LongIdentifierToken("x", 4, [], new Lexer.IdentifierToken("x", 4)))
+    , 8)));
+    expect(parse(atomic_pattern_vid_with_op).toEqualWithType(pattern_tester(
+        new Expr.ValueIdentifier(4,
+        new Lexer.LongIdentifierToken("x", 4, [], new Lexer.IdentifierToken("x", 4)))
+    , 8)));
 });
 
 it("atomic pattern - record", () => {
-    //TODO tests
+    let atomic_pattern_record: string = "val { x = _ } = 42;";
+    expect(parse(atomic_pattern_record).toEqualWithType(pattern_tester(
+        new Expr.Record(4, true, [["x", new Expr.Wildcard(10)]])
+    , 16)))
 });
 
 it("atomic pattern - 0-tuple", () => {
-    //TODO tests
+    let atomic_pattern_0_tuple: string = "val () = 42;";
+    expect(parse(atomic_pattern_0_tuple).toEqualWithType(pattern_tester(
+        new Expr.Tuple(4, [])
+    , 9)));
 });
 
 it("atomic pattern - n-tuple", () => {
-    //TODO tests
+
+    let atomic_pattern_2_tuple:string = "val (_,_) = 42;";
+    expect(parse(atomic_pattern_2_tuple).toEqualWithType(pattern_tester(
+        new Expr.Tuple(4, [
+            new Expr.Wildcard(5),
+            new Expr.Wildcard(7)
+        ])
+    , 12)));
 });
 
 it("atomic pattern - list", () => {
-    //TODO tests
+    let atomic_pattern_0_list:string = "val [] = 42;";
+    let atomic_pattern_1_list:string = "val [_] = 42;";
+    let atomic_pattern_2_list:string = "val [_,_] = 42;";
+    expect(parse(atomic_pattern_0_list).toEqualWithType(pattern_tester(
+        new Expr.List(4, [])
+    , 9)));
+    expect(parse(atomic_pattern_1_list).toEqualWithType(pattern_tester(
+        new Expr.List(4, [new Expr.Wildcard(5)])
+    , 10)));
+    expect(parse(atomic_pattern_1_list).toEqualWithType(pattern_tester(
+        new Expr.List(4, [new Expr.Wildcard(5), new Expr.Wildcard(7)])
+    , 12)));
 });
 
 it("atomic pattern - bracketed", () => {
-    //TODO tests
+    let atomic_pattern_bracketed:string = "val (_) = 42;";
+    expect(parse(atomic_pattern_bracketed).toEqualWithType(pattern_tester(
+        new Expr.Tuple(4, [new Expr.Wildcard(5)])
+    , 10)));
 });
 
 it("pattern row - wildcard", () => {
-    //TODO tests
+    let patrow_wildcard:string = "val { ... } = 42;";
+    expect(parse(patrow_wildcard).toEqualWithType(pattern_tester(
+        new Expr.Record(4, false, [])
+    , 14)));
 });
 
 it("pattern row - pattern row", () => {
-    //TODO tests
+    let patrow_patrow: string = "val { ... , ... } = 42;";
+    expect(parse(patrow_wildcard).toEqualWithType(pattern_tester(
+        new Expr.Record(4, false, [])
+    , 20)));
+    let patrow_label: string = "val { l1 = _ } = 42;";
+    expect(parse(patrow_label).toEqualWithType(pattern_tester(
+        new Expr.Record(4, true, ["l1", new Wildcard(11)])
+    , 17)));
 });
 
 it("pattern row - label as variable", () => {
-    //TODO tests
+    let patrow_as_label: string = "val {x:int as _} = 42;";
+    let patrow_as_label1: string = "val {x as _} = 42;";
+    let patrow_as_label2: string = "val {x:int} = 42;";
+    //TODO dunno what to do
 });
 
 it("pattern - atomic", () => {
-    //TODO tests
+    //TODO ? tests already tested via atomic tests
 });
 
 it("pattern - constructed value", () => {
+    let pattern_cons_val: string = "val x _ = 42;";
+    let pattern_cons_val_with_op: string = "val op x _ = 42;"
     //TODO tests
 });
 
 it("pattern - constructed value (infix)", () => {
+    let pattern_infix:string = "val _ x _ = 42;";
     //TODO tests
 });
 
 it("pattern - typed", () => {
-    //TODO tests
+    let pattern_type:string = "val x : int = 42;";
+    expect(parse(pattern_type).toEqualWithType(pattern_tester(
+        new Expr.TypedExpression(4,
+        new Expr.ValueIdentifier(4, new Lexer.LongIdentifierToken("x", 4, [], new Lexer.IdentifierToken("x", 4))),
+        new Type.PrimitiveType(Type.PrimitiveTypes.int, 8)
+    ), 14
+    )));
 });
 
 it("pattern - layered", () => {
-    //TODO tests
+    "val x as _ = 42;"
+    "val op x as _ = 42;"
+    "val x :int as _ = 42;"
+    "val op x:int as _ = 42;"
+    //TODO tests don't want anymore
 });
 
 it("type - type variable", () => {
@@ -680,4 +754,3 @@ it("type row", () => {
         )
     ));
 });
-
