@@ -252,17 +252,17 @@ export class Parser {
             }
             firstIt = false;
 
-            if (curTok instanceof IdentifierToken
-                || curTok instanceof NumericToken) {
+            if (curTok.isValidRecordLabel()) {
                 ++this.position;
                 let nextTok = this.currentToken();
                 this.assertKeywordToken(nextTok, '=');
 
                 ++this.position;
-                res.entries.push([curTok.text, this.parseExpression()]);
+                res.entries.push([curTok.getText(), this.parseExpression()]);
                 continue;
             }
-            throw new ParserError('Expected "}", or identifier', curTok.position);
+            throw new ParserError('Expected "}", or identifier, got "'
+                + nextTok.getText() + '".', curTok.position);
         }
     }
 
@@ -441,11 +441,12 @@ export class Parser {
                 ++this.position;
                 continue;
             }
-            if (curTok instanceof IdentifierToken) {
+            if (curTok.isValidRecordLabel()) {
                 ++this.position;
                 let nextTok = this.currentToken();
                 if (!(nextTok instanceof KeywordToken)) {
-                    throw new ParserError('Expected ":", "as", or ","', nextTok.position);
+                    throw new ParserError('Expected ":", "as", ",", or "=", got ' +
+                        nextTok.getText() + '".', nextTok.position);
                 }
 
                 if (nextTok.text === '=') {
@@ -485,7 +486,7 @@ export class Parser {
                 res.entries.push([curTok.text, pat]);
                 continue;
             }
-            throw new ParserError('Expected "}", "...", or identifier', curTok.position);
+            throw new ParserError('Expected "}", "...", or identifier.', curTok.position);
         }
     }
 
@@ -686,7 +687,7 @@ export class Parser {
             }
             firstIt = false;
 
-            if (curTok instanceof IdentifierToken) {
+            if (curTok.isValidRecordLabel()) {
                 ++this.position;
                 let nextTok = this.currentToken();
                 if (!(nextTok instanceof KeywordToken)) {
@@ -694,14 +695,15 @@ export class Parser {
                 }
 
                 if (nextTok.text === ':') {
-                    // lab = pat
+                    // lab: type
                     ++this.position;
-                    res.elements.set(curTok.text, this.parseType());
+                    res.elements.set(curTok.getText(), this.parseType());
                     continue;
                 }
                 throw new ParserError('Expected ":".', nextTok.position);
             }
-            throw new ParserError('Expected "}", or identifier', curTok.position);
+            throw new ParserError('Expected "}", or an identifier, got "' +
+                curTok.getText() + '".', curTok.position);
         }
     }
 
