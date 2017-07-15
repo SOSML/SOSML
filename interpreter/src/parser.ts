@@ -208,7 +208,7 @@ export class Parser {
             ++this.position;
             let res: Expression[] = [this.parseExpression()];
             let newTok = this.currentToken();
-            while (this.checkKeywordToken(curTok, ',')) {
+            while (this.checkKeywordToken(newTok, ';')) {
                 ++this.position;
                 res.push(this.parseExpression());
                 newTok = this.currentToken();
