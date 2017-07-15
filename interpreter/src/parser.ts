@@ -203,6 +203,7 @@ export class Parser {
             this.state = this.state.getNestedState();
 
             let dec = this.parseDeclaration();
+            --this.position;
             this.assertKeywordToken(this.currentToken(), 'in');
             ++this.position;
             let res: Expression[] = [this.parseExpression()];
@@ -217,7 +218,12 @@ export class Parser {
 
             this.state = nstate;
 
-            return new LocalDeclarationExpression(curTok.position, dec, new Sequence(curTok.position, res));
+            if (res.length >= 2) {
+                return new LocalDeclarationExpression(curTok.position, dec,
+                    new Sequence(curTok.position, res));
+            } else {
+                return new LocalDeclarationExpression(curTok.position, dec, res[0]);
+            }
         } else if (curTok instanceof ConstantToken) {
             ++this.position;
             return new Constant(curTok.position, curTok);
@@ -1301,7 +1307,8 @@ export class Parser {
             return new NonfixDeclaration(curTok.position, res);
         }
 
-        if (this.checkKeywordToken(curTok, ';')) {
+        if (this.checkKeywordToken(curTok, ';')
+            || this.checkKeywordToken(curTok, 'in')) {
             ++this.position;
             return new EmptyDeclaration();
         }

@@ -604,7 +604,8 @@ export class CaseAnalysis extends Expression {
     constructor(public position: Position, public expression: Expression, public match: Match) { super(); }
 
     simplify(): FunctionApplication {
-        return new FunctionApplication(this.position, new Lambda(this.position, this.match.simplify()),
+        return new FunctionApplication(this.position, new Lambda(this.position,
+            this.match.simplify()),
             this.expression.simplify());
     }
 
