@@ -309,10 +309,10 @@ it("atomic expression - local declaration", () => {
                         get42(13)
                     ])
             ])
-            new Expr.Sequence(10, [
-                get42(10),
-                createSampleExpression1(10),
-                createSampleExpression2(10)
+            new Expr.Sequence(0, [
+                get42(20),
+                createSampleExpression1(24),
+                createSampleExpression2(44)
             ])
         )
     ));
@@ -596,8 +596,8 @@ it("atomic pattern - value identifier", () => {
     , 8));
     expect(parse(atomic_pattern_vid_with_op)).toEqualWithType(pattern_tester(
         new Expr.ValueIdentifier(4,
-        new Lexer.AlphanumericIdentifierToken("x", 4))
-    , 8));
+        prefixWithOp(new Lexer.AlphanumericIdentifierToken("x", 7)))
+    , 11));
 });
 
 it("atomic pattern - record", () => {
@@ -635,7 +635,7 @@ it("atomic pattern - list", () => {
     expect(parse(atomic_pattern_1_list)).toEqualWithType(pattern_tester(
         new Expr.List(4, [new Expr.Wildcard(5)])
     , 10));
-    expect(parse(atomic_pattern_1_list)).toEqualWithType(pattern_tester(
+    expect(parse(atomic_pattern_2_list)).toEqualWithType(pattern_tester(
         new Expr.List(4, [new Expr.Wildcard(5), new Expr.Wildcard(7)])
     , 12));
 });
