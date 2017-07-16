@@ -14,6 +14,17 @@ export abstract class Value {
     }
 }
 
+export class Char extends Value {
+    constructor(public value: number) {
+        super();
+    }
+
+    prettyPrint(): string {
+        // TODO
+        return '#"<' + this.value + '>"';
+    }
+}
+
 export class Integer extends Value {
     constructor(public value: number) {
         super();
@@ -39,6 +50,30 @@ export class Integer extends Value {
 
     equals(value: Value): boolean {
         return this.compareTo(value) === 0;
+    }
+
+    negate(): Integer {
+        return new Integer(-this.value);
+    }
+
+    add(other: Integer): Integer {
+        return new Integer(this.value + other.value);
+    }
+
+    multiply(other: Integer): Integer {
+        return new Integer(this.value * other.value);
+    }
+
+    divide(other: Integer): Integer {
+        return new Integer(Math.floor(this.value / other.value));
+    }
+
+    modulo(other: Integer): Integer {
+        return new Integer(this.value % other.value);
+    }
+
+    toReal(): Real {
+        return new Real(this.value);
     }
 }
 
@@ -68,6 +103,26 @@ export class Real extends Value {
 
     equals(value: Value): boolean {
         return this.compareTo(value) === 0;
+    }
+
+    negate(): Real {
+        return new Real(-this.value);
+    }
+
+    add(other: Real): Real {
+        return new Real(this.value + other.value);
+    }
+
+    multiply(other: Real): Real {
+        return new Real(this.value * other.value);
+    }
+
+    divide(other: Real): Real {
+        return new Real(this.value / other.value);
+    }
+
+    toInteger(): Integer {
+        return new Integer(Math.floor(this.value));
     }
 }
 
