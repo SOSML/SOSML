@@ -404,6 +404,10 @@ export class InfixExpression extends Expression implements Pattern {
     reParse(state: State): FunctionApplication {
         let ops = this.operators;
         let exps = this.expressions;
+        let poses: number[][] = [];
+        for (let i = 0; i < exps.length; ++i) {
+            poses.push([i]);
+        }
         ops.sort(([a, p1], [b, p2]) => {
             let sta = state.lookupInfixStatus(a.text);
             let stb = state.lookupInfixStatus(b.text);
@@ -432,18 +436,22 @@ export class InfixExpression extends Expression implements Pattern {
         });
 
         // Using copy by reference to make this work whithout shrinking the array
-        let last = 0;
         for (let i = 0; i < ops.length; ++i) {
             let left = exps[ops[i][1]];
             let right = exps[ops[i][1] + 1];
             let com = new FunctionApplication(ops[i][0].position,
                                               new ValueIdentifier(ops[i][0].position, ops[i][0]),
                                               new Tuple(ops[i][0].position, [left, right]));
-            exps[ops[i][1]] = com;
-            exps[ops[i][1] + 1] = com;
-            last = ops[i][1];
+            let npos = poses[ops[i][1]];
+            for (let j of poses[ops[i][1] + 1]) {
+                npos.push(j);
+            }
+            for (let j of npos) {
+                poses[j] = npos;
+                exps[j] = com;
+            }
         }
-        return <FunctionApplication> exps[last];
+        return <FunctionApplication> exps[0];
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
@@ -476,8 +484,8 @@ export class Conjunction extends Expression {
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
-        return this.leftOperand.prettyPrint(indentation, oneLine) + ' andalso '
-        + this.rightOperand.prettyPrint(indentation, oneLine);
+        return '( ' + this.leftOperand.prettyPrint(indentation, oneLine) + ' andalso '
+        + this.rightOperand.prettyPrint(indentation, oneLine) + ' )';
     }
 }
 
@@ -491,8 +499,8 @@ export class Disjunction extends Expression {
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
-        return this.leftOperand.prettyPrint(indentation, oneLine) + ' orelse '
-        + this.rightOperand.prettyPrint(indentation, oneLine);
+        return '( ' + this.leftOperand.prettyPrint(indentation, oneLine) + ' orelse '
+        + this.rightOperand.prettyPrint(indentation, oneLine) + ' )';
     }
 }
 

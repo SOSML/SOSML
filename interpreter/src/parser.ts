@@ -336,15 +336,11 @@ export class Parser {
         return new InfixExpression(exps, ops).reParse(this.state);
     }
 
-    parseExpression(): Expression {
+    parseAppendedExpression(): Expression {
         /*
          * exp ::= infexp
          *         exp : ty                         TypedExpression(position, exp, type)
          *          exp KeywordToken type
-         *         exp1 andalso exp2                Conjunction(pos, exp1, exp2)
-         *          exp KeywordToken exp
-         *         exp1 orelse exp2                 Disjunction(pos, exp1, exp2)
-         *          exp KeywordToken exp
          *         exp handle match                 HandleException(position, exp, match)
          *          exp KeywordToken exp
          *         raise exp                        RaiseException(position, exp)
@@ -386,15 +382,65 @@ export class Parser {
         if (this.checkKeywordToken(nextTok, ':')) {
             ++this.position;
             return new TypedExpression(curTok.position, exp, this.parseType());
-        } else if (this.checkKeywordToken(nextTok, 'andalso')) {
-            ++this.position;
-            return new Conjunction(curTok.position, exp, this.parseExpression());
-        } else if (this.checkKeywordToken(nextTok, 'orelse')) {
-            ++this.position;
-            return new Disjunction(curTok.position, exp, this.parseExpression());
         } else if (this.checkKeywordToken(nextTok, 'handle')) {
             ++this.position;
             return new HandleException(curTok.position, exp, this.parseMatch());
+        }
+        return exp;
+    }
+
+    parseExpression(): Expression {
+        /*
+         * exp ::= exp1 andalso exp2                Conjunction(pos, exp1, exp2)
+         *          exp KeywordToken exp
+         *         exp1 orelse exp2                 Disjunction(pos, exp1, exp2)
+         *          exp KeywordToken exp
+         */
+        let exp = this.parseAppendedExpression();
+        let nextTok = this.currentToken();
+        if (this.checkKeywordToken(nextTok, 'andalso')
+            || this.checkKeywordToken(nextTok, 'orelse') ) {
+            let exps: [Expression, number[]][] = [[exp, [0]]];
+            let ops: [number, number][] = [];
+            let cnt = 0;
+
+            while (true) {
+                if (this.checkKeywordToken(nextTok, 'orelse')) {
+                    ops.push([1, cnt++]);
+                    ++this.position;
+                } else if (this.checkKeywordToken(nextTok, 'andalso')) {
+                    ops.push([0, cnt++]);
+                    ++this.position;
+                } else {
+                    break;
+                }
+                exps.push([this.parseAppendedExpression(), [cnt]]);
+                nextTok = this.currentToken();
+            }
+
+            ops.sort();
+
+            for (let i = 0; i < ops.length; ++i) {
+                // Using pointers or something similar could speed up this stuff here
+                // and achieve linear running time
+                let left = exps[ops[i][1]][0];
+                let right = exps[ops[i][1] + 1][0];
+                let res: Expression;
+                if (ops[i][0] === 0) {
+                    res = new Conjunction(left.position, left, right);
+                } else {
+                    res = new Disjunction(left.position, left, right);
+                }
+
+                let npos = exps[ops[i][1]][1];
+                for (let j of exps[ops[i][1] + 1][1]) {
+                    npos.push(j);
+                }
+                for (let j of npos) {
+                    exps[j] = [res, npos];
+                }
+            }
+            return exps[0][0];
         }
         return exp;
     }
