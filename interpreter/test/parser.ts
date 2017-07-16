@@ -604,7 +604,22 @@ it("atomic pattern - record", () => {
     let atomic_pattern_record: string = "val { x = _ } = 42;";
     expect(parse(atomic_pattern_record)).toEqualWithType(pattern_tester(
         new Expr.Record(6, true, [["x", new Expr.Wildcard(10)]])
-    , 16))
+    , 16));
+    let atomic_pattern_record1: string = "val { x = _, y = 10 } = 42;";
+    expect(parse(atomic_pattern_record1)).toEqualWithType(pattern_tester(
+        new Expr.Record(6, true, [["x", new Expr.Wildcard(10)],
+    ["y", new Expr.Constant(17, new Lexer.IntegerConstantToken("10", 17, 10))]])
+    , 24));
+    let atomic_pattern_record2: string = "val { x = _, y = 10, ... } = 42;";
+    expect(parse(atomic_pattern_record2)).toEqualWithType(pattern_tester(
+        new Expr.Record(6, false, [["x", new Expr.Wildcard(10)],
+    ["y", new Expr.Constant(17, new Lexer.IntegerConstantToken("10", 17, 10))]])
+    , 29));
+    let atomic_pattern_record_non_atomic: string = "val { x = _:int } = 42;";
+    expect(parse(atomic_pattern_record_non_atomic)).toEqualWithType(pattern_tester(
+        new Expr.Record(6, true, [["x", new Expr.TypedExpression(10, new Expr.Wildcard(10),
+            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 12), [], 12))]])
+    , 20));
 });
 
 it("atomic pattern - 0-tuple", () => {
@@ -623,6 +638,23 @@ it("atomic pattern - n-tuple", () => {
             new Expr.Wildcard(7)
         ])
     , 12));
+
+    let atomic_pattern_3_tuple:string = "val (_,_,x) = 42;";
+    expect(parse(atomic_pattern_3_tuple)).toEqualWithType(pattern_tester(
+        new Expr.Tuple(4, [
+            new Expr.Wildcard(5),
+            new Expr.Wildcard(7),
+            new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken("x", 9))
+        ])
+    , 14));
+
+    let atomic_pattern_tuple_pat:string = "val (_:int,_) = 42;";
+    expect(parse(atomic_pattern_tuple_pat)).toEqualWithType(pattern_tester(
+        new Expr.Tuple(4, [new Expr.TypedExpression(5, new Expr.Wildcard(5),
+            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 7), [], 7)),
+            new Type.Wildcard(11)
+        ])
+    , 16));
 });
 
 it("atomic pattern - list", () => {
@@ -638,6 +670,11 @@ it("atomic pattern - list", () => {
     expect(parse(atomic_pattern_2_list)).toEqualWithType(pattern_tester(
         new Expr.List(4, [new Expr.Wildcard(5), new Expr.Wildcard(7)])
     , 12));
+    let atomic_pattern_list_pat:string = "val [_:int] = 42;";
+    expect(parse(atomic_pattern_list_pat)).toEqualWithType(pattern_tester(
+        new Expr.List(4, [new Expr.TypedExpression(5, new Expr.Wildcard(5),
+            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 7), [], 7))])
+    , 14));
 });
 
 it("atomic pattern - bracketed", () => {
@@ -645,6 +682,16 @@ it("atomic pattern - bracketed", () => {
     expect(parse(atomic_pattern_bracketed)).toEqualWithType(pattern_tester(
         new Expr.Tuple(4, [new Expr.Wildcard(5)])
     , 10));
+    let atomic_pattern_multi_bracketed:string = "val (((_))) = 42;";
+    expect(parse(atomic_multi_pattern_bracketed)).toEqualWithType(pattern_tester(
+        new Expr.Tuple(4, [
+            new Expr.Tuple(5, [
+                new Expr.Tuple(6, [
+                    new Expr.Wildcard(7)
+                ])
+            ])
+        ])
+    , 14));
 });
 
 it("pattern row - wildcard", () => {
@@ -659,7 +706,31 @@ it("pattern row - pattern row", () => {
     expect(parse(patrow_label)).toEqualWithType(pattern_tester(
         new Expr.Record(6, true, [["l1", new Expr.Wildcard(11)]])
     , 17));
-    // TODO test all valid and some invalid lab tokenclasses
+    let patrow_label1: string = "val { 1 = _ } = 42;";
+    expect(parse(patrow_label)).toEqualWithType(pattern_tester(
+        new Expr.Record(6, true, [["1", new Expr.Wildcard(11)]])
+    , 17));
+    let patrow_label2: string = "val { * = _ } = 42;";
+    expect(parse(patrow_label)).toEqualWithType(pattern_tester(
+        new Expr.Record(6, true, [["*", new Expr.Wildcard(11)]])
+    , 17));
+    let patrow_label3: string = "val { $ = _ } = 42;";
+    expect(parse(patrow_label)).toEqualWithType(pattern_tester(
+        new Expr.Record(6, true, [["$", new Expr.Wildcard(11)]])
+    , 17));
+    let patrow_label3: string = "val { ## = _ } = 42;";
+    expect(parse(patrow_label)).toEqualWithType(pattern_tester(
+        new Expr.Record(6, true, [["##", new Expr.Wildcard(12)]])
+    , 18));
+});
+
+it("pattern row - wrong label", () => {
+    let not_patrow_label: string = "val { 0 = _ } = 42;";
+    let not_patrow_label1: string = "val { 01 = _ } = 42;";
+    let not_patrow_label2: string = "val { 'l = _ } = 42;";
+    let not_patrow_label3: string = "val { = = _ } = 42;";
+    let not_patrow_label4: string = "val { # = _ } = 42;";
+    //TODO tests
 });
 
 it("pattern row - label as variable", () => {
@@ -667,6 +738,11 @@ it("pattern row - label as variable", () => {
     let patrow_as_label1: string = "val {x as _} = 42;";
     let patrow_as_label2: string = "val {x:int} = 42;";
     //TODO dunno what to do
+    /*
+    expect(parse(patrow_as_label).toEqualWithType(pattern_tester(
+        new Expr.Record(4, true, [])
+    )));
+    */
 });
 
 it("pattern - atomic", () => {
@@ -675,8 +751,13 @@ it("pattern - atomic", () => {
 
 it("pattern - constructed value", () => {
     let pattern_cons_val: string = "val x _ = 42;";
+    expect(parse(pattern_cons_val).toEqualWithType(pattern_tester(
+        new Expr.FunctionApplication(4,
+            new Expr.AlphanumericIdentifierToken("x", 4),
+            new Expr.Wildcard(6))
+    , 10)))
     let pattern_cons_val_with_op: string = "val op x _ = 42;"
-    //TODO tests
+    //TODO tests how is this value constructed
 });
 
 it("pattern - constructed value (infix)", () => {
@@ -686,21 +767,52 @@ it("pattern - constructed value (infix)", () => {
 
 it("pattern - typed", () => {
     let pattern_type:string = "val x : int = 42;";
-    expect(parse(pattern_type)).toEqualWithType(pattern_tester(
+    expect(parse(pattern_type).toEqualWithType(pattern_tester(
         new Expr.TypedExpression(4,
         new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
         new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 8), [], 8)
-    ), 14
-    ));
+    ), 14)));
+
+    let pattern_func_type:string = "val x : int -> int = 42;";
+    expect(parse(pattern_func_type).toEqualWithType(pattern_tester(
+        new Expr.TypedExpression(4,
+        new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
+        new Type.FunctionType(
+            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 8), [], 8),
+        new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 15), [], 15), 8))
+    , 14)));
+
+    let double_typed: string = "val x:int:int = 42;";
+    expect(parse(double_typed).toEqualWithType(pattern_tester(
+        new Expr.TypedExpression(
+            4,
+            new Expr.TypedExpression(
+                4,
+                new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
+                new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 6, [], 6))
+            ),
+            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 10, [], 10))
+        )
+    , 16)))
+
+    let list_typed: string = "val []:int = 42;"
+    expect(parse(double_typed).toEqualWithType(pattern_tester(
+        new Expr.TypedExpression(
+            4,
+            new Expr.List(4, []),
+            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 4, [], 4))
+        )
+    , 13)));
+
     // TODO more complex patterns with type to check whether this uses the correct rules
 });
 
 it("pattern - layered", () => {
-    "val x as _ = 42;"
-    "val op x as _ = 42;"
-    "val x :int as _ = 42;"
-    "val op x:int as _ = 42;"
-    //TODO tests don't want anymore
+    let layered: string = "val x as _ = 42;";
+    let layered1: string = "val op x as _ = 42;";
+    let layered2: string = "val x :int as _ = 42;";
+    let layered3: string = "val op x:int as _ = 42;";
+    //TODO tests
 });
 
 it("type - type variable", () => {
