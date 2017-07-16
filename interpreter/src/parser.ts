@@ -208,6 +208,7 @@ export class Parser {
             ++this.position;
             let res: Expression[] = [this.parseExpression()];
             let newTok = this.currentToken();
+            let tpos = newTok.position;
             while (this.checkKeywordToken(newTok, ';')) {
                 ++this.position;
                 res.push(this.parseExpression());
@@ -220,7 +221,7 @@ export class Parser {
 
             if (res.length >= 2) {
                 return new LocalDeclarationExpression(curTok.position, dec,
-                    new Sequence(curTok.position, res));
+                    new Sequence(tpos, res));
             } else {
                 return new LocalDeclarationExpression(curTok.position, dec, res[0]);
             }
