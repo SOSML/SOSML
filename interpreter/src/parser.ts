@@ -1149,11 +1149,13 @@ export class Parser {
                 curTok = this.currentToken();
                 if (this.checkKeywordToken(curTok, ',')) {
                     ++this.position;
+                    continue;
                 } else if (this.checkKeywordToken(curTok, ')')) {
                     ++this.position;
                     break;
                 }
-                throw new ParserError('Expected "(" or ","', curTok.position);
+                throw new ParserError('Expected "," or ")" but got "'
+                    + curTok.getText() + '".', curTok.position);
             }
         }
         return res;
