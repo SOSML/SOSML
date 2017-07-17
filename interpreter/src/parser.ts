@@ -2,8 +2,7 @@ import { Expression, Tuple, Constant, ValueIdentifier, Wildcard,
          LayeredPattern, FunctionApplication, TypedExpression, Record, List,
          Sequence, RecordSelector, Lambda, Conjunction, LocalDeclarationExpression,
          Disjunction, Conditional, CaseAnalysis, RaiseException,
-         HandleException, Match, InfixExpression, PatternExpression
-} from './expressions';
+         HandleException, Match, InfixExpression, PatternExpression, While } from './expressions';
 import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } from './types';
 import { InterpreterError, InternalInterpreterError, IncompleteError, Position } from './errors';
 import { Token, KeywordToken, IdentifierToken, ConstantToken,
@@ -350,6 +349,8 @@ export class Parser {
          *          KeywordToken exp KeywordToken exp KeywordToken exp
          *         case exp of match                CaseAnalysis(pos, exp, match)
          *          KeywordToken exp KeywordToken match
+         *         while exp do exp                 While(pos, exp, exp)
+         *          KeywordToken exp KeywordToken exp
          *         fn match                         Lambda(position, match)
          *          KeywordToken match
          */
@@ -373,6 +374,12 @@ export class Parser {
             this.assertKeywordToken(this.currentToken(), 'of');
             ++this.position;
             return new CaseAnalysis(curTok.position, cond, this.parseMatch());
+        } else if (this.checkKeywordToken(curTok, 'while')) {
+            ++this.position;
+            let cond = this.parseExpression();
+            this.assertKeywordToken(this.currentToken(), 'do');
+            ++this.position;
+            return new While(curTok.position, cond, this.parseExpression());
         } else if (this.checkKeywordToken(curTok, 'fn')) {
             ++this.position;
             return new Lambda(curTok.position, this.parseMatch());
@@ -380,12 +387,10 @@ export class Parser {
 
         let exp = this.parseInfixExpression();
         let nextTok = this.currentToken();
-        if (this.checkKeywordToken(nextTok, ':')) {
+        while (this.checkKeywordToken(nextTok, ':')) {
             ++this.position;
-            return new TypedExpression(curTok.position, exp, this.parseType());
-        } else if (this.checkKeywordToken(nextTok, 'handle')) {
-            ++this.position;
-            return new HandleException(curTok.position, exp, this.parseMatch());
+            exp = new TypedExpression(curTok.position, exp, this.parseType());
+            nextTok = this.currentToken();
         }
         return exp;
     }
@@ -399,6 +404,7 @@ export class Parser {
          */
         let exp = this.parseAppendedExpression();
         let nextTok = this.currentToken();
+        let curTok = nextTok;
         if (this.checkKeywordToken(nextTok, 'andalso')
             || this.checkKeywordToken(nextTok, 'orelse') ) {
             let exps: [Expression, number[]][] = [[exp, [0]]];
@@ -441,8 +447,15 @@ export class Parser {
                     exps[j] = [res, npos];
                 }
             }
-            return exps[0][0];
+            exp = exps[0][0];
         }
+        nextTok = this.currentToken();
+        while (this.checkKeywordToken(nextTok, 'handle')) {
+            ++this.position;
+            exp = new HandleException(curTok.position, exp, this.parseMatch());
+            nextTok = this.currentToken();
+        }
+
         return exp;
     }
 
@@ -670,24 +683,29 @@ export class Parser {
             ++this.position;
             try {
                 // Check whether layered pattern
-                if (!isLong) {
-                    let newTok = this.currentToken();
-                    let tp: Type | undefined;
-                    if (this.checkKeywordToken(newTok, ':')) {
+                let newOldPos = this.position;
+                try {
+                    if (!isLong) {
+                        let newTok = this.currentToken();
+                        let tp: Type | undefined;
+                        if (this.checkKeywordToken(newTok, ':')) {
+                            ++this.position;
+                            tp = this.parseType();
+                            newTok = this.currentToken();
+                        }
+                        this.assertKeywordToken(newTok, 'as');
                         ++this.position;
-                        tp = this.parseType();
-                        newTok = this.currentToken();
+                        return new LayeredPattern(curTok.position, name, tp, this.parsePattern());
                     }
-                    this.assertKeywordToken(newTok, 'as');
-                    ++this.position;
-                    return new LayeredPattern(curTok.position, name, tp, this.parsePattern());
+                } catch (f) {
+                    this.position = newOldPos;
                 }
 
                 // Try if it is a FunctionApplication instead
                 return new FunctionApplication(curTok.position,
                                                new ValueIdentifier(name.position, name),
                                                this.parseAtomicPattern());
-            } catch (ParserError) {
+            } catch (e) {
                 // It seems we were wrong, so try the other possibilities instead
                 this.position = oldPos;
             }
@@ -695,10 +713,11 @@ export class Parser {
 
         let res = this.parseAtomicPattern();
         nextTok = this.currentToken();
-        if (this.checkKeywordToken(nextTok, ':')) {
+        while (this.checkKeywordToken(nextTok, ':')) {
             ++this.position;
             let tp = this.parseType();
-            return new TypedExpression(curTok.position, res, tp);
+            res = new TypedExpression(curTok.position, res, tp);
+            nextTok = this.currentToken();
         }
         return res;
     }

@@ -309,7 +309,7 @@ it("atomic expression - local declaration", () => {
                         get42(13)
                     ])
             ])
-            new Expr.Sequence(0, [
+            new Expr.Sequence(22, [
                 get42(20),
                 createSampleExpression1(24),
                 createSampleExpression2(44)
@@ -345,93 +345,30 @@ it("expression row", () => {
     let testcase_reserved_word: string = '{ val = 42};';
     let testcase_equals: string = '{ = = 42};';
 
-    //expect(parse(testcase_alphanum)).toEqualWithType(createItExpression(
-        //new Expr.TypedExpression(0,
-            //get42(0),
-            //new Expr.Record(2, true, [
-                    //["hi", get42(7)]
-                //]),
-            //)
-        //)
-    //));
-    //expect(parse(testcase_numeric)).toEqualWithType(createItExpression(
-        //new Expr.TypedExpression(0,
-            //get42(0),
-            //new Type.RecordType(
-                //new Map([
-                    //["1337", new Type.TypeVariable('\'a', 12)]
-                //]),
-                //true,
-                //6
-            //)
-        //)
-    //));
-    //expect(parse(testcase_non_alphanum)).toEqualWithType(createItExpression(
-        //new Expr.TypedExpression(0,
-            //get42(0),
-            //new Type.RecordType(
-                //new Map([
-                    //["###", new Type.TypeVariable('\'a', 12)]
-                //]),
-                //true,
-                //6
-            //)
-        //)
-    //));
-    //expect(parse(testcase_star)).toEqualWithType(createItExpression(
-        //new Expr.TypedExpression(0,
-            //get42(0),
-            //new Type.RecordType(
-                //new Map([
-                    //["*", new Type.TypeVariable('\'a', 10)]
-                //]),
-                //true,
-                //6
-            //)
-        //)
-    //));
+    expect(parse(testcase_alphanum)).toEqualWithType(createItExpression(
+        new Expr.Record(2, true, [
+            ["hi", get42(7)]
+        ]),
+    ));
+    expect(parse(testcase_numeric)).toEqualWithType(createItExpression(
+        new Expr.Record(2, true, [
+            ["1337", get42(9)]
+        ]),
+    ));
+    expect(parse(testcase_non_alphanum)).toEqualWithType(createItExpression(
+        new Expr.Record(2, true, [
+            ["###", createSampleExpression1(8)]
+        ]),
+    ));
+    expect(parse(testcase_star)).toEqualWithType(createItExpression(
+        new Expr.Record(2, true, [
+            ["*", createSampleExpression2(6)]
+        ]),
+    ));
 
-    //expect(() => { parse(testcase_zero); }).toThrow(Parser.ParserError);
-    //expect(() => { parse(testcase_reserved_word); }).toThrow(Parser.ParserError);
-    //expect(() => { parse(testcase_equals); }).toThrow(Parser.ParserError);
-
-    //expect(parse(testcase_ident)).toEqualWithType(createItExpression(
-        //new Expr.TypedExpression(0,
-            //get42(0),
-            //new Type.RecordType(
-                //new Map([
-                    //["hi", new Type.CustomType(
-                        //new Lexer.AlphanumericIdentifierToken('a', 10), [], 10)]
-                //]),
-                //true,
-                //6
-            //)
-        //)
-    //));
-    //expect(parse(testcase_tyvar)).toEqualWithType(createItExpression(
-        //new Expr.TypedExpression(0,
-            //get42(0),
-            //new Type.RecordType(
-                //new Map([
-                    //["hi", new Type.TypeVariable('\'a', 10)]
-                //]),
-                //true,
-                //6
-            //)
-        //)
-    //));
-    //expect(parse(testcase_etyvar)).toEqualWithType(createItExpression(
-        //new Expr.TypedExpression(0,
-            //get42(0),
-            //new Type.RecordType(
-                //new Map([
-                    //["hi", new Type.TypeVariable('\'\'a', 10)]
-                //]),
-                //true,
-                //6
-            //)
-        //)
-    //));
+    expect(() => { parse(testcase_zero); }).toThrow(Parser.ParserError);
+    expect(() => { parse(testcase_reserved_word); }).toThrow(Parser.ParserError);
+    expect(() => { parse(testcase_equals); }).toThrow(Parser.ParserError);
 });
 
 it("application expression", () => {
@@ -442,44 +379,343 @@ it("infix expression", () => {
     //TODO tests
 });
 
-it("expression - passthrough", () => {
-    //TODO tests
-});
-
 it("expression - typed expression", () => {
-    //TODO tests
+    let testcase_simple: string = '42: \'a;';
+    let testcase_nested: string = '42: \'a: \'b;';
+    let testcase_precedence_conj: string = '42 andalso 42: \'a -> \'b;';
+    let testcase_precedence_disj: string = '42 orelse 42: \'a -> \'b;';
+    let testcase_precedence_handle: string = '42 handle _ => 42 : \'a -> \'b;';
+    let testcase_precedence_raise: string = 'raise 42: \'a -> \'b;';
+    let testcase_precedence_if: string = 'if ' + sampleExpression1 + ' then ' + sampleExpression2 + ' else 42: \'a -> \'b;';
+
+    expect(parse(testcase_simple)).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            get42(0),
+            new Type.TypeVariable('\'a', 4)
+        )
+    ));
+    expect(parse(testcase_nested)).toEqualWithType(createItExpression(
+        new Expr.TypedExpression(0,
+            new Expr.TypedExpression(0,
+                get42(0),
+                new Type.TypeVariable('\'a', 4)
+            )
+            new Type.TypeVariable('\'b', 8)
+        )
+    ));
+    expect(parse(testcase_precedence_conj)).toEqualWithType(createItExpression(
+        new Expr.Conjunction(0,
+            get42(0),
+            new Expr.TypedExpression(11,
+                get42(11),
+                new Type.FunctionType(
+                    new Type.TypeVariable('\'a', 15),
+                    new Type.TypeVariable('\'b', 21),
+                    18
+                )
+            )
+        )
+    ));
+    expect(parse(testcase_precedence_disj)).toEqualWithType(createItExpression(
+        new Expr.Disjunction(0,
+            get42(0),
+            new Expr.TypedExpression(10,
+                get42(10),
+                new Type.FunctionType(
+                    new Type.TypeVariable('\'a', 14),
+                    new Type.TypeVariable('\'b', 20),
+                    17
+                )
+            )
+        )
+    ));
+    expect(parse(testcase_precedence_handle)).toEqualWithType(createItExpression(
+        new Expr.HandleException(3,
+            get42(0),
+            new Expr.Match(10,
+                [[new Expr.Wildcard(10),
+                    new Expr.TypedExpression(15,
+                        get42(15),
+                        new Type.FunctionType(
+                            new Type.TypeVariable('\'a', 20),
+                            new Type.TypeVariable('\'b', 26),
+                            23
+                        )
+                    )
+                ]]
+            )
+        )
+    ));
+    expect(parse(testcase_precedence_raise)).toEqualWithType(createItExpression(
+        new Expr.RaiseException(0,
+            new Expr.TypedExpression(6,
+                get42(6),
+                new Type.FunctionType(
+                    new Type.TypeVariable('\'a', 10),
+                    new Type.TypeVariable('\'b', 16),
+                    13
+                )
+            )
+        )
+    ));
+    expect(parse(testcase_precedence_if)).toEqualWithType(createItExpression(
+        new Expr.Conditional(0,
+            createSampleExpression1(3),
+            createSampleExpression2(27),
+            new Expr.TypedExpression(51,
+                get42(51),
+                new Type.FunctionType(
+                    new Type.TypeVariable('\'a', 55),
+                    new Type.TypeVariable('\'b', 61),
+                    58
+                )
+            )
+        )
+    ));
 });
 
 it("expression - conjunction", () => {
-    //TODO tests
+    let testcase_simple: string = '42 andalso 42;';
+    let testcase_associativity: string = '42 andalso (' + sampleExpression1 + ') andalso (' + sampleExpression2 + ');';
+    let testcase_precedence_disj1: string = '42 andalso (' + sampleExpression1 + ') orelse (' + sampleExpression2 + ');';
+    let testcase_precedence_disj2: string = '42 orelse (' + sampleExpression1 + ') andalso (' + sampleExpression2 + ');';
+    let testcase_precedence_handle1: string = '42 andalso (' + sampleExpression1 + ') handle _ => 42;';
+    let testcase_precedence_handle2: string = '(' + sampleExpression1 + ') handle _ => 42 andalso 42;';
+    //TODO maybe more precedence tests?
+
+    expect(parse(testcase_simple)).toEqualWithType(createItExpression(
+        new Expr.Conjunction(0,
+            get42(0),
+            get42(11)
+        )
+    ));
+    expect(parse(testcase_associativity)).toEqualWithType(createItExpression(
+        new Expr.Conjunction(0,
+            new Expr.Conjunction(0,
+                get42(0),
+                createSampleExpression1(12)
+            ),
+            createSampleExpression2(41)
+        )
+    ));
+    expect(parse(testcase_precedence_disj1)).toEqualWithType(createItExpression(
+        new Expr.Disjunction(0,
+            new Expr.Conjunction(0,
+                get42(0),
+                createSampleExpression1(12)
+            ),
+            createSampleExpression2(40)
+        )
+    ))
+    expect(parse(testcase_precedence_disj2)).toEqualWithType(createItExpression(
+        new Expr.Disjunction(0,
+            get42(0),
+            new Expr.Conjunction(11,
+                createSampleExpression1(11),
+                createSampleExpression2(40)
+            )
+        )
+    ));
+    expect(parse(testcase_precedence_handle1)).toEqualWithType(createItExpression(
+        new Expr.HandleException(3,
+            new Expr.Conjunction(0,
+                get42(0),
+                createSampleExpression1(12)
+            ),
+            new Expr.Match(39,
+                [[new Expr.Wildcard(39), get42(44)]]
+            )
+        )
+    ));
+    expect(parse(testcase_precedence_handle2)).toEqualWithType(createItExpression(
+        new Expr.HandleException(21,
+            createSampleExpression1(1)
+            new Expr.Match(28,
+                [[new Expr.Wildcard(28),
+                    new Expr.Conjunction(33,
+                        get42(33),
+                        get42(44)
+                    )
+                ]]
+            )
+        )
+    ));
 });
 
 it("expression - disjunction", () => {
-    //TODO tests
+    let testcase_simple: string = '42 orelse 42;';
+    let testcase_precedence_handle: string = '42 orelse (' + sampleExpression1 + ') handle _ => ' + sampleExpression2 + ';';
+    //TODO maybe more precedence tests?
+    //TODO associativity
+
+    expect(parse(testcase_simple)).toEqualWithType(createItExpression(
+        new Expr.Disjunction(0,
+            get42(0),
+            get42(10)
+        )
+    ));
+    expect(parse(testcase_precedence_handle)).toEqualWithType(createItExpression(
+        new Expr.HandleException(3,
+            new Expr.Disjunction(0,
+                get42(0),
+                createSampleExpression1(11)
+            ),
+            new Expr.Match(38,
+                [[new Expr.Wildcard(38), createSampleExpression2(43)]]
+            )
+        )
+    ));
 });
 
 it("expression - handle exception", () => {
-    //TODO tests
+    let testcase_simple: string = '42 handle _ => ' + sampleExpression1 + ';';
+    let testcase_precedence_raise: string = 'raise 42 handle _ => ' + sampleExpression1 + ';';
+    //TODO maybe more precedence tests?
+
+
+    expect(parse(testcase_simple)).toEqualWithType(createItExpression(
+        new Expr.HandleException(3,
+            get42(0),
+            new Expr.Match(10,
+                [[new Expr.Wildcard(10), createSampleExpression1(15)]]
+            )
+        )
+    ));
+    expect(parse(testcase_precedence_raise)).toEqualWithType(createItExpression(
+        new Expr.RaiseException(0,
+            new Expr.HandleException(9,
+                get42(6),
+                new Expr.Match(16,
+                    [[new Expr.Wildcard(16), createSampleExpression1(21)]]
+                )
+            )
+    ));
 });
 
 it("expression - raise exception", () => {
-    //TODO tests
+    let testcase_simple1: string = 'raise 42;';
+    let testcase_simple2: string = 'raise ' + sampleExpression1 + ';';
+    let testcase_simple3: string = 'raise ' + sampleExpression2 + ';';
+
+    expect(parse(testcase_simple1)).toEqualWithType(createItExpression(
+        new Expr.RaiseException(0,
+            get42(6)
+        )
+    ));
+    expect(parse(testcase_simple2)).toEqualWithType(createItExpression(
+        new Expr.RaiseException(0,
+            createSampleExpression1(6)
+        )
+    ));
+    expect(parse(testcase_simple3)).toEqualWithType(createItExpression(
+        new Expr.RaiseException(0,
+            createSampleExpression2(6)
+        )
+    ));
 });
 
 it("expression - conditional", () => {
-    //TODO tests
+    let testcase_simple: string = 'if 42 then ' + sampleExpression1 + ' else ' + sampleExpression2 + ';';
+
+    expect(parse(testcase_simple)).toEqualWithType(createItExpression(
+        new Expr.Conditional(0,
+            get42(3),
+            createSampleExpression1(11),
+            createSampleExpression2(35)
+        )
+    ));
+    //TODO maybe more tests?
 });
 
 it("expression - iteration", () => {
+    let testcase_simple: string = 'while true do 42;';
+
+    //expect(() => { parse(testcase_simple); }).toThrow(Errors.FeatureNotImplementedError);
     //TODO tests
 });
 
 it("expression - case analysis", () => {
-    //TODO tests
+    let testcase_simple: string = 'case 42 of _ => 42;';
+    let testcase_multipattern: string = 'case ' + sampleExpression1 + ' of _ => 42 | 42 => ' + sampleExpression2 + ';';
+    let testcase_nested: string = 'case 42 of _ => case ' + sampleExpression2 + ' of _ => 42 | 42 => ' + sampleExpression1 +';';
+
+    expect(parse(testcase_simple)).toEqualWithType(createItExpression(
+        new Expr.CaseAnalysis(0,
+            get42(5),
+            new Expr.Match(11,
+                [[new Expr.Wildcard(11), get42(16)]]
+            )
+        )
+    ));
+    expect(parse(testcase_multipattern)).toEqualWithType(createItExpression(
+        new Expr.CaseAnalysis(0,
+            createSampleExpression1(5),
+            new Expr.Match(27,
+                [
+                    [new Expr.Wildcard(27), get42(32)],
+                    [get42(37), createSampleExpression2(43)]
+                ]
+            )
+        )
+    ));
+    expect(parse(testcase_nested)).toEqualWithType(createItExpression(
+        new Expr.CaseAnalysis(0,
+            get42(5)
+            new Expr.Match(11,
+                [[new Expr.Wildcard(11),
+                    new Expr.CaseAnalysis(16,
+                        createSampleExpression2(21),
+                        new Expr.Match(43,
+                            [
+                                [new Expr.Wildcard(43), get42(48)],
+                                [get42(53), createSampleExpression1(59)]
+                            ]
+                        )
+                    )
+                ]]
+            )
+        )
+    ));
 });
 
 it("expression - function", () => {
-    //TODO tests
+    let testcase_simple: string = 'fn _ => 42;';
+    let testcase_multipattern: string = 'fn _ => 42 | 42 => ' + sampleExpression2 + ';';
+    let testcase_nested: string = 'fn _ => fn _ => 42 | 42 => ' + sampleExpression1 +';';
+
+    expect(parse(testcase_simple)).toEqualWithType(createItExpression(
+        new Expr.Lambda(0,
+            new Expr.Match(3,
+                [[new Expr.Wildcard(3), get42(8)]]
+            )
+        )
+    ));
+    expect(parse(testcase_multipattern)).toEqualWithType(createItExpression(
+        new Expr.Lambda(0,
+            new Expr.Match(3,
+                [
+                    [new Expr.Wildcard(3), get42(8)],
+                    [get42(13), createSampleExpression2(19)]
+                ]
+            )
+        )
+    ));
+    expect(parse(testcase_nested)).toEqualWithType(createItExpression(
+        new Expr.Lambda(0,
+            new Expr.Match(3,
+                [[new Expr.Wildcard(3),
+                    new Expr.Lambda(8,
+                        new Expr.Match(11,
+                            [
+                                [new Expr.Wildcard(11), get42(16)],
+                                [get42(21), createSampleExpression1(27)]
+                            ]
+                        )
+                    )
+                ]]
+            )
+        )
+    ));
 });
 
 it("matches", () => {
