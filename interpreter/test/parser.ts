@@ -29,6 +29,24 @@ function pattern_tester(pattern: Expr.Pattern, pos42: Errors.Position): Decl.Dec
     ]);
 }
 
+function create_infix(position: Errors.Position) {
+    return new Decl.InfixDeclaration(
+        position,
+        [
+            new Lexer.AlphanumericIdentifierToken("x", position+6)
+        ]
+    )
+}
+
+function create_infixr(position: Errors.Position) {
+    return new Decl.InfixRDeclaration(
+        position,
+        [
+            new Lexer.AlphanumericIdentifierToken("x", position+7)
+        ]
+    )
+}
+
 function prefixWithOp(tok: Lexer.IdentifierToken): Lexer.IdentifierToken {
     tok.opPrefixed = true;
     return tok;
@@ -1019,6 +1037,15 @@ it("pattern - constructed value", () => {
 
 it("pattern - constructed value (infix)", () => {
     let pattern_infix:string = "infix x; val _ x _ = 42;";
+    let pattern: Expr.Expression = new Expr.FunctionApplication(15, new Expr.ValueIdentifier(15, new Lexer.AlphanumericIdentifierToken("x", 15)), new Expr.Tuple(15, [new Expr.Wildcard(13), new Expr.Wildcard(17)]));
+    expect(parse(pattern_infix)).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            create_infix(0),
+            new Decl.ValueDeclaration(9, [], [
+                new Decl.ValueBinding(13, false, pattern, get42(21))
+            ])
+        ])
+    )
     //TODO tests
 });
 
