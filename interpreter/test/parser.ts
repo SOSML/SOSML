@@ -962,16 +962,15 @@ it("pattern row - pattern row", () => {
 
 it("pattern row - wrong label", () => {
     let not_patrow_label: string = "val { 0 = _ } = 42;";
-    expect(() => {parse(not_patrow_label);}).toThrow();
+    expect(() => {parse(not_patrow_label);}).toThrow(Parser.ParserError);
     let not_patrow_label1: string = "val { 01 = _ } = 42;";
-    expect(() => {parse(not_patrow_label1);}).toThrow();
+    expect(() => {parse(not_patrow_label1);}).toThrow(Parser.ParserError);
     let not_patrow_label2: string = "val { 'l = _ } = 42;";
-    expect(() => {parse(not_patrow_label2);}).toThrow();
+    expect(() => {parse(not_patrow_label2);}).toThrow(Parser.ParserError);
     let not_patrow_label3: string = "val { = = _ } = 42;";
-    expect(() => {parse(not_patrow_label3);}).toThrow();
+    expect(() => {parse(not_patrow_label3);}).toThrow(Parser.ParserError);
     let not_patrow_label4: string = "val { # = _ } = 42;";
-    expect(() => {parse(not_patrow_label4);}).toThrow();
-    //TODO tests
+    expect(() => {parse(not_patrow_label4);}).toThrow(Parser.ParserError);
 });
 
 it("pattern row - label as variable", () => {
@@ -987,7 +986,7 @@ it("pattern row - label as variable", () => {
     let patrow_as_label1: string = "val {x as _} = 42;";
     let patrow_as_label2: string = "val {x:int} = 42;";
 
-    //TODO dunno what to do
+    //TODO test further as soon as fixed
 });
 
 it("pattern - atomic", () => {
@@ -1019,7 +1018,7 @@ it("pattern - constructed value", () => {
 });
 
 it("pattern - constructed value (infix)", () => {
-    let pattern_infix:string = "val _ x _ = 42;";
+    let pattern_infix:string = "infix x; val _ x _ = 42;";
     //TODO tests
 });
 
@@ -1061,8 +1060,6 @@ it("pattern - typed", () => {
             new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 7), [], 7)
         )
     , 13));
-
-    // TODO more complex patterns with type to check whether this uses the correct rules
 });
 
 it("pattern - layered", () => {
@@ -1116,7 +1113,6 @@ it("pattern - layered", () => {
         ),
         20
     ));
-    //TODO tests
 });
 
 it("type - type variable", () => {
