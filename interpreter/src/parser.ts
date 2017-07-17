@@ -1212,8 +1212,14 @@ export class Parser {
                 tyvar = [];
             }
             let valbinds: ValueBinding[] = [];
+            let isRec = false;
             while (true) {
-                valbinds.push(this.parseValueBinding());
+                let curbnd = this.parseValueBinding();
+                if (curbnd.isRecursive) {
+                    isRec = true;
+                }
+                curbnd.isRecursive = isRec;
+                valbinds.push(curbnd);
                 if (this.checkKeywordToken(this.currentToken(), 'and')) {
                     ++this.position;
                 } else {
