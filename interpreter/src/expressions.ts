@@ -1,4 +1,4 @@
-import { FunctionType, PrimitiveType, PrimitiveTypes, RecordType, Type } from './types';
+import { FunctionType, PrimitiveType, RecordType, Type } from './types';
 import {
     Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConstantToken, NumericToken,
     WordConstantToken, CharacterConstantToken, StringConstantToken
@@ -6,7 +6,7 @@ import {
 import { Declaration } from './declarations';
 import { State } from './state';
 import { InternalInterpreterError, Position, SemanticError } from './errors';
-import { Value } from './values';
+import { Value, CharValue, StringValue, Integer, Real, Word } from './values';
 
 
 export abstract class Expression {
@@ -29,7 +29,7 @@ export abstract class Expression {
         throw new InternalInterpreterError(this.position, 'called computeType on derived form');
     }
 
-    getValue(state: State): Value {
+    compute(state: State): Value {
         throw new InternalInterpreterError(this.position, 'called getValue on derived form');
     }
 
@@ -56,8 +56,9 @@ export type PatternExpression = Pattern & Expression;
 export class Wildcard extends Expression implements Pattern {
     constructor(public position: Position) { super(); }
 
-    getValue(state: State): Value {
-        throw new InternalInterpreterError(this.position, 'called getValue on a pattern wildcard');
+    compute(state: State): Value {
+        throw new InternalInterpreterError(this.position,
+            'Wildcards are far too wild to have a value.');
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -75,12 +76,12 @@ export class Wildcard extends Expression implements Pattern {
 
 export class LayeredPattern extends Expression implements Pattern {
 // <op> identifier <:type> as pattern
-    constructor(public position: Position, public identifier: IdentifierToken, public typeAnnotation: Type | undefined,
-                public pattern: Expression
-    ) { super(); }
+    constructor(public position: Position, public identifier: IdentifierToken,
+                public typeAnnotation: Type | undefined, public pattern: Expression) { super(); }
 
-    getValue(state: State): Value {
-        throw new InternalInterpreterError(this.position, 'called getValue on a pattern');
+    compute(state: State): Value {
+        throw new InternalInterpreterError(this.position,
+            'Layered patterns are far too layered to have a value.');
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -128,9 +129,19 @@ export class Match {
         return res;
     }
 
-    getValue(state: State, matchWith: Value): Value {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'not yet implemented');
+    compute(state: State, value: Value): Value {
+        for (let i = 0; i < this.matches.length; ++i) {
+            let res = this.matches[i][0].matches(state, value);
+            if (res !== undefined) {
+                let nstate = state.getNestedState();
+                for (let j = 0; j < res.length; ++j) {
+                    nstate.updateValue(res[i][0], res[i][1]);
+                }
+                return this.matches[i][1].compute(nstate);
+            }
+        }
+        // TODO return Match here
+        throw new InternalInterpreterError(this.position, 'Constructing "Match" is nyi\'an');
     }
 
     simplify(): Match {
@@ -174,6 +185,10 @@ export class TypedExpression extends Expression implements Pattern {
         res += ': ' + this.typeAnnotation.prettyPrint();
         return res + ' )';
     }
+
+    compute(state: State): Value {
+        return this.expression.compute(state);
+    }
 }
 
 export class HandleException extends Expression {
@@ -190,6 +205,10 @@ export class HandleException extends Expression {
         res += ' handle ' + this.match.prettyPrint(indentation, oneLine);
         return res;
     }
+
+    compute(state: State): Value {
+        throw new InternalInterpreterError(-1, 'nyi\'an');
+    }
 }
 
 export class RaiseException extends Expression {
@@ -204,6 +223,10 @@ export class RaiseException extends Expression {
         // TODO
         return 'raise ' + this.expression.prettyPrint(indentation, oneLine);
     }
+
+    compute(state: State): Value {
+        throw new InternalInterpreterError(-1, 'nyi\'an');
+    }
 }
 
 export class Lambda extends Expression {
@@ -217,6 +240,10 @@ export class Lambda extends Expression {
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         return '( fn ' + this.match.prettyPrint(indentation, oneLine) + ' )';
+    }
+
+    compute(state: State): Value {
+        throw new InternalInterpreterError(-1, 'nyi\'an');
     }
 }
 
@@ -254,6 +281,10 @@ export class FunctionApplication extends Expression implements Pattern {
         res += ' ' + this.argument.prettyPrint(indentation, oneLine);
         return res;
     }
+
+    compute(state: State): Value {
+        throw new InternalInterpreterError(-1, 'nyi\'an');
+    }
 }
 
 export class Constant extends Expression implements Pattern {
@@ -266,17 +297,18 @@ export class Constant extends Expression implements Pattern {
 
     computeType(state: State): Type {
         if (this.token instanceof IntegerConstantToken || this.token instanceof NumericToken) {
-            return new PrimitiveType(PrimitiveTypes.int);
+            return new PrimitiveType('int');
         } else if (this.token instanceof RealConstantToken) {
-            return new PrimitiveType(PrimitiveTypes.real);
+            return new PrimitiveType('real');
         } else if (this.token instanceof WordConstantToken) {
-            return new PrimitiveType(PrimitiveTypes.word);
+            return new PrimitiveType('word');
         } else if (this.token instanceof CharacterConstantToken) {
-            return new PrimitiveType(PrimitiveTypes.char);
+            return new PrimitiveType('char');
         } else if (this.token instanceof StringConstantToken) {
-            return new PrimitiveType(PrimitiveTypes.string);
+            return new PrimitiveType('string');
         } else {
-            throw new InternalInterpreterError(this.token.position, 'invalid Constant ' + this.prettyPrint());
+            throw new InternalInterpreterError(this.token.position,
+                '"' + this.prettyPrint() + '" does not seem to be a valid constant.');
         }
     }
 
@@ -285,6 +317,21 @@ export class Constant extends Expression implements Pattern {
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         return this.token.getText();
+    }
+
+    compute(state: State): Value {
+        if (this.token instanceof IntegerConstantToken || this.token instanceof NumericToken) {
+            return new Integer((<IntegerConstantToken | NumericToken> this.token).value);
+        } else if (this.token instanceof RealConstantToken) {
+            return new Real((<RealConstantToken> this.token).value);
+        } else if (this.token instanceof WordConstantToken) {
+            return new Word((<WordConstantToken> this.token).value);
+        } else if (this.token instanceof CharacterConstantToken) {
+            return new CharValue((<CharacterConstantToken> this.token).value);
+        } else if (this.token instanceof StringConstantToken) {
+            return new StringValue((<StringConstantToken> this.token).value);
+        }
+        throw new InternalInterpreterError(this.token.position, 'You sure that this is a constant?');
     }
 }
 
@@ -302,6 +349,10 @@ export class ValueIdentifier extends Expression implements Pattern {
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
         return this.name.getText();
+    }
+
+    compute(state: State): Value {
+        throw new InternalInterpreterError(-1, 'nyi\'an');
     }
 }
 
@@ -368,6 +419,11 @@ export class Record extends Expression implements Pattern {
         }
         return result + '}';
     }
+
+    compute(state: State): Value {
+        // TODO
+        throw new InternalInterpreterError(-1, 'nyi\'an');
+    }
 }
 
 export class LocalDeclarationExpression extends Expression {
@@ -385,6 +441,12 @@ export class LocalDeclarationExpression extends Expression {
         res += ' in ' + this.expression.prettyPrint(indentation, oneLine) + ' end';
         return res;
     }
+
+    compute(state: State): Value {
+        let nstate = state.getNestedState();
+        this.declaration.evaluate(nstate);
+        return this.expression.compute(nstate);
+    }
 }
 
 export class InfixExpression extends Expression implements Pattern {
@@ -394,7 +456,7 @@ export class InfixExpression extends Expression implements Pattern {
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        return this.simplify().matches(state, v);
+        return this.reParse(state).matches(state, v);
     }
 
     simplify(): FunctionApplication {
@@ -409,8 +471,8 @@ export class InfixExpression extends Expression implements Pattern {
             poses.push([i]);
         }
         ops.sort(([a, p1], [b, p2]) => {
-            let sta = state.lookupInfixStatus(a.text);
-            let stb = state.lookupInfixStatus(b.text);
+            let sta = state.getInfixStatus(a);
+            let stb = state.getInfixStatus(b);
             if (sta.precedence > stb.precedence) {
                 return -1;
             }

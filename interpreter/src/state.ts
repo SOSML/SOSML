@@ -1,63 +1,81 @@
 // TODO This is still far from unfinished
-// TODO Add method for working properly with environments
-// TODO Add types
+// TODO set method for working properly with environments
+// TODO set types
 //
 // TODO Remove stuff not needed for our subset of SML
 
-import { FunctionType, PrimitiveType, PrimitiveTypes, TupleType, Type } from './types';
+import { Type } from './types';
 import { Value } from './values';
 import { Token, IdentifierToken, LongIdentifierToken } from './lexer';
 import { InternalInterpreterError } from './errors';
+import { _getInitialState } from './initialState';
 
 // ???
 export enum IdentifierStatus {
-    CONSTRUCTOR,
-    VALUE,
-    EXCEPTION
+    Constructor,    // Used for evaluating closed stuff, i.e. constructors
+    Predefined,     // Used for predefined functions that need to be evaluated differently
+    Exception,      // Used to construct exceptions which are different from Constructors
+    Value,          // Used for computed values
 }
 
-export class IdentifierInformation {
-    constructor(public type: Type,
-                public value: Value | undefined = undefined,
-                public identifierStatus: IdentifierStatus = IdentifierStatus.VALUE) {} // move to Value?
+export class ValueInformation {
+    constructor(public type: Type[],
+                public value: Value | undefined,
+                public identifierStatus: IdentifierStatus) { }
 }
 
-export class ConstructorInformation {
-    identifierStatus: IdentifierStatus = IdentifierStatus.CONSTRUCTOR; // move to Value?
+// maps identifiers to type, value, etc.
+type ValueEnvironment = { [name: string]: ValueInformation };
 
-    constructor(public type: Type, public args: Type[]) {}
+export class TypeInformation {
+    // Every constructor also appears in the value environment,
+    // thus it suffices to record their names here.
+    constructor(public type: Type, public constructors: string[]) { }
 }
 
-type TypeEnvironment = { [name: string]: ConstructorInformation }; // maps constructors to arguments and type
-type ValueEnvironment = { [name: string]: IdentifierInformation }; // maps identifiers to type, value, etc.
+// maps constructors to arguments and type
+type TypeEnvironment = { [name: string]: TypeInformation };
 
 export class Environment {
     // TODO structEnvironment
-    constructor(public /*private*/ structEnvironment: any, private typeEnvironment: TypeEnvironment,
+    constructor(public /*private*/ structEnvironment: any,
+                private typeEnvironment: TypeEnvironment,
                 private valueEnvironment: ValueEnvironment ) {
 
     }
 
-    // TODO: structures?
-    lookup(name: string): IdentifierInformation | ConstructorInformation | undefined {
-        if (this.typeEnvironment.hasOwnProperty(name)) {
-            return this.typeEnvironment[name];
+    getValue(name: string): ValueInformation | undefined {
+        return this.valueEnvironment[name];
+    }
+
+    setValue(name: string, type: Type, value: Value | undefined = undefined,
+             idStatus: IdentifierStatus = IdentifierStatus.Predefined) {
+        this.valueEnvironment[name]
+            = new ValueInformation([type], value, idStatus);
+    }
+
+    updateValue(name: string, value: Value,
+                idStatus: IdentifierStatus = IdentifierStatus.Predefined) {
+        if (this.valueEnvironment[name] !== undefined) {
+            this.valueEnvironment[name].value = value;
+            this.valueEnvironment[name].identifierStatus = idStatus;
         } else {
-            return this.valueEnvironment[name];
+            this.valueEnvironment[name] = new ValueInformation([], value, idStatus);
         }
     }
 
-    addValue(name: string, type: Type, value: Value | undefined = undefined) {
-        this.valueEnvironment[name] = new IdentifierInformation(type, value);
+    setType(name: string, type: Type, constructors: string[]) {
+        this.typeEnvironment[name] = new TypeInformation(type, constructors);
     }
 
-    addConstructor(name: string, type: Type, args: Type[]) {
-        this.typeEnvironment[name] = new ConstructorInformation(type, args);
+    getType(name: string): TypeInformation {
+        return this.typeEnvironment[name];
     }
 }
 
 
-type TypeNames = { [name: string]: Type };
+// Maps type name to (arity, allows Equality)
+type TypeNames = { [name: string]: [number, boolean] };
 
 export class InfixStatus {
     constructor(public infix: boolean, public precedence: number = 0, public rightAssociative: boolean = false) {}
@@ -75,37 +93,34 @@ export class State {
         return new State(this, {}, {}, {} , new Environment({}, {}, {}), {});
     }
 
-    // looks up values, constructors (and structures?)
-    lookupValue(name: string): IdentifierInformation | ConstructorInformation | undefined {
-        let result: IdentifierInformation | ConstructorInformation | undefined;
-        result = this.environment.lookup(name);
+    getValue(name: string): ValueInformation | undefined {
+        let result: ValueInformation | undefined;
+        result = this.environment.getValue(name);
         if (result !== undefined || !this.parent) {
             return result;
         } else {
-            return this.parent.lookupValue(name);
+            return this.parent.getValue(name);
         }
     }
 
-    addValue(name: string, type: Type, value: Value | undefined = undefined) {
-        this.environment.addValue(name, type, value);
-    }
-
-    addConstructor(name: string, type: Type, args: Type[]) {
-        this.environment.addConstructor(name, type, args);
-    }
-
-    lookupInfixStatus(name: string): InfixStatus {
-        if (this.infixEnvironment.hasOwnProperty(name) || !this.parent) {
-            return this.infixEnvironment[name];
+    getTypeInformation(name: string): TypeInformation | undefined {
+        let result: TypeInformation | undefined;
+        result = this.environment.getType(name);
+        if (result !== undefined || !this.parent) {
+            return result;
         } else {
-            return this.parent.lookupInfixStatus(name);
+            return this.parent.getTypeInformation(name);
         }
     }
 
-    getIdentifierInformation(id: Token): InfixStatus {
+    getInfixStatus(id: Token): InfixStatus {
         if (id instanceof IdentifierToken
             || id instanceof LongIdentifierToken ) {
-            return this.lookupInfixStatus(id.getText());
+            if (this.infixEnvironment.hasOwnProperty(id.getText()) || !this.parent) {
+                return this.infixEnvironment[id.getText()];
+            } else {
+                return this.parent.getInfixStatus(id);
+            }
         } else {
             throw new InternalInterpreterError(id.position,
                 'You gave me some "' + id.getText() + '" (' + id.constructor.name
@@ -113,93 +128,39 @@ export class State {
         }
     }
 
-    addIdentifierInformation(id: Token, precedence: number,
-                             rightAssociative: boolean, infix: boolean): void {
-        if (id instanceof IdentifierToken
-            || id instanceof LongIdentifierToken) {
-            this.addInfix(id.getText(), infix, precedence, rightAssociative);
-        }
-    }
-
-    addInfix(name: string, infix: boolean = true, precedence: number = 0, rightAssociative: boolean = false) {
-        this.infixEnvironment[name] = new InfixStatus(infix, precedence, rightAssociative);
-    }
-
-    lookupType(name: string): Type | undefined {
+    getPrimitiveType(name: string): [number, boolean] {
         if (this.typeNames.hasOwnProperty(name) || !this.parent) {
             return this.typeNames[name];
         } else {
-            return this.parent.lookupType(name);
+            return this.parent.getPrimitiveType(name);
         }
     }
 
-    addType(name: string, type: Type) {
-        this.typeNames[name] = type;
+    updateValue(name: string, value: Value,
+                idStatus: IdentifierStatus = IdentifierStatus.Predefined) {
+        this.environment.updateValue(name, value, idStatus);
+    }
+
+    setValue(name: string, type: Type,
+             value: Value | undefined = undefined,
+             idStatus: IdentifierStatus = IdentifierStatus.Predefined) {
+        this.environment.setValue(name, type, value, idStatus);
+    }
+
+    setTypeInformation(name: string, type: Type, constructors: string[]) {
+        this.environment.setType(name, type, constructors);
+    }
+
+    setInfixStatus(id: Token, precedence: number,
+                   rightAssociative: boolean, infix: boolean): void {
+        if (id instanceof IdentifierToken
+            || id instanceof LongIdentifierToken) {
+            this.infixEnvironment[id.getText()]
+                = new InfixStatus(infix, precedence, rightAssociative);
+        }
     }
 }
 
-
-// Initial static basis (see SML Definition, appendix C through E)
-// currently (very) incomplete
-
-let int = new PrimitiveType(PrimitiveTypes.int);
-let real = new PrimitiveType(PrimitiveTypes.real);
-// let word = new PrimitiveType(PrimitiveTypes.word);
-// let string = new PrimitiveType(PrimitiveTypes.string);
-// let char = new PrimitiveType(PrimitiveTypes.char);
-let bool = new PrimitiveType(PrimitiveTypes.bool);
-
-// TODO: overloading is not yet implemented. Change these types once it is.
-let wordInt = int;
-// let realInt = int;
-let num = int;
-let numTxt = int;
-
-let wordIntFunction = new FunctionType(new TupleType([wordInt, wordInt]), wordInt);
-let numFunction = new FunctionType(new TupleType([num, num]), num);
-let realFunction = new FunctionType(new TupleType([real, real]), real);
-let numTxtBoolFunction = new FunctionType(new TupleType([numTxt, numTxt]), bool);
-
-// TODO: very incomplet
-let initialState: State = new State(
-    undefined,
-    {},
-    undefined,
-    undefined,
-    new Environment(
-        undefined,
-        {},
-        {
-            'div': new IdentifierInformation(wordIntFunction),
-            'mod': new IdentifierInformation(wordIntFunction),
-            '*': new IdentifierInformation(numFunction),
-            '/': new IdentifierInformation(realFunction),
-
-            '+': new IdentifierInformation(numFunction),
-            '-': new IdentifierInformation(numFunction),
-
-            '<': new IdentifierInformation(numTxtBoolFunction),
-            '>': new IdentifierInformation(numTxtBoolFunction),
-            '<=': new IdentifierInformation(numTxtBoolFunction),
-            '>=': new IdentifierInformation(numTxtBoolFunction),
-        }
-    ),
-    {
-        'div': new InfixStatus(true, 7, false),
-        'mod': new InfixStatus(true, 7, false),
-        '*': new InfixStatus(true, 7, false),
-        '/': new InfixStatus(true, 7, false),
-
-        '+': new InfixStatus(true, 6, false),
-        '-': new InfixStatus(true, 6, false),
-
-        '<': new InfixStatus(true, 4, false),
-        '>': new InfixStatus(true, 4, false),
-        '<=': new InfixStatus(true, 4, false),
-        '>=': new InfixStatus(true, 4, false)
-    }
-);
-
-export function getInitialState(): State {
-    return initialState.getNestedState();
+export function getInitialState() {
+    return _getInitialState();
 }
