@@ -976,7 +976,6 @@ it("pattern row - wrong label", () => {
 
 it("pattern row - label as variable", () => {
     let patrow_as_label: string = "val {x:int as _} = 42;";
-    /*
     expect(parse(patrow_as_label)).toEqualWithType(pattern_tester(
         new Expr.Record(
             true,
@@ -985,7 +984,6 @@ it("pattern row - label as variable", () => {
         ),
         19
     ));
-    */
     let patrow_as_label1: string = "val {x as _} = 42;";
     let patrow_as_label2: string = "val {x:int} = 42;";
 
@@ -998,20 +996,26 @@ it("pattern - atomic", () => {
 
 it("pattern - constructed value", () => {
     let pattern_cons_val: string = "val x _ = 42;";
-    expect(parse(pattern_cons_val).toEqualWithType(pattern_tester(
+    expect(parse(pattern_cons_val)).toEqualWithType(pattern_tester(
         new Expr.FunctionApplication(4,
-            new Expr.AlphanumericIdentifierToken("x", 4),
+            new Expr.ValueIdentifier(
+                4,
+                new Lexer.AlphanumericIdentifierToken("x", 4),
+            ),
             new Expr.Wildcard(6))
-    , 10)))
+    , 10))
 
     let x: Lexer.AlphanumericIdentifierToken = new Lexer.AlphanumericIdentifierToken("x", 7);
     x.opPrefixed = true;
     let pattern_cons_val_with_op: string = "val op x _ = 42;";
-    expect(parse(pattern_cons_val).toEqualWithType(pattern_tester(
+    expect(parse(pattern_cons_val_with_op)).toEqualWithType(pattern_tester(
         new Expr.FunctionApplication(4,
-            x,
+            new Expr.ValueIdentifier(
+                7,
+                x
+            ),
             new Expr.Wildcard(9))
-    , 10)));
+    , 13));
 });
 
 it("pattern - constructed value (infix)", () => {
@@ -1033,7 +1037,7 @@ it("pattern - typed", () => {
         new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
         new Type.FunctionType(
             new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 8), [], 8),
-        new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 15), [], 15), 8))
+        new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 15), [], 15), 12))
     , 21));
 
     let double_typed: string = "val x:int:int = 42;";
@@ -1050,11 +1054,11 @@ it("pattern - typed", () => {
     , 16))
 
     let list_typed: string = "val []:int = 42;"
-    expect(parse(double_typed)).toEqualWithType(pattern_tester(
+    expect(parse(list_typed)).toEqualWithType(pattern_tester(
         new Expr.TypedExpression(
             4,
             new Expr.List(4, []),
-            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 4))
+            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 7), [], 7)
         )
     , 13));
 
