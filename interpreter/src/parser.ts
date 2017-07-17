@@ -1186,7 +1186,7 @@ export class Parser {
          *         fun tyvarseq fvalbind                FunctionDeclaration(pos, tyvarseq, FunctionValueBinding[])
          *         type typbind                         TypeDeclaration(pos, TypeBinding[])
          *         datatype datbind [withtype typbind]  DatatypeDeclaration(pos, DTBind[], TypeBind[]|undefined)
-         *         datatype tycon -=- datatype ltycon   DatatypeReplication(pos, IdentifierToken, oldname: Token)
+         *         datatype tycon = datatype ltycon   DatatypeReplication(pos, IdentifierToken, oldname: Token)
          *         abstype datbind [withtype typbind]
          *              with dec end                    AbstypeDeclaration(pos, DTBind[], TypeBing[]|undef, Decl)
          *         exception exbind                     ExceptionDeclaration(pos, ExceptionBinding[])
@@ -1239,8 +1239,7 @@ export class Parser {
             return new TypeDeclaration(curTok.position, this.parseTypeBindingSeq());
         } else if (this.checkKeywordToken(curTok, 'datatype')) {
             if (this.position + 2 < this.tokens.length &&
-                this.tokens[this.position + 2] instanceof IdentifierToken &&
-                this.tokens[this.position + 2].text === '-=-') {
+                this.checkKeywordToken(this.tokens[this.position + 2], '=')) {
                 ++this.position;
                 let nw = this.currentToken();
                 this.assertIdentifierToken(nw);
@@ -1326,6 +1325,7 @@ export class Parser {
             let precedence = 0;
             if (this.currentToken() instanceof IntegerConstantToken) {
                 precedence = (<IntegerConstantToken> this.currentToken()).value;
+                ++this.position;
             }
             let res: IdentifierToken[] = [];
             while (this.currentToken() instanceof IdentifierToken) {
