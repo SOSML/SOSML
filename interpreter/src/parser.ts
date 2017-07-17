@@ -683,24 +683,29 @@ export class Parser {
             ++this.position;
             try {
                 // Check whether layered pattern
-                if (!isLong) {
-                    let newTok = this.currentToken();
-                    let tp: Type | undefined;
-                    if (this.checkKeywordToken(newTok, ':')) {
+                let newOldPos = this.position;
+                try {
+                    if (!isLong) {
+                        let newTok = this.currentToken();
+                        let tp: Type | undefined;
+                        if (this.checkKeywordToken(newTok, ':')) {
+                            ++this.position;
+                            tp = this.parseType();
+                            newTok = this.currentToken();
+                        }
+                        this.assertKeywordToken(newTok, 'as');
                         ++this.position;
-                        tp = this.parseType();
-                        newTok = this.currentToken();
+                        return new LayeredPattern(curTok.position, name, tp, this.parsePattern());
                     }
-                    this.assertKeywordToken(newTok, 'as');
-                    ++this.position;
-                    return new LayeredPattern(curTok.position, name, tp, this.parsePattern());
+                } catch (f) {
+                    this.position = newOldPos;
                 }
 
                 // Try if it is a FunctionApplication instead
                 return new FunctionApplication(curTok.position,
                                                new ValueIdentifier(name.position, name),
                                                this.parseAtomicPattern());
-            } catch (ParserError) {
+            } catch (e) {
                 // It seems we were wrong, so try the other possibilities instead
                 this.position = oldPos;
             }
@@ -708,10 +713,11 @@ export class Parser {
 
         let res = this.parseAtomicPattern();
         nextTok = this.currentToken();
-        if (this.checkKeywordToken(nextTok, ':')) {
+        while (this.checkKeywordToken(nextTok, ':')) {
             ++this.position;
             let tp = this.parseType();
-            return new TypedExpression(curTok.position, res, tp);
+            res = new TypedExpression(curTok.position, res, tp);
+            nextTok = this.currentToken();
         }
         return res;
     }
