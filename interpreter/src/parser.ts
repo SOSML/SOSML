@@ -202,7 +202,6 @@ export class Parser {
             this.state = this.state.getNestedState();
 
             let dec = this.parseDeclaration();
-            --this.position;
             this.assertKeywordToken(this.currentToken(), 'in');
             ++this.position;
             let res: Expression[] = [this.parseExpression()];
@@ -1170,7 +1169,12 @@ export class Parser {
         while (this.position < this.tokens.length) {
             let cur = this.parseSimpleDeclaration();
             if (cur instanceof EmptyDeclaration) {
-                break;
+                if (this.position >= this.tokens.length
+                    || this.checkKeywordToken(this.currentToken(), 'in')
+                    || this.checkKeywordToken(this.currentToken(), 'end')) {
+                    break;
+                }
+                continue;
             }
             res.push(cur);
             if (this.checkKeywordToken(this.currentToken(), ';')) {
@@ -1382,9 +1386,11 @@ export class Parser {
             return new NonfixDeclaration(curTok.position, res);
         }
 
-        if (this.checkKeywordToken(curTok, ';')
-            || this.checkKeywordToken(curTok, 'in')) {
+        if (this.checkKeywordToken(curTok, ';')) {
             ++this.position;
+            return new EmptyDeclaration();
+        } else if (this.checkKeywordToken(curTok, 'in')
+                || this.checkKeywordToken(curTok, 'end')) {
             return new EmptyDeclaration();
         }
 
