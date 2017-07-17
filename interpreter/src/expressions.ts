@@ -3,7 +3,7 @@ import {
     Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConstantToken, NumericToken,
     WordConstantToken, CharacterConstantToken, StringConstantToken
 } from './lexer';
-import { Declaration } from './declarations';
+import { Declaration, ValueBinding, ValueDeclaration } from './declarations';
 import { State } from './state';
 import { InternalInterpreterError, Position, SemanticError } from './errors';
 import { Value } from './values';
@@ -186,8 +186,8 @@ export class HandleException extends Expression {
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
-        let res = '( ' + this.expression.prettyPrint(indentation, oneLine) + ' )';
-        res += ' handle ' + this.match.prettyPrint(indentation, oneLine);
+        let res = '( ( ' + this.expression.prettyPrint(indentation, oneLine) + ' )';
+        res += ' handle ' + this.match.prettyPrint(indentation, oneLine) + ' )';
         return res;
     }
 }
@@ -642,5 +642,32 @@ export class Conditional extends Expression {
         res += ' then ' + this.consequence.prettyPrint(indentation, oneLine);
         res += ' else ' + this.alternative.prettyPrint(indentation, oneLine);
         return res;
+    }
+}
+
+export class While extends Expression {
+// while exp do exp
+    constructor(public position: Position, public condition: Expression,
+                public body: Expression) {
+        super();
+    }
+
+    simplify(): Expression {
+        let nm = new ValueIdentifier(this.position, new IdentifierToken('__whl', this.position));
+        let fapp = new FunctionApplication(this.position, nm, new Tuple(this.position, []));
+        let cond = new Conditional(this.position, this.condition,
+            new Sequence(this.position, [this.body, fapp]), new Tuple(this.position, []));
+        let valbnd = new ValueBinding(this.position, true, nm,
+            new Lambda(this.position, new Match(this.position,
+                [[new Tuple(this.position, []), cond]])));
+        let dec = new ValueDeclaration(this.position, [], [valbnd]);
+
+        return new LocalDeclarationExpression(this.position, dec, fapp).simplify();
+    }
+
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+        // TODO
+        return '( while ' + this.condition.prettyPrint(indentation, oneLine)
+            + ' do ' + this.body.prettyPrint(indentation, oneLine) + ' )';
     }
 }

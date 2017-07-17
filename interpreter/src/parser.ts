@@ -2,8 +2,7 @@ import { Expression, Tuple, Constant, ValueIdentifier, Wildcard,
          LayeredPattern, FunctionApplication, TypedExpression, Record, List,
          Sequence, RecordSelector, Lambda, Conjunction, LocalDeclarationExpression,
          Disjunction, Conditional, CaseAnalysis, RaiseException,
-         HandleException, Match, InfixExpression, PatternExpression
-} from './expressions';
+         HandleException, Match, InfixExpression, PatternExpression, While } from './expressions';
 import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } from './types';
 import { InterpreterError, InternalInterpreterError, IncompleteError, Position } from './errors';
 import { Token, KeywordToken, IdentifierToken, ConstantToken,
@@ -350,6 +349,8 @@ export class Parser {
          *          KeywordToken exp KeywordToken exp KeywordToken exp
          *         case exp of match                CaseAnalysis(pos, exp, match)
          *          KeywordToken exp KeywordToken match
+         *         while exp do exp                 While(pos, exp, exp)
+         *          KeywordToken exp KeywordToken exp
          *         fn match                         Lambda(position, match)
          *          KeywordToken match
          */
@@ -373,6 +374,12 @@ export class Parser {
             this.assertKeywordToken(this.currentToken(), 'of');
             ++this.position;
             return new CaseAnalysis(curTok.position, cond, this.parseMatch());
+        } else if (this.checkKeywordToken(curTok, 'while')) {
+            ++this.position;
+            let cond = this.parseExpression();
+            this.assertKeywordToken(this.currentToken(), 'do');
+            ++this.position;
+            return new While(curTok.position, cond, this.parseExpression());
         } else if (this.checkKeywordToken(curTok, 'fn')) {
             ++this.position;
             return new Lambda(curTok.position, this.parseMatch());
