@@ -387,12 +387,10 @@ export class Parser {
 
         let exp = this.parseInfixExpression();
         let nextTok = this.currentToken();
-        if (this.checkKeywordToken(nextTok, ':')) {
+        while (this.checkKeywordToken(nextTok, ':')) {
             ++this.position;
-            return new TypedExpression(curTok.position, exp, this.parseType());
-        } else if (this.checkKeywordToken(nextTok, 'handle')) {
-            ++this.position;
-            return new HandleException(curTok.position, exp, this.parseMatch());
+            exp = new TypedExpression(curTok.position, exp, this.parseType());
+            nextTok = this.currentToken();
         }
         return exp;
     }
@@ -406,6 +404,7 @@ export class Parser {
          */
         let exp = this.parseAppendedExpression();
         let nextTok = this.currentToken();
+        let curTok = nextTok;
         if (this.checkKeywordToken(nextTok, 'andalso')
             || this.checkKeywordToken(nextTok, 'orelse') ) {
             let exps: [Expression, number[]][] = [[exp, [0]]];
@@ -448,8 +447,15 @@ export class Parser {
                     exps[j] = [res, npos];
                 }
             }
-            return exps[0][0];
+            exp = exps[0][0];
         }
+        nextTok = this.currentToken();
+        while (this.checkKeywordToken(nextTok, 'handle')) {
+            ++this.position;
+            exp = new HandleException(curTok.position, exp, this.parseMatch());
+            nextTok = this.currentToken();
+        }
+
         return exp;
     }
 
