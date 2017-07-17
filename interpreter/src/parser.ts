@@ -1160,14 +1160,14 @@ export class Parser {
         return res;
     }
 
-    parseDeclaration(): Declaration {
+    parseDeclaration(topLevel: boolean = false): Declaration {
         /*
          * dec ::= dec [;] dec                          SequentialDeclaration(pos, Declaration[])
          */
         let res: Declaration[] = [];
         let curTok = this.currentToken();
         while (this.position < this.tokens.length) {
-            let cur = this.parseSimpleDeclaration();
+            let cur = this.parseSimpleDeclaration(topLevel);
             if (cur instanceof EmptyDeclaration) {
                 if (this.position >= this.tokens.length
                     || this.checkKeywordToken(this.currentToken(), 'in')
@@ -1184,7 +1184,7 @@ export class Parser {
         return new SequentialDeclaration(curTok.position, res);
     }
 
-    parseSimpleDeclaration(): Declaration {
+    parseSimpleDeclaration(topLevel: boolean = false): Declaration {
         /*
          * dec ::= val tyvarseq valbind                 ValueDeclaration(pos, tyvarseq, ValueBinding[])
          *         fun tyvarseq fvalbind                FunctionDeclaration(pos, tyvarseq, FunctionValueBinding[])
@@ -1394,11 +1394,14 @@ export class Parser {
             return new EmptyDeclaration();
         }
 
-        let exp = this.parseExpression();
-        let valbnd = new ValueBinding(curTok.position, false,
-            new ValueIdentifier(-1, new AlphanumericIdentifierToken('it', -1)), exp);
-        this.assertKeywordToken(this.currentToken(), ';');
-        return new ValueDeclaration(curTok.position, [], [valbnd]);
+        if (topLevel) {
+            let exp = this.parseExpression();
+            let valbnd = new ValueBinding(curTok.position, false,
+                new ValueIdentifier(-1, new AlphanumericIdentifierToken('it', -1)), exp);
+            this.assertKeywordToken(this.currentToken(), ';');
+            return new ValueDeclaration(curTok.position, [], [valbnd]);
+        }
+        throw new ParserError('Expected a declaration.', curTok.position);
     }
 
     private currentToken(): Token {
@@ -1411,5 +1414,5 @@ export class Parser {
 
 export function parse(tokens: Token[], state: State): Declaration {
     let p: Parser = new Parser(tokens, state);
-    return p.parseDeclaration();
+    return p.parseDeclaration(true);
 }
