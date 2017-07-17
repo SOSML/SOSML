@@ -1238,8 +1238,8 @@ export class Parser {
             ++this.position;
             return new TypeDeclaration(curTok.position, this.parseTypeBindingSeq());
         } else if (this.checkKeywordToken(curTok, 'datatype')) {
-            if (this.position + 2 < this.tokens.length &&
-                this.checkKeywordToken(this.tokens[this.position + 2], '=')) {
+            if (this.position + 3 < this.tokens.length &&
+                this.checkKeywordToken(this.tokens[this.position + 3], 'datatype')) {
                 ++this.position;
                 let nw = this.currentToken();
                 this.assertIdentifierToken(nw);
