@@ -1914,6 +1914,13 @@ it("pattern row - pattern row", () => {
     expect(parse(patrow_label4)).toEqualWithType(pattern_tester(
         new Expr.Record(6, true, [["##", new Expr.Wildcard(11)]])
     , 17));
+    let patrow_label5: string = "val { ## = x } = 42;";
+    expect(parse(patrow_label5)).toEqualWithType(pattern_tester(
+        new Expr.Record(6, true, [[
+            "##",
+            new Expr.ValueIdentifier(11, new Lexer.AlphanumericIdentifierToken("x", 11))
+        ]])
+    , 17));
 });
 
 it("pattern row - wrong label", () => {
@@ -1933,9 +1940,9 @@ it("pattern row - label as variable", () => {
     let patrow_as_label: string = "val {x:int as _} = 42;";
     expect(parse(patrow_as_label)).toEqualWithType(pattern_tester(
         new Expr.Record(
+            5,
             true,
-            [],
-            4
+            [["x", new Expr.TypedExpression(5, new Expr.Wildcard(14), new Type.CustomType(new Lexer.AlphanumericIdentifierToken("int", 7), [], 7)) ]]
         ),
         19
     ));
