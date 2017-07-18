@@ -13,6 +13,8 @@ export abstract class Value {
         throw new InternalInterpreterError(-1,
             'Tried comparing incomparable things.');
     }
+
+
 }
 
 export class BoolValue extends Value {

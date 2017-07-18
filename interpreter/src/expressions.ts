@@ -9,15 +9,9 @@ import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
          ExceptionValue } from './values';
 
-
 export abstract class Expression {
     type: Type | undefined;
     position: Position;
-
-    // It is not necessary to call checkStaticSemantics on Expressions. getType may be called instead.
-    checkStaticSemantics(state: State): void {
-        this.getType(state);
-    }
 
     getType(state: State): Type {
         if (!this.type) {
@@ -30,7 +24,7 @@ export abstract class Expression {
         throw new InternalInterpreterError(this.position, 'Called "computeType" on derived form.');
     }
 
-    // Computes an expression, returns [computed value, is thrown exception]
+    // Computes the value of an expression, returns [computed value, is thrown exception]
     compute(state: State): [Value, boolean] {
         throw new InternalInterpreterError(this.position, 'Called "getValue" on derived form.');
     }
@@ -112,10 +106,6 @@ export class Match {
     returnType: Type;
 
     constructor(public position: Position, public matches: [PatternExpression, Expression][]) { }
-
-    checkStaticSemantics(state: State) {
-        // TODO
-    }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
@@ -321,8 +311,11 @@ export class Constant extends Expression implements Pattern {
     constructor(public position: Position, public token: ConstantToken) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'not yet implemented');
+        if (this.compute(state)[0].equals(v)) {
+            return [];
+        } else {
+            return undefined;
+        }
     }
 
     computeType(state: State): Type {
@@ -370,8 +363,14 @@ export class ValueIdentifier extends Expression implements Pattern {
     constructor(public position: Position, public name: Token) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
+        /* if (state.getValue(this.name.getText()) !== undefined
+            && state.getValue(this.name.getText()).value !== undefined
+            && state.getValue(this.name.getText()).value.equals(v)) {
+            return [];
+        }
+        return [[this.name.getText(), v]];*/
         // TODO
-        throw new InternalInterpreterError(this.position, 'not yet implemented');
+        throw new InternalInterpreterError(-1, 'nyi\'an');
     }
 
     simplify(): ValueIdentifier { return this; }
@@ -394,7 +393,7 @@ export class ValueIdentifier extends Expression implements Pattern {
 
 export class Record extends Expression implements Pattern {
 // { lab = exp, ... } or { }
-    // a record(pattern) is incomplete if it ends with '...'
+// a record(pattern) is incomplete if it ends with '...'
     constructor(public position: Position, public complete: boolean,
                 public entries: [string, Expression][]) {
         super();
@@ -472,7 +471,8 @@ export class Record extends Expression implements Pattern {
 
 export class LocalDeclarationExpression extends Expression {
 // let dec in exp1; ...; expn end
-// A sequential expression exp1; ... ; expn is represented as such, despite the potentially missing parentheses
+// A sequential expression exp1; ... ; expn is represented as such,
+// despite the potentially missing parentheses
     constructor(public position: Position, public declaration: Declaration, public expression: Expression) { super(); }
 
     simplify(): LocalDeclarationExpression {
@@ -493,8 +493,8 @@ export class LocalDeclarationExpression extends Expression {
     }
 }
 
-// The following classes are derived forms. They will not be present in the simplified AST and do not implement
-// checkSemantics/getType
+// The following classes are derived forms.
+// They will not be present in the simplified AST and do not implement checkSemantics/getType
 
 export class InfixExpression extends Expression implements Pattern {
     // operators: (op, idx), to simplify simplify
