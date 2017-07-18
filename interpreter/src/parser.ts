@@ -1334,11 +1334,15 @@ export class Parser {
             ++this.position;
             let precedence = 0;
             if (this.currentToken() instanceof IntegerConstantToken) {
+                if (this.currentToken().text.length !== 1) {
+                    throw new ParserError('Precedences may only be single digits.',
+                        this.currentToken().position);
+                }
                 precedence = (<IntegerConstantToken> this.currentToken()).value;
                 ++this.position;
             }
             let res: IdentifierToken[] = [];
-            while (this.currentToken() instanceof IdentifierToken) {
+            while (this.currentToken().allowsInfix()) {
                 res.push(<IdentifierToken> this.currentToken());
 
                 this.state.addIdentifierInformation(
@@ -1356,10 +1360,15 @@ export class Parser {
             ++this.position;
             let precedence = 0;
             if (this.currentToken() instanceof IntegerConstantToken) {
+                if (this.currentToken().text.length !== 1) {
+                    throw new ParserError('Precedences may only be single digits.',
+                        this.currentToken().position);
+                }
                 precedence = (<IntegerConstantToken> this.currentToken()).value;
+                ++this.position;
             }
             let res: IdentifierToken[] = [];
-            while (this.currentToken() instanceof IdentifierToken) {
+            while (this.currentToken().allowsInfix()) {
                 res.push(<IdentifierToken> this.currentToken());
 
                 this.state.addIdentifierInformation(
@@ -1376,7 +1385,7 @@ export class Parser {
         } else if (this.checkKeywordToken(curTok, 'nonfix')) {
             ++this.position;
             let res: IdentifierToken[] = [];
-            while (this.currentToken() instanceof IdentifierToken) {
+            while (this.currentToken().allowsInfix()) {
                 res.push(<IdentifierToken> this.currentToken());
 
                 this.state.addIdentifierInformation(
