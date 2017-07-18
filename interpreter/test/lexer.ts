@@ -682,6 +682,7 @@ it('identifiers', () => {
     let testcase_triple_prime: string = '\'\'\'';
     let testcase_spacing: string = ' test identifier';
     let testcase_mixed: string = 'test!identifier';
+    let testcase_underscore: string = '__hi';
 
     expect(Lexer.lex(testcase_empty)).toEqualWithType([]);
     expect(Lexer.lex(testcase_alphanum)).toEqualWithType([
@@ -709,10 +710,10 @@ it('identifiers', () => {
         new Lexer.AlphanumericIdentifierToken('test', 1, 'test'),
         new Lexer.AlphanumericIdentifierToken('identifier', 6, 'identifier')
     ]);
-    expect(Lexer.lex(testcase_mixed)).toEqualWithType([
-        new Lexer.AlphanumericIdentifierToken('test', 0, 'test'),
-        new Lexer.IdentifierToken('!', 4, '!'),
-        new Lexer.AlphanumericIdentifierToken('identifier', 5, 'identifier')
+    expect(Lexer.lex(testcase_underscore)).toEqualWithType([
+        new Lexer.KeywordToken('_', 0)
+        new Lexer.KeywordToken('_', 1)
+        new Lexer.AlphanumericIdentifierToken('hi', 2, 'hi')
     ]);
 });
 
