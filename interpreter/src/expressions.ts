@@ -7,6 +7,7 @@ import { Declaration, ValueBinding, ValueDeclaration } from './declarations';
 import { State } from './state';
 import { InternalInterpreterError, Position, SemanticError } from './errors';
 import { Value } from './values';
+import { ParserError } from './parser';
 
 
 export abstract class Expression {
@@ -435,8 +436,18 @@ export class InfixExpression extends Expression implements Pattern {
             return 0;
         });
 
+        let isRight = false;
+        let isLeft = false;
         // Using copy by reference to make this work whithout shrinking the array
         for (let i = 0; i < ops.length; ++i) {
+            let ass = state.lookupInfixStatus(ops[i][0].getText()).rightAssociative;
+            if ((isRight && !ass) || (isLeft && ass)) {
+                throw new ParserError('Could you ever imagine left associatives and'
+                    + ' right associatives living together in peace?', ops[i][0].position);
+            }
+            isRight = ass;
+            isLeft = !ass;
+
             let left = exps[ops[i][1]];
             let right = exps[ops[i][1] + 1];
             let com = new FunctionApplication(ops[i][0].position,
