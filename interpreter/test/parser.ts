@@ -1755,15 +1755,20 @@ it("value bindings - non recursive", () => {
 });
 
 it("value bindings - recursive", () => {
-    let testcase_single: string = 'val rec _ = 42;';
-    let testcase_multirec: string = 'val rec rec rec _ = 42;';
-    let testcase_multiple: string = 'val _ = 42 and rec f = ' + sampleExpression1 + ' and g = ' + sampleExpression2 + ';';
+    let testcase_single: string = 'val rec _ = fn _ => 42;';
+    let testcase_multirec: string = 'val rec rec rec _ = fn _ => 42;';
+    let testcase_multiple: string = 'val f = fn _ => 42 and rec f = fn _ => ' + sampleExpression1 + ' and g = fn _ => ' + sampleExpression2 + ';';
+    let testcase_no_lambda: string = 'val rec _ = 42;';
     expect(parse(testcase_single)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.ValueDeclaration(0, [], [
                 new Decl.ValueBinding(4, true,
                     new Expr.Wildcard(8),
-                    get42(12)
+                    new Expr.Lambda(12,
+                        new Expr.Match(15, [
+                            [new Expr.Wildcard(15), get42(20)]
+                        ])
+                    )
                 )
             ])
         ])
@@ -1773,7 +1778,11 @@ it("value bindings - recursive", () => {
             new Decl.ValueDeclaration(0, [], [
                 new Decl.ValueBinding(4, true,
                     new Expr.Wildcard(16),
-                    get42(20)
+                    new Expr.Lambda(20,
+                        new Expr.Match(23, [
+                            [new Expr.Wildcard(23), get42(28)]
+                        ])
+                    )
                 )
             ])
         ])
@@ -1783,23 +1792,36 @@ it("value bindings - recursive", () => {
             new Decl.ValueDeclaration(0, [], [
                 new Decl.ValueBinding(4, false,
                     new Expr.Wildcard(4),
-                    get42(8)
-                )
-                new Decl.ValueBinding(15, true,
-                    new Expr.ValueIdentifier(19,
-                        new Lexer.AlphanumericIdentifierToken('f', 19)
+                    new Expr.Lambda(8,
+                        new Expr.Match(11, [
+                            [new Expr.Wildcard(11), get42(16)]
+                        ])
                     )
-                    createSampleExpression1(23)
                 )
-                new Decl.ValueBinding(46, true,
-                    new Expr.ValueIdentifier(46,
-                        new Lexer.AlphanumericIdentifierToken('g', 46)
+                new Decl.ValueBinding(23, true,
+                    new Expr.ValueIdentifier(27,
+                        new Lexer.AlphanumericIdentifierToken('f', 27)
                     )
-                    createSampleExpression2(50)
+                    new Expr.Lambda(31,
+                        new Expr.Match(34, [
+                            [new Expr.Wildcard(34), createSampleExpression1(39)]
+                        ])
+                    )
+                )
+                new Decl.ValueBinding(62, true,
+                    new Expr.ValueIdentifier(62,
+                        new Lexer.AlphanumericIdentifierToken('g', 62)
+                    )
+                    new Expr.Lambda(66,
+                        new Expr.Match(69, [
+                            [new Expr.Wildcard(69), createSampleExpression2(74)]
+                        ])
+                    )
                 )
             ])
         ])
     );
+    expect(() => {parse(testcase_no_lambda);}).toThrow(Parser.ParserError);
 });
 
 it("function value bindings", () => {
