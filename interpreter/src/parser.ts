@@ -1342,7 +1342,7 @@ export class Parser {
                 ++this.position;
             }
             let res: IdentifierToken[] = [];
-            while (this.currentToken().allowsInfix()) {
+            while (this.currentToken().isVid()) {
                 res.push(<IdentifierToken> this.currentToken());
 
                 this.state.addIdentifierInformation(
@@ -1368,7 +1368,7 @@ export class Parser {
                 ++this.position;
             }
             let res: IdentifierToken[] = [];
-            while (this.currentToken().allowsInfix()) {
+            while (this.currentToken().isVid()) {
                 res.push(<IdentifierToken> this.currentToken());
 
                 this.state.addIdentifierInformation(
@@ -1385,7 +1385,7 @@ export class Parser {
         } else if (this.checkKeywordToken(curTok, 'nonfix')) {
             ++this.position;
             let res: IdentifierToken[] = [];
-            while (this.currentToken().allowsInfix()) {
+            while (this.currentToken().isVid()) {
                 res.push(<IdentifierToken> this.currentToken());
 
                 this.state.addIdentifierInformation(
