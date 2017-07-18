@@ -627,7 +627,7 @@ export class Parser {
                     ++this.position;
                 } else if (this.checkKeywordToken(nextCurTok, ')')) {
                     ++this.position;
-                    if (length === 1) {
+                    if (results.length === 1) {
                         return results[0];
                     } else {
                         return new Tuple(curTok.position, results);
