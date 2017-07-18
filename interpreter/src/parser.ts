@@ -1334,6 +1334,10 @@ export class Parser {
             ++this.position;
             let precedence = 0;
             if (this.currentToken() instanceof IntegerConstantToken) {
+                if (this.currentToken().text.length !== 1) {
+                    throw new ParserError('Precedences may only be single digits.',
+                        this.currentToken().position);
+                }
                 precedence = (<IntegerConstantToken> this.currentToken()).value;
                 ++this.position;
             }
@@ -1356,7 +1360,12 @@ export class Parser {
             ++this.position;
             let precedence = 0;
             if (this.currentToken() instanceof IntegerConstantToken) {
+                if (this.currentToken().text.length !== 1) {
+                    throw new ParserError('Precedences may only be single digits.',
+                        this.currentToken().position);
+                }
                 precedence = (<IntegerConstantToken> this.currentToken()).value;
+                ++this.position;
             }
             let res: IdentifierToken[] = [];
             while (this.currentToken().allowsInfix()) {
