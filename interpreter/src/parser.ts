@@ -1233,6 +1233,15 @@ export class Parser {
                 let curbnd = this.parseValueBinding();
                 if (curbnd.isRecursive) {
                     isRec = true;
+                    if (!(curbnd.expression instanceof Lambda)) {
+                        throw new ParserError('Using "rec" requires binding a lambda.',
+                            curbnd.position);
+                    }
+                    if (!(curbnd.pattern instanceof ValueIdentifier)) {
+                        throw new ParserError('Using "rec" requires binding to a single identifier'
+                            + ' and not "' + curbnd.pattern.prettyPrint(0, true) + '".',
+                            curbnd.position);
+                    }
                 }
                 curbnd.isRecursive = isRec;
                 valbinds.push(curbnd);
