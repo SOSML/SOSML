@@ -6,13 +6,40 @@ require('codemirror/mode/mllike/mllike.js');
 require('codemirror/addon/edit/matchbrackets.js');
 import './CodeMirrorWrapper.css';
 
+class CodeMirrorSubset {
+    cm: any;
+
+    constructor(cm: any) {
+        this.cm = cm;
+    }
+
+    getCode(pos: any): string {
+        return this.cm.getRange(pos, {'line': this.cm.lineCount() + 1, 'ch' : 0}, '\n');
+    }
+
+    markText(from: any, to: any, style: string) {
+        return this.cm.markText(from, to, {
+            className: style
+        });
+    }
+}
+
 class IncrementalInterpretationHelper {
     semicoli: any[];
     states: any[];
+    markers: any[];
+    output: any[];
+    debounceTimeout: any;
+    debounceMinimumPosition: any;
+    debounceCallNecessary: boolean;
 
     constructor() {
         this.semicoli = [];
         this.states = [];
+        this.markers = [];
+        this.output = [];
+
+        this.debounceCallNecessary = false;
     }
 
     clear() {
@@ -20,7 +47,8 @@ class IncrementalInterpretationHelper {
         this.states.length = 0;
     }
 
-    handleChangeAt(pos: any, added: string[], removed: string[], codeProvider: (pos: any) => string) {
+    handleChangeAt(pos: any, added: string[], removed: string[], codemirror: CodeMirrorSubset) {
+        /*
         if (!this.isHandlingNecessary(pos, added, removed)) {
             // console.log('NO');
             return;
@@ -35,20 +63,63 @@ class IncrementalInterpretationHelper {
         } else {
             basePos = {line: 0, ch: 0};
         }
-        let remainingText = codeProvider(basePos);
+        let remainingText = codemirror.getCode(basePos);
         if (baseIndex !== -1) {
             remainingText = remainingText.substr(1);
             basePos.ch = basePos.ch + 1;
         }
-        this.reEvaluateFrom(basePos, baseIndex, anchor, remainingText);
+        this.reEvaluateFrom(basePos, baseIndex, anchor, remainingText, codemirror);
+        */
+        this.doDebounce(pos, added, removed, codemirror);
+    }
+
+    private doDebounce(pos: any, added: string[], removed: string[], codemirror: CodeMirrorSubset) {
+        clearTimeout(this.debounceTimeout);
+        if (!this.debounceCallNecessary) {
+            if (!this.isHandlingNecessary(pos, added, removed)) {
+                return;
+            } else {
+                this.debounceCallNecessary = true;
+            }
+        }
+        if (!this.debounceMinimumPosition || this.compare(pos, this.debounceMinimumPosition) === -1) {
+            this.debounceMinimumPosition = pos;
+        }
+        this.debounceTimeout = setTimeout(() => {
+            this.debounceTimeout = null;
+            this.debounceCallNecessary = false;
+            let minPos = this.debounceMinimumPosition;
+            this.debounceMinimumPosition = null;
+            this.debouncedHandleChangeAt(minPos, codemirror);
+        }, 400);
+    }
+
+    private debouncedHandleChangeAt(pos: any, codemirror: CodeMirrorSubset) {
+        let anchor = this.binarySearch(pos);
+        this.deleteAllAfter(anchor);
+        let baseIndex = this.findBaseIndex(anchor);
+        let basePos: any;
+        if (baseIndex !== -1) {
+            basePos = this.copyPos(this.semicoli[baseIndex]);
+        } else {
+            basePos = {line: 0, ch: 0};
+        }
+        let remainingText = codemirror.getCode(basePos);
+        if (baseIndex !== -1) {
+            remainingText = remainingText.substr(1);
+            basePos.ch = basePos.ch + 1;
+        }
+        this.reEvaluateFrom(basePos, baseIndex, anchor, remainingText, codemirror);
     }
 
     private copyPos(pos: any): any {
         return {line: pos.line, ch: pos.ch};
     }
 
-    private reEvaluateFrom(basePos: any, baseIndex: number, anchor: number, remainingText: string) {
+    private reEvaluateFrom(basePos: any, baseIndex: number, anchor: number, remainingText: string,
+                           codemirror: CodeMirrorSubset) {
         let splitByLine: string[] = remainingText.split('\n');
+        let lastPos = basePos;
         // console.log(remainingText);
         let partial = '';
         let previousState = (baseIndex === -1) ? null : this.states[baseIndex];
@@ -70,13 +141,15 @@ class IncrementalInterpretationHelper {
 
                     // TODO: eval
                     let newState = {'partial': partial, 'prev': previousState};
+                    let semiPos = {line: (basePos.line + i), ch: sc + lineOffset};
                     if (partial.indexOf('NOPE') !== -1 && partial.indexOf(';') === -1) {
                         // Simulate failure
-                        this.addSemicolon({line: (basePos.line + i), ch: sc + lineOffset}, null);
+                        this.addSemicolon(semiPos, null, null);
                         partial += ';';
                     } else {
 
-                        this.addSemicolon({line: (basePos.line + i), ch: sc + lineOffset}, newState);
+                        this.addSemicolon(semiPos, newState, codemirror.markText(lastPos, semiPos, 'eval-success'));
+                        lastPos = semiPos;
                         previousState = newState;
 
                         partial = ''; // ONLY do this if the evaluation was successfull, else append ';' to partial
@@ -92,9 +165,11 @@ class IncrementalInterpretationHelper {
         // console.log(this);
     }
 
-    private addSemicolon(pos: any, newState: any) {
+    private addSemicolon(pos: any, newState: any, marker: any) {
         this.semicoli.push(pos);
         this.states.push(newState);
+        this.output.push('');
+        this.markers.push(marker);
     }
 
     private stringArrayContains(arr: string[], search: string) {
@@ -132,6 +207,13 @@ class IncrementalInterpretationHelper {
     private deleteAllAfter(index: number) {
         this.semicoli.length = index + 1;
         this.states.length = index + 1;
+        this.output.length = index + 1;
+        for (let i = index + 1; i < this.markers.length; i++) {
+            if (this.markers[i]) {
+                this.markers[i].clear();
+            }
+        }
+        this.markers.length = index + 1;
     }
 
     private binarySearch(pos: any): number {
@@ -259,9 +341,7 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
     handleChangeEvent(codemirror: any, change: any) {
         // console.log(change);
         // console.log(codemirror.getValue());
-        this.evalHelper.handleChangeAt(change.from, change.text, change.removed, (pos: any) => {
-            return codemirror.getRange(pos, {'line': codemirror.lineCount() + 1, 'ch' : 0}, '\n');
-        });
+        this.evalHelper.handleChangeAt(change.from, change.text, change.removed, new CodeMirrorSubset(codemirror));
     }
 }
 
