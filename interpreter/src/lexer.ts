@@ -14,6 +14,7 @@ export interface Token {
 
     getText(): string;
     isValidRecordLabel(): boolean;
+    isVid(): boolean;
 }
 
 export class KeywordToken implements Token {
@@ -23,6 +24,7 @@ export class KeywordToken implements Token {
         return this.text;
     }
     isValidRecordLabel(): boolean { return false; }
+    isVid() { return false; }
 }
 
 export abstract class ConstantToken implements Token {
@@ -31,6 +33,7 @@ export abstract class ConstantToken implements Token {
 
     abstract getText(): string;
     abstract isValidRecordLabel(): boolean;
+    isVid() { return false; }
 }
 export class IntegerConstantToken extends ConstantToken {
     constructor(public text: string, public position: Position, public value: int) {
@@ -89,6 +92,7 @@ export class IdentifierToken implements Token {
         return this.text;
     }
     isValidRecordLabel(): boolean { return true; }
+    isVid() { return true; }
 }
 
 // Alphanumeric identifiers not starting with a prime may represent structure identifiers, signature identifiers
@@ -108,6 +112,7 @@ export class TypeVariableToken implements Token {
         return this.text;
     }
     isValidRecordLabel(): boolean { return false; }
+    isVid() { return false; }
 }
 
 // An alphanumeric identifier that starts with two primes
@@ -117,6 +122,7 @@ export class EqualityTypeVariableToken extends TypeVariableToken {
         return this.text;
     }
     isValidRecordLabel(): boolean { return false; }
+    isVid() { return false; }
 }
 
 // A star (*) can be used as value identifier or record label, but not as a type constructor and thus must be separated.
@@ -130,6 +136,7 @@ export class StarToken extends KeywordToken {
         return this.text;
     }
     isValidRecordLabel(): boolean { return true; }
+    isVid() { return true; }
 }
 
 // Reserved words are generally not allowed as identifiers. "The only exception to this rule is that the symbol = ,
@@ -143,6 +150,7 @@ export class EqualsToken extends KeywordToken {
         return this.text;
     }
     isValidRecordLabel(): boolean { return false; }
+    isVid() { return true; }
 }
 
 // A numeric token (a positive, decimal integer not starting with '0') can be used either as an integer constant or as
@@ -153,6 +161,7 @@ export class NumericToken extends IntegerConstantToken {
         return this.text;
     }
     isValidRecordLabel(): boolean { return true; }
+    isVid() { return false; }
 }
 
 // A long identifier is a sequence str_1.str_2. … .str_n.id of n > 0 structure identifiers and one Identifier
@@ -172,6 +181,7 @@ export class LongIdentifierToken implements Token {
         return res + this.text;
     }
     isValidRecordLabel(): boolean { return false; }
+    isVid() { return false; }
 }
 
 

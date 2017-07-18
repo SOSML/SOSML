@@ -202,7 +202,6 @@ export class Parser {
             this.state = this.state.getNestedState();
 
             let dec = this.parseDeclaration();
-            --this.position;
             this.assertKeywordToken(this.currentToken(), 'in');
             ++this.position;
             let res: Expression[] = [this.parseExpression()];
@@ -1161,16 +1160,21 @@ export class Parser {
         return res;
     }
 
-    parseDeclaration(): Declaration {
+    parseDeclaration(topLevel: boolean = false): Declaration {
         /*
          * dec ::= dec [;] dec                          SequentialDeclaration(pos, Declaration[])
          */
         let res: Declaration[] = [];
         let curTok = this.currentToken();
         while (this.position < this.tokens.length) {
-            let cur = this.parseSimpleDeclaration();
+            let cur = this.parseSimpleDeclaration(topLevel);
             if (cur instanceof EmptyDeclaration) {
-                break;
+                if (this.position >= this.tokens.length
+                    || this.checkKeywordToken(this.currentToken(), 'in')
+                    || this.checkKeywordToken(this.currentToken(), 'end')) {
+                    break;
+                }
+                continue;
             }
             res.push(cur);
             if (this.checkKeywordToken(this.currentToken(), ';')) {
@@ -1180,7 +1184,7 @@ export class Parser {
         return new SequentialDeclaration(curTok.position, res);
     }
 
-    parseSimpleDeclaration(): Declaration {
+    parseSimpleDeclaration(topLevel: boolean = false): Declaration {
         /*
          * dec ::= val tyvarseq valbind                 ValueDeclaration(pos, tyvarseq, ValueBinding[])
          *         fun tyvarseq fvalbind                FunctionDeclaration(pos, tyvarseq, FunctionValueBinding[])
@@ -1208,8 +1212,14 @@ export class Parser {
                 tyvar = [];
             }
             let valbinds: ValueBinding[] = [];
+            let isRec = false;
             while (true) {
-                valbinds.push(this.parseValueBinding());
+                let curbnd = this.parseValueBinding();
+                if (curbnd.isRecursive) {
+                    isRec = true;
+                }
+                curbnd.isRecursive = isRec;
+                valbinds.push(curbnd);
                 if (this.checkKeywordToken(this.currentToken(), 'and')) {
                     ++this.position;
                 } else {
@@ -1238,8 +1248,8 @@ export class Parser {
             ++this.position;
             return new TypeDeclaration(curTok.position, this.parseTypeBindingSeq());
         } else if (this.checkKeywordToken(curTok, 'datatype')) {
-            if (this.position + 2 < this.tokens.length &&
-                this.checkKeywordToken(this.tokens[this.position + 2], '=')) {
+            if (this.position + 3 < this.tokens.length &&
+                this.checkKeywordToken(this.tokens[this.position + 3], 'datatype')) {
                 ++this.position;
                 let nw = this.currentToken();
                 this.assertIdentifierToken(nw);
@@ -1324,11 +1334,15 @@ export class Parser {
             ++this.position;
             let precedence = 0;
             if (this.currentToken() instanceof IntegerConstantToken) {
+                if (this.currentToken().text.length !== 1) {
+                    throw new ParserError('Precedences may only be single digits.',
+                        this.currentToken().position);
+                }
                 precedence = (<IntegerConstantToken> this.currentToken()).value;
                 ++this.position;
             }
             let res: IdentifierToken[] = [];
-            while (this.currentToken() instanceof IdentifierToken) {
+            while (this.currentToken().isVid()) {
                 res.push(<IdentifierToken> this.currentToken());
 
                 this.state.addIdentifierInformation(
@@ -1346,10 +1360,15 @@ export class Parser {
             ++this.position;
             let precedence = 0;
             if (this.currentToken() instanceof IntegerConstantToken) {
+                if (this.currentToken().text.length !== 1) {
+                    throw new ParserError('Precedences may only be single digits.',
+                        this.currentToken().position);
+                }
                 precedence = (<IntegerConstantToken> this.currentToken()).value;
+                ++this.position;
             }
             let res: IdentifierToken[] = [];
-            while (this.currentToken() instanceof IdentifierToken) {
+            while (this.currentToken().isVid()) {
                 res.push(<IdentifierToken> this.currentToken());
 
                 this.state.addIdentifierInformation(
@@ -1366,7 +1385,7 @@ export class Parser {
         } else if (this.checkKeywordToken(curTok, 'nonfix')) {
             ++this.position;
             let res: IdentifierToken[] = [];
-            while (this.currentToken() instanceof IdentifierToken) {
+            while (this.currentToken().isVid()) {
                 res.push(<IdentifierToken> this.currentToken());
 
                 this.state.addIdentifierInformation(
@@ -1382,17 +1401,22 @@ export class Parser {
             return new NonfixDeclaration(curTok.position, res);
         }
 
-        if (this.checkKeywordToken(curTok, ';')
-            || this.checkKeywordToken(curTok, 'in')) {
+        if (this.checkKeywordToken(curTok, ';')) {
             ++this.position;
+            return new EmptyDeclaration();
+        } else if (this.checkKeywordToken(curTok, 'in')
+                || this.checkKeywordToken(curTok, 'end')) {
             return new EmptyDeclaration();
         }
 
-        let exp = this.parseExpression();
-        let valbnd = new ValueBinding(curTok.position, false,
-            new ValueIdentifier(-1, new AlphanumericIdentifierToken('it', -1)), exp);
-        this.assertKeywordToken(this.currentToken(), ';');
-        return new ValueDeclaration(curTok.position, [], [valbnd]);
+        if (topLevel) {
+            let exp = this.parseExpression();
+            let valbnd = new ValueBinding(curTok.position, false,
+                new ValueIdentifier(-1, new AlphanumericIdentifierToken('it', -1)), exp);
+            this.assertKeywordToken(this.currentToken(), ';');
+            return new ValueDeclaration(curTok.position, [], [valbnd]);
+        }
+        throw new ParserError('Expected a declaration.', curTok.position);
     }
 
     private currentToken(): Token {
@@ -1405,5 +1429,5 @@ export class Parser {
 
 export function parse(tokens: Token[], state: State): Declaration {
     let p: Parser = new Parser(tokens, state);
-    return p.parseDeclaration();
+    return p.parseDeclaration(true);
 }
