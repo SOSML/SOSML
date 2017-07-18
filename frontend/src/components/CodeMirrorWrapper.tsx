@@ -149,7 +149,8 @@ class IncrementalInterpretationHelper {
                     } else {
 
                         this.addSemicolon(semiPos, newState, codemirror.markText(lastPos, semiPos, 'eval-success'));
-                        lastPos = semiPos;
+                        lastPos = this.copyPos(semiPos);
+                        lastPos.ch++;
                         previousState = newState;
 
                         partial = ''; // ONLY do this if the evaluation was successfull, else append ';' to partial

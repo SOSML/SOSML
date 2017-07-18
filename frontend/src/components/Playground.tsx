@@ -44,7 +44,7 @@ class Playground extends React.Component<Props, State> {
         // let glyphRight: string = 'resize-full';
         let lines: string[] = this.state.output.split('\n');
         let lineItems = lines.map((line) =>
-            <div>{line}</div>
+            <div key={line}>{line}</div>
         );
         // let codeNull: string | null = localStorage.getItem('tmpCode');
         let code: string = this.props.initialCode;
@@ -73,7 +73,7 @@ class Playground extends React.Component<Props, State> {
                     </div>
                     <div className="flexcomponent flexy">
                         <MiniWindow content={
-                            <p>{lineItems}</p>} /* header={(
+                            <div>{lineItems}</div>} /* header={(
                             <ButtonToolbar className="pull-right">
                                 <Button bsSize="small" onClick={this.handleRightResize}>
                                     <Glyphicon glyph={glyphRight} />
