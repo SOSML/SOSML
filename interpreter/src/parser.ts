@@ -41,8 +41,22 @@ export class Parser {
             throw new ParserError('Expected "' + text + '" but got "' + tok.text + '".', tok.position);
         }
     }
+    assertVidToken(tok: Token) {
+        if (!tok.isVid()) {
+            throw new ParserError('Expected an identifier, got \"'
+                + tok.getText() + '\" ('
+                + tok.constructor.name + ').', tok.position);
+        }
+    }
     assertIdentifierToken(tok: Token) {
         if (!(tok instanceof IdentifierToken)) {
+            throw new ParserError('Expected an identifier, got \"'
+                + tok.getText() + '\" ('
+                + tok.constructor.name + ').', tok.position);
+        }
+    }
+    assertVidOrLongToken(tok: Token) {
+        if (!tok.isVid() && !(tok instanceof LongIdentifierToken)) {
             throw new ParserError('Expected an identifier, got \"'
                 + tok.getText() + '\" ('
                 + tok.constructor.name + ').', tok.position);
@@ -62,6 +76,9 @@ export class Parser {
                 + tok.getText() + '\" ('
                 + tok.constructor.name + ').', tok.position);
         }
+    }
+    checkVidOrLongToken(tok: Token) {
+        return (tok.isVid() || (tok instanceof LongIdentifierToken));
     }
     checkIdentifierOrLongToken(tok: Token) {
         return ((tok instanceof IdentifierToken)
@@ -120,7 +137,7 @@ export class Parser {
         if (this.checkKeywordToken(curTok, 'op')) {
             ++this.position;
             let nextCurTok = this.currentToken();
-            this.assertIdentifierOrLongToken(nextCurTok);
+            this.assertVidOrLongToken(nextCurTok);
             (<IdentifierToken|LongIdentifierToken> nextCurTok).opPrefixed = true;
             ++this.position;
             return new ValueIdentifier(curTok.position, nextCurTok);
@@ -226,8 +243,7 @@ export class Parser {
         } else if (curTok instanceof ConstantToken) {
             ++this.position;
             return new Constant(curTok.position, curTok);
-        } else if (curTok instanceof IdentifierToken
-                   || curTok instanceof LongIdentifierToken) {
+        } else if (curTok.isVid() || curTok instanceof LongIdentifierToken) {
             ++this.position;
             if (this.state.getIdentifierInformation(curTok) !== undefined
                 && this.state.getIdentifierInformation(curTok).infix) {

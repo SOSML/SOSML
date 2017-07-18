@@ -6,7 +6,7 @@
 
 import { FunctionType, PrimitiveType, PrimitiveTypes, TupleType, Type } from './types';
 import { Value } from './values';
-import { Token, IdentifierToken, LongIdentifierToken } from './lexer';
+import { Token, LongIdentifierToken } from './lexer';
 import { InternalInterpreterError } from './errors';
 
 // ???
@@ -103,8 +103,7 @@ export class State {
     }
 
     getIdentifierInformation(id: Token): InfixStatus {
-        if (id instanceof IdentifierToken
-            || id instanceof LongIdentifierToken ) {
+        if (id.isVid() || id instanceof LongIdentifierToken ) {
             return this.lookupInfixStatus(id.getText());
         } else {
             throw new InternalInterpreterError(id.position,
@@ -115,8 +114,7 @@ export class State {
 
     addIdentifierInformation(id: Token, precedence: number,
                              rightAssociative: boolean, infix: boolean): void {
-        if (id instanceof IdentifierToken
-            || id instanceof LongIdentifierToken) {
+        if (id.isVid() || id instanceof LongIdentifierToken) {
             this.addInfix(id.getText(), infix, precedence, rightAssociative);
         }
     }
