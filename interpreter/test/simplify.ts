@@ -162,6 +162,17 @@ it("exp", () => {
     expect(parse("val x = fish andalso blah;").simplify()).toEqualWithType(
         expression_tester(andalso)
     )
+
+    let br_semicolon: Expr.Expression = new Expr.FunctionApplication(
+        8,
+        new Expr.Lambda(8, new Expr.Match(8, [
+            [new Expr.ValueIdentifier(0, new Lexer.IdentifierToken("true", 0)), new Expr.ValueIdentifier(21, new Lexer.AlphanumericIdentifierToken("blah", 21))]
+        ])),
+        new Expr.ValueIdentifier(8, new Lexer.AlphanumericIdentifierToken("fish", 8))
+    )
+    expect(parse("val x = (1;2);").simplify()).toEqualWithType(
+        parse("val x = case 1 of (_) => 2;").simplify()
+    )
     //TODO
 });
 
