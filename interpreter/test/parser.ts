@@ -1145,7 +1145,7 @@ it("declaration - infix (L) directive", () => {
     let testcase_multiple: string = 'infix * f g;';
     let testcase_double_digit1: string = 'infix 00 f;';
     let testcase_double_digit2: string = 'infix 10 f;';
-    let testcase_negative: string = 'infix -1 f;';
+    let testcase_negative: string = 'infix ~1 f;';
     let testcase_prime: string = 'infix \'a;';
 
     expect(parse(testcase_simple)).toEqualWithType(
@@ -1199,7 +1199,7 @@ it("declaration - infix (R) directive", () => {
     let testcase_multiple: string = 'infixr * f g;';
     let testcase_double_digit1: string = 'infixr 00 f;';
     let testcase_double_digit2: string = 'infixr 10 f;';
-    let testcase_negative: string = 'infixr -1 f;';
+    let testcase_negative: string = 'infixr ~1 f;';
     let testcase_prime: string = 'infixr \'a;';
 
     expect(parse(testcase_simple)).toEqualWithType(
