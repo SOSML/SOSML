@@ -492,7 +492,7 @@ class Lexer {
         let firstChar: char = this.getChar();
         if (Lexer.isSymbolic(firstChar)) {
             charChecker = Lexer.isSymbolic;
-        } else if (Lexer.isAlphanumeric(firstChar) && !Lexer.isNumber(firstChar, false)) {
+        } else if (Lexer.isAlphanumeric(firstChar) && !Lexer.isNumber(firstChar, false) && firstChar !== '_') {
             // alphanumeric identifiers may not start with a number
             charChecker = Lexer.isAlphanumeric;
         } else if (reservedWords.has(firstChar)) {
