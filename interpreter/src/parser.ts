@@ -1338,7 +1338,7 @@ export class Parser {
                 ++this.position;
             }
             let res: IdentifierToken[] = [];
-            while (this.currentToken() instanceof IdentifierToken) {
+            while (this.currentToken().allowsInfix()) {
                 res.push(<IdentifierToken> this.currentToken());
 
                 this.state.addIdentifierInformation(
@@ -1359,7 +1359,7 @@ export class Parser {
                 precedence = (<IntegerConstantToken> this.currentToken()).value;
             }
             let res: IdentifierToken[] = [];
-            while (this.currentToken() instanceof IdentifierToken) {
+            while (this.currentToken().allowsInfix()) {
                 res.push(<IdentifierToken> this.currentToken());
 
                 this.state.addIdentifierInformation(
@@ -1376,7 +1376,7 @@ export class Parser {
         } else if (this.checkKeywordToken(curTok, 'nonfix')) {
             ++this.position;
             let res: IdentifierToken[] = [];
-            while (this.currentToken() instanceof IdentifierToken) {
+            while (this.currentToken().allowsInfix()) {
                 res.push(<IdentifierToken> this.currentToken());
 
                 this.state.addIdentifierInformation(
