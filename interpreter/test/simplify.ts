@@ -164,14 +164,14 @@ it("exp", () => {
     )
 
     let br_semicolon: Expr.Expression = new Expr.FunctionApplication(
-        8,
-        new Expr.Lambda(8, new Expr.Match(8, [
-            [new Expr.ValueIdentifier(0, new Lexer.IdentifierToken("true", 0)), new Expr.ValueIdentifier(21, new Lexer.AlphanumericIdentifierToken("blah", 21))]
+        -1,
+        new Expr.Lambda(-1, new Expr.Match(-1, [
+            [new Expr.Wildcard(0), new Expr.Constant(11, new Lexer.NumericToken("2", 11, 2))]
         ])),
-        new Expr.ValueIdentifier(8, new Lexer.AlphanumericIdentifierToken("fish", 8))
+        new Expr.Constant(9, new Lexer.NumericToken("1", 9 , 1))
     )
     expect(parse("val x = (1;2);").simplify()).toEqualWithType(
-        parse("val x = case 1 of (_) => 2;").simplify()
+        expression_tester(br_semicolon)
     )
     //TODO
 });
