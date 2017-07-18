@@ -72,6 +72,18 @@ it("exp - tuple to record", () => {
             ])
         ])
     );
+
+    expect(parse("val x = (11);").simplify()).toEqualWithType(
+        new Decl.SequentialDeclaration(0,[
+            new Decl.ValueDeclaration(0, [], [
+                new Decl.ValueBinding(
+                    4, false,
+                    new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
+                    new Expr.Constant(9, new Lexer.NumericToken("11", 9, 11));
+                )
+            ])
+        ])
+    )
 });
 
 it("exp", () => {
@@ -110,9 +122,9 @@ it("exp", () => {
                 new Expr.Record(
                     -1,
                     false,
-                    [["y", new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken("__rs",-1))]]
+                    [["y", new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken("__rs",-1))]]
                 ),
-                new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken("__rs", -1))
+                new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken("__rs", -1))
             ]]
         )
     );
