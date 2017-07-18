@@ -140,6 +140,8 @@ it("atomic expression - value identifier", () => {
     let testcase_vid_with_op_long: string = 'op Math.pow;';
     let testcase_vid_without_op: string = 'blub;';
     let testcase_vid_without_op_long: string = 'Reals.nan;';
+    let testcase_star: string = '*;';
+    let testcase_equals: string = 'op=;';
 
     expect(parse(testcase_vid_with_op)).toEqualWithType(createItExpression(
         new Expr.ValueIdentifier(0,
@@ -168,6 +170,14 @@ it("atomic expression - value identifier", () => {
                 new Lexer.AlphanumericIdentifierToken('nan', 6)
             )
         )
+    ));
+
+    expect(parse(testcase_star)).toEqualWithType(createItExpression(
+        new Expr.ValueIdentifier(0, new Lexer.StarToken('*', 0))
+    ));
+
+    expect(parse(testcase_equals)).toEqualWithType(createItExpression(
+        new Expr.ValueIdentifier(0, prefixWithOp(new Lexer.EqualsToken('=', 0)))
     ));
 });
 
