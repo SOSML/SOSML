@@ -1,12 +1,13 @@
 import { FunctionType, PrimitiveType, RecordType, Type } from './types';
-import {
-    Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConstantToken, NumericToken,
-    WordConstantToken, CharacterConstantToken, StringConstantToken
-} from './lexer';
+import { Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConstantToken,
+         NumericToken, WordConstantToken, CharacterConstantToken,
+         StringConstantToken } from './lexer';
 import { Declaration } from './declarations';
-import { State } from './state';
-import { InternalInterpreterError, Position, SemanticError } from './errors';
-import { Value, CharValue, StringValue, Integer, Real, Word } from './values';
+import { State, ValueInformation } from './state';
+import { InternalInterpreterError, Position, SemanticError, EvaluationError } from './errors';
+import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
+         ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
+         ExceptionValue } from './values';
 
 
 export abstract class Expression {
@@ -26,16 +27,16 @@ export abstract class Expression {
     }
 
     computeType(state: State): Type {
-        throw new InternalInterpreterError(this.position, 'called computeType on derived form');
+        throw new InternalInterpreterError(this.position, 'Called "computeType" on derived form.');
     }
 
-    compute(state: State): Value {
-        throw new InternalInterpreterError(this.position, 'called getValue on derived form');
+    // Computes an expression, returns [computed value, is thrown exception]
+    compute(state: State): [Value, boolean] {
+        throw new InternalInterpreterError(this.position, 'Called "getValue" on derived form.');
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO: move to subclasses
-        throw new InternalInterpreterError(this.position, 'not yet implemented');
+        throw new InternalInterpreterError(this.position, 'I don\'t want to be printed.');
     }
 
     abstract simplify(): Expression;
@@ -56,7 +57,7 @@ export type PatternExpression = Pattern & Expression;
 export class Wildcard extends Expression implements Pattern {
     constructor(public position: Position) { super(); }
 
-    compute(state: State): Value {
+    compute(state: State): [Value, boolean] {
         throw new InternalInterpreterError(this.position,
             'Wildcards are far too wild to have a value.');
     }
@@ -79,7 +80,7 @@ export class LayeredPattern extends Expression implements Pattern {
     constructor(public position: Position, public identifier: IdentifierToken,
                 public typeAnnotation: Type | undefined, public pattern: Expression) { super(); }
 
-    compute(state: State): Value {
+    compute(state: State): [Value, boolean] {
         throw new InternalInterpreterError(this.position,
             'Layered patterns are far too layered to have a value.');
     }
@@ -129,7 +130,7 @@ export class Match {
         return res;
     }
 
-    compute(state: State, value: Value): Value {
+    compute(state: State, value: Value): [Value, boolean] {
         for (let i = 0; i < this.matches.length; ++i) {
             let res = this.matches[i][0].matches(state, value);
             if (res !== undefined) {
@@ -140,8 +141,7 @@ export class Match {
                 return this.matches[i][1].compute(nstate);
             }
         }
-        // TODO return Match here
-        throw new InternalInterpreterError(this.position, 'Constructing "Match" is nyi\'an');
+        return [<Value> (<ValueInformation> state.getValue('Match')).value, true];
     }
 
     simplify(): Match {
@@ -165,18 +165,13 @@ export class TypedExpression extends Expression implements Pattern {
     }
 
     computeType(state: State): Type {
-        let result: Type = this.expression.getType(state);
-        // TODO: check semantics of typeAnnotation
-        // TODO: equals is not correct here. result must generalise typeAnnotation
-        if (!result.equals(this.typeAnnotation)) {
-            throw new SemanticError(this.position,
-                'expression cannot have explicit type ' + this.typeAnnotation.toString());
-        }
-        return this.typeAnnotation;
+        // TODO
+        throw new InternalInterpreterError(this.position, 'not yet implemented');
     }
 
     simplify(): TypedExpression {
-        return new TypedExpression(this.position, this.expression.simplify(), this.typeAnnotation.simplify());
+        return new TypedExpression(this.position,
+            this.expression.simplify(), this.typeAnnotation.simplify());
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
@@ -186,14 +181,16 @@ export class TypedExpression extends Expression implements Pattern {
         return res + ' )';
     }
 
-    compute(state: State): Value {
+    compute(state: State): [Value, boolean] {
         return this.expression.compute(state);
     }
 }
 
 export class HandleException extends Expression {
 // expression handle match
-    constructor(public position: Position, public expression: Expression, public match: Match) { super(); }
+    constructor(public position: Position, public expression: Expression, public match: Match) {
+        super();
+    }
 
     simplify(): HandleException {
         return new HandleException(this.position, this.expression.simplify(), this.match.simplify());
@@ -206,8 +203,16 @@ export class HandleException extends Expression {
         return res;
     }
 
-    compute(state: State): Value {
-        throw new InternalInterpreterError(-1, 'nyi\'an');
+    compute(state: State): [Value, boolean] {
+        let res = this.expression.compute(state);
+        if (res[1]) {
+            let next = this.match.compute(state, res[0]);
+            if (!next[1] || (<ExceptionValue> next[0]).constructorName !== 'Match') {
+                // Exception got handled
+                return next;
+            }
+        }
+        return res;
     }
 }
 
@@ -224,8 +229,14 @@ export class RaiseException extends Expression {
         return 'raise ' + this.expression.prettyPrint(indentation, oneLine);
     }
 
-    compute(state: State): Value {
-        throw new InternalInterpreterError(-1, 'nyi\'an');
+    compute(state: State): [Value, boolean] {
+        let res = this.expression.compute(state);
+        if (!(res[0] instanceof ExceptionValue)) {
+            throw new EvaluationError(this.position,
+                'Cannot "raise" value of type "' + res.constructor.name
+                + '" (type must be "exn").');
+        }
+        return [res[0], true];
     }
 }
 
@@ -242,8 +253,8 @@ export class Lambda extends Expression {
         return '( fn ' + this.match.prettyPrint(indentation, oneLine) + ' )';
     }
 
-    compute(state: State): Value {
-        throw new InternalInterpreterError(-1, 'nyi\'an');
+    compute(state: State): [Value, boolean] {
+        return [new FunctionValue(state, this.match), false];
     }
 }
 
@@ -282,8 +293,27 @@ export class FunctionApplication extends Expression implements Pattern {
         return res;
     }
 
-    compute(state: State): Value {
-        throw new InternalInterpreterError(-1, 'nyi\'an');
+    compute(state: State): [Value, boolean] {
+        let funcVal = this.func.compute(state);
+        if (funcVal[1]) {
+            // computing the function failed
+            return funcVal;
+        }
+        let argVal = this.argument.compute(state);
+        if (argVal[1]) {
+            return argVal;
+        }
+        if (funcVal instanceof FunctionValue) {
+            return (<FunctionValue> funcVal[0]).compute(state, argVal[0]);
+        } else if (funcVal instanceof ValueConstructor) {
+            return [(<ValueConstructor> funcVal[0]).construct(argVal[0]), false];
+        } else if (funcVal instanceof ExceptionConstructor) {
+            return [(<ExceptionConstructor> funcVal[0]).construct(argVal[0]), false];
+        } else if (funcVal instanceof PredefinedFunction) {
+            return [(<PredefinedFunction> funcVal[0]).apply(argVal[0]), false];
+        }
+        throw new EvaluationError(this.position, 'Cannot evaluate the function "'
+            + this.func.prettyPrint() + '".');
     }
 }
 
@@ -319,19 +349,19 @@ export class Constant extends Expression implements Pattern {
         return this.token.getText();
     }
 
-    compute(state: State): Value {
+    compute(state: State): [Value, boolean] {
         if (this.token instanceof IntegerConstantToken || this.token instanceof NumericToken) {
-            return new Integer((<IntegerConstantToken | NumericToken> this.token).value);
+            return [new Integer((<IntegerConstantToken | NumericToken> this.token).value), false];
         } else if (this.token instanceof RealConstantToken) {
-            return new Real((<RealConstantToken> this.token).value);
+            return [new Real((<RealConstantToken> this.token).value), false];
         } else if (this.token instanceof WordConstantToken) {
-            return new Word((<WordConstantToken> this.token).value);
+            return [new Word((<WordConstantToken> this.token).value), false];
         } else if (this.token instanceof CharacterConstantToken) {
-            return new CharValue((<CharacterConstantToken> this.token).value);
+            return [new CharValue((<CharacterConstantToken> this.token).value), false];
         } else if (this.token instanceof StringConstantToken) {
-            return new StringValue((<StringConstantToken> this.token).value);
+            return [new StringValue((<StringConstantToken> this.token).value), false];
         }
-        throw new InternalInterpreterError(this.token.position, 'You sure that this is a constant?');
+        throw new EvaluationError(this.token.position, 'You sure that this is a constant?');
     }
 }
 
@@ -351,8 +381,14 @@ export class ValueIdentifier extends Expression implements Pattern {
         return this.name.getText();
     }
 
-    compute(state: State): Value {
-        throw new InternalInterpreterError(-1, 'nyi\'an');
+    compute(state: State): [Value, boolean] {
+        let res = state.getValue(this.name.getText());
+        if (res === undefined || res.value === undefined) {
+            throw new EvaluationError(this.position, 'Unbound value identifier "'
+                + this.name.getText() + '".');
+        }
+
+        return [res.value, false];
     }
 }
 
@@ -420,9 +456,17 @@ export class Record extends Expression implements Pattern {
         return result + '}';
     }
 
-    compute(state: State): Value {
-        // TODO
-        throw new InternalInterpreterError(-1, 'nyi\'an');
+    compute(state: State): [Value, boolean] {
+        let nentr = new Map<string, Value>();
+        for (let i = 0; i < this.entries.length; ++i) {
+            let res = this.entries[i][1].compute(state);
+            if (res[1]) {
+                // Computing some expression failed
+                return res;
+            }
+            nentr.set(this.entries[i][0], res[0]);
+        }
+        return [new RecordValue(nentr), false];
     }
 }
 
@@ -442,12 +486,15 @@ export class LocalDeclarationExpression extends Expression {
         return res;
     }
 
-    compute(state: State): Value {
+    compute(state: State): [Value, boolean] {
         let nstate = state.getNestedState();
         this.declaration.evaluate(nstate);
         return this.expression.compute(nstate);
     }
 }
+
+// The following classes are derived forms. They will not be present in the simplified AST and do not implement
+// checkSemantics/getType
 
 export class InfixExpression extends Expression implements Pattern {
     // operators: (op, idx), to simplify simplify
@@ -515,22 +562,8 @@ export class InfixExpression extends Expression implements Pattern {
         }
         return <FunctionApplication> exps[0];
     }
-
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
-        let res = '{{ ' + this.expressions[0].prettyPrint(indentation, oneLine);
-        for (let i = 1; i < this.expressions.length; ++i) {
-            res += ' ' + this.operators[i - 1][0].getText();
-            res += ' ' + this.expressions[i].prettyPrint(indentation, oneLine);
-        }
-        return res + ' }}';
-    }
 }
 
-// The following classes are derived forms. They will not be present in the simplified AST and do not implement
-// checkSemantics/getType
-
-// TODO move these constants to state
 let falseConstant = new ValueIdentifier(0, new IdentifierToken('false', 0));
 let trueConstant = new ValueIdentifier(0, new IdentifierToken('true', 0));
 let nilConstant = new ValueIdentifier(0, new IdentifierToken('nil', 0));
@@ -541,7 +574,8 @@ export class Conjunction extends Expression {
     constructor(public position: Position, public leftOperand: Expression, public rightOperand: Expression) { super(); }
 
     simplify(): FunctionApplication {
-        return new Conditional(this.position, this.leftOperand, this.rightOperand, falseConstant).simplify();
+        return new Conditional(this.position, this.leftOperand, this.rightOperand,
+            falseConstant).simplify();
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {

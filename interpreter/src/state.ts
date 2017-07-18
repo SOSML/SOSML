@@ -10,18 +10,10 @@ import { Token, IdentifierToken, LongIdentifierToken } from './lexer';
 import { InternalInterpreterError } from './errors';
 import { _getInitialState } from './initialState';
 
-// ???
-export enum IdentifierStatus {
-    Constructor,    // Used for evaluating closed stuff, i.e. constructors
-    Predefined,     // Used for predefined functions that need to be evaluated differently
-    Exception,      // Used to construct exceptions which are different from Constructors
-    Value,          // Used for computed values
-}
 
 export class ValueInformation {
     constructor(public type: Type[],
-                public value: Value | undefined,
-                public identifierStatus: IdentifierStatus) { }
+                public value: Value | undefined) { }
 }
 
 // maps identifiers to type, value, etc.
@@ -48,19 +40,16 @@ export class Environment {
         return this.valueEnvironment[name];
     }
 
-    setValue(name: string, type: Type, value: Value | undefined = undefined,
-             idStatus: IdentifierStatus = IdentifierStatus.Predefined) {
+    setValue(name: string, type: Type, value: Value | undefined = undefined) {
         this.valueEnvironment[name]
-            = new ValueInformation([type], value, idStatus);
+            = new ValueInformation([type], value);
     }
 
-    updateValue(name: string, value: Value,
-                idStatus: IdentifierStatus = IdentifierStatus.Predefined) {
+    updateValue(name: string, value: Value) {
         if (this.valueEnvironment[name] !== undefined) {
             this.valueEnvironment[name].value = value;
-            this.valueEnvironment[name].identifierStatus = idStatus;
         } else {
-            this.valueEnvironment[name] = new ValueInformation([], value, idStatus);
+            this.valueEnvironment[name] = new ValueInformation([], value);
         }
     }
 
@@ -136,15 +125,13 @@ export class State {
         }
     }
 
-    updateValue(name: string, value: Value,
-                idStatus: IdentifierStatus = IdentifierStatus.Predefined) {
-        this.environment.updateValue(name, value, idStatus);
+    updateValue(name: string, value: Value) {
+        this.environment.updateValue(name, value);
     }
 
     setValue(name: string, type: Type,
-             value: Value | undefined = undefined,
-             idStatus: IdentifierStatus = IdentifierStatus.Predefined) {
-        this.environment.setValue(name, type, value, idStatus);
+             value: Value | undefined = undefined) {
+        this.environment.setValue(name, type, value);
     }
 
     setTypeInformation(name: string, type: Type, constructors: string[]) {

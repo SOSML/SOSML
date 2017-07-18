@@ -63,3 +63,10 @@ export class SemanticError extends InterpreterError {
         Object.setPrototypeOf(this, SemanticError.prototype);
     }
 }
+
+export class EvaluationError extends InterpreterError {
+    constructor(position: Position, message: string) {
+        super(position, message);
+        Object.setPrototypeOf(this, LexerError.prototype);
+    }
+}

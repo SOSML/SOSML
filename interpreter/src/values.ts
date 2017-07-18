@@ -3,9 +3,9 @@
  */
 
 import { State } from './state';
-import { Declaration } from './declarations';
-import { InternalInterpreterError } from './errors';
+import { InternalInterpreterError, EvaluationError } from './errors';
 import { int, char } from './lexer';
+import { Match } from './expressions';
 
 export abstract class Value {
     abstract prettyPrint(): string;
@@ -218,6 +218,13 @@ export class RecordValue extends Value {
         throw new InternalInterpreterError(0, 'not yet implemented');
     }
 
+    getValue(name: string): Value {
+        if (!this.entries.has(name)) {
+            throw new EvaluationError(0, 'Tried accessing non-existing record part.');
+        }
+        return this.entries[name];
+    }
+
     equals(other: Value): boolean {
         if (!(other instanceof RecordValue)) {
             return false;
@@ -249,13 +256,19 @@ export class RecordValue extends Value {
 }
 
 export class FunctionValue extends Value {
-    constructor(public state: State, public body: Declaration) {
+    constructor(public state: State, public body: Match) {
         super();
     }
 
     prettyPrint(): string {
         // TODO
         throw new InternalInterpreterError(0, 'not yet implemented');
+    }
+
+    // Computes the function on the given argument,
+    // returns [result, is thrown]
+    compute(state: State, argument: Value): [Value, boolean] {
+        return this.body.compute(state, argument);
     }
 }
 
@@ -318,7 +331,7 @@ export class ExceptionValue extends Value {
 
 export class PredefinedFunction extends Value {
     constructor(public name: string,
-                public apply: (val1: Value|undefined, val2: Value|undefined) => Value) {
+                public apply: (arg: Value|undefined) => Value) {
         super();
     }
 
