@@ -83,13 +83,13 @@ it("exp", () => {
                 new Expr.Record(
                     12,
                     false,
-                    [["y", new Expr.ValueIdentifier(16, new Lexer.AlphanumericIdentifierToken("__rs",16))]]
+                    [["y", new Expr.ValueIdentifier(16, new Lexer.AlphanumericIdentifierToken("fish",16))]]
                 ),
-                new Expr.ValueIdentifier(30, new Lexer.AlphanumericIdentifierToken("__rs", 30))
+                new Expr.ValueIdentifier(30, new Lexer.AlphanumericIdentifierToken("fish", 30))
             ]]
         )
     );
-    let try_this: string = "val x = fn {y = __rs, ...} => __rs;";
+    let try_this: string = "val x = fn {y = fish, ...} => fish;";
     expect(parse(try_this).simplify()).toEqualWithType(
         expression_tester(lambda)
     );
