@@ -6,7 +6,7 @@ import { IdentifierToken, Token } from './lexer';
 import { Type, TypeVariable } from './types';
 import { State } from './state';
 import { InternalInterpreterError, Position, EvaluationError, FeatureDisabledError } from './errors';
-import { Value } from './values';
+import { Value, ValueConstructor } from './values';
 
 export abstract class Declaration {
     hasSemanticError: boolean = false;
@@ -143,7 +143,15 @@ export class DatatypeBinding {
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        let connames: string[] = [];
+        for (let i = 0; i < this.type.length; ++i) {
+            state.setDynamicValue(this.type[i][0].getText(),
+                new ValueConstructor(this.type[i][0].getText()));
+            connames.push(this.type[i][0].getText());
+        }
+        state.setDynamicType(this.name.getText(), connames);
+
+        return [state, false, undefined];
     }
 }
 
