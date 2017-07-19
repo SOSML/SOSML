@@ -84,24 +84,43 @@ export class FunctionValueBinding {
         // Build the case analysis, starting with the (vid1,...,vidn)
         let arr: ValueIdentifier[] = [];
         let matches: [PatternExpression, Expression][] = [];
-        for (let i = 0; i < this.parameters.length; ++i) {
+        for (let i = 0; i < this.parameters[0][0].length; ++i) {
             arr.push(new ValueIdentifier(-1, new IdentifierToken('__arg' + i, -1)));
-            if (this.parameters[i][1] === undefined) {
-                matches.push([new Tuple(-1, this.parameters[i][0]), this.parameters[i][2]]);
+        }
+        for (let i = 0; i < this.parameters.length; ++i) {
+            let pat: Pattern;
+            if (this.parameters[i][0].length === 1) {
+                pat = this.parameters[i][0][0];
             } else {
-                matches.push([new Tuple(-1, this.parameters[i][0]),
+                pat = new Tuple(-1, this.parameters[i][0]);
+            }
+
+            if (this.parameters[i][1] === undefined) {
+                matches.push([pat, this.parameters[i][2]]);
+            } else {
+                matches.push([pat,
                     new TypedExpression(-1, this.parameters[i][2], <Type> this.parameters[i][1])]);
             }
         }
-        let pat = new Tuple(-1, arr).simplify();
+        let pat: Pattern;
+        if (arr.length !== 1) {
+            pat = new Tuple(-1, arr).simplify();
+        } else {
+            pat = arr[0];
+        }
         let mat = new Match(-1, matches);
-        let exp: Expression = new CaseAnalysis(-1, pat, mat);
+        let exp: Expression;
+        if (arr.length === 1) {
+            exp = new Lambda(-1, mat);
+        } else {
+            exp = new CaseAnalysis(-1, pat, mat);
 
-        // Now build the lambdas around
-        for (let i = this.parameters.length - 1; i >= 0; --i) {
-            exp = new Lambda(-1, new Match(-1, [[
-                new ValueIdentifier(-1, new IdentifierToken('__arg' + i, -1)),
-                exp]]));
+            // Now build the lambdas around
+            for (let i = this.parameters[0][0].length - 1; i >= 0; --i) {
+                exp = new Lambda(-1, new Match(-1, [[
+                    new ValueIdentifier(-1, new IdentifierToken('__arg' + i, -1)),
+                    exp]]));
+            }
         }
 
         return new ValueBinding(this.position, true, this.name, exp.simplify());

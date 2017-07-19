@@ -218,8 +218,18 @@ export class RecordValue extends Value {
     }
 
     prettyPrint(): string {
-        // TODO
-        throw new InternalInterpreterError(0, 'not yet implemented');
+        // TODO: print as Tuple if possible
+        let result: string = '{';
+        let first: boolean = true;
+        this.entries.forEach((value: Value, key: string) => {
+            if (!first) {
+                result += ', ';
+            } else {
+                first = false;
+            }
+            result += key + ' : ' + value.prettyPrint();
+        });
+        return result + '}';
     }
 
     getValue(name: string): Value {
@@ -279,16 +289,16 @@ export class FunctionValue extends Value {
 // Values that were constructed from type constructors
 export class ConstructedValue extends Value {
     constructor(public constructorName: string,
-                public argument: Value = new RecordValue(new Map<string, Value>())) {
+                public argument: Value|undefined = undefined) {
         super();
     }
 
     prettyPrint(): string {
-        let result: string = '(' + this.constructorName;
+        let result: string =  this.constructorName;
         if (this.argument) {
             result += ' ' + this.argument.prettyPrint();
         }
-        return result + ')';
+        return result;
     }
 
     equals(other: Value): boolean {
@@ -309,16 +319,16 @@ export class ConstructedValue extends Value {
 
 export class ExceptionValue extends Value {
     constructor(public constructorName: string,
-                public argument: Value = new RecordValue(new Map<string, Value>())) {
+                public argument: Value|undefined = undefined) {
         super();
     }
 
     prettyPrint(): string {
-        let result: string = '(' + this.constructorName;
+        let result: string = this.constructorName;
         if (this.argument) {
             result += ' ' + this.argument.prettyPrint();
         }
-        return result + ')';
+        return result;
     }
 
     equals(other: Value): boolean {
@@ -367,7 +377,7 @@ export class ValueConstructor extends Value {
         return this.constructorName === (<ValueConstructor> other).constructorName;
     }
 
-    construct(parameter: Value = new RecordValue(new Map<string, Value>())): ConstructedValue {
+    construct(parameter: Value|undefined = undefined): ConstructedValue {
         return new ConstructedValue(this.constructorName, parameter);
     }
 
@@ -392,7 +402,7 @@ export class ExceptionConstructor extends Value {
         return this.exceptionName === (<ExceptionConstructor> other).exceptionName;
     }
 
-    construct(parameter: Value = new RecordValue(new Map<string, Value>())): ExceptionValue {
+    construct(parameter: Value|undefined = undefined): ExceptionValue {
         return new ExceptionValue(this.exceptionName, parameter);
     }
 
