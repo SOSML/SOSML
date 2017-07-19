@@ -95,7 +95,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "div" on value of the wrong type.');
+                    'Called "div" on value of the wrong type (' + val.constructor.name + ').');
             }),
             'mod': new PredefinedFunction('mod', (val: Value) => {
                 if (val instanceof RecordValue) {
@@ -109,7 +109,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "mod" on value of the wrong type.');
+                    'Called "mod" on value of the wrong type (' + val.constructor.name + ').');
             }),
             '*': new PredefinedFunction('*', (val: Value) => {
                 if (val instanceof RecordValue) {
@@ -125,7 +125,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "*" on value of the wrong type.');
+                    'Called "*" on value of the wrong type (' + val.constructor.name + ').');
             }),
             '/': new PredefinedFunction('/', (val: Value) => {
                 if (val instanceof RecordValue) {
@@ -137,7 +137,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "/" on value of the wrong type.');
+                    'Called "/" on value of the wrong type (' + val.constructor.name + ').');
             }),
             '+': new PredefinedFunction('+', (val: Value) => {
                 if (val instanceof RecordValue) {
@@ -153,7 +153,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "+" on value of the wrong type.');
+                    'Called "+" on value of the wrong type (' + val.constructor.name + ').');
             }),
             '-': new PredefinedFunction('-', (val: Value) => {
                 if (val instanceof RecordValue) {
@@ -169,7 +169,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "-" on value of the wrong type.');
+                    'Called "-" on value of the wrong type (' + val.constructor.name + ').');
             }),
 
             '<': new PredefinedFunction('<', (val: Value) => {
@@ -190,7 +190,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "<" on value of the wrong type.');
+                    'Called "<" on value of the wrong type (' + val.constructor.name + ').');
             }),
             '>': new PredefinedFunction('<', (val: Value) => {
                 if (val instanceof RecordValue) {
@@ -210,7 +210,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called ">" on value of the wrong type.');
+                    'Called ">" on value of the wrong type (' + val.constructor.name + ').');
             }),
             '<=': new PredefinedFunction('<', (val: Value) => {
                 if (val instanceof RecordValue) {
@@ -230,7 +230,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "<=" on value of the wrong type.');
+                    'Called "<=" on value of the wrong type (' + val.constructor.name + ').');
             }),
             '>=': new PredefinedFunction('<', (val: Value) => {
                 if (val instanceof RecordValue) {
@@ -250,7 +250,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called ">=" on value of the wrong type.');
+                    'Called ">=" on value of the wrong type (' + val.constructor.name + ').');
             }),
             '=': new PredefinedFunction('=', (val: Value) => {
                 if (val instanceof RecordValue) {
@@ -260,7 +260,7 @@ let initialState: State = new State(
                     return new BoolValue(val1.equals(val2));
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "=" on value of the wrong type.');
+                    'Called "=" on value of the wrong type (' + val.constructor.name + ').');
             }),
             // ':='
             // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),

@@ -151,8 +151,7 @@ export class TypedExpression extends Expression implements Pattern {
                 public typeAnnotation: Type) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'not yet implemented');
+        return (<PatternExpression> this.expression).matches(state, v);
     }
 
     computeType(state: State): Type {
@@ -294,17 +293,17 @@ export class FunctionApplication extends Expression implements Pattern {
         if (argVal[1]) {
             return argVal;
         }
-        if (funcVal instanceof FunctionValue) {
+        if (funcVal[0] instanceof FunctionValue) {
             return (<FunctionValue> funcVal[0]).compute(state, argVal[0]);
-        } else if (funcVal instanceof ValueConstructor) {
+        } else if (funcVal[0] instanceof ValueConstructor) {
             return [(<ValueConstructor> funcVal[0]).construct(argVal[0]), false];
-        } else if (funcVal instanceof ExceptionConstructor) {
+        } else if (funcVal[0] instanceof ExceptionConstructor) {
             return [(<ExceptionConstructor> funcVal[0]).construct(argVal[0]), false];
-        } else if (funcVal instanceof PredefinedFunction) {
+        } else if (funcVal[0] instanceof PredefinedFunction) {
             return [(<PredefinedFunction> funcVal[0]).apply(argVal[0]), false];
         }
         throw new EvaluationError(this.position, 'Cannot evaluate the function "'
-            + this.func.prettyPrint() + '".');
+            + this.func.prettyPrint() + '" (' + funcVal[0].constructor.name + ').');
     }
 }
 
@@ -364,14 +363,16 @@ export class ValueIdentifier extends Expression implements Pattern {
     constructor(public position: Position, public name: Token) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        /* if (state.getValue(this.name.getText()) !== undefined
-            && state.getValue(this.name.getText()).value !== undefined
-            && state.getValue(this.name.getText()).value.equals(v)) {
-            return [];
+        let res = state.getDynamicValue(this.name.getText());
+        if (res !== undefined && (<Value> res).isSimpleValue()) {
+            if (v.equals(<Value> res)) {
+                return [];
+            } else {
+                return undefined;
+            }
+        } else {
+            return [[this.name.getText(), v]];
         }
-        return [[this.name.getText(), v]];*/
-        // TODO
-        throw new InternalInterpreterError(-1, 'nyi\'an');
     }
 
     simplify(): ValueIdentifier { return this; }
@@ -464,7 +465,7 @@ export class Record extends Expression implements Pattern {
                 // Computing some expression failed
                 return res;
             }
-            nentr.set(this.entries[i][0], res[0]);
+            nentr[this.entries[i][0]] = res[0];
         }
         return [new RecordValue(nentr), false];
     }

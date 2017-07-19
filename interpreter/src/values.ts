@@ -14,7 +14,9 @@ export abstract class Value {
             'Tried comparing incomparable things.');
     }
 
-
+    isSimpleValue(): boolean {
+        return true;
+    }
 }
 
 export class BoolValue extends Value {
@@ -221,7 +223,7 @@ export class RecordValue extends Value {
     }
 
     getValue(name: string): Value {
-        if (!this.entries.has(name)) {
+        if (this.entries[name] === undefined) {
             throw new EvaluationError(0, 'Tried accessing non-existing record part.');
         }
         return this.entries[name];
@@ -347,6 +349,10 @@ export class PredefinedFunction extends Value {
         }
         return this.name === (<PredefinedFunction> other).name;
     }
+
+    isSimpleValue(): boolean {
+        return false;
+    }
 }
 
 export class ValueConstructor extends Value {
@@ -368,6 +374,10 @@ export class ValueConstructor extends Value {
     prettyPrint() {
         return this.constructorName + ' [value constructor]';
     }
+
+    isSimpleValue(): boolean {
+        return false;
+    }
 }
 
 export class ExceptionConstructor extends Value {
@@ -388,5 +398,9 @@ export class ExceptionConstructor extends Value {
 
     prettyPrint() {
         return this.exceptionName + ' [exception constructor]';
+    }
+
+    isSimpleValue(): boolean {
+        return false;
     }
 }
