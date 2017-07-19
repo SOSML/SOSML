@@ -3,7 +3,7 @@ import { Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConsta
          NumericToken, WordConstantToken, CharacterConstantToken,
          StringConstantToken } from './lexer';
 import { Declaration } from './declarations';
-import { State, ValueInformation } from './state';
+import { State } from './state';
 import { InternalInterpreterError, Position, SemanticError, EvaluationError } from './errors';
 import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
@@ -126,12 +126,12 @@ export class Match {
             if (res !== undefined) {
                 let nstate = state.getNestedState();
                 for (let j = 0; j < res.length; ++j) {
-                    nstate.updateValue(res[i][0], res[i][1]);
+                    nstate.setDynamicValue(res[i][0], res[i][1]);
                 }
                 return this.matches[i][1].compute(nstate);
             }
         }
-        return [<Value> (<ValueInformation> state.getValue('Match')).value, true];
+        return [<Value> state.getDynamicValue('Match'), true];
     }
 
     simplify(): Match {
@@ -381,13 +381,13 @@ export class ValueIdentifier extends Expression implements Pattern {
     }
 
     compute(state: State): [Value, boolean] {
-        let res = state.getValue(this.name.getText());
-        if (res === undefined || res.value === undefined) {
+        let res = state.getDynamicValue(this.name.getText());
+        if (res === undefined) {
             throw new EvaluationError(this.position, 'Unbound value identifier "'
                 + this.name.getText() + '".');
         }
 
-        return [res.value, false];
+        return [res, false];
     }
 }
 
