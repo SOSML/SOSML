@@ -1,3 +1,4 @@
+/*
 import {
     FunctionType, PrimitiveType, PrimitiveTypes, RecordType, TupleType, Type, TypeUnificationError,
     TypeVariable
@@ -81,3 +82,4 @@ it("very basic test", () => {
 
     checkThrow(int_bool, a_a);
 });
+*/

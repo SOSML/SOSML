@@ -18,22 +18,21 @@ import { getInitialState } from './initialState';
 import * as Lexer from './lexer';
 import * as Parser from './parser';
 import { Settings } from './settings';
+import { Value } from './values';
 
 export class Interpreter {
     /* Think of some additional flags n stuff etc */
     static interpret(nextInstruction: string,
-                     oldState: State = getInitialState()): State {
+                     oldState: State = getInitialState()): [State, boolean, Value|undefined] {
         let state = oldState.getNestedState();
         let tkn = Lexer.lex(nextInstruction);
 
         let ast = Parser.parse(tkn, state);
 
         state = oldState.getNestedState();
-        ast.simplify();
+        ast = ast.simplify();
         ast.checkStaticSemantics(state);
-        ast.evaluate(state);
-
-        return state;
+        return ast.evaluate(state);
     }
 
     constructor(public settings: Settings) {}
