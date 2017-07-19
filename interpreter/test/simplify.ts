@@ -173,6 +173,14 @@ it("exp", () => {
     expect(parse("val x = (1;2);").simplify()).toEqualWithType(
         expression_tester(br_semicolon)
     )
+
+    expect(parse("val x = let val y = 42 in  1;2;3  end;").simplify()).toEqualWithType(
+        parse("val x = let val y = 42 in (1;2;3) end;").simplify()
+    )
+
+    expect(parse("val x = while true do 1;").simplify()).toEqualWithType(
+        parse("val x = let val rec fish = fn () => if true then (1;fish()) else () in fish() end;")
+    )
     //TODO
 });
 
