@@ -177,18 +177,46 @@ it("exp", () => {
     expect(parse("val x = let val y = 42 in  1;2;3  end;").simplify()).toEqualWithType(
         parse("val x = let val y = 42 in (1;2;3) end;").simplify()
     )
-
+    /*
     expect(parse("val x = while true do 1;").simplify()).toEqualWithType(
         parse("val x = let val rec fish = fn () => if true then (1;fish()) else () in fish() end;")
+    )
+    */
+
+    expect(parse("val x = [1];").simplify()).toEqualWithType(
+        parse("val x =  1::nil;").simplify()
     )
     //TODO
 });
 
 it("pat", () => {
+    expect(parse("val () = 42;").simplify()).toEqualWithType(
+        pattern_tester(
+            new Expr.Record(4, true, []),
+            9
+        )
+    )
+
+    expect(parse("val (_,{}) = 42;").simplify()).toEqualWithType(
+        pattern_tester(
+            new Expr.Record(4, true, [
+                ["1", new Expr.Wildcard(5)],
+                ["2", new Expr.Record(8, true, [])]
+            ]),
+            13
+        )
+    )
+    //TODO especially the list stuff as soon as it is fixed in exp
     //TODO
 });
 
 it("patrow", () => {
+    expect(parse("val {x  } = 42;").simplify()).toEqualWithType(
+        pattern_tester(
+            new Expr.Record(5, true, [["x", new Lexer.AlphanumericIdentifierToken("x", 5)]]),
+            12
+        )
+    )
     //TODO
 });
 
