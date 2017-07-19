@@ -245,8 +245,8 @@ export class Parser {
             return new Constant(curTok.position, curTok);
         } else if (curTok.isVid() || curTok instanceof LongIdentifierToken) {
             ++this.position;
-            if (this.state.getIdentifierInformation(curTok) !== undefined
-                && this.state.getIdentifierInformation(curTok).infix) {
+            if (this.state.getInfixStatus(curTok) !== undefined
+                && this.state.getInfixStatus(curTok).infix) {
                 throw new ParserError('Infix operator "' + curTok.getText()
                     + '" appeared in non-infix context without "op".', curTok.position);
             }
@@ -303,8 +303,8 @@ export class Parser {
             let oldPos = this.position;
             let nextTok = this.currentToken();
             if (this.checkIdentifierOrLongToken(nextTok)
-                && this.state.getIdentifierInformation(nextTok) !== undefined
-                && this.state.getIdentifierInformation(nextTok).infix) {
+                && this.state.getInfixStatus(nextTok) !== undefined
+                && this.state.getInfixStatus(nextTok).infix) {
                 break;
             }
 
@@ -334,8 +334,8 @@ export class Parser {
 
             let curTok = this.currentToken();
             if (this.checkIdentifierOrLongToken(curTok)
-                && this.state.getIdentifierInformation(curTok) !== undefined
-                && this.state.getIdentifierInformation(curTok).infix) {
+                && this.state.getInfixStatus(curTok) !== undefined
+                && this.state.getInfixStatus(curTok).infix) {
                 // We don't know anything about identifiers yet, so just assume they are infix
                 ++this.position;
                 ops.push([<IdentifierToken> curTok, cnt++]);
@@ -750,8 +750,8 @@ export class Parser {
 
             let curTok = this.currentToken();
             if (this.checkIdentifierOrLongToken(curTok)
-                && this.state.getIdentifierInformation(curTok) !== undefined
-                && this.state.getIdentifierInformation(curTok).infix) {
+                && this.state.getInfixStatus(curTok) !== undefined
+                && this.state.getInfixStatus(curTok).infix) {
                 ++this.position;
                 ops.push([<IdentifierToken> curTok, cnt++]);
             } else {
@@ -950,8 +950,8 @@ export class Parser {
                 this.assertIdentifierOrLongToken(this.currentToken());
                 nm = new ValueIdentifier(this.currentToken().position, this.currentToken());
 
-                if (this.state.getIdentifierInformation(this.currentToken()) === undefined
-                    || !this.state.getIdentifierInformation(this.currentToken()).infix) {
+                if (this.state.getInfixStatus(this.currentToken()) === undefined
+                    || !this.state.getInfixStatus(this.currentToken()).infix) {
                     throw new ParserError('"' + this.currentToken().getText()
                         + '" does not have infix status.', this.currentToken().position);
                 }
@@ -967,8 +967,8 @@ export class Parser {
                 try {
                     let tok = this.parseOpIdentifierToken();
                     nm = new ValueIdentifier(tok.position, tok);
-                    if (this.state.getIdentifierInformation(nm.name) !== undefined
-                        && this.state.getIdentifierInformation(nm.name).infix
+                    if (this.state.getInfixStatus(nm.name) !== undefined
+                        && this.state.getInfixStatus(nm.name).infix
                         && !(<IdentifierToken | LongIdentifierToken> nm.name).opPrefixed) {
                         throwError = true;
                         throw new ParserError('Missing "op".', nm.name.position);
@@ -995,8 +995,8 @@ export class Parser {
                         this.assertIdentifierOrLongToken(this.currentToken());
                         nm = new ValueIdentifier(this.currentToken().position, this.currentToken());
 
-                        if (this.state.getIdentifierInformation(this.currentToken()) === undefined
-                            || !this.state.getIdentifierInformation(this.currentToken()).infix) {
+                        if (this.state.getInfixStatus(this.currentToken()) === undefined
+                            || !this.state.getInfixStatus(this.currentToken()).infix) {
                             throwError = true;
                             throw new ParserError('"' + this.currentToken().getText()
                                 + '" does not have infix status.',
@@ -1371,7 +1371,7 @@ export class Parser {
             while (this.currentToken().isVid()) {
                 res.push(<IdentifierToken> this.currentToken());
 
-                this.state.addIdentifierInformation(
+                this.state.setInfixStatus(
                     <IdentifierToken> this.currentToken(), precedence, false, true);
 
                 ++this.position;
@@ -1397,7 +1397,7 @@ export class Parser {
             while (this.currentToken().isVid()) {
                 res.push(<IdentifierToken> this.currentToken());
 
-                this.state.addIdentifierInformation(
+                this.state.setInfixStatus(
                     <IdentifierToken> this.currentToken(), precedence, true, true);
 
                 ++this.position;
@@ -1414,7 +1414,7 @@ export class Parser {
             while (this.currentToken().isVid()) {
                 res.push(<IdentifierToken> this.currentToken());
 
-                this.state.addIdentifierInformation(
+                this.state.setInfixStatus(
                     <IdentifierToken> this.currentToken(), 0, true, false);
 
                 ++this.position;

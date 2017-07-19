@@ -12,8 +12,6 @@ export class TypeUnificationError extends InterpreterError {
 type Instantiations = [[string, Type][], [string, Type][]];
 
 export abstract class Type {
-    admitsEquality: boolean;
-
     // TODO: state may not accurately represent which type variables are free at the position where the
     // instantiation is made
     static findMapping(instantiations: Instantiations, state: State): Map<string, Type> {
@@ -89,17 +87,17 @@ export abstract class Type {
     }
 }
 
-// TODO: better name
-export enum PrimitiveTypes { int, real, word, string, char, bool }
-
 export class PrimitiveType extends Type {
-    constructor(public type: PrimitiveTypes, public position: Position = 0) {
+    constructor(public name: string, public parameters: Type[] = [], public position: Position = 0) {
         super();
-        this.admitsEquality = true;
     }
 
     prettyPrint(): string {
-        return PrimitiveTypes[this.type];
+        let res = '';
+        for (let i = 0; i < this.parameters.length; ++i) {
+            res += this.parameters[i].prettyPrint() + ' ';
+        }
+        return res += this.name;
     }
 
     unifyImpl(other: Type): Type {
@@ -111,16 +109,35 @@ export class PrimitiveType extends Type {
     }
 
     equals(other: any): boolean {
-        return other instanceof PrimitiveType && this.type === other.type;
+        if (!(other instanceof PrimitiveType)) {
+            return false;
+        }
+        if (this.name !== (<PrimitiveType> other).name) {
+            return false;
+        }
+        if (this.parameters.length !== (<PrimitiveType> other).parameters.length) {
+            return false;
+        }
+        for (let i = 0; i < this.parameters.length; ++i) {
+            if (!this.parameters[i].equals((<PrimitiveType> other).parameters[i])) {
+                return false;
+            }
+        }
+        return true;
     }
 
-    simplify(): Type { return this; }
+    simplify(): Type {
+        let param: Type[] = [];
+        for (let i = 0; i < this.parameters.length; ++i) {
+            param.push(this.parameters[i].simplify());
+        }
+        return new PrimitiveType(this.name, param, this.position);
+    }
 }
 
 export class TypeVariable extends Type {
     constructor(public name: string, public position: Position = 0) {
         super();
-        this.admitsEquality = name.charAt(1) === '\'';
     }
 
     prettyPrint(): string {
@@ -142,11 +159,13 @@ export class TypeVariable extends Type {
     }
 
     unifyImpl(other: Type): Type {
-        if (other.admitsEquality || !this.admitsEquality) {
+        /*    if (other.admitsEquality || !this.admitsEquality) {
             return other;
         } else {
             throw new TypeUnificationError(this, other);
-        }
+        }*/
+
+        throw new InternalInterpreterError(-1, 'nyi\'an');
     }
 
     equals(other: any): boolean {
@@ -157,12 +176,6 @@ export class TypeVariable extends Type {
 export class RecordType extends Type {
     constructor(public elements: Map<string, Type>, public complete: boolean = true, public position: Position = 0) {
         super();
-        this.admitsEquality = true;
-        this.elements.forEach((type: Type, key: string) => {
-            if (!type.admitsEquality) {
-                this.admitsEquality = false;
-            }
-        });
     }
 
     prettyPrint(): string {
@@ -284,7 +297,6 @@ export class RecordType extends Type {
 export class FunctionType extends Type {
     constructor(public parameterType: Type, public returnType: Type, public position: Position = 0) {
         super();
-        this.admitsEquality = parameterType.admitsEquality && returnType.admitsEquality;
     }
 
     prettyPrint(): string {
@@ -379,7 +391,7 @@ export class CustomType extends Type {
         }
     }
 
-    simplify(): CustomType {
+    simplify(): Type {
         let args: Type[] = [];
         for (let i: number = 0; i < this.typeArguments.length; ++i) {
             args.push(this.typeArguments[i].simplify());

@@ -13,15 +13,16 @@ let AST = instance.lexParse(..code..);
 
 */
 
-import { getInitialState, State } from './state';
+import { State } from './state';
+import { getInitialState } from './initialState';
 import * as Lexer from './lexer';
 import * as Parser from './parser';
 import { Settings } from './settings';
 
 export class Interpreter {
     /* Think of some additional flags n stuff etc */
-    static interpret(nextInstruction: string, oldState: State = getInitialState()): State {
-        // TODO
+    static interpret(nextInstruction: string,
+                     oldState: State = getInitialState()): State {
         let state = oldState.getNestedState();
         let tkn = Lexer.lex(nextInstruction);
 
@@ -34,18 +35,6 @@ export class Interpreter {
 
         return state;
     }
-
-    /*static interpretFurther(oldState: State, currentPartialInstruction: string,
-                            nextInstructionPart: string): [State, string] | Error {
-        try {
-            return [API.interpret(oldState, currentPartialInstruction + nextInstructionPart), ''];
-        } catch (e) {
-            // if( e instanceof IncompleteCode ) {
-            //   return (oldState, currentPartialInstruction + nextInstructionPart);
-            // }
-            throw e;
-        }
-    }*/
 
     constructor(public settings: Settings) {}
 }

@@ -3,6 +3,7 @@ const Parser = require("../src/parser");
 const Errors = require("../src/errors");
 
 const State = require("../src/state.ts");
+const InitialState = require("../src/initialState.ts");
 const Expr = require("../src/expressions.ts");
 const Decl = require("../src/declarations.ts");
 const Type = require("../src/types.ts");
@@ -77,7 +78,7 @@ function createSampleExpression2(pos: Errors.Position): Expr.Expression {
 }
 
 function parse(str: string): Decl.Declaration {
-    return Parser.parse(Lexer.lex(str), State.getInitialState());
+    return Parser.parse(Lexer.lex(str), InitialState.getInitialState());
 }
 
 it("basic", () => {

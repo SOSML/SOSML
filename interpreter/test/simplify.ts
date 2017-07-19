@@ -3,6 +3,7 @@ const Parser = require("../src/parser");
 const Errors = require("../src/errors");
 
 const State = require("../src/state.ts");
+const InitialState = require("../src/initialState.ts");
 const Expr = require("../src/expressions.ts");
 const Decl = require("../src/declarations.ts");
 const Type = require("../src/types.ts");
@@ -11,7 +12,7 @@ const TestHelper = require("./test_helper.ts");
 TestHelper.init();
 
 function parse(str: string): Decl.Declaration {
-    return Parser.parse(Lexer.lex(str), State.getInitialState());
+    return Parser.parse(Lexer.lex(str), InitialState.getInitialState());
 }
 
 function expression_tester(expression: Expr.Expression) {

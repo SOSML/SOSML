@@ -69,7 +69,7 @@ export class CharacterConstantToken extends ConstantToken {
         super();
     }
     getText(): string {
-        return '' + this.value;
+        return '' + this.text;
     }
     isValidRecordLabel(): boolean { return false; }
 }
@@ -78,7 +78,7 @@ export class StringConstantToken extends ConstantToken {
         super();
     }
     getText(): string {
-        return '' + this.value;
+        return '' + this.text;
     }
     isValidRecordLabel(): boolean { return false; }
 }
