@@ -74,7 +74,7 @@ export class API {
                 }
             );
         }
-        return fetch('/share/' + hash,
+        return fetch('/api/share/' + hash,
             {
                 headers: {
                   'Accept': 'text/plain',
