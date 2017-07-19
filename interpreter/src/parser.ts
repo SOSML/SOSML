@@ -1237,7 +1237,8 @@ export class Parser {
                         throw new ParserError('Using "rec" requires binding a lambda.',
                             curbnd.position);
                     }
-                    if (!(curbnd.pattern instanceof ValueIdentifier)) {
+                    if (!(curbnd.pattern instanceof ValueIdentifier)
+                        && !(curbnd.pattern instanceof Wildcard)) {
                         throw new ParserError('Using "rec" requires binding to a single identifier'
                             + ' and not "' + curbnd.pattern.prettyPrint(0, true) + '".',
                             curbnd.position);
