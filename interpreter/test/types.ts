@@ -1,3 +1,5 @@
+it();
+
 /*
 import {
     FunctionType, PrimitiveType, PrimitiveTypes, RecordType, TupleType, Type, TypeUnificationError,
