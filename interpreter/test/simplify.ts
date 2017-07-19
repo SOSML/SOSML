@@ -260,11 +260,37 @@ it("ty", () => {
     //TODO
 });
 
+function fvalbind_helper(expr: Expr.Expression) {
+    return new Decl.SequentialDeclaration(0, [
+        new Decl.FunctionDeclaration(0, [], [
+            new Decl.FunctionValueBinding(4,[
+                    [
+                        [new Expr.ValueIdentifier(6, new Lexer.AlphanumericIdentifierToken('x', 6))],
+                        undefined,
+                        expr
+                    ]
+                ],
+                new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('f', 4)),
+            )
+        ])
+    ])
+}
+
 it("fvalbind", () => {
+    /*
+    expect(parse("fun f x = 1;").simplify()).toEqualWithType(
+        parse("fun f = fn fish => case (fish) of (x) => 1;").simplify()
+    )
+    */
     //TODO
 });
 
 it("dec", () => {
+    /*
+    expect(parse("fun f x = 1;").simplify()).toEqualWithType(
+        parse("val rec f x = 1;")
+    )
+    */
     //TODO
 });
 
@@ -281,6 +307,17 @@ it("funbind", () => {
 });
 
 it("program", () => {
-
+    expect(parse("1;").simplify()).toEqualWithType(
+        new Decl.SequentialDeclaration(0,[new Decl.ValueDeclaration(
+            0,
+            [],
+            [new Decl.ValueBinding(
+                0,
+                false,
+                new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken("it", -1)),
+                new Expr.Constant(0, new Lexer.NumericToken("1",0,1))
+            )]
+        )])
+    )
     //TODO
 });
