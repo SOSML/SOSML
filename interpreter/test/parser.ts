@@ -1083,14 +1083,19 @@ it("expression - conditional", () => {
             createSampleExpression2(35)
         )
     ));
-    //TODO maybe more tests?
 });
 
 it("expression - iteration", () => {
     let testcase_simple: string = 'while true do 42;';
 
-    //expect(() => { parse(testcase_simple); }).toThrow(Errors.FeatureNotImplementedError);
-    //TODO tests
+    expect(parse(testcase_simple)).toEqualWithType(createItExpression(
+        new Expr.While(0,
+            new Expr.ValueIdentifier(6,
+                new Lexer.AlphanumericIdentifierToken('true', 6)
+            ),
+            get42(14)
+        )
+    ));
 });
 
 it("expression - case analysis", () => {
