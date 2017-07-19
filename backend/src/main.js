@@ -22,6 +22,11 @@ server.get('/', function (request, response) {
     response.sendFile(path.resolve('../frontend/build/index.html'));
 });
 
+server.get('/share/:code', function (request, response) {
+    response.sendFile(path.resolve('../frontend/build/index.html'));
+});
+
+
 var callDockerLimiter = new RateLimit({
     windowMs: 10*60*1000, // 1 hour window
     delayAfter: 10, // begin slowing down responses after the first 10 requests
@@ -109,7 +114,7 @@ server.put('/api/share/',
     }
 );
 
-server.get('/share/:code',
+server.get('/api/share/:code',
     function (request, response) {
         var code = request.params.code;
         outputFile("./code/shares/" + code + ".sml", response);
