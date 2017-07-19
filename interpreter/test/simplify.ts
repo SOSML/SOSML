@@ -14,18 +14,6 @@ function parse(str: string): Decl.Declaration {
     return Parser.parse(Lexer.lex(str), State.getInitialState());
 }
 
-function get42(pos: Errors.Position): Expr.Expresion {
-    return new Expr.Constant(pos, new Lexer.NumericToken('42', pos, 42));
-}
-
-function pattern_tester(pattern: Expr.Pattern, pos42: Errors.Position): Decl.Declaration {
-    return new Decl.SequentialDeclaration(0, [
-        new Decl.ValueDeclaration(0, [], [
-            new Decl.ValueBinding(4, false, pattern, get42(pos42))
-        ])
-    ]);
-}
-
 function expression_tester(expression: Expr.Expression) {
     return new Decl.SequentialDeclaration(
         0,
@@ -189,6 +177,18 @@ it("exp", () => {
     //TODO
 });
 
+function get42(pos: Errors.Position): Expr.Expresion {
+    return new Expr.Constant(pos, new Lexer.NumericToken('42', pos, 42));
+}
+
+function pattern_tester(pattern: Expr.Pattern, pos42: Errors.Position): Decl.Declaration {
+    return new Decl.SequentialDeclaration(0, [
+        new Decl.ValueDeclaration(0, [], [
+            new Decl.ValueBinding(4, false, pattern, get42(pos42))
+        ])
+    ]);
+}
+
 it("pat", () => {
     expect(parse("val () = 42;").simplify()).toEqualWithType(
         pattern_tester(
@@ -220,7 +220,42 @@ it("patrow", () => {
     //TODO
 });
 
+// val x = 42 :ty
+function type_tester(type: Type.Type) {
+    return expression_tester(new Expr.TypedExpression(
+        8,
+        get42(8),
+        type
+    ))
+}
+
 it("ty", () => {
+    //currently irrelevant, use when testing for positions
+    /*
+    expect(parse("val x = 42:int;").simplify()).toEqualWithType(
+        parse("val x = 42:int;")
+    )
+    */
+    expect(parse("val x = 42:int * int;").simplify()).toEqualWithType(
+        type_tester(new Type.RecordType(
+            new Map([
+                ["1", new Type.CustomType(new Lexer.LongIdentifierToken("int", 11, [], new Lexer.AlphanumericIdentifierToken("int", 11)), [], 0)],
+                ["2", new Type.CustomType(new Lexer.LongIdentifierToken("int", 17, [], new Lexer.AlphanumericIdentifierToken("int", 17)), [], 0)]]
+            ]),
+            true,
+        ))
+    )
+
+    expect(parse("val x = 42:int * int * int;").simplify()).toEqualWithType(
+        type_tester(new Type.RecordType(
+            new Map([
+                ["1", new Type.CustomType(new Lexer.LongIdentifierToken("int", 11, [], new Lexer.AlphanumericIdentifierToken("int", 11)), [], 0)],
+                ["2", new Type.CustomType(new Lexer.LongIdentifierToken("int", 17, [], new Lexer.AlphanumericIdentifierToken("int", 17)), [], 0)],
+                ["3", new Type.CustomType(new Lexer.LongIdentifierToken("int", 23, [], new Lexer.AlphanumericIdentifierToken("int", 23)), [], 0)],
+            ]),
+            true,
+        ))
+    )
     //TODO
 });
 
