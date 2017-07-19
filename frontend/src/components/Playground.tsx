@@ -18,7 +18,13 @@ interface State {
     sizeAnchor: any;
 }
 
-class Playground extends React.Component<any, State> {
+interface Props {
+    readOnly: boolean;
+    onCodeChange?: (x: string) => void;
+    initialCode: string;
+}
+
+class Playground extends React.Component<Props, State> {
     constructor(props: any) {
         super(props);
 
@@ -38,19 +44,21 @@ class Playground extends React.Component<any, State> {
         // let glyphRight: string = 'resize-full';
         let lines: string[] = this.state.output.split('\n');
         let lineItems = lines.map((line) =>
-            <div>{line}</div>
+            <div key={line}>{line}</div>
         );
-        let codeNull: string | null = localStorage.getItem('tmpCode');
-        let code: string = '';
-        if (typeof codeNull === 'string') {
+        // let codeNull: string | null = localStorage.getItem('tmpCode');
+        let code: string = this.props.initialCode;
+        /* if (typeof codeNull === 'string') {
             code = codeNull;
-        }
+        } */
         return (
             <div className="playground">
                 <SplitterLayout onUpdate={this.handleSplitterUpdate}>
                     <div className="flexcomponent flexy">
-                        <MiniWindow content={
-                            <CodeMirrorWrapper flex={true} onChange={this.handleCodeChange} code={code} />}
+                        <MiniWindow content={(
+                                <CodeMirrorWrapper flex={true} onChange={this.handleCodeChange} code={code}
+                                readOnly={this.props.readOnly} />
+                            )}
                             footer={(
                             <ButtonToolbar>
                                 <Button bsSize="small" bsStyle="primary" onClick={this.handleRun}>Ausführen</Button>
@@ -65,7 +73,7 @@ class Playground extends React.Component<any, State> {
                     </div>
                     <div className="flexcomponent flexy">
                         <MiniWindow content={
-                            <p>{lineItems}</p>} /* header={(
+                            <div>{lineItems}</div>} /* header={(
                             <ButtonToolbar className="pull-right">
                                 <Button bsSize="small" onClick={this.handleRightResize}>
                                     <Glyphicon glyph={glyphRight} />
@@ -115,7 +123,9 @@ class Playground extends React.Component<any, State> {
         this.setState(prevState => {
             return {code: newCode};
         });
-        localStorage.setItem('tmpCode', newCode);
+        if (this.props.onCodeChange) {
+            this.props.onCodeChange(newCode);
+        }
     }
 }
 
