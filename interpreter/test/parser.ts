@@ -1757,7 +1757,7 @@ it("value bindings - non recursive", () => {
 it("value bindings - recursive", () => {
     let testcase_single: string = 'val rec _ = fn _ => 42;';
     let testcase_multirec: string = 'val rec rec rec _ = fn _ => 42;';
-    let testcase_multiple: string = 'val f = fn _ => 42 and rec f = fn _ => ' + sampleExpression1 + ' and g = fn _ => ' + sampleExpression2 + ';';
+    let testcase_multiple: string = 'val _ = fn _ => 42 and rec f = fn _ => ' + sampleExpression1 + ' and g = fn _ => ' + sampleExpression2 + ';';
     let testcase_no_lambda: string = 'val rec _ = 42;';
     expect(parse(testcase_single)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
