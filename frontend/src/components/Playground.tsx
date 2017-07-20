@@ -36,6 +36,7 @@ class Playground extends React.Component<Props, State> {
         this.handleCodeChange = this.handleCodeChange.bind(this);
         this.handleSplitterUpdate = this.handleSplitterUpdate.bind(this);
         this.handleBrowserResize = this.handleBrowserResize.bind(this);
+        this.handleOutputChange = this.handleOutputChange.bind(this);
     }
 
     render() {
@@ -43,8 +44,9 @@ class Playground extends React.Component<Props, State> {
         // let glyphLeft: string = 'resize-full';
         // let glyphRight: string = 'resize-full';
         let lines: string[] = this.state.output.split('\n');
+        var key = 0;
         let lineItems = lines.map((line) =>
-            <div key={line}>{line}</div>
+            <div key={line + (key++)}>{line}</div>
         );
         // let codeNull: string | null = localStorage.getItem('tmpCode');
         let code: string = this.props.initialCode;
@@ -57,7 +59,7 @@ class Playground extends React.Component<Props, State> {
                     <div className="flexcomponent flexy">
                         <MiniWindow content={(
                                 <CodeMirrorWrapper flex={true} onChange={this.handleCodeChange} code={code}
-                                readOnly={this.props.readOnly} />
+                                readOnly={this.props.readOnly} outputCallback={this.handleOutputChange} />
                             )}
                             footer={(
                             <ButtonToolbar>
@@ -126,6 +128,13 @@ class Playground extends React.Component<Props, State> {
         if (this.props.onCodeChange) {
             this.props.onCodeChange(newCode);
         }
+    }
+
+    handleOutputChange(newOutput: string) {
+        this.setState(prevState => {
+            let ret: any = {output: newOutput};
+            return ret;
+        });
     }
 }
 

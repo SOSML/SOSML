@@ -5158,7 +5158,7 @@ var Interpreter = (function () {
         var ast = Parser.parse(tkn, state);
         state = oldState.getNestedState();
         ast = ast.simplify();
-        ast.checkStaticSemantics(state);
+        //      ast.checkStaticSemantics(state);
         return ast.evaluate(state);
     };
     return Interpreter;

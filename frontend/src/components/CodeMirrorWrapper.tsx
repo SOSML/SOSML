@@ -42,8 +42,9 @@ class IncrementalInterpretationHelper {
     debounceMinimumPosition: any;
     debounceCallNecessary: boolean;
     interpreter: any;
+    outputCallback: (code: string) => any;
 
-    constructor() {
+    constructor(outputCallback: (code: string) => any) {
         this.semicoli = [];
         this.states = [];
         this.markers = [];
@@ -53,11 +54,15 @@ class IncrementalInterpretationHelper {
         this.debounceCallNecessary = false;
 
         this.interpreter = API.createInterpreter();
+        this.outputCallback = outputCallback;
     }
 
     clear() {
         this.semicoli.length = 0;
         this.states.length = 0;
+        this.markers.length = 0;
+        this.output.length = 0;
+        this.error.length = 0;
     }
 
     handleChangeAt(pos: any, added: string[], removed: string[], codemirror: CodeMirrorSubset) {
@@ -102,6 +107,15 @@ class IncrementalInterpretationHelper {
             basePos.ch = basePos.ch + 1;
         }
         this.reEvaluateFrom(basePos, baseIndex, anchor, remainingText, codemirror);
+        this.recomputeOutput();
+    }
+
+    private recomputeOutput() {
+        let out = '';
+        for (let i = 0; i < this.output.length; i++) {
+            out += this.output[i];
+        }
+        this.outputCallback(out);
     }
 
     private copyPos(pos: any): any {
@@ -134,7 +148,7 @@ class IncrementalInterpretationHelper {
 
                     let semiPos = {line: (basePos.line + i), ch: sc + lineOffset};
                     if (errorEncountered) {
-                        this.addErrorSemicolon(semiPos, codemirror.markText(lastPos, semiPos, 'eval-fail'));
+                        this.addErrorSemicolon(semiPos, '', codemirror.markText(lastPos, semiPos, 'eval-fail'));
                         lastPos = this.copyPos(semiPos);
                         lastPos.ch++;
                         previousState = null;
@@ -143,7 +157,7 @@ class IncrementalInterpretationHelper {
                     } else {
                         let ret = this.evaluate(previousState, partial);
                         if (ret[1] === ErrorType.INCOMPLETE) {
-                            this.addSemicolon(semiPos, null, null);
+                            this.addIncompleteSemicolon(semiPos);
                             partial += ';';
                         } else if (ret[1] === ErrorType.OK) {
                             this.addSemicolon(semiPos, ret[0], codemirror.markText(lastPos, semiPos, 'eval-success'));
@@ -154,9 +168,18 @@ class IncrementalInterpretationHelper {
                             partial = '';
                         } else if (ret[1] === ErrorType.SML) {
                             // TODO
+                            this.addSMLErrorSemicolon(semiPos, ret[2],
+                                codemirror.markText(lastPos, semiPos, 'eval-fail'));
+                            lastPos = this.copyPos(semiPos);
+                            lastPos.ch++;
+                            previousState = ret[0];
+
+                            partial = '';
                         } else {
                             // TODO: mark error position with red color
-                            this.addErrorSemicolon(semiPos, codemirror.markText(lastPos, semiPos, 'eval-fail'));
+                            let errorMessage = this.getErrorMessage(ret[2], partial, lastPos);
+                            this.addErrorSemicolon(semiPos, errorMessage,
+                                codemirror.markText(lastPos, semiPos, 'eval-fail'));
                             lastPos = this.copyPos(semiPos);
                             lastPos.ch++;
                             previousState = null;
@@ -186,7 +209,13 @@ class IncrementalInterpretationHelper {
             }
         } catch (e) {
             // TODO: switch over e's type
-            return [null, ErrorType.INTERPRETER, e];
+            // console.log(e);
+            let proto: any = Object.getPrototypeOf(e);
+            if (proto.constructor && proto.constructor.name && proto.constructor.name === 'IncompleteError') {
+                return [null, ErrorType.INCOMPLETE, e];
+            } else {
+                return [null, ErrorType.INTERPRETER, e];
+            }
         }
         if (ret[1]) {
             return [ret[0], ErrorType.SML, ret[2]];
@@ -195,20 +224,77 @@ class IncrementalInterpretationHelper {
         }
     }
 
+    private getErrorMessage(error: any, partial: string, startPos: any): string {
+        if (error.position !== undefined) {
+            let position = this.calculateErrorPos(partial, startPos, error.position);
+            return 'Zeile ' + position[0] + ' Spalte ' + position[1] + ': ' + error.toString();
+        } else {
+            return 'Unbekannte Position: ' + error.toString();
+        }
+    }
+
+    private calculateErrorPos(partial: string, startPos: any, offset: number): [number, number] {
+        let pos = {line: startPos.line, ch: startPos.ch};
+        for (let i = 0; i < offset; i++) {
+            let char = partial.charAt(i);
+            if (char === '\n') {
+                pos.line ++;
+                pos.ch = 0;
+            } else {
+                pos.ch++;
+            }
+        }
+        return [pos.line + 1, pos.ch + 1];
+    }
+
     private addSemicolon(pos: any, newState: any, marker: any) {
         this.semicoli.push(pos);
         this.states.push(newState);
-        this.output.push('');
+        this.output.push(this.computeNewStateOutput(newState));
         this.markers.push(marker);
         this.error.push(false);
     }
 
-    private addErrorSemicolon(pos: any, marker: any) {
+    private addIncompleteSemicolon(pos: any) {
         this.semicoli.push(pos);
         this.states.push(null);
         this.output.push('');
+        this.markers.push(null);
+        this.error.push(false);
+    }
+
+    private addErrorSemicolon(pos: any, errorMessage: any, marker: any) {
+        this.semicoli.push(pos);
+        this.states.push(null);
+        this.output.push(errorMessage);
         this.markers.push(marker);
         this.error.push(true);
+    }
+
+    private addSMLErrorSemicolon(pos: any, error: any, marker: any) {
+        this.semicoli.push(pos);
+        this.states.push(null);
+        if (error.prettyPrint) {
+            this.output.push('Uncaught SML exception: ' + error.prettyPrint() + '\n');
+        } else {
+            this.output.push('Unknown Uncaught SML exception\n');
+        }
+        this.markers.push(marker);
+        this.error.push(true);
+    }
+
+    private computeNewStateOutput(state: any) {
+        let output = '';
+        if (state.dynamicBasis.valueEnvironment !== undefined) {
+            let valEnv = state.dynamicBasis.valueEnvironment;
+            for (let i in valEnv) {
+                if (valEnv.hasOwnProperty(i)) {
+                    output = 'val ' + i + ' = ' + state.getDynamicValue(i).prettyPrint() + ';';
+                }
+            }
+            output += '\n';
+        }
+        return output;
     }
 
     private stringArrayContains(arr: string[], search: string) {
@@ -303,6 +389,7 @@ export interface Props {
     onChange?: (x: string) => void;
     code?: string;
     readOnly?: boolean;
+    outputCallback: (code: string) => any;
 }
 
 class CodeMirrorWrapper extends React.Component<Props, any> {
@@ -312,7 +399,7 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
     constructor(props: Props) {
         super(props);
 
-        this.evalHelper = new IncrementalInterpretationHelper();
+        this.evalHelper = new IncrementalInterpretationHelper(this.props.outputCallback);
 
         this.handleChange = this.handleChange.bind(this);
         this.handleChangeEvent = this.handleChangeEvent.bind(this);
