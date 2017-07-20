@@ -128,7 +128,7 @@ export class Match {
                 for (let j = 0; j < res.length; ++j) {
                     state.setDynamicValue(res[j][0], res[j][1]);
                 }
-                return this.matches[i][1].compute(state);
+                return this.matches[i][1].compute(state.getNestedState());
             }
         }
         return [<Value> state.getDynamicValue('Match'), true];
