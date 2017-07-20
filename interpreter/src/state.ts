@@ -1,117 +1,247 @@
-// TODO This is still far from unfinished
-// TODO Add method for working properly with environments
-// TODO Add types
-//
-// TODO Remove stuff not needed for our subset of SML
+import { Type, PrimitiveType } from './types';
+import { Value, StringValue } from './values';
+import { Token, LongIdentifierToken } from './lexer';
+import { InternalInterpreterError } from './errors';
 
-import { Type } from './types';
-import { IdentifierToken, Token, LongIdentifierToken } from './lexer';
-import { InternalInterpreterError } from './errors.ts';
+// maps id to Value
+type DynamicValueEnvironment = { [name: string]: Value };
+// maps id to type (multiple if overloaded)
+type StaticValueEnvironment = { [name: string]: Type[] };
 
-export enum IdentifierStatus {
-    CONSTANT,
-    VALUE,
-    EXCEPTION
+export class TypeInformation {
+    // Every constructor also appears in the value environment,
+    // thus it suffices to record their names here.
+    constructor(public type: Type, public constructors: string[]) { }
 }
 
-export class IdentifierInformation {
-    type: Type;
-    identifierStatus: IdentifierStatus;
-    precedence: number;
-    rightAssociative: boolean;
-    infix: boolean;
+// maps type name to constructor names
+type DynamicTypeEnvironment = { [name: string]: string[] };
+// maps type name to (Type, constructor name)
+type StaticTypeEnvironment = { [name: string]: TypeInformation };
 
-    clone(): IdentifierInformation {
-        // TODO
-        throw new Error('nyi\'an :/');
+export class TypeNameInformation {
+    constructor(public arity: number,
+                public allowsEquality: boolean) {
     }
 }
 
-export interface ValueEnvironment {
-    // maps value identifiers to (type scheme, identifier status)
-    [name: string]: IdentifierInformation;
+// Maps type name to (arity, allows Equality)
+type TypeNames = { [name: string]: TypeNameInformation };
+
+export class InfixStatus {
+    constructor(public infix: boolean,
+                public precedence: number = 0,
+                public rightAssociative: boolean = false) {}
 }
 
-export class ConstructorInformation {
-    type: Type;
-    identifierStatus: IdentifierStatus;
+type InfixEnvironment = { [name: string]: InfixStatus };
 
-    clone(): ConstructorInformation {
-        // TODO
-        throw new Error('nyi\'an :/');
+export class DynamicBasis {
+    constructor(public typeEnvironment: DynamicTypeEnvironment,
+                public valueEnvironment: DynamicValueEnvironment) {
+    }
+
+    getValue(name: string): Value | undefined {
+        return this.valueEnvironment[name];
+    }
+
+    getType(name: string): string[] | undefined {
+        return this.typeEnvironment[name];
+    }
+
+    setValue(name: string, value: Value): void {
+        this.valueEnvironment[name] = value;
+    }
+
+    setType(name: string, type: string[]) {
+        this.typeEnvironment[name] = type;
     }
 }
 
-export interface ConstructorSet {
-    [name: string]: ConstructorInformation;
-}
+export class StaticBasis {
+    constructor(public typeEnvironment: StaticTypeEnvironment,
+                public valueEnvironment: StaticValueEnvironment) {
+    }
 
-export class TypeDefinition {
-    type: Type;
-    constructors: ConstructorSet;
+    getValue(name: string): Type[] | undefined {
+        return this.valueEnvironment[name];
+    }
 
-    clone(): TypeEnvironment {
-        // TODO
-        throw new Error('nyi\'an :/');
+    getType(name: string): TypeInformation | undefined {
+        return this.typeEnvironment[name];
+    }
+
+    setValue(name: string, value: Type): void {
+        this.valueEnvironment[name] = [value];
+    }
+
+    setType(name: string, type: Type, constructors: string[]) {
+        this.typeEnvironment[name] = new TypeInformation(type, constructors);
     }
 }
 
-export interface TypeEnvironment {
-    // maps type name to (type, [constructor])
-    [name: string]: TypeDefinition;
-}
-
-export class Environment {
-    // TODO structEnvironment
-    constructor(public structEnvironment: any, public typeEnvironment: TypeEnvironment,
-                public valueEnvironment: ValueEnvironment) {
-    }
-
-    clone(): Environment {
-        throw new Error('nyi\'an :/');
-    }
-}
-
-export class TypeName {
-    constructor(public name: string, public arity: number, public allowsEquality: boolean) {
-    }
-
-    clone(): TypeName {
-        return new TypeName(this.name, this.arity, this.allowsEquality);
-    }
-}
-
+let emptyStdFile: DynamicValueEnvironment = {
+    '__stdout': new StringValue(''),
+    '__stdin': new StringValue(''),
+    '__stderr': new StringValue('')
+};
 export class State {
-    // typeNames:              TypeName[];         // Type names
-    // functorEnvironment:     any;         // Functor environment TODO
-    // signatureEnvironment:   any;         // Signature environment TODO
-    // environment:            Environment;
+    private stdfiles = emptyStdFile;
 
-    constructor(public typeNames: TypeName[], public functorEnvironment: any,
-                public signatureEnvironment: any, public environment: Environment) {
+    constructor(public id: number,
+                public parent: State | undefined,
+                public staticBasis: StaticBasis,
+                public dynamicBasis: DynamicBasis,
+                private typeNames: TypeNames,
+                private infixEnvironment: InfixEnvironment) {
     }
 
-    clone(): State {
-        let tns: TypeName[] = [];
-        for (let i = 0; i < this.typeNames.length; ++i) {
-            tns.push(this.typeNames[i].clone());
+    getNestedState() {
+        return new State(this.id + 1, this,
+            new StaticBasis({}, {}),
+            new DynamicBasis({}, {}),
+            {}, {});
+    }
+
+    getStaticValue(name: string, idLimit: number = 0): Type[] | undefined {
+        if (this.stdfiles[name] !== undefined) {
+            return [new PrimitiveType('string')];
         }
-        return new State(tns, this.functorEnvironment, this.signatureEnvironment,
-                         this.environment.clone());
-    }
-
-    getIdentifierInformation(id: Token): IdentifierInformation {
-        if (id instanceof IdentifierToken) {
-            return this.environment.valueEnvironment[id.text];
-        } else if (id instanceof LongIdentifierToken) {
-            // TODO
-            return this.environment.valueEnvironment[id.text];
+        let result: Type[] | undefined;
+        result = this.staticBasis.getValue(name);
+        if (result !== undefined || !this.parent || this.parent.id < idLimit) {
+            return result;
         } else {
-            throw new InternalInterpreterError(id.position, 'Not an identifier');
+            return this.parent.getStaticValue(name);
         }
     }
-}
 
-export function initialState(): State {
-    throw new Error('nyi\'an');
+    getStaticType(name: string, idLimit: number = 0): TypeInformation | undefined {
+        let result: TypeInformation | undefined;
+        result = this.staticBasis.getType(name);
+        if (result !== undefined || !this.parent || this.parent.id < idLimit) {
+            return result;
+        } else {
+            return this.parent.getStaticType(name);
+        }
+    }
+
+    getDynamicValue(name: string, idLimit: number = 0): Value | undefined {
+        if (this.stdfiles[name] !== undefined
+            && (<StringValue> this.stdfiles[name]).value !== '') {
+            return this.stdfiles[name];
+        }
+        let result: Value | undefined;
+        result = this.dynamicBasis.getValue(name);
+        if (result !== undefined || !this.parent || this.parent.id < idLimit) {
+            return result;
+        } else {
+            return this.parent.getDynamicValue(name);
+        }
+    }
+
+    getDynamicType(name: string, idLimit: number = 0): string[] | undefined {
+        let result: string[] | undefined;
+        result = this.dynamicBasis.getType(name);
+        if (result !== undefined || !this.parent || this.parent.id < idLimit) {
+            return result;
+        } else {
+            return this.parent.getDynamicType(name);
+        }
+    }
+
+    getInfixStatus(id: Token, idLimit: number = 0): InfixStatus {
+        if (id.isVid() || id instanceof LongIdentifierToken ) {
+            if (this.infixEnvironment.hasOwnProperty(id.getText()) || !this.parent
+                || this.parent.id < idLimit) {
+                return this.infixEnvironment[id.getText()];
+            } else {
+                return this.parent.getInfixStatus(id);
+            }
+        } else {
+            throw new InternalInterpreterError(id.position,
+                'You gave me some "' + id.getText() + '" (' + id.constructor.name
+                + ') but I only want (Long)IdentifierToken.');
+        }
+    }
+
+    getPrimitiveType(name: string, idLimit: number = 0): TypeNameInformation {
+        if (this.typeNames.hasOwnProperty(name) || !this.parent || this.parent.id < idLimit) {
+            return this.typeNames[name];
+        } else {
+            return this.parent.getPrimitiveType(name);
+        }
+    }
+
+    setStaticValue(name: string, type: Type, atId: number|undefined = undefined) {
+        if (this.stdfiles[name] !== undefined) {
+            return;
+        }
+        if (atId === undefined || atId === this.id) {
+            this.staticBasis.setValue(name, type);
+        } else if (atId > this.id || this.parent === undefined) {
+            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+        } else {
+            (<State> this.parent).setStaticValue(name, type, atId);
+        }
+    }
+
+    setStaticType(name: string, type: Type,
+                  constructors: string[],
+                  atId: number|undefined = undefined) {
+        if (atId === undefined || atId === this.id) {
+            this.staticBasis.setType(name, type, constructors);
+        } else if (atId > this.id || this.parent === undefined) {
+            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+        } else {
+            (<State> this.parent).setStaticType(name, type, constructors, atId);
+        }
+    }
+
+    setDynamicValue(name: string, value: Value, atId: number|undefined = undefined) {
+        if (atId === undefined || atId === this.id) {
+            if (this.stdfiles[name] !== undefined) {
+                if (value instanceof StringValue) {
+                    (<StringValue> this.stdfiles[name]).concat(value);
+                    return;
+                } else {
+                    throw new InternalInterpreterError(-1, 'Wrong type.');
+                }
+            }
+            this.dynamicBasis.setValue(name, value);
+        } else if (atId > this.id || this.parent === undefined) {
+            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+        } else {
+            this.parent.setDynamicValue(name, value, atId);
+        }
+    }
+
+    setDynamicType(name: string,
+                   constructors: string[],
+                   atId: number|undefined = undefined) {
+        if (atId === undefined || atId === this.id) {
+            this.dynamicBasis.setType(name, constructors);
+        } else if (atId > this.id || this.parent === undefined) {
+            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+        } else {
+            this.parent.setDynamicType(name, constructors, atId);
+        }
+    }
+
+
+    setInfixStatus(id: Token, precedence: number,
+                   rightAssociative: boolean,
+                   infix: boolean,
+                   atId: number|undefined = undefined): void {
+        if (atId === undefined || atId === this.id) {
+            if (id.isVid() || id instanceof LongIdentifierToken) {
+                this.infixEnvironment[id.getText()]
+                    = new InfixStatus(infix, precedence, rightAssociative);
+            }
+        } else if (atId > this.id || this.parent === undefined) {
+            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+        } else {
+            this.parent.setInfixStatus(id, precedence, rightAssociative, infix, atId);
+        }
+    }
 }

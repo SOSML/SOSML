@@ -14,39 +14,26 @@ let AST = instance.lexParse(..code..);
 */
 
 import { State } from './state';
+import { getInitialState } from './initialState';
 import * as Lexer from './lexer';
-import { Parser } from './parser';
+import * as Parser from './parser';
+import { Settings } from './settings';
+import { Value } from './values';
 
-export class API {
+export class Interpreter {
     /* Think of some additional flags n stuff etc */
-    static interpret(oldState: State, nextInstruction: string): State {
-        // TODO
-        // TODO copy old state
-        // Do we need to clone?
-        let state = oldState.clone();
+    static interpret(nextInstruction: string,
+                     oldState: State = getInitialState()): [State, boolean, Value|undefined] {
+        let state = oldState.getNestedState();
         let tkn = Lexer.lex(nextInstruction);
 
-        let parser = new Parser(tkn);
-        let ast = parser.parseDeclaration();
-        ast = ast.reParse(state);
+        let ast = Parser.parse(tkn, state);
 
-        state = oldState.clone();
-        ast.simplify();
+        state = oldState.getNestedState();
+        ast = ast.simplify();
         ast.checkStaticSemantics(state);
-        ast.evaluate(state);
-
-        return state;
+        return ast.evaluate(state);
     }
 
-    static interpretFurther(oldState: State, currentPartialInstruction: string,
-                            nextInstructionPart: string): [State, string] | Error {
-        try {
-            return [API.interpret(oldState, currentPartialInstruction + nextInstructionPart), ''];
-        } catch (e) {
-            // if( e instanceof IncompleteCode ) {
-            //   return (oldState, currentPartialInstruction + nextInstructionPart);
-            // }
-            throw e;
-        }
-    }
+    constructor(public settings: Settings) {}
 }
