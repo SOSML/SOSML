@@ -86,6 +86,21 @@ export class API {
             return response.text();
         });
     }
+
+    static createInterpreter(): any {
+        // TODO: return new interpreter
+
+        return {
+            interpret: function(partial: string, oldState: any): [any, boolean, any] {
+                if (partial.indexOf('NOPE') !== -1 && partial.indexOf(';') === -1) {
+                    // Simulate failure
+                    return [null, true, 'Generic error'];
+                } else {
+                    return [{'partial': partial, 'prev': oldState}, false, null];
+                }
+            }
+        };
+    }
 }
 
 export class Database {
