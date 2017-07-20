@@ -14,9 +14,8 @@ export abstract class Value {
             'Tried comparing incomparable things.');
     }
 
-    isSimpleValue(): boolean {
-        return true;
-    }
+    isSimpleValue(): boolean { return true; }
+    isConstructedValue(): boolean { return false; }
 }
 
 export class BoolValue extends Value {
@@ -239,6 +238,10 @@ export class RecordValue extends Value {
         return this.entries[name];
     }
 
+    hasValue(name: string): boolean {
+        return this.entries[name] !== undefined;
+    }
+
     equals(other: Value): boolean {
         if (!(other instanceof RecordValue)) {
             return false;
@@ -322,6 +325,8 @@ export class ConstructedValue extends Value {
         // TODO if this CustomType is a List of CharValue, implode them into a string.
         throw new InternalInterpreterError(-1, 'nyi\'an');
     }
+
+    isConstructedValue(): boolean { return true; }
 }
 
 export class ExceptionValue extends Value {
@@ -355,6 +360,8 @@ export class ExceptionValue extends Value {
             return (<ExceptionValue> other).argument === undefined;
         }
     }
+
+    isConstructedValue(): boolean { return true; }
 }
 
 

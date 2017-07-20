@@ -125,11 +125,10 @@ export class Match {
         for (let i = 0; i < this.matches.length; ++i) {
             let res = this.matches[i][0].matches(state, value);
             if (res !== undefined) {
-                let nstate = state.getNestedState();
                 for (let j = 0; j < res.length; ++j) {
-                    nstate.setDynamicValue(res[j][0], res[j][1]);
+                    state.setDynamicValue(res[j][0], res[j][1]);
                 }
-                return this.matches[i][1].compute(nstate);
+                return this.matches[i][1].compute(state);
             }
         }
         return [<Value> state.getDynamicValue('Match'), true];
@@ -278,9 +277,9 @@ export class FunctionApplication extends Expression implements Pattern {
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
-        let res = this.func.prettyPrint(indentation, oneLine);
+        let res = '( ' +  this.func.prettyPrint(indentation, oneLine);
         res += ' ' + this.argument.prettyPrint(indentation, oneLine);
-        return res;
+        return res + ' )';
     }
 
     compute(state: State): [Value, boolean] {
@@ -364,7 +363,7 @@ export class ValueIdentifier extends Expression implements Pattern {
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         let res = state.getDynamicValue(this.name.getText());
-        if (res !== undefined && (<Value> res).isSimpleValue()) {
+        if (res !== undefined && (<Value> res).isConstructedValue()) {
             if (v.equals(<Value> res)) {
                 return [];
             } else {
@@ -409,8 +408,27 @@ export class Record extends Expression implements Pattern {
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'not yet implemented');
+        if (!(v instanceof RecordValue)) {
+            console.log("v is no Record");
+            return undefined;
+        }
+
+        let res: [string, Value][] = [];
+
+        for (let i = 0; i < this.entries.length; ++i) {
+            if (!(<RecordValue> v).hasValue(this.entries[i][0])) {
+                console.log(v.prettyPrint() + " has no value " + this.entries[i][0]);
+                return undefined;
+            }
+            let cur = (<Pattern> this.entries[i][1]).matches(state, (<RecordValue> v).getValue(this.entries[i][0]));
+            if (cur === undefined) {
+                return cur;
+            }
+            for (let j = 0; j < cur.length; ++j) {
+                res.push(cur[j]);
+            }
+        }
+        return res;
     }
 
     computeType(state: State): RecordType {

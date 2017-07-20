@@ -112,7 +112,7 @@ export class State {
         if (result !== undefined || !this.parent || this.parent.id < idLimit) {
             return result;
         } else {
-            return this.parent.getStaticValue(name);
+            return this.parent.getStaticValue(name, idLimit);
         }
     }
 
@@ -122,7 +122,7 @@ export class State {
         if (result !== undefined || !this.parent || this.parent.id < idLimit) {
             return result;
         } else {
-            return this.parent.getStaticType(name);
+            return this.parent.getStaticType(name, idLimit);
         }
     }
 
@@ -136,7 +136,7 @@ export class State {
         if (result !== undefined || !this.parent || this.parent.id < idLimit) {
             return result;
         } else {
-            return this.parent.getDynamicValue(name);
+            return this.parent.getDynamicValue(name, idLimit);
         }
     }
 
@@ -146,7 +146,7 @@ export class State {
         if (result !== undefined || !this.parent || this.parent.id < idLimit) {
             return result;
         } else {
-            return this.parent.getDynamicType(name);
+            return this.parent.getDynamicType(name, idLimit);
         }
     }
 
@@ -156,7 +156,7 @@ export class State {
                 || this.parent.id < idLimit) {
                 return this.infixEnvironment[id.getText()];
             } else {
-                return this.parent.getInfixStatus(id);
+                return this.parent.getInfixStatus(id, idLimit);
             }
         } else {
             throw new InternalInterpreterError(id.position,
@@ -169,7 +169,7 @@ export class State {
         if (this.typeNames.hasOwnProperty(name) || !this.parent || this.parent.id < idLimit) {
             return this.typeNames[name];
         } else {
-            return this.parent.getPrimitiveType(name);
+            return this.parent.getPrimitiveType(name, idLimit);
         }
     }
 
