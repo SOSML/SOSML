@@ -89,17 +89,21 @@ export class API {
 
     static createInterpreter(): any {
         // TODO: return new interpreter
-
-        return {
-            interpret: function(partial: string, oldState: any): [any, boolean, any] {
-                if (partial.indexOf('NOPE') !== -1 && partial.indexOf(';') === -1) {
-                    // Simulate failure
-                    return [null, true, 'Generic error'];
-                } else {
-                    return [{'partial': partial, 'prev': oldState}, false, null];
+        let untypedWindow: any = window;
+        if (untypedWindow.Interpreter) { // It's loaded!
+            return untypedWindow.Interpreter.Interpreter;
+        } else {
+            return {
+                interpret: function(partial: string, oldState: any): [any, boolean, any] {
+                    if (partial.indexOf('NOPE') !== -1 && partial.indexOf(';') === -1) {
+                        // Simulate failure
+                        return [null, true, 'Generic error'];
+                    } else {
+                        return [{'partial': partial, 'prev': oldState}, false, null];
+                    }
                 }
-            }
-        };
+            };
+        }
     }
 }
 

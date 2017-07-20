@@ -37,6 +37,7 @@ class IncrementalInterpretationHelper {
     states: any[];
     markers: any[];
     output: any[];
+    error: any[];
     debounceTimeout: any;
     debounceMinimumPosition: any;
     debounceCallNecessary: boolean;
@@ -47,6 +48,7 @@ class IncrementalInterpretationHelper {
         this.states = [];
         this.markers = [];
         this.output = [];
+        this.error = [];
 
         this.debounceCallNecessary = false;
 
@@ -59,28 +61,6 @@ class IncrementalInterpretationHelper {
     }
 
     handleChangeAt(pos: any, added: string[], removed: string[], codemirror: CodeMirrorSubset) {
-        /*
-        if (!this.isHandlingNecessary(pos, added, removed)) {
-            // console.log('NO');
-            return;
-        }
-        // console.log('YEA');
-        let anchor = this.binarySearch(pos);
-        this.deleteAllAfter(anchor);
-        let baseIndex = this.findBaseIndex(anchor);
-        let basePos: any;
-        if (baseIndex !== -1) {
-            basePos = this.copyPos(this.semicoli[baseIndex]);
-        } else {
-            basePos = {line: 0, ch: 0};
-        }
-        let remainingText = codemirror.getCode(basePos);
-        if (baseIndex !== -1) {
-            remainingText = remainingText.substr(1);
-            basePos.ch = basePos.ch + 1;
-        }
-        this.reEvaluateFrom(basePos, baseIndex, anchor, remainingText, codemirror);
-        */
         this.doDebounce(pos, added, removed, codemirror);
     }
 
@@ -107,6 +87,7 @@ class IncrementalInterpretationHelper {
 
     private debouncedHandleChangeAt(pos: any, codemirror: CodeMirrorSubset) {
         let anchor = this.binarySearch(pos);
+        anchor = this.findNonErrorAnchor(anchor);
         this.deleteAllAfter(anchor);
         let baseIndex = this.findBaseIndex(anchor);
         let basePos: any;
@@ -133,6 +114,7 @@ class IncrementalInterpretationHelper {
         let lastPos = basePos;
         // console.log(remainingText);
         let partial = '';
+        let errorEncountered = false;
         let previousState = (baseIndex === -1) ? null : this.states[baseIndex];
         for (let i = 0; i < splitByLine.length; i++) {
             let lineOffset = 0;
@@ -150,36 +132,39 @@ class IncrementalInterpretationHelper {
                 if (baseIndex >= anchor) {
                     // actually need to handle this
 
-                    // TODO: eval
-                    let ret = this.evaluate(previousState, partial);
                     let semiPos = {line: (basePos.line + i), ch: sc + lineOffset};
-                    if (ret[1] === ErrorType.OK) {
-                        this.addSemicolon(semiPos, null, null);
-                        partial += ';';
-                    } else {
-                        this.addSemicolon(semiPos, ret[0], codemirror.markText(lastPos, semiPos, 'eval-success'));
+                    if (errorEncountered) {
+                        this.addErrorSemicolon(semiPos, codemirror.markText(lastPos, semiPos, 'eval-fail'));
                         lastPos = this.copyPos(semiPos);
                         lastPos.ch++;
-                        previousState = ret[0];
+                        previousState = null;
 
-                        partial = ''; // ONLY do this if the evaluation was successfull, else append ';' to partial
+                        partial = '';
+                    } else {
+                        let ret = this.evaluate(previousState, partial);
+                        if (ret[1] === ErrorType.INCOMPLETE) {
+                            this.addSemicolon(semiPos, null, null);
+                            partial += ';';
+                        } else if (ret[1] === ErrorType.OK) {
+                            this.addSemicolon(semiPos, ret[0], codemirror.markText(lastPos, semiPos, 'eval-success'));
+                            lastPos = this.copyPos(semiPos);
+                            lastPos.ch++;
+                            previousState = ret[0];
+
+                            partial = '';
+                        } else if (ret[1] === ErrorType.SML) {
+                            // TODO
+                        } else {
+                            // TODO: mark error position with red color
+                            this.addErrorSemicolon(semiPos, codemirror.markText(lastPos, semiPos, 'eval-fail'));
+                            lastPos = this.copyPos(semiPos);
+                            lastPos.ch++;
+                            previousState = null;
+                            errorEncountered = true;
+
+                            partial = '';
+                        }
                     }
-                    /*
-                    let newState = {'partial': partial, 'prev': previousState};
-                    let semiPos = {line: (basePos.line + i), ch: sc + lineOffset};
-                    if (partial.indexOf('NOPE') !== -1 && partial.indexOf(';') === -1) {
-                        // Simulate failure
-                        this.addSemicolon(semiPos, null, null);
-                        partial += ';';
-                    } else {
-
-                        this.addSemicolon(semiPos, newState, codemirror.markText(lastPos, semiPos, 'eval-success'));
-                        lastPos = this.copyPos(semiPos);
-                        lastPos.ch++;
-                        previousState = newState;
-
-                        partial = ''; // ONLY do this if the evaluation was successfull, else append ';' to partial
-                    }*/
                 } else { // no need
                     partial += ';';
                 }
@@ -195,9 +180,9 @@ class IncrementalInterpretationHelper {
         let ret: any;
         try {
             if (oldState === null) {
-                ret = this.interpreter.interpret(partial);
+                ret = this.interpreter.interpret(partial + ';');
             } else {
-                ret = this.interpreter.interpret(partial, oldState);
+                ret = this.interpreter.interpret(partial + ';', oldState);
             }
         } catch (e) {
             // TODO: switch over e's type
@@ -215,6 +200,15 @@ class IncrementalInterpretationHelper {
         this.states.push(newState);
         this.output.push('');
         this.markers.push(marker);
+        this.error.push(false);
+    }
+
+    private addErrorSemicolon(pos: any, marker: any) {
+        this.semicoli.push(pos);
+        this.states.push(null);
+        this.output.push('');
+        this.markers.push(marker);
+        this.error.push(true);
     }
 
     private stringArrayContains(arr: string[], search: string) {
@@ -249,6 +243,15 @@ class IncrementalInterpretationHelper {
         return -1;
     }
 
+    private findNonErrorAnchor(anchor: number) {
+        for (let i = anchor; i >= 0; i--) {
+            if (!this.error[i]) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     private deleteAllAfter(index: number) {
         this.semicoli.length = index + 1;
         this.states.length = index + 1;
@@ -259,6 +262,7 @@ class IncrementalInterpretationHelper {
             }
         }
         this.markers.length = index + 1;
+        this.error.length = index + 1;
     }
 
     private binarySearch(pos: any): number {
