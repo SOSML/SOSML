@@ -95,6 +95,4 @@ export function init(): void {
 }
 
 
-it("dummy", () => {
-    // we can't have an empty testsuite
-});
+it();

@@ -941,7 +941,9 @@ it("expression - conjunction", () => {
     let testcase_precedence_disj2: string = '42 orelse (' + sampleExpression1 + ') andalso (' + sampleExpression2 + ');';
     let testcase_precedence_handle1: string = '42 andalso (' + sampleExpression1 + ') handle _ => 42;';
     let testcase_precedence_handle2: string = '(' + sampleExpression1 + ') handle _ => 42 andalso 42;';
-    //TODO maybe more precedence tests?
+
+    let testcase_precedence_raise: string = 'raise 42 andalso (' + sampleExpression1 + ');';
+    let testcase_precedence_if: string = 'if 42 then (' + sampleExpression1 + ') else 42 andalso (' + sampleExpression2 + ');';
 
     expect(parse(testcase_simple)).toEqualWithType(createItExpression(
         new Expr.Conjunction(0,
@@ -1000,13 +1002,34 @@ it("expression - conjunction", () => {
             )
         )
     ));
+    expect(parse(testcase_precedence_raise)).toEqualWithType(createItExpression(
+        new Expr.RaiseException(0,
+            new Expr.Conjunction(6,
+                get42(6),
+                createSampleExpression1(18)
+            )
+        )
+    ));
+    expect(parse(testcase_precedence_if)).toEqualWithType(createItExpression(
+        new Expr.Conditional(0,
+            get42(3),
+            createSampleExpression1(12),
+            new Expr.Conjunction(37,
+                get42(37),
+                createSampleExpression2(49)
+            )
+        )
+    ));
 });
 
 it("expression - disjunction", () => {
     let testcase_simple: string = '42 orelse 42;';
-    let testcase_precedence_handle: string = '42 orelse (' + sampleExpression1 + ') handle _ => ' + sampleExpression2 + ';';
-    //TODO maybe more precedence tests?
-    //TODO associativity
+    let testcase_associativity: string = '42 orelse (' + sampleExpression1 + ') orelse (' + sampleExpression2 + ');';
+    let testcase_precedence_handle1: string = '42 orelse (' + sampleExpression1 + ') handle _ => 42;';
+    let testcase_precedence_handle2: string = '(' + sampleExpression1 + ') handle _ => 42 orelse 42;';
+
+    let testcase_precedence_raise: string = 'raise 42 orelse (' + sampleExpression1 + ');';
+    let testcase_precedence_if: string = 'if 42 then (' + sampleExpression1 + ') else 42 orelse (' + sampleExpression2 + ');';
 
     expect(parse(testcase_simple)).toEqualWithType(createItExpression(
         new Expr.Disjunction(0,
@@ -1014,14 +1037,54 @@ it("expression - disjunction", () => {
             get42(10)
         )
     ));
-    expect(parse(testcase_precedence_handle)).toEqualWithType(createItExpression(
+    expect(parse(testcase_associativity)).toEqualWithType(createItExpression(
+        new Expr.Disjunction(0,
+            new Expr.Disjunction(0,
+                get42(0),
+                createSampleExpression1(11)
+            ),
+            createSampleExpression2(39)
+        )
+    ));
+    expect(parse(testcase_precedence_handle1)).toEqualWithType(createItExpression(
         new Expr.HandleException(3,
             new Expr.Disjunction(0,
                 get42(0),
                 createSampleExpression1(11)
             ),
             new Expr.Match(38,
-                [[new Expr.Wildcard(38), createSampleExpression2(43)]]
+                [[new Expr.Wildcard(38), get42(43)]]
+            )
+        )
+    ));
+    expect(parse(testcase_precedence_handle2)).toEqualWithType(createItExpression(
+        new Expr.HandleException(21,
+            createSampleExpression1(1)
+            new Expr.Match(28,
+                [[new Expr.Wildcard(28),
+                    new Expr.Disjunction(33,
+                        get42(33),
+                        get42(43)
+                    )
+                ]]
+            )
+        )
+    ));
+    expect(parse(testcase_precedence_raise)).toEqualWithType(createItExpression(
+        new Expr.RaiseException(0,
+            new Expr.Disjunction(6,
+                get42(6),
+                createSampleExpression1(17)
+            )
+        )
+    ));
+    expect(parse(testcase_precedence_if)).toEqualWithType(createItExpression(
+        new Expr.Conditional(0,
+            get42(3),
+            createSampleExpression1(12),
+            new Expr.Disjunction(37,
+                get42(37),
+                createSampleExpression2(48)
             )
         )
     ));
@@ -1030,8 +1093,7 @@ it("expression - disjunction", () => {
 it("expression - handle exception", () => {
     let testcase_simple: string = '42 handle _ => ' + sampleExpression1 + ';';
     let testcase_precedence_raise: string = 'raise 42 handle _ => ' + sampleExpression1 + ';';
-    //TODO maybe more precedence tests?
-
+    let testcase_precedence_if: string = 'if 42 then ' + sampleExpression1 + ' else 42 handle _ => ' + sampleExpression2 + ';';
 
     expect(parse(testcase_simple)).toEqualWithType(createItExpression(
         new Expr.HandleException(3,
@@ -1047,6 +1109,17 @@ it("expression - handle exception", () => {
                 get42(6),
                 new Expr.Match(16,
                     [[new Expr.Wildcard(16), createSampleExpression1(21)]]
+                )
+            )
+    ));
+    expect(parse(testcase_precedence_if)).toEqualWithType(createItExpression(
+        new Expr.Conditional(0,
+            get42(3),
+            createSampleExpression1(11),
+            new Expr.HandleException(38,
+                get42(35),
+                new Expr.Match(45,
+                    [[new Expr.Wildcard(45), createSampleExpression2(50)]]
                 )
             )
     ));
@@ -1545,7 +1618,27 @@ it("declaration - local declaration", () => {
 });
 
 it("declaration - open declaration", () => {
-    //TODO tests
+    let testcase_single: string = 'open stru;';
+    let testcase_multiple: string = 'open stru stra.stru;';
+
+
+    expect(parse(testcase_single)).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Decl.OpenDeclaration(0, [
+                new Lexer.AlphanumericIdentifierToken('stru', 5)
+            ])
+        ])
+    );
+    expect(parse(testcase_multiple)).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Decl.OpenDeclaration(0, [
+                new Lexer.AlphanumericIdentifierToken('stru', 5),
+                new Lexer.LongIdentifierToken('stra.stru', 10, [
+                    new Lexer.AlphanumericIdentifierToken('stra', 10)
+                ], new Lexer.AlphanumericIdentifierToken('stru', 15))
+            ])
+        ])
+    );
 });
 
 it("declaration - empty declaration", () => {
