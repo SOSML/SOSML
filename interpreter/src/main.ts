@@ -13,20 +13,40 @@ let AST = instance.lexParse(..code..);
 
 */
 
-/*
+import { State } from './state';
+import * as Lexer from './lexer';
+import { Parser } from './parser';
 
-To export the API of the interpreter, use the TypeScript "export = " statement.
-For example to export an object with two methods, one could write:
-export = {
-    "run": function(code) {
-        // ...
-    },
-    "createAST": otherFunction
-};
+export class API {
+    /* Think of some additional flags n stuff etc */
+    static interpret(oldState: State, nextInstruction: string): State {
+        // TODO
+        // TODO copy old state
+        // Do we need to clone?
+        let state = oldState.clone();
+        let tkn = Lexer.lex(nextInstruction);
 
-*/
-export = class API {
-    static dummy(str: string): string {
-        return str + '!!';
+        let parser = new Parser(tkn);
+        let ast = parser.parseDeclaration();
+        ast = ast.reParse(state);
+
+        state = oldState.clone();
+        ast.simplify();
+        ast.checkStaticSemantics(state);
+        ast.evaluate(state);
+
+        return state;
     }
-};
+
+    static interpretFurther(oldState: State, currentPartialInstruction: string,
+                            nextInstructionPart: string): [State, string] | Error {
+        try {
+            return [API.interpret(oldState, currentPartialInstruction + nextInstructionPart), ''];
+        } catch (e) {
+            // if( e instanceof IncompleteCode ) {
+            //   return (oldState, currentPartialInstruction + nextInstructionPart);
+            // }
+            throw e;
+        }
+    }
+}

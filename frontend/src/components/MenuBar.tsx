@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Nav, Navbar, NavItem } from 'react-bootstrap';
+import { Nav, Navbar, NavItem, Glyphicon } from 'react-bootstrap';
 const LinkContainer = require('react-router-bootstrap').LinkContainer;
 // ^ this circumvents type checking as the @types/react-router-bootstrap package is buggy
 // it does not know the exact property, although it is clearly specified
@@ -23,12 +23,17 @@ class MenuBar extends React.Component<any, any> {
                 <Navbar.Collapse>
                     <Nav>
                         <LinkContainer exact={true} to="/">
-                            <NavItem>Editor</NavItem>
+                            <NavItem><Glyphicon glyph={'edit'} /> Editor</NavItem>
+                        </LinkContainer>
+                    </Nav>
+                    <Nav>
+                        <LinkContainer to="/files">
+                            <NavItem><Glyphicon glyph={'file'} /> Dateien</NavItem>
                         </LinkContainer>
                     </Nav>
                     <Nav pullRight={true}>
                         <LinkContainer to="/help">
-                            <NavItem>Hilfe</NavItem>
+                            <NavItem><Glyphicon glyph={'question-sign'} /> Hilfe</NavItem>
                         </LinkContainer>
                     </Nav>
                 </Navbar.Collapse>

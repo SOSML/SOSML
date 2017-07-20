@@ -12,3 +12,7 @@
 .ReactCodeMirror {
     height: 100%;
 }
+
+.eval-success {
+    background-color: rgba(190, 230, 190, 200);
+}

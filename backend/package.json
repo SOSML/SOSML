@@ -8,7 +8,8 @@
     "test": "jest --notify --watch",
     "build": "webpack --env=dev",
     "dist": "webpack --env=prod",
-    "start": "node-dev src/main.js"
+    "start": "node-dev src/main.js",
+    "production-start": "node src/main.js"
   },
   "author": "SOSML Team",
   "license": "UNLICENSED",
@@ -35,7 +36,12 @@
     ]
   },
   "dependencies": {
+    "body-parser": "^1.17.2",
+    "compression": "^1.6.2",
+    "express": "^4.15.3",
+    "express-rate-limit": "^2.8.0",
     "hapi": "^16.4.3",
+    "helmet": "^3.6.1",
     "node-cmd": "^3.0.0"
   }
 }
