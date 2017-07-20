@@ -308,7 +308,15 @@ export class ConstructedValue extends Value {
         if (this.constructorName !== (<ConstructedValue> other).constructorName) {
             return false;
         }
-        return this.argument.equals((<ConstructedValue> other).argument);
+        if (this.argument !== undefined) {
+            if ((<ConstructedValue> other).argument === undefined) {
+                return true;
+            } else {
+                return this.argument.equals(<Value> (<ConstructedValue> other).argument);
+            }
+        } else {
+            return (<ConstructedValue> other).argument === undefined;
+        }
     }
 
     implode(): StringValue {
@@ -338,7 +346,15 @@ export class ExceptionValue extends Value {
         if (this.constructorName !== (<ExceptionValue> other).constructorName) {
             return false;
         }
-        return this.argument.equals((<ExceptionValue> other).argument);
+        if (this.argument !== undefined) {
+            if ((<ExceptionValue> other).argument === undefined) {
+                return true;
+            } else {
+                return this.argument.equals(<Value> (<ExceptionValue> other).argument);
+            }
+        } else {
+            return (<ExceptionValue> other).argument === undefined;
+        }
     }
 }
 
