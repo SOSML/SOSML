@@ -291,12 +291,73 @@ it("fvalbind", () => {
 });
 
 it("dec", () => {
-    /*
-    expect(parse("fun f x = 1;").simplify()).toEqualWithType(
-        parse("val rec f x = 1;")
+    expect(parse("fun 'a f x = 42;").simplify()).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+             new Decl.ValueDeclaration(0, [new Type.TypeVariable('\'a', 4)], [
+                 new Decl.ValueBinding(7,
+                     true,
+                     new Expr.ValueIdentifier(7, new Lexer.AlphanumericIdentifierToken('f', 7)),
+                     new Expr.Lambda(-1,
+                         new Expr.Match(-1, [
+                             [new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken('__arg0', -1)),
+                                new Expr.FunctionApplication(-1,
+                                    new Expr.Lambda(-1,
+                                        new Expr.Match(-1, [
+                                            [new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken('x', 9)), get42(13)]
+                                        ])
+                                    )
+                                    new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken('__arg0', -1)),
+                                 )
+                             ]
+                         ])
+                     )
+                 )
+             ])
+        ])
     )
-    */
-    //TODO
+    expect(parse("fun 'a f x = 42 and g x = 42;").simplify()).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+             new Decl.ValueDeclaration(0, [new Type.TypeVariable('\'a', 4)], [
+                 new Decl.ValueBinding(7,
+                     true,
+                     new Expr.ValueIdentifier(7, new Lexer.AlphanumericIdentifierToken('f', 7)),
+                     new Expr.Lambda(-1,
+                         new Expr.Match(-1, [
+                             [new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken('__arg0', -1)),
+                                new Expr.FunctionApplication(-1,
+                                    new Expr.Lambda(-1,
+                                        new Expr.Match(-1, [
+                                            [new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken('x', 9)), get42(13)]
+                                        ])
+                                    )
+                                    new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken('__arg0', -1)),
+                                 )
+                             ]
+                         ])
+                     )
+                 ),
+                 new Decl.ValueBinding(20,
+                     true,
+                     new Expr.ValueIdentifier(20, new Lexer.AlphanumericIdentifierToken('g', 20)),
+                     new Expr.Lambda(-1,
+                         new Expr.Match(-1, [
+                             [new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken('__arg0', -1)),
+                                new Expr.FunctionApplication(-1,
+                                    new Expr.Lambda(-1,
+                                        new Expr.Match(-1, [
+                                            [new Expr.ValueIdentifier(22, new Lexer.AlphanumericIdentifierToken('x', 22)), get42(26)]
+                                        ])
+                                    )
+                                    new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken('__arg0', -1)),
+                                 )
+                             ]
+                         ])
+                     )
+                 )
+             ])
+        ])
+    )
+    //TODO withtype
 });
 
 it("strbind", () => {
