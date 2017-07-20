@@ -30,7 +30,7 @@ function run_test(commands): void {
         oldTests.push([state, step[2]]);
     }
 }
-
+/*
 it("basic", () => {
     run_test([
         ['42;', (x) => { x(); },  (state : State.State) => {
@@ -44,4 +44,27 @@ it("basic", () => {
             expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(42));
         }]
     ]);
+});
+*/
+it("exp", () => {
+    run_test([
+        ['42; 10.0;', (x) => { x(); },  (state : State.State) => {
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(10));
+        }],
+        ['val it = 4;', (x) => { x(); }, (state : State.State) => {
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(42));
+        }]
+    ]);
+});
+
+it("match", () => {
+});
+
+it("dec", () => {
+});
+
+it("pattern", () => {
+});
+
+it("datatype", () => {
 });
