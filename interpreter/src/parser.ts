@@ -143,12 +143,12 @@ export class Parser {
             return new ValueIdentifier(curTok.position, nextCurTok);
         }
         if (this.checkKeywordToken(curTok, '{')) {
-            // Record pattern
+            // Record expression
             ++this.position;
             return this.parseExpressionRow();
         }
         if (this.checkKeywordToken(curTok, '(')) {
-            // Tuple pattern
+            // Tuple expression
             ++this.position;
             if (this.checkKeywordToken(this.currentToken(), ')')) {
                 ++this.position;
@@ -545,7 +545,7 @@ export class Parser {
                 }
 
                 let tp: Type|undefined = undefined;
-                let pat: PatternExpression = new Wildcard(newTok.position);
+                let pat: PatternExpression = new ValueIdentifier(newTok.position, newTok);
                 let hasPat = false;
                 let hasType = false;
 
