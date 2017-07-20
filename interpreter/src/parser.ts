@@ -302,7 +302,7 @@ export class Parser {
         while (true) {
             let oldPos = this.position;
             let nextTok = this.currentToken();
-            if (this.checkIdentifierOrLongToken(nextTok)
+            if (this.checkVidOrLongToken(nextTok)
                 && this.state.getInfixStatus(nextTok) !== undefined
                 && this.state.getInfixStatus(nextTok).infix) {
                 break;
@@ -333,7 +333,7 @@ export class Parser {
             exps.push(this.parseApplicationExpression());
 
             let curTok = this.currentToken();
-            if (this.checkIdentifierOrLongToken(curTok)
+            if (this.checkVidOrLongToken(curTok)
                 && this.state.getInfixStatus(curTok) !== undefined
                 && this.state.getInfixStatus(curTok).infix) {
                 // We don't know anything about identifiers yet, so just assume they are infix

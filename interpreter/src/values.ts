@@ -275,8 +275,7 @@ export class FunctionValue extends Value {
     }
 
     prettyPrint(): string {
-        // TODO
-        throw new InternalInterpreterError(0, 'not yet implemented');
+        return '( fn ' + this.body.prettyPrint(0, true) + ', <some state> )';
     }
 
     // Computes the function on the given argument,
