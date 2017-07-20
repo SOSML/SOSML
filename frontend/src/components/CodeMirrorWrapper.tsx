@@ -5,6 +5,7 @@ require('codemirror/lib/codemirror.css');
 require('codemirror/mode/mllike/mllike.js');
 require('codemirror/addon/edit/matchbrackets.js');
 import './CodeMirrorWrapper.css';
+import {API} from '../API';
 
 class CodeMirrorSubset {
     cm: any;
@@ -24,6 +25,13 @@ class CodeMirrorSubset {
     }
 }
 
+enum ErrorType {
+    OK = 0, // Interpret successfull
+    INCOMPLETE, // The given partial string was incomplete SML code
+    INTERPRETER, // The interpreter failed, e.g. compile error etc.
+    SML // SML raised an exception
+}
+
 class IncrementalInterpretationHelper {
     semicoli: any[];
     states: any[];
@@ -32,6 +40,7 @@ class IncrementalInterpretationHelper {
     debounceTimeout: any;
     debounceMinimumPosition: any;
     debounceCallNecessary: boolean;
+    interpreter: any;
 
     constructor() {
         this.semicoli = [];
@@ -40,6 +49,8 @@ class IncrementalInterpretationHelper {
         this.output = [];
 
         this.debounceCallNecessary = false;
+
+        this.interpreter = API.createInterpreter();
     }
 
     clear() {
@@ -140,6 +151,20 @@ class IncrementalInterpretationHelper {
                     // actually need to handle this
 
                     // TODO: eval
+                    let ret = this.evaluate(previousState, partial);
+                    let semiPos = {line: (basePos.line + i), ch: sc + lineOffset};
+                    if (ret[1] === ErrorType.OK) {
+                        this.addSemicolon(semiPos, null, null);
+                        partial += ';';
+                    } else {
+                        this.addSemicolon(semiPos, ret[0], codemirror.markText(lastPos, semiPos, 'eval-success'));
+                        lastPos = this.copyPos(semiPos);
+                        lastPos.ch++;
+                        previousState = ret[0];
+
+                        partial = ''; // ONLY do this if the evaluation was successfull, else append ';' to partial
+                    }
+                    /*
                     let newState = {'partial': partial, 'prev': previousState};
                     let semiPos = {line: (basePos.line + i), ch: sc + lineOffset};
                     if (partial.indexOf('NOPE') !== -1 && partial.indexOf(';') === -1) {
@@ -154,7 +179,7 @@ class IncrementalInterpretationHelper {
                         previousState = newState;
 
                         partial = ''; // ONLY do this if the evaluation was successfull, else append ';' to partial
-                    }
+                    }*/
                 } else { // no need
                     partial += ';';
                 }
@@ -164,6 +189,25 @@ class IncrementalInterpretationHelper {
             partial += line.substr(start + 1);
         }
         // console.log(this);
+    }
+
+    private evaluate(oldState: any, partial: string): [any, ErrorType, any] {
+        let ret: any;
+        try {
+            if (oldState === null) {
+                ret = this.interpreter.interpret(partial);
+            } else {
+                ret = this.interpreter.interpret(partial, oldState);
+            }
+        } catch (e) {
+            // TODO: switch over e's type
+            return [null, ErrorType.INTERPRETER, e];
+        }
+        if (ret[1]) {
+            return [ret[0], ErrorType.SML, ret[2]];
+        } else {
+            return [ret[0], ErrorType.OK, null];
+        }
     }
 
     private addSemicolon(pos: any, newState: any, marker: any) {
