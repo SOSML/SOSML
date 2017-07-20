@@ -173,7 +173,10 @@ it("exp", () => {
     */
 
     expect(parse("val x = [1];").simplify()).toEqualWithType(
-        parse("val x =  1::nil;").simplify()
+        expression_tester(new Expr.FunctionApplication(-1, new Expr.ValueIdentifier(0, new Lexer.IdentifierToken("::", 0)), new Expr.Record(-1, true, [
+            ["1", new Expr.Constant(9, new Lexer.NumericToken("1", 9, 1))],
+            ["2", new Expr.ValueIdentifier(0, new Lexer.IdentifierToken("nil",0))],
+        ])))
     )
     //TODO
 });
@@ -214,7 +217,9 @@ it("pat", () => {
 it("patrow", () => {
     expect(parse("val {x  } = 42;").simplify()).toEqualWithType(
         pattern_tester(
-            new Expr.Record(5, true, [["x", new Lexer.AlphanumericIdentifierToken("x", 5)]]),
+            new Expr.Record(5, true, [
+                ["x", new Expr.ValueIdentifier(5, new Lexer.AlphanumericIdentifierToken("x", 5))]
+            ]),
             12
         )
     )
