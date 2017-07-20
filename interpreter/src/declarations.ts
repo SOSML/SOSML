@@ -88,21 +88,21 @@ export class FunctionValueBinding {
             arr.push(new ValueIdentifier(-1, new IdentifierToken('__arg' + i, -1)));
         }
         for (let i = 0; i < this.parameters.length; ++i) {
-            let pat: Pattern;
+            let pat2: PatternExpression;
             if (this.parameters[i][0].length === 1) {
-                pat = this.parameters[i][0][0];
+                pat2 = this.parameters[i][0][0];
             } else {
-                pat = new Tuple(-1, this.parameters[i][0]);
+                pat2 = new Tuple(-1, this.parameters[i][0]);
             }
 
             if (this.parameters[i][1] === undefined) {
-                matches.push([pat, this.parameters[i][2]]);
+                matches.push([pat2, this.parameters[i][2]]);
             } else {
-                matches.push([pat,
+                matches.push([pat2,
                     new TypedExpression(-1, this.parameters[i][2], <Type> this.parameters[i][1])]);
             }
         }
-        let pat: Pattern;
+        let pat: PatternExpression;
         if (arr.length !== 1) {
             pat = new Tuple(-1, arr).simplify();
         } else {
@@ -110,18 +110,18 @@ export class FunctionValueBinding {
         }
         let mat = new Match(-1, matches);
         let exp: Expression;
-        if (arr.length === 1) {
-            exp = new Lambda(-1, mat);
-        } else {
-            exp = new CaseAnalysis(-1, pat, mat);
+        //        if (arr.length === 1) {
+        //    exp = new Lambda(-1, mat);
+        // } else {
+        exp = new CaseAnalysis(-1, pat, mat);
 
-            // Now build the lambdas around
-            for (let i = this.parameters[0][0].length - 1; i >= 0; --i) {
-                exp = new Lambda(-1, new Match(-1, [[
-                    new ValueIdentifier(-1, new IdentifierToken('__arg' + i, -1)),
-                    exp]]));
-            }
+        // Now build the lambdas around
+        for (let i = this.parameters[0][0].length - 1; i >= 0; --i) {
+            exp = new Lambda(-1, new Match(-1, [[
+                new ValueIdentifier(-1, new IdentifierToken('__arg' + i, -1)),
+                exp]]));
         }
+        // }
 
         return new ValueBinding(this.position, true, this.name, exp.simplify());
     }
