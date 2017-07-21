@@ -1357,9 +1357,8 @@ var Value = (function () {
     Value.prototype.equals = function (other) {
         throw new errors_1.InternalInterpreterError(-1, 'Tried comparing incomparable things.');
     };
-    Value.prototype.isSimpleValue = function () {
-        return true;
-    };
+    Value.prototype.isSimpleValue = function () { return true; };
+    Value.prototype.isConstructedValue = function () { return false; };
     return Value;
 }());
 exports.Value = Value;
@@ -1574,24 +1573,27 @@ var RecordValue = (function (_super) {
     }
     RecordValue.prototype.prettyPrint = function () {
         // TODO: print as Tuple if possible
-        var result = '{';
+        var result = '{ ';
         var first = true;
-        this.entries.forEach(function (value, key) {
+        for (var a in this.entries) {
             if (!first) {
                 result += ', ';
             }
             else {
                 first = false;
             }
-            result += key + ' : ' + value.prettyPrint();
-        });
-        return result + '}';
+            result += a + ' = ' + this.entries[a].prettyPrint();
+        }
+        return result + ' }';
     };
     RecordValue.prototype.getValue = function (name) {
         if (this.entries[name] === undefined) {
             throw new errors_1.EvaluationError(0, 'Tried accessing non-existing record part.');
         }
         return this.entries[name];
+    };
+    RecordValue.prototype.hasValue = function (name) {
+        return this.entries[name] !== undefined;
     };
     RecordValue.prototype.equals = function (other) {
         var _this = this;
@@ -1684,6 +1686,7 @@ var ConstructedValue = (function (_super) {
         // TODO if this CustomType is a List of CharValue, implode them into a string.
         throw new errors_1.InternalInterpreterError(-1, 'nyi\'an');
     };
+    ConstructedValue.prototype.isConstructedValue = function () { return true; };
     return ConstructedValue;
 }(Value));
 exports.ConstructedValue = ConstructedValue;
@@ -1722,6 +1725,7 @@ var ExceptionValue = (function (_super) {
             return other.argument === undefined;
         }
     };
+    ExceptionValue.prototype.isConstructedValue = function () { return true; };
     return ExceptionValue;
 }(Value));
 exports.ExceptionValue = ExceptionValue;
@@ -1750,9 +1754,11 @@ var PredefinedFunction = (function (_super) {
 exports.PredefinedFunction = PredefinedFunction;
 var ValueConstructor = (function (_super) {
     __extends(ValueConstructor, _super);
-    function ValueConstructor(constructorName) {
+    function ValueConstructor(constructorName, numArgs) {
+        if (numArgs === void 0) { numArgs = 0; }
         var _this = _super.call(this) || this;
         _this.constructorName = constructorName;
+        _this.numArgs = numArgs;
         return _this;
     }
     ValueConstructor.prototype.equals = function (other) {
@@ -1766,6 +1772,9 @@ var ValueConstructor = (function (_super) {
         return new ConstructedValue(this.constructorName, parameter);
     };
     ValueConstructor.prototype.prettyPrint = function () {
+        if (this.numArgs === 1) {
+            return this.constructorName + ' <arg> [value constructor]';
+        }
         return this.constructorName + ' [value constructor]';
     };
     ValueConstructor.prototype.isSimpleValue = function () {
@@ -1776,9 +1785,11 @@ var ValueConstructor = (function (_super) {
 exports.ValueConstructor = ValueConstructor;
 var ExceptionConstructor = (function (_super) {
     __extends(ExceptionConstructor, _super);
-    function ExceptionConstructor(exceptionName) {
+    function ExceptionConstructor(exceptionName, numArgs) {
+        if (numArgs === void 0) { numArgs = 0; }
         var _this = _super.call(this) || this;
         _this.exceptionName = exceptionName;
+        _this.numArgs = numArgs;
         return _this;
     }
     ExceptionConstructor.prototype.equals = function (other) {
@@ -3393,7 +3404,11 @@ var DatatypeBinding = (function () {
     DatatypeBinding.prototype.evaluate = function (state) {
         var connames = [];
         for (var i = 0; i < this.type.length; ++i) {
-            state.setDynamicValue(this.type[i][0].getText(), new values_1.ValueConstructor(this.type[i][0].getText()));
+            var numArg = 0;
+            if (this.type[i][1] !== undefined) {
+                numArg = 1;
+            }
+            state.setDynamicValue(this.type[i][0].getText(), new values_1.ValueConstructor(this.type[i][0].getText(), numArg));
             connames.push(this.type[i][0].getText());
         }
         state.setDynamicType(this.name.getText(), connames);
@@ -3409,6 +3424,14 @@ var DirectExceptionBinding = (function () {
         this.name = name;
         this.type = type;
     }
+    DirectExceptionBinding.prototype.evaluate = function (state) {
+        var numArg = 0;
+        if (this.type !== undefined) {
+            numArg = 1;
+        }
+        state.setDynamicValue(this.name.getText(), new values_1.ValueConstructor(this.name.getText(), numArg));
+        return [state, false, undefined];
+    };
     return DirectExceptionBinding;
 }());
 exports.DirectExceptionBinding = DirectExceptionBinding;
@@ -3419,6 +3442,15 @@ var ExceptionAlias = (function () {
         this.name = name;
         this.oldname = oldname;
     }
+    ExceptionAlias.prototype.evaluate = function (state) {
+        var res = state.getDynamicValue(this.oldname.getText());
+        if (res === undefined) {
+            throw new errors_1.EvaluationError(this.position, 'Unbound value identifier "'
+                + this.oldname.getText() + '".');
+        }
+        state.setDynamicValue(this.name.getText(), res);
+        return [state, false, undefined];
+    };
     return ExceptionAlias;
 }());
 exports.ExceptionAlias = ExceptionAlias;
@@ -3436,6 +3468,16 @@ var ExceptionDeclaration = (function (_super) {
     ExceptionDeclaration.prototype.prettyPrint = function (indentation, oneLine) {
         // TODO
         throw new errors_1.InternalInterpreterError(-1, 'Not yet implemented.');
+    };
+    ExceptionDeclaration.prototype.evaluate = function (state) {
+        for (var i = 0; i < this.bindings.length; ++i) {
+            var res = this.bindings[i].evaluate(state);
+            if (res[1]) {
+                return res;
+            }
+            state = res[0];
+        }
+        return [state, false, undefined];
     };
     return ExceptionDeclaration;
 }(Declaration));
@@ -3709,9 +3751,15 @@ var AbstypeDeclaration = (function (_super) {
         /* } */
     };
     AbstypeDeclaration.prototype.evaluate = function (state) {
-        // TODO
-        // Well, if I knew what this stuff did, I could implement what it's s'pposed to do ^^"
-        throw new errors_1.InternalInterpreterError(-1, 'Not yet implemented.');
+        // I'm assuming the withtype is empty
+        for (var i = 0; i < this.datatypeBinding.length; ++i) {
+            var res = this.datatypeBinding[i].evaluate(state);
+            if (res[1]) {
+                return res;
+            }
+            state = res[0];
+        }
+        return this.declaration.evaluate(state);
     };
     AbstypeDeclaration.prototype.prettyPrint = function (indentation, oneLine) {
         // TODO
@@ -3915,7 +3963,7 @@ var NonfixDeclaration = (function (_super) {
 exports.NonfixDeclaration = NonfixDeclaration;
 var EmptyDeclaration = (function (_super) {
     __extends(EmptyDeclaration, _super);
-    // exactly what it sais on the tin.
+    // exactly what it says on the tin.
     function EmptyDeclaration() {
         return _super.call(this) || this;
     }
@@ -4019,8 +4067,15 @@ var LayeredPattern = (function (_super) {
         throw new errors_1.InternalInterpreterError(this.position, 'Layered patterns are far too layered to have a value.');
     };
     LayeredPattern.prototype.matches = function (state, v) {
-        // TODO
-        throw new errors_1.InternalInterpreterError(this.position, 'not yet implemented');
+        var res = this.pattern.matches(state, v);
+        if (res === undefined) {
+            return res;
+        }
+        var result = [[this.identifier.getText(), v]];
+        for (var i = 0; i < res.length; ++i) {
+            result.push(res[i]);
+        }
+        return result;
     };
     LayeredPattern.prototype.simplify = function () {
         if (this.typeAnnotation) {
@@ -4034,7 +4089,7 @@ var LayeredPattern = (function (_super) {
         if (indentation === void 0) { indentation = 0; }
         if (oneLine === void 0) { oneLine = true; }
         // TODO
-        throw new errors_1.InternalInterpreterError(this.position, 'not yet implemented');
+        return this.identifier.getText() + ' as ' + this.pattern.prettyPrint(indentation, oneLine);
     };
     return LayeredPattern;
 }(Expression));
@@ -4062,11 +4117,10 @@ var Match = (function () {
         for (var i = 0; i < this.matches.length; ++i) {
             var res = this.matches[i][0].matches(state, value);
             if (res !== undefined) {
-                var nstate = state.getNestedState();
                 for (var j = 0; j < res.length; ++j) {
-                    nstate.setDynamicValue(res[j][0], res[j][1]);
+                    state.setDynamicValue(res[j][0], res[j][1]);
                 }
-                return this.matches[i][1].compute(nstate);
+                return this.matches[i][1].compute(state.getNestedState());
             }
         }
         return [state.getDynamicValue('Match'), true];
@@ -4216,8 +4270,37 @@ var FunctionApplication = (function (_super) {
         return _this;
     }
     FunctionApplication.prototype.matches = function (state, v) {
-        // TODO
-        throw new errors_1.InternalInterpreterError(this.position, 'not yet implemented');
+        if (v instanceof values_1.FunctionValue) {
+            throw new errors_1.EvaluationError(this.position, 'You simply cannot match function values.');
+        }
+        else if (v instanceof values_1.ConstructedValue) {
+            if (this.func instanceof ValueIdentifier
+                && this.func.name.getText()
+                    === v.constructorName) {
+                if (v.argument !== undefined) {
+                    return this.argument.matches(state, v.argument);
+                }
+                else {
+                    return undefined;
+                }
+            }
+            return undefined;
+        }
+        else if (v instanceof values_1.ExceptionValue) {
+            if (this.func instanceof ValueIdentifier
+                && this.func.name.getText()
+                    === v.constructorName) {
+                if (v.argument !== undefined) {
+                    return this.argument.matches(state, v.argument);
+                }
+            }
+            return [];
+        }
+        else if (v instanceof values_1.PredefinedFunction) {
+            throw new errors_1.EvaluationError(this.position, 'You simply cannot match predefined functions.');
+        }
+        throw new errors_1.EvaluationError(this.position, 'Help me, I\'m broken. ('
+            + v.constructor.name + ').');
     };
     FunctionApplication.prototype.computeType = function (state) {
         var f = this.func.getType(state);
@@ -4238,9 +4321,9 @@ var FunctionApplication = (function (_super) {
         if (indentation === void 0) { indentation = 0; }
         if (oneLine === void 0) { oneLine = true; }
         // TODO
-        var res = this.func.prettyPrint(indentation, oneLine);
+        var res = '( ' + this.func.prettyPrint(indentation, oneLine);
         res += ' ' + this.argument.prettyPrint(indentation, oneLine);
-        return res;
+        return res + ' )';
     };
     FunctionApplication.prototype.compute = function (state) {
         var funcVal = this.func.compute(state);
@@ -4345,7 +4428,7 @@ var ValueIdentifier = (function (_super) {
     }
     ValueIdentifier.prototype.matches = function (state, v) {
         var res = state.getDynamicValue(this.name.getText());
-        if (res !== undefined && res.isSimpleValue()) {
+        if (res !== undefined && res.isConstructedValue()) {
             if (v.equals(res)) {
                 return [];
             }
@@ -4370,6 +4453,14 @@ var ValueIdentifier = (function (_super) {
             throw new errors_1.EvaluationError(this.position, 'Unbound value identifier "'
                 + this.name.getText() + '".');
         }
+        if (res instanceof values_1.ValueConstructor
+            && res.numArgs === 0) {
+            res = res.construct();
+        }
+        if (res instanceof values_1.ExceptionConstructor
+            && res.numArgs === 0) {
+            res = res.construct();
+        }
         return [res, false];
     };
     return ValueIdentifier;
@@ -4393,8 +4484,23 @@ var Record = (function (_super) {
         return _this;
     }
     Record.prototype.matches = function (state, v) {
-        // TODO
-        throw new errors_1.InternalInterpreterError(this.position, 'not yet implemented');
+        if (!(v instanceof values_1.RecordValue)) {
+            return undefined;
+        }
+        var res = [];
+        for (var i = 0; i < this.entries.length; ++i) {
+            if (!v.hasValue(this.entries[i][0])) {
+                return undefined;
+            }
+            var cur = this.entries[i][1].matches(state, v.getValue(this.entries[i][0]));
+            if (cur === undefined) {
+                return cur;
+            }
+            for (var j = 0; j < cur.length; ++j) {
+                res.push(cur[j]);
+            }
+        }
+        return res;
     };
     Record.prototype.computeType = function (state) {
         var e = new Map();
@@ -5088,9 +5194,25 @@ var initialState = new state_1.State(0, undefined, new state_1.StaticBasis({
     'true': new values_1.BoolValue(true),
     'false': new values_1.BoolValue(false),
     'nil': new values_1.ValueConstructor('nil').construct(),
-    '::': new values_1.ValueConstructor('::'),
+    '::': new values_1.ValueConstructor('::', 1),
     'Match': new values_1.ExceptionConstructor('Match').construct(),
-    'Bind': new values_1.ExceptionConstructor('Bind').construct()
+    'Bind': new values_1.ExceptionConstructor('Bind').construct(),
+    '^': new values_1.PredefinedFunction('^', function (val) {
+        if (val instanceof values_1.RecordValue) {
+            var val1 = val.getValue('1');
+            var val2 = val.getValue('2');
+            if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
+                return val1.concat(val2);
+            }
+        }
+        throw new errors_1.InternalInterpreterError(-1, 'Called "^" on value of the wrong type (' + val.constructor.name + ').');
+    }),
+    'explode': new values_1.PredefinedFunction('explode', function (val) {
+        if (val instanceof values_1.StringValue) {
+            return val.explode();
+        }
+        throw new errors_1.InternalInterpreterError(-1, 'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
+    })
 }), {
     'bool': new state_1.TypeNameInformation(0, true),
     'int': new state_1.TypeNameInformation(0, true),
@@ -5115,6 +5237,7 @@ var initialState = new state_1.State(0, undefined, new state_1.StaticBasis({
     '::': new state_1.InfixStatus(true, 5, true),
     '=': new state_1.InfixStatus(true, 4, false),
     ':=': new state_1.InfixStatus(true, 3, false),
+    '^': new state_1.InfixStatus(true, 6, false),
 });
 function getInitialState() {
     return initialState.getNestedState();
@@ -5158,7 +5281,7 @@ var Interpreter = (function () {
         var ast = Parser.parse(tkn, state);
         state = oldState.getNestedState();
         ast = ast.simplify();
-        //      ast.checkStaticSemantics(state);
+        // ast.checkStaticSemantics(state);
         return ast.evaluate(state);
     };
     return Interpreter;
@@ -5275,7 +5398,7 @@ var State = (function () {
             return result;
         }
         else {
-            return this.parent.getStaticValue(name);
+            return this.parent.getStaticValue(name, idLimit);
         }
     };
     State.prototype.getStaticType = function (name, idLimit) {
@@ -5286,7 +5409,7 @@ var State = (function () {
             return result;
         }
         else {
-            return this.parent.getStaticType(name);
+            return this.parent.getStaticType(name, idLimit);
         }
     };
     State.prototype.getDynamicValue = function (name, idLimit) {
@@ -5301,7 +5424,7 @@ var State = (function () {
             return result;
         }
         else {
-            return this.parent.getDynamicValue(name);
+            return this.parent.getDynamicValue(name, idLimit);
         }
     };
     State.prototype.getDynamicType = function (name, idLimit) {
@@ -5312,7 +5435,7 @@ var State = (function () {
             return result;
         }
         else {
-            return this.parent.getDynamicType(name);
+            return this.parent.getDynamicType(name, idLimit);
         }
     };
     State.prototype.getInfixStatus = function (id, idLimit) {
@@ -5323,7 +5446,7 @@ var State = (function () {
                 return this.infixEnvironment[id.getText()];
             }
             else {
-                return this.parent.getInfixStatus(id);
+                return this.parent.getInfixStatus(id, idLimit);
             }
         }
         else {
@@ -5337,7 +5460,7 @@ var State = (function () {
             return this.typeNames[name];
         }
         else {
-            return this.parent.getPrimitiveType(name);
+            return this.parent.getPrimitiveType(name, idLimit);
         }
     };
     State.prototype.setStaticValue = function (name, type, atId) {
