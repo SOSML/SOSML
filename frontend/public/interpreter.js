@@ -1567,6 +1567,7 @@ exports.Real = Real;
 var RecordValue = (function (_super) {
     __extends(RecordValue, _super);
     function RecordValue(entries) {
+        if (entries === void 0) { entries = new Map(); }
         var _this = _super.call(this) || this;
         _this.entries = entries;
         return _this;
@@ -1575,25 +1576,25 @@ var RecordValue = (function (_super) {
         // TODO: print as Tuple if possible
         var result = '{ ';
         var first = true;
-        for (var a in this.entries) {
+        this.entries.forEach(function (value, key) {
             if (!first) {
                 result += ', ';
             }
             else {
                 first = false;
             }
-            result += a + ' = ' + this.entries[a].prettyPrint();
-        }
+            result += key + ' = ' + value.prettyPrint();
+        });
         return result + ' }';
     };
     RecordValue.prototype.getValue = function (name) {
-        if (this.entries[name] === undefined) {
+        if (!this.entries.has(name)) {
             throw new errors_1.EvaluationError(0, 'Tried accessing non-existing record part.');
         }
-        return this.entries[name];
+        return this.entries.get(name);
     };
     RecordValue.prototype.hasValue = function (name) {
-        return this.entries[name] !== undefined;
+        return this.entries.has(name);
     };
     RecordValue.prototype.equals = function (other) {
         var _this = this;
@@ -4552,7 +4553,7 @@ var Record = (function (_super) {
                 // Computing some expression failed
                 return res;
             }
-            nentr[this.entries[i][0]] = res[0];
+            nentr = nentr.set(this.entries[i][0], res[0]);
         }
         return [new values_1.RecordValue(nentr), false];
     };
@@ -4584,8 +4585,11 @@ var LocalDeclarationExpression = (function (_super) {
     };
     LocalDeclarationExpression.prototype.compute = function (state) {
         var nstate = state.getNestedState();
-        this.declaration.evaluate(nstate);
-        return this.expression.compute(nstate);
+        var res = this.declaration.evaluate(nstate);
+        if (res[1]) {
+            return [res[2], true];
+        }
+        return this.expression.compute(res[0]);
     };
     return LocalDeclarationExpression;
 }(Expression));
@@ -5212,7 +5216,7 @@ var initialState = new state_1.State(0, undefined, new state_1.StaticBasis({
             return val.explode();
         }
         throw new errors_1.InternalInterpreterError(-1, 'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
-    })
+    }),
 }), {
     'bool': new state_1.TypeNameInformation(0, true),
     'int': new state_1.TypeNameInformation(0, true),
@@ -5240,7 +5244,7 @@ var initialState = new state_1.State(0, undefined, new state_1.StaticBasis({
     '^': new state_1.InfixStatus(true, 6, false),
 });
 function getInitialState() {
-    return initialState.getNestedState();
+    return initialState.getNestedState(true);
 }
 exports.getInitialState = getInitialState;
 
@@ -5276,7 +5280,7 @@ var Interpreter = (function () {
     /* Think of some additional flags n stuff etc */
     Interpreter.interpret = function (nextInstruction, oldState) {
         if (oldState === void 0) { oldState = initialState_1.getInitialState(); }
-        var state = oldState.getNestedState();
+        var state = oldState.getNestedState(true);
         var tkn = Lexer.lex(nextInstruction);
         var ast = Parser.parse(tkn, state);
         state = oldState.getNestedState();
@@ -5384,8 +5388,21 @@ var State = (function () {
         this.infixEnvironment = infixEnvironment;
         this.stdfiles = emptyStdFile;
     }
-    State.prototype.getNestedState = function () {
-        return new State(this.id + 1, this, new StaticBasis({}, {}), new DynamicBasis({}, {}), {}, {});
+    State.prototype.getNestedState = function (redefinePrint) {
+        if (redefinePrint === void 0) { redefinePrint = false; }
+        var res = new State(this.id + 1, this, new StaticBasis({}, {}), new DynamicBasis({}, {}), {}, {});
+        if (redefinePrint) {
+            res.setDynamicValue('print', new values_1.PredefinedFunction('print', function (val) {
+                if (val instanceof values_1.StringValue) {
+                    res.setDynamicValue('__stdout', val);
+                }
+                else {
+                    res.setDynamicValue('__stdout', new values_1.StringValue(val.prettyPrint()));
+                }
+                return new values_1.RecordValue();
+            }));
+        }
+        return res;
     };
     State.prototype.getStaticValue = function (name, idLimit) {
         if (idLimit === void 0) { idLimit = 0; }
@@ -5495,7 +5512,7 @@ var State = (function () {
         if (atId === undefined || atId === this.id) {
             if (this.stdfiles[name] !== undefined) {
                 if (value instanceof values_1.StringValue) {
-                    this.stdfiles[name].concat(value);
+                    this.stdfiles[name] = this.stdfiles[name].concat(value);
                     return;
                 }
                 else {
