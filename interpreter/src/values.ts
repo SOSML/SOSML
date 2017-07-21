@@ -232,14 +232,14 @@ export class RecordValue extends Value {
     }
 
     getValue(name: string): Value {
-        if (this.entries[name] === undefined) {
+        if (!this.entries.has(name)) {
             throw new EvaluationError(0, 'Tried accessing non-existing record part.');
         }
-        return this.entries[name];
+        return <Value> this.entries.get(name);
     }
 
     hasValue(name: string): boolean {
-        return this.entries[name] !== undefined;
+        return this.entries.has(name);
     }
 
     equals(other: Value): boolean {
