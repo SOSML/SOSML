@@ -221,12 +221,14 @@ export class RecordValue extends Value {
         let result: string = '{ ';
         let first: boolean = true;
         for (let a in this.entries) {
-            if (!first) {
-                result += ', ';
-            } else {
-                first = false;
+            if (this.entries.has(a)) {
+                if (!first) {
+                    result += ', ';
+                } else {
+                    first = false;
+                }
+                result += a + ' = ' + this.entries[a].prettyPrint();
             }
-            result += a + ' = ' + this.entries[a].prettyPrint();
         }
         return result + ' }';
     }

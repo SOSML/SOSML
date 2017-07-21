@@ -553,8 +553,11 @@ export class LocalDeclarationExpression extends Expression {
 
     compute(state: State): [Value, boolean] {
         let nstate = state.getNestedState();
-        this.declaration.evaluate(nstate);
-        return this.expression.compute(nstate);
+        let res = this.declaration.evaluate(nstate);
+        if (res[1]) {
+            return [<Value> res[2], true];
+        }
+        return this.expression.compute(res[0]);
     }
 }
 
