@@ -31,7 +31,7 @@ export class Interpreter {
 
         state = oldState.getNestedState();
         ast = ast.simplify();
-        //ast.checkStaticSemantics(state);
+        // ast.checkStaticSemantics(state);
         return ast.evaluate(state);
     }
 

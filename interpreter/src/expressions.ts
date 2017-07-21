@@ -7,7 +7,7 @@ import { State } from './state';
 import { InternalInterpreterError, Position, SemanticError, EvaluationError } from './errors';
 import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
-         ExceptionValue } from './values';
+         ExceptionValue, ConstructedValue } from './values';
 import { ParserError } from './parser';
 
 export abstract class Expression {
@@ -252,11 +252,37 @@ export class FunctionApplication extends Expression implements Pattern {
 // function argument
     constructor(public position: Position,
                 public func: Expression,
-                public argument: Expression) { super(); }
+                public argument: Expression|PatternExpression) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'not yet implemented');
+        if (v instanceof FunctionValue) {
+            throw new EvaluationError(this.position,
+                'You simply cannot match function values.');
+        } else if (v instanceof ConstructedValue) {
+            if (this.func instanceof ValueIdentifier
+                && (<ValueIdentifier> this.func).name.getText()
+                    === (<ConstructedValue> v).constructorName) {
+                if ((<ConstructedValue> v).argument !== undefined) {
+                    return (<PatternExpression> this.argument).matches(
+                        state, <Value> (<ConstructedValue> v).argument);
+                }
+            }
+            return [];
+        } else if (v instanceof ExceptionValue) {
+            if (this.func instanceof ValueIdentifier
+                && (<ValueIdentifier> this.func).name.getText()
+                    === (<ExceptionValue> v).constructorName) {
+                if ((<ExceptionValue> v).argument !== undefined) {
+                    return (<PatternExpression> this.argument).matches(
+                        state, <Value> (<ExceptionValue> v).argument);
+                }
+            }
+            return [];
+        } else if (v instanceof PredefinedFunction) {
+            throw new EvaluationError(this.position,
+                'You simply cannot match predefined functions.');
+        }
+        throw new EvaluationError(this.position, 'Help me, I\'m broken.');
     }
 
     computeType(state: State): Type {
@@ -396,7 +422,7 @@ export class Record extends Expression implements Pattern {
 // { lab = exp, ... } or { }
 // a record(pattern) is incomplete if it ends with '...'
     constructor(public position: Position, public complete: boolean,
-                public entries: [string, Expression][]) {
+                public entries: [string, Expression|PatternExpression][]) {
         super();
         this.entries.sort();
         for (let i = 1; i < this.entries.length; ++i) {
@@ -409,7 +435,6 @@ export class Record extends Expression implements Pattern {
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         if (!(v instanceof RecordValue)) {
-            console.log("v is no Record");
             return undefined;
         }
 
@@ -417,10 +442,10 @@ export class Record extends Expression implements Pattern {
 
         for (let i = 0; i < this.entries.length; ++i) {
             if (!(<RecordValue> v).hasValue(this.entries[i][0])) {
-                console.log(v.prettyPrint() + " has no value " + this.entries[i][0]);
                 return undefined;
             }
-            let cur = (<Pattern> this.entries[i][1]).matches(state, (<RecordValue> v).getValue(this.entries[i][0]));
+            let cur = (<PatternExpression> this.entries[i][1]).matches(
+                state, (<RecordValue> v).getValue(this.entries[i][0]));
             if (cur === undefined) {
                 return cur;
             }
