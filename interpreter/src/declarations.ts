@@ -29,6 +29,7 @@ export abstract class Declaration {
 }
 
 export interface ExceptionBinding {
+    evaluate(state: State): [State, boolean, Value|undefined];
 }
 
 export class ValueBinding {
@@ -176,13 +177,31 @@ export class DatatypeBinding {
 
 export class DirectExceptionBinding implements ExceptionBinding {
 // <op> name <of type>
-    constructor(public position: Position, public name: IdentifierToken, public type: Type | undefined) {
+    constructor(public position: Position,
+                public name: IdentifierToken,
+                public type: Type | undefined) {
+    }
+
+    evaluate(state: State): [State, boolean, Value|undefined] {
+        state.setDynamicValue(this.name.getText(),
+            new ValueConstructor(this.name.getText()));
+        return [state, false, undefined];
     }
 }
 
 export class ExceptionAlias implements ExceptionBinding {
 // <op> name = <op> oldname
     constructor(public position: Position, public name: IdentifierToken, public oldname: Token) {
+    }
+
+    evaluate(state: State): [State, boolean, Value|undefined] {
+        let res = state.getDynamicValue(this.oldname.getText());
+        if (res === undefined) {
+            throw new EvaluationError(this.position, 'Unbound value identifier "'
+                + this.oldname.getText() + '".');
+        }
+        state.setDynamicValue(this.name.getText(), <Value> res);
+        return [state, false, undefined];
     }
 }
 
@@ -198,6 +217,17 @@ export class ExceptionDeclaration extends Declaration {
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
+
+    evaluate(state: State): [State, boolean, Value|undefined] {
+        for (let i = 0; i < this.bindings.length; ++i) {
+            let res = this.bindings[i].evaluate(state);
+            if (res[1]) {
+                return res;
+            }
+            state = res[0];
+        }
+        return [state, false, undefined];
     }
 }
 
@@ -482,7 +512,7 @@ export class AbstypeDeclaration extends Declaration {
     evaluate(state: State): [State, boolean, Value|undefined] {
         // TODO
         // Well, if I knew what this stuff did, I could implement what it's s'pposed to do ^^"
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        throw new InternalInterpreterError( -1, '.');
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
