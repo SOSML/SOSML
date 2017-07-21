@@ -73,7 +73,8 @@ export class Wildcard extends Expression implements Pattern {
 export class LayeredPattern extends Expression implements Pattern {
 // <op> identifier <:type> as pattern
     constructor(public position: Position, public identifier: IdentifierToken,
-                public typeAnnotation: Type | undefined, public pattern: Expression) { super(); }
+                public typeAnnotation: Type | undefined,
+                public pattern: Expression|PatternExpression) { super(); }
 
     compute(state: State): [Value, boolean] {
         throw new InternalInterpreterError(this.position,
@@ -81,8 +82,15 @@ export class LayeredPattern extends Expression implements Pattern {
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'not yet implemented');
+        let res = (<PatternExpression> this.pattern).matches(state, v);
+        if (res === undefined) {
+            return res;
+        }
+        let result: [string, Value][] = [[this.identifier.getText(), v]];
+        for (let i = 0; i < (<[string, Value][]> res).length; ++i) {
+            result.push((<[string, Value][]> res)[i]);
+        }
+        return result;
     }
 
     simplify(): LayeredPattern {
@@ -96,7 +104,7 @@ export class LayeredPattern extends Expression implements Pattern {
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
-        throw new InternalInterpreterError(this.position, 'not yet implemented');
+        return this.identifier.getText() + ' as ' + this.pattern.prettyPrint(indentation, oneLine);
     }
 }
 
