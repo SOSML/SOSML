@@ -269,7 +269,26 @@ let initialState: State = new State(
             'nil':      new ValueConstructor('nil').construct(),
             '::':       new ValueConstructor('::', 1),
             'Match':    new ExceptionConstructor('Match').construct(),
-            'Bind':     new ExceptionConstructor('Bind').construct()
+            'Bind':     new ExceptionConstructor('Bind').construct(),
+            '^':        new PredefinedFunction('^', (val: Value) => {
+                if (val instanceof RecordValue) {
+                    let val1 = (<RecordValue> val).getValue('1');
+                    let val2 = (<RecordValue> val).getValue('2');
+
+                    if (val1 instanceof StringValue && val2 instanceof StringValue) {
+                        return (<StringValue> val1).concat(val2);
+                    }
+                }
+                throw new InternalInterpreterError(-1,
+                    'Called "^" on value of the wrong type (' + val.constructor.name + ').');
+            }),
+            'explode':  new PredefinedFunction('explode', (val: Value) => {
+                if (val instanceof StringValue) {
+                    return (<StringValue> val).explode();
+                }
+                throw new InternalInterpreterError(-1,
+                    'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
+            }
         }
     ),
     {
@@ -300,6 +319,8 @@ let initialState: State = new State(
         '::': new InfixStatus(true, 5, true),
         '=': new InfixStatus(true, 4, false),
         ':=': new InfixStatus(true, 3, false),
+
+        '^': new InfixStatus(true, 6, false),
     }
 );
 
