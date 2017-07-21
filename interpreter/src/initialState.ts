@@ -267,7 +267,7 @@ let initialState: State = new State(
             'true':     new BoolValue(true),
             'false':    new BoolValue(false),
             'nil':      new ValueConstructor('nil').construct(),
-            '::':       new ValueConstructor('::'),
+            '::':       new ValueConstructor('::', 1),
             'Match':    new ExceptionConstructor('Match').construct(),
             'Bind':     new ExceptionConstructor('Bind').construct()
         }

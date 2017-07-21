@@ -388,7 +388,7 @@ export class PredefinedFunction extends Value {
 }
 
 export class ValueConstructor extends Value {
-    constructor(public constructorName: string) {
+    constructor(public constructorName: string, public numArgs: number = 0) {
         super();
     }
 
@@ -404,6 +404,9 @@ export class ValueConstructor extends Value {
     }
 
     prettyPrint() {
+        if (this.numArgs === 1) {
+            return this.constructorName + ' <arg> [value constructor]';
+        }
         return this.constructorName + ' [value constructor]';
     }
 
@@ -413,7 +416,7 @@ export class ValueConstructor extends Value {
 }
 
 export class ExceptionConstructor extends Value {
-    constructor(public exceptionName: string) {
+    constructor(public exceptionName: string, public numArgs: number = 0) {
         super();
     }
 

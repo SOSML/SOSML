@@ -269,13 +269,15 @@ export class FunctionApplication extends Expression implements Pattern {
         } else if (v instanceof ConstructedValue) {
             if (this.func instanceof ValueIdentifier
                 && (<ValueIdentifier> this.func).name.getText()
-                    === (<ConstructedValue> v).constructorName) {
+                === (<ConstructedValue> v).constructorName) {
                 if ((<ConstructedValue> v).argument !== undefined) {
                     return (<PatternExpression> this.argument).matches(
                         state, <Value> (<ConstructedValue> v).argument);
+                } else {
+                    return undefined;
                 }
             }
-            return [];
+            return undefined;
         } else if (v instanceof ExceptionValue) {
             if (this.func instanceof ValueIdentifier
                 && (<ValueIdentifier> this.func).name.getText()
@@ -290,7 +292,8 @@ export class FunctionApplication extends Expression implements Pattern {
             throw new EvaluationError(this.position,
                 'You simply cannot match predefined functions.');
         }
-        throw new EvaluationError(this.position, 'Help me, I\'m broken.');
+        throw new EvaluationError(this.position, 'Help me, I\'m broken. ('
+            + v.constructor.name + ').' );
     }
 
     computeType(state: State): Type {
@@ -420,6 +423,15 @@ export class ValueIdentifier extends Expression implements Pattern {
         if (res === undefined) {
             throw new EvaluationError(this.position, 'Unbound value identifier "'
                 + this.name.getText() + '".');
+        }
+
+        if (res instanceof ValueConstructor
+            && (<ValueConstructor> res).numArgs === 0) {
+            res = (<ValueConstructor> res).construct();
+        }
+        if (res instanceof ExceptionConstructor
+            && (<ExceptionConstructor> res).numArgs === 0) {
+            res = (<ExceptionConstructor> res).construct();
         }
 
         return [res, false];

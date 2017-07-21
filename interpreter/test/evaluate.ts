@@ -51,7 +51,7 @@ it("exp", () => {
         ['42; 10.0;', (x) => { x(); },  (state : State.State) => {
             expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(10));
         }],
-        ['val it = 4;', (x) => { x(); }, (state : State.State) => {
+        ['val it = 42;', (x) => { x(); }, (state : State.State) => {
             expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(42));
         }]
     ]);

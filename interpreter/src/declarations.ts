@@ -165,8 +165,12 @@ export class DatatypeBinding {
     evaluate(state: State): [State, boolean, Value|undefined] {
         let connames: string[] = [];
         for (let i = 0; i < this.type.length; ++i) {
+            let numArg: number = 0;
+            if (this.type[i][1] !== undefined) {
+                numArg = 1;
+            }
             state.setDynamicValue(this.type[i][0].getText(),
-                new ValueConstructor(this.type[i][0].getText()));
+                new ValueConstructor(this.type[i][0].getText(), numArg));
             connames.push(this.type[i][0].getText());
         }
         state.setDynamicType(this.name.getText(), connames);
@@ -183,8 +187,12 @@ export class DirectExceptionBinding implements ExceptionBinding {
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
+        let numArg = 0;
+        if (this.type !== undefined) {
+            numArg = 1;
+        }
         state.setDynamicValue(this.name.getText(),
-            new ValueConstructor(this.name.getText()));
+            new ValueConstructor(this.name.getText(), numArg));
         return [state, false, undefined];
     }
 }
