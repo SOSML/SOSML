@@ -218,17 +218,17 @@ export class RecordValue extends Value {
 
     prettyPrint(): string {
         // TODO: print as Tuple if possible
-        let result: string = '{';
+        let result: string = '{ ';
         let first: boolean = true;
-        this.entries.forEach((value: Value, key: string) => {
+        for (let a in this.entries) {
             if (!first) {
                 result += ', ';
             } else {
                 first = false;
             }
-            result += key + ' : ' + value.prettyPrint();
-        });
-        return result + '}';
+            result += a + ' = ' + this.entries[a].prettyPrint();
+        }
+        return result + ' }';
     }
 
     getValue(name: string): Value {
