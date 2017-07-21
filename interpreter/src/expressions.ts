@@ -528,7 +528,7 @@ export class Record extends Expression implements Pattern {
                 // Computing some expression failed
                 return res;
             }
-            nentr[this.entries[i][0]] = res[0];
+            nentr = nentr.set(this.entries[i][0], res[0]);
         }
         return [new RecordValue(nentr), false];
     }

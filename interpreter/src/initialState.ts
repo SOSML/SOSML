@@ -288,7 +288,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
-            })
+            }),
         }
     ),
     {
@@ -325,5 +325,13 @@ let initialState: State = new State(
 );
 
 export function getInitialState(): State {
+    initialState.setDynamicValue('print', new PredefinedFunction('print', (val: Value) => {
+        if (val instanceof StringValue) {
+            initialState.setDynamicValue('__stdout', val);
+        } else {
+            initialState.setDynamicValue('__stdout', new StringValue(val.prettyPrint()));
+        }
+        return new RecordValue();
+    }));
     return initialState.getNestedState();
 }

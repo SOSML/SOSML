@@ -202,7 +202,7 @@ export class State {
         if (atId === undefined || atId === this.id) {
             if (this.stdfiles[name] !== undefined) {
                 if (value instanceof StringValue) {
-                    (<StringValue> this.stdfiles[name]).concat(value);
+                    this.stdfiles[name] = (<StringValue> this.stdfiles[name]).concat(value);
                     return;
                 } else {
                     throw new InternalInterpreterError(-1, 'Wrong type.');

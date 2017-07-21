@@ -212,7 +212,7 @@ export class Real extends Value {
 }
 
 export class RecordValue extends Value {
-    constructor(public entries: Map<string, Value>) {
+    constructor(public entries: Map<string, Value> = new Map<string, Value>()) {
         super();
     }
 
@@ -220,16 +220,14 @@ export class RecordValue extends Value {
         // TODO: print as Tuple if possible
         let result: string = '{ ';
         let first: boolean = true;
-        for (let a in this.entries) {
-            if (this.entries.has(a)) {
-                if (!first) {
-                    result += ', ';
-                } else {
-                    first = false;
-                }
-                result += a + ' = ' + this.entries[a].prettyPrint();
+        this.entries.forEach((value: Value, key: string) => {
+            if (!first) {
+                result += ', ';
+            } else {
+                first = false;
             }
-        }
+            result += key + ' = ' + value.prettyPrint();
+        });
         return result + ' }';
     }
 
