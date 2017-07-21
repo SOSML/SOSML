@@ -510,9 +510,15 @@ export class AbstypeDeclaration extends Declaration {
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
-        // TODO
-        // Well, if I knew what this stuff did, I could implement what it's s'pposed to do ^^"
-        throw new InternalInterpreterError( -1, '.');
+        // I'm assuming the withtype is empty
+        for (let i = 0; i < this.datatypeBinding.length; ++i) {
+            let res = this.datatypeBinding[i].evaluate(state);
+            if (res[1]) {
+                return res;
+            }
+            state = res[0];
+        }
+        return this.declaration.evaluate(state);
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -702,7 +708,7 @@ export class NonfixDeclaration extends Declaration {
 }
 
 export class EmptyDeclaration extends Declaration {
-// exactly what it sais on the tin.
+// exactly what it says on the tin.
     constructor() {
         super();
     }
