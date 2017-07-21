@@ -325,13 +325,5 @@ let initialState: State = new State(
 );
 
 export function getInitialState(): State {
-    initialState.setDynamicValue('print', new PredefinedFunction('print', (val: Value) => {
-        if (val instanceof StringValue) {
-            initialState.setDynamicValue('__stdout', val);
-        } else {
-            initialState.setDynamicValue('__stdout', new StringValue(val.prettyPrint()));
-        }
-        return new RecordValue();
-    }));
-    return initialState.getNestedState();
+    return initialState.getNestedState(true);
 }

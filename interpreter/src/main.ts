@@ -24,7 +24,7 @@ export class Interpreter {
     /* Think of some additional flags n stuff etc */
     static interpret(nextInstruction: string,
                      oldState: State = getInitialState()): [State, boolean, Value|undefined] {
-        let state = oldState.getNestedState();
+        let state = oldState.getNestedState(true);
         let tkn = Lexer.lex(nextInstruction);
 
         let ast = Parser.parse(tkn, state);

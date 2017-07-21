@@ -1,5 +1,5 @@
 import { Type, PrimitiveType } from './types';
-import { Value, StringValue } from './values';
+import { Value, StringValue, PredefinedFunction, RecordValue } from './values';
 import { Token, LongIdentifierToken } from './lexer';
 import { InternalInterpreterError } from './errors';
 
@@ -96,11 +96,22 @@ export class State {
                 private infixEnvironment: InfixEnvironment) {
     }
 
-    getNestedState() {
-        return new State(this.id + 1, this,
+    getNestedState(redefinePrint: boolean = false) {
+        let res = new State(this.id + 1, this,
             new StaticBasis({}, {}),
             new DynamicBasis({}, {}),
             {}, {});
+        if (redefinePrint) {
+            res.setDynamicValue('print', new PredefinedFunction('print', (val: Value) => {
+                if (val instanceof StringValue) {
+                    res.setDynamicValue('__stdout', val);
+                } else {
+                    res.setDynamicValue('__stdout', new StringValue(val.prettyPrint()));
+                }
+                return new RecordValue();
+            }));
+        }
+        return res;
     }
 
     getStaticValue(name: string, idLimit: number = 0): Type[] | undefined {
