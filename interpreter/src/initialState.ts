@@ -288,7 +288,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
-            }
+            })
         }
     ),
     {
