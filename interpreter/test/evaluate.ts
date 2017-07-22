@@ -30,7 +30,7 @@ function run_test(commands): void {
         oldTests.push([state, step[2]]);
     }
 }
-/*
+
 it("basic", () => {
     run_test([
         ['42;', (x) => { x(); },  (state : State.State) => {
@@ -45,7 +45,7 @@ it("basic", () => {
         }]
     ]);
 });
-*/
+
 it("exp", () => {
     run_test([
         ['42; 10.0;', (x) => { x(); },  (state : State.State) => {
