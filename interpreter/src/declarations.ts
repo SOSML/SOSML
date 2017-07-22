@@ -1,6 +1,6 @@
 import {
     Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
-    Pattern, TypedExpression, Tuple, PatternExpression
+    Pattern, TypedExpression, Tuple, PatternExpression, Wildcard
 } from './expressions';
 import { IdentifierToken, Token } from './lexer';
 import { Type, TypeVariable } from './types';
@@ -50,7 +50,7 @@ export class ValueBinding {
     }
 
     // Computes for recursive bindings the function triple to be added to the environment
-    compute(state: State): [string, [Value, boolean]] {
+    compute(state: State): [string, [Value|undefined, boolean]] {
         if (!this.isRecursive) {
             throw new InternalInterpreterError(this.position,
                 'Well, consider reading the docs next time.'
@@ -58,6 +58,9 @@ export class ValueBinding {
         }
 
         if (!(this.pattern instanceof ValueIdentifier)) {
+            if (this.pattern instanceof Wildcard) {
+                return ['_', [undefined, true]];
+            }
             throw new EvaluationError(this.pattern.position,
                 'When using "rec", exactly one name is required here.');
         }
@@ -286,10 +289,13 @@ export class ValueDeclaration extends Declaration {
             let k = i;
             for (; k < this.valueBinding.length; ++k) {
                 let res = this.valueBinding[k].compute(state);
-                if (res[1][1]) {
-                    return [state, true, res[1][0]];
+                if (res[1][1] && res[1][0] === undefined) {
+                    continue;
                 }
-                state.setDynamicValue(res[0], res[1][0]);
+                if (res[1][1]) {
+                    return [state, true, <Value> res[1][0]];
+                }
+                state.setDynamicValue(res[0], <Value> res[1][0]);
             }
         }
         return [state, false, undefined];
