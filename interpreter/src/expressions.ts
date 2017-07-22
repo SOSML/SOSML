@@ -131,7 +131,7 @@ export class Match {
 
     compute(state: State, value: Value): [Value, boolean] {
         for (let i = 0; i < this.matches.length; ++i) {
-            let res = this.matches[i][0].matches(state, value);
+            let res = this.matches[i][0].matches(state.getNestedState(), value);
             if (res !== undefined) {
                 for (let j = 0; j < res.length; ++j) {
                     state.setDynamicValue(res[j][0], res[j][1]);
@@ -203,7 +203,7 @@ export class HandleException extends Expression {
     compute(state: State): [Value, boolean] {
         let res = this.expression.compute(state);
         if (res[1]) {
-            let next = this.match.compute(state, res[0]);
+            let next = this.match.compute(state.getNestedState(), res[0]);
             if (!next[1] || (<ExceptionValue> next[0]).constructorName !== 'Match') {
                 // Exception got handled
                 return next;
@@ -272,7 +272,7 @@ export class FunctionApplication extends Expression implements Pattern {
                 === (<ConstructedValue> v).constructorName) {
                 if ((<ConstructedValue> v).argument !== undefined) {
                     return (<PatternExpression> this.argument).matches(
-                        state, <Value> (<ConstructedValue> v).argument);
+                        state.getNestedState(), <Value> (<ConstructedValue> v).argument);
                 } else {
                     return undefined;
                 }
@@ -284,7 +284,7 @@ export class FunctionApplication extends Expression implements Pattern {
                     === (<ExceptionValue> v).constructorName) {
                 if ((<ExceptionValue> v).argument !== undefined) {
                     return (<PatternExpression> this.argument).matches(
-                        state, <Value> (<ExceptionValue> v).argument);
+                        state.getNestedState(), <Value> (<ExceptionValue> v).argument);
                 }
             }
             return [];
@@ -462,7 +462,7 @@ export class Record extends Expression implements Pattern {
                 return undefined;
             }
             let cur = (<PatternExpression> this.entries[i][1]).matches(
-                state, (<RecordValue> v).getValue(this.entries[i][0]));
+                state.getNestedState(), (<RecordValue> v).getValue(this.entries[i][0]));
             if (cur === undefined) {
                 return cur;
             }

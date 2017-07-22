@@ -273,7 +273,7 @@ export class ValueDeclaration extends Declaration {
             if (val[1]) {
                 return [state, true, val[0]];
             }
-            result = this.valueBinding[i].pattern.matches(state, val[0]);
+            result = this.valueBinding[i].pattern.matches(state.getNestedState(), val[0]);
 
             if (result === undefined) {
                 return [state, true, state.getDynamicValue('Bind')];

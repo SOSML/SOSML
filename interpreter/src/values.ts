@@ -278,7 +278,7 @@ export class FunctionValue extends Value {
     }
 
     prettyPrint(): string {
-        return '( fn ' + this.body.prettyPrint(0, true) + ', <some state> )';
+        return '[some function]';
     }
 
     // Computes the function on the given argument,
