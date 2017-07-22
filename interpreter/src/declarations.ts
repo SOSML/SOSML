@@ -6,7 +6,7 @@ import { IdentifierToken, Token } from './lexer';
 import { Type, TypeVariable } from './types';
 import { State } from './state';
 import { InternalInterpreterError, Position, EvaluationError, FeatureDisabledError } from './errors';
-import { Value, ValueConstructor } from './values';
+import { Value, ValueConstructor, ExceptionConstructor } from './values';
 
 export abstract class Declaration {
     hasSemanticError: boolean = false;
@@ -195,7 +195,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
             numArg = 1;
         }
         state.setDynamicValue(this.name.getText(),
-            new ValueConstructor(this.name.getText(), numArg));
+            new ExceptionConstructor(this.name.getText(), numArg));
         return [state, false, undefined];
     }
 }
