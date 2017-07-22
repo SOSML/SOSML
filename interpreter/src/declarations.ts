@@ -354,8 +354,7 @@ export class TypeDeclaration extends Declaration {
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
-    //    for (let i = 0; i < this.typeBinding.length; ++i) { }
-        throw new Error('');
+        return [state, false, undefined];
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -651,6 +650,9 @@ export class InfixDeclaration extends Declaration {
     }
 
     evaluate(state: State): [State, boolean, Value|undefined]  {
+        for (let i = 0; i < this.operators.length; ++i) {
+            state.setInfixStatus(this.operators[i], this.precedence, false, true);
+        }
         return [state, false, undefined];
     }
 
@@ -677,6 +679,9 @@ export class InfixRDeclaration extends Declaration {
     }
 
     evaluate(state: State): [State, boolean, Value|undefined]  {
+        for (let i = 0; i < this.operators.length; ++i) {
+            state.setInfixStatus(this.operators[i], this.precedence, true, true);
+        }
         return [state, false, undefined];
     }
 
@@ -702,6 +707,9 @@ export class NonfixDeclaration extends Declaration {
     }
 
     evaluate(state: State): [State, boolean, Value|undefined]  {
+        for (let i = 0; i < this.operators.length; ++i) {
+            state.setInfixStatus(this.operators[i], 0, false, false);
+        }
         return [state, false, undefined];
     }
 

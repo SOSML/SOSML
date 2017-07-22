@@ -1370,10 +1370,6 @@ export class Parser {
             let res: IdentifierToken[] = [];
             while (this.currentToken().isVid()) {
                 res.push(<IdentifierToken> this.currentToken());
-
-                this.state.setInfixStatus(
-                    <IdentifierToken> this.currentToken(), precedence, false, true);
-
                 ++this.position;
             }
 
@@ -1381,7 +1377,9 @@ export class Parser {
                 throw new ParserError('Empty "infix" declaration.',
                                       this.currentToken().position);
             }
-            return new InfixDeclaration(curTok.position, res, precedence);
+            let resdec = new InfixDeclaration(curTok.position, res, precedence);
+            this.state = resdec.evaluate(this.state)[0];
+            return resdec;
         } else if (this.checkKeywordToken(curTok, 'infixr')) {
             ++this.position;
             let precedence = 0;
@@ -1396,10 +1394,6 @@ export class Parser {
             let res: IdentifierToken[] = [];
             while (this.currentToken().isVid()) {
                 res.push(<IdentifierToken> this.currentToken());
-
-                this.state.setInfixStatus(
-                    <IdentifierToken> this.currentToken(), precedence, true, true);
-
                 ++this.position;
             }
 
@@ -1407,16 +1401,14 @@ export class Parser {
                 throw new ParserError('Empty "infixr" declaration.',
                                       this.currentToken().position);
             }
-            return new InfixRDeclaration(curTok.position, res, precedence);
+            let resdec = new InfixRDeclaration(curTok.position, res, precedence);
+            this.state = resdec.evaluate(this.state)[0];
+            return resdec;
         } else if (this.checkKeywordToken(curTok, 'nonfix')) {
             ++this.position;
             let res: IdentifierToken[] = [];
             while (this.currentToken().isVid()) {
                 res.push(<IdentifierToken> this.currentToken());
-
-                this.state.setInfixStatus(
-                    <IdentifierToken> this.currentToken(), 0, true, false);
-
                 ++this.position;
             }
 
@@ -1424,7 +1416,9 @@ export class Parser {
                 throw new ParserError('Empty "nonfix" declaration.',
                                       this.currentToken().position);
             }
-            return new NonfixDeclaration(curTok.position, res);
+            let resdec = new NonfixDeclaration(curTok.position, res);
+            this.state = resdec.evaluate(this.state)[0];
+            return resdec;
         }
 
         if (this.checkKeywordToken(curTok, ';')) {
