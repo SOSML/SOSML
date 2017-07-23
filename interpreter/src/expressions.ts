@@ -4,7 +4,7 @@ import { Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConsta
          NumericToken, WordConstantToken, CharacterConstantToken,
          StringConstantToken } from './lexer';
 import { State } from './state';
-import { InternalInterpreterError, Position, SemanticError, EvaluationError } from './errors';
+import { InternalInterpreterError, Position, ElaborationError, EvaluationError } from './errors';
 import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
          ExceptionValue, ConstructedValue } from './values';
@@ -324,7 +324,7 @@ export class FunctionApplication extends Expression implements Pattern {
             f.parameterType.unify(arg, state, this.argument.position);
             return f.returnType;
         } else { */
-            throw new SemanticError(this.func.position, this.func.prettyPrint() + ' is not a function.');
+            throw new ElaborationError(this.func.position, this.func.prettyPrint() + ' is not a function.');
         // }
     }
 
@@ -469,7 +469,7 @@ export class Record extends Expression implements Pattern {
         this.entries.sort();
         for (let i = 1; i < this.entries.length; ++i) {
             if (this.entries[i][0] === this.entries[i - 1][0]) {
-                throw new SemanticError(this.position,
+                throw new ElaborationError(this.position,
                     'Label "' + this.entries[i][0] + '" occurs more than once in the same record.');
             }
         }
@@ -505,7 +505,7 @@ export class Record extends Expression implements Pattern {
             let name: string = this.entries[i][0];
             let exp: Expression = this.entries[i][1];
             if (e.has(name)) {
-                throw new SemanticError(this.position,
+                throw new ElaborationError(this.position,
                     'Label "' + name + '" occurs more than once in the same record.');
             }
             e.set(name, exp.getType(state));
@@ -590,7 +590,7 @@ export class LocalDeclarationExpression extends Expression {
 }
 
 // The following classes are derived forms.
-// They will not be present in the simplified AST and do not implement checkSemantics/getType
+// They will not be present in the simplified AST and do not implement elaborate/getType
 
 export class InfixExpression extends Expression implements Pattern {
     // operators: (op, idx), to simplify simplify

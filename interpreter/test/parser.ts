@@ -18,24 +18,24 @@ function createItExpression(exp: Expr.Expression): void {
                 new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
                 exp
             )
-        ])
-    ]);
+        ], 2)
+    ], 1);
 }
 
 function pattern_tester(pattern: Expr.Pattern, pos42: Errors.Position): Decl.Declaration {
     return new Decl.SequentialDeclaration(0, [
         new Decl.ValueDeclaration(0, [], [
             new Decl.ValueBinding(4, false, pattern, get42(pos42))
-        ])
-    ]);
+        ], 2)
+    ], 1);
 }
 
-function create_infix(position: Errors.Position) {
+function create_infix(position: Errors.Position, id: number) {
     return new Decl.InfixDeclaration(
         position,
         [
             new Lexer.AlphanumericIdentifierToken("x", position+6)
-        ]
+        ], 0, id
     )
 }
 
@@ -88,7 +88,7 @@ it("basic", () => {
     let testcase_sample_expr2: string = sampleExpression2 + ';';
 
     expect(parse(testcase_empty)).toEqualWithType(
-        new Decl.SequentialDeclaration(0, [])
+        new Decl.SequentialDeclaration(0, [], 1)
     );
     expect(parse(testcase_simple1)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -97,8 +97,8 @@ it("basic", () => {
                     new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('x', 4)),
                     get42(8)
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_sample_expr1)).toEqualWithType(createItExpression(
         createSampleExpression1(0)
@@ -329,8 +329,8 @@ it("atomic expression - local declaration", () => {
                         new Expr.ValueIdentifier(8, new Lexer.AlphanumericIdentifierToken('it', 8)),
                         get42(13)
                     )
-                ])
-            ),
+                ], 4)
+            ], 3),
             get42(19)
         )
     ));
@@ -342,8 +342,8 @@ it("atomic expression - local declaration", () => {
                         new Expr.ValueIdentifier(8, new Lexer.AlphanumericIdentifierToken('it', 8)),
                         get42(13)
                     )
-                ])
-            ),
+                ], 4)
+            ], 3),
             new Expr.Sequence(22, [
                 get42(20),
                 createSampleExpression1(24),
@@ -355,7 +355,7 @@ it("atomic expression - local declaration", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('f', 6)
-            ]),
+            ], 0, 2),
             new Decl.ValueDeclaration(9, [], [
                 new Decl.ValueBinding(9, false,
                     new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
@@ -363,8 +363,8 @@ it("atomic expression - local declaration", () => {
                         new Decl.SequentialDeclaration(13, [
                             new Decl.InfixRDeclaration(13, [
                                 new Lexer.AlphanumericIdentifierToken('f', 20)
-                            ])
-                        ]),
+                            ], 0, 5)
+                        ], 4),
                         new Expr.FunctionApplication(27,
                             new Expr.ValueIdentifier(27, new Lexer.AlphanumericIdentifierToken('f', 27)),
                             new Expr.Tuple(27, [
@@ -380,7 +380,7 @@ it("atomic expression - local declaration", () => {
                         )
                     )
                 )
-            ]),
+            ], 3),
             new Decl.ValueDeclaration(40, [], [
                 new Decl.ValueBinding(40, false,
                     new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
@@ -398,14 +398,14 @@ it("atomic expression - local declaration", () => {
                         ])
                     )
                 )
-            ])
-        )
+            ], 7)
+        ], 1)
     );
     expect(parse(testcase_infix2)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixRDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('f', 7)
-            ]),
+            ], 0, 2),
             new Decl.ValueDeclaration(10, [], [
                 new Decl.ValueBinding(10, false,
                     new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
@@ -413,8 +413,8 @@ it("atomic expression - local declaration", () => {
                         new Decl.SequentialDeclaration(14, [
                             new Decl.InfixDeclaration(14, [
                                 new Lexer.AlphanumericIdentifierToken('f', 20)
-                            ])
-                        ]),
+                            ], 0, 5)
+                        ], 4),
                         new Expr.FunctionApplication(31,
                             new Expr.ValueIdentifier(31, new Lexer.AlphanumericIdentifierToken('f', 31)),
                             new Expr.Tuple(31, [
@@ -430,7 +430,7 @@ it("atomic expression - local declaration", () => {
                         )
                     )
                 )
-            ]),
+            ], 3),
             new Decl.ValueDeclaration(40, [], [
                 new Decl.ValueBinding(40, false,
                     new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
@@ -448,14 +448,14 @@ it("atomic expression - local declaration", () => {
                         ])
                     )
                 )
-            ])
-        )
+            ], 7)
+        ], 1)
     );
     expect(parse(testcase_infix3)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('f', 6)
-            ]),
+            ], 0, 2),
             new Decl.ValueDeclaration(9, [], [
                 new Decl.ValueBinding(9, false,
                     new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
@@ -463,8 +463,8 @@ it("atomic expression - local declaration", () => {
                         new Decl.SequentialDeclaration(13, [
                             new Decl.NonfixDeclaration(13, [
                                 new Lexer.AlphanumericIdentifierToken('f', 20)
-                            ])
-                        ]),
+                            ], 5)
+                        ], 4),
                         new Expr.FunctionApplication(25,
                             new Expr.FunctionApplication(25,
                                 new Expr.FunctionApplication(25,
@@ -480,7 +480,7 @@ it("atomic expression - local declaration", () => {
                         )
                     )
                 )
-            ]),
+            ], 3),
             new Decl.ValueDeclaration(40, [], [
                 new Decl.ValueBinding(40, false,
                     new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
@@ -498,8 +498,8 @@ it("atomic expression - local declaration", () => {
                         ])
                     )
                 )
-            ])
-        )
+            ], 7)
+        ], 1)
     );
     expect(parse(testcase_infix4)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -510,8 +510,8 @@ it("atomic expression - local declaration", () => {
                         new Decl.SequentialDeclaration(4, [
                             new Decl.InfixDeclaration(4, [
                                 new Lexer.AlphanumericIdentifierToken('f', 10)
-                            ])
-                        ]),
+                            ], 0, 4)
+                        ], 3),
                         new Expr.FunctionApplication(21,
                             new Expr.ValueIdentifier(21, new Lexer.AlphanumericIdentifierToken('f', 21)),
                             new Expr.Tuple(21, [
@@ -527,7 +527,7 @@ it("atomic expression - local declaration", () => {
                         )
                     )
                 )
-            ]),
+            ], 2),
             new Decl.ValueDeclaration(30, [], [
                 new Decl.ValueBinding(30, false,
                     new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
@@ -545,8 +545,8 @@ it("atomic expression - local declaration", () => {
                         new Expr.ValueIdentifier(38, new Lexer.AlphanumericIdentifierToken('c', 38))
                     )
                 )
-            ])
-        )
+            ], 6)
+        ], 1)
     );
 
     expect(() => { parse(testcase_surplus_semicolon); }).toThrow(Parser.ParserError);
@@ -673,7 +673,7 @@ it("infix expression", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('f', 6)
-            ]),
+            ], 0, 2),
             new Decl.ValueDeclaration(9, [], [
                 new Decl.ValueBinding(9, false,
                     new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
@@ -697,14 +697,14 @@ it("infix expression", () => {
                         ])
                     )
                 )
-            ])
-        )
+            ], 3)
+        ], 1)
     );
     expect(parse(testcase_right)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixRDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('f', 7)
-            ]),
+            ], 0, 2),
             new Decl.ValueDeclaration(10, [], [
                 new Decl.ValueBinding(10, false,
                     new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
@@ -728,17 +728,17 @@ it("infix expression", () => {
                         ])
                     )
                 )
-            ])
-        )
+            ], 3)
+        ], 1)
     );
     expect(parse(testcase_prio_left)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('f', 8)
-            ], 5),
+            ], 5, 2),
             new Decl.InfixDeclaration(11, [
                 new Lexer.AlphanumericIdentifierToken('g', 19)
-            ], 4),
+            ], 4, 3),
             new Decl.ValueDeclaration(22, [], [
                 new Decl.ValueBinding(22, false,
                     new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
@@ -762,17 +762,17 @@ it("infix expression", () => {
                         ])
                     )
                 )
-            ])
-        )
+            ], 4)
+        ], 1)
     );
     expect(parse(testcase_prio_right)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixRDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('f', 9)
-            ], 5),
+            ], 5, 2),
             new Decl.InfixRDeclaration(12, [
                 new Lexer.AlphanumericIdentifierToken('g', 21)
-            ], 4),
+            ], 4, 3),
             new Decl.ValueDeclaration(24, [], [
                 new Decl.ValueBinding(24, false,
                     new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
@@ -796,20 +796,20 @@ it("infix expression", () => {
                         ])
                     )
                 )
-            ])
-        )
+            ], 4)
+        ], 1)
     );
     expect(parse(testcase_non_colliding)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('f', 8)
-            ], 1),
+            ], 1, 2),
             new Decl.InfixRDeclaration(11, [
                 new Lexer.AlphanumericIdentifierToken('g', 20)
-            ], 1),
+            ], 1, 3),
             new Decl.InfixDeclaration(23, [
                 new Lexer.AlphanumericIdentifierToken('h', 29)
-            ]),
+            ], 0, 4),
             new Decl.ValueDeclaration(32, [], [
                 new Decl.ValueBinding(32, false,
                     new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
@@ -833,8 +833,8 @@ it("infix expression", () => {
                         ])
                     ),
                 )
-            ])
-        )
+            ], 5)
+        ], 1)
     );
     expect(() => { parse(testcase_colliding); }).toThrow(Parser.ParserError);
 });
@@ -1274,8 +1274,8 @@ it("declaration - value declaration", () => {
                     new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('x', 4)),
                     get42(8)
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_1_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1286,9 +1286,9 @@ it("declaration - value declaration", () => {
                         new Expr.ValueIdentifier(7, new Lexer.AlphanumericIdentifierToken('x', 7)),
                         get42(11)
                     )
-                ]
+                ], 2
             )
-        ])
+        ], 1)
     );
     expect(parse(testcase_1_tyvar_seq)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1299,9 +1299,9 @@ it("declaration - value declaration", () => {
                         new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken('x', 9)),
                         get42(13)
                     )
-                ]
+                ], 2
             )
-        ])
+        ], 1)
     );
     expect(parse(testcase_2_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1313,9 +1313,9 @@ it("declaration - value declaration", () => {
                         new Expr.ValueIdentifier(13, new Lexer.AlphanumericIdentifierToken('x', 13)),
                         get42(17)
                     )
-                ]
+                ], 2
             )
-        ])
+        ], 1)
     );
     expect(parse(testcase_3_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1328,9 +1328,9 @@ it("declaration - value declaration", () => {
                         new Expr.ValueIdentifier(17, new Lexer.AlphanumericIdentifierToken('x', 17)),
                         get42(21)
                     )
-                ]
+                ], 2
             )
-        ])
+        ], 1)
     );
 });
 
@@ -1353,8 +1353,8 @@ it("declaration - function declaration", () => {
                     ],
                     new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('f', 4)),
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_1_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1370,9 +1370,9 @@ it("declaration - function declaration", () => {
                         ],
                         new Expr.ValueIdentifier(7, new Lexer.AlphanumericIdentifierToken('f', 7)),
                     )
-                ]
+                ], 2
             )
-        ])
+        ], 1)
     );
     expect(parse(testcase_1_tyvar_seq)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1388,9 +1388,9 @@ it("declaration - function declaration", () => {
                         ],
                         new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken('f', 9)),
                     )
-                ]
+                ], 2
             )
-        ])
+        ], 1)
     );
     expect(parse(testcase_2_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1407,9 +1407,9 @@ it("declaration - function declaration", () => {
                         ],
                         new Expr.ValueIdentifier(13, new Lexer.AlphanumericIdentifierToken('f', 13)),
                     )
-                ]
+                ], 2
             )
-        ])
+        ], 1)
     );
     expect(parse(testcase_3_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1427,9 +1427,9 @@ it("declaration - function declaration", () => {
                         ],
                         new Expr.ValueIdentifier(17, new Lexer.AlphanumericIdentifierToken('f', 17)),
                     )
-                ]
+                ], 2
             )
-        ])
+        ], 1)
     );
 });
 
@@ -1446,8 +1446,8 @@ it("declaration - type declaration", () => {
                     new Lexer.AlphanumericIdentifierToken('blub', 5),
                     new Type.TypeVariable('\'a', 12)
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_nonalphanum)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1456,8 +1456,8 @@ it("declaration - type declaration", () => {
                     new Lexer.IdentifierToken('####', 5),
                     new Type.TypeVariable('\'a', 12)
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(() => { parse(testcase_numeric); }).toThrow(Parser.ParserError);
     expect(() => { parse(testcase_star); }).toThrow(Parser.ParserError);
@@ -1479,8 +1479,8 @@ it("declaration - datatype declaration", () => {
                         [new Lexer.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', 21)]
                     ]
                 )
-            ])
-        ])
+            ], undefined, 2)
+        ], 1)
     );
     expect(parse(testcase_nonalphanum)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1491,8 +1491,8 @@ it("declaration - datatype declaration", () => {
                         [new Lexer.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', 21)]
                     ]
                 )
-            ])
-        ])
+            ], undefined, 2)
+        ], 1)
     );
     expect(() => { parse(testcase_numeric); }).toThrow(Parser.ParserError);
     expect(() => { parse(testcase_star); }).toThrow(Parser.ParserError);
@@ -1517,8 +1517,8 @@ it("declaration - exception declaration", () => {
                     new Lexer.AlphanumericIdentifierToken('X', 10),
                     undefined
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_of)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1527,8 +1527,8 @@ it("declaration - exception declaration", () => {
                     new Lexer.AlphanumericIdentifierToken('X', 10),
                     new Type.TypeVariable('\'a', 15)
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
 });
 
@@ -1548,12 +1548,12 @@ it("declaration - local declaration", () => {
                             new Expr.ValueIdentifier(10, new Lexer.AlphanumericIdentifierToken('it', 10)),
                             get42(15)
                         )
-                    ])
-                ]),
+                    ], 4)
+                ], 3),
                 new Decl.SequentialDeclaration(21, [
-                ])
+                ], 6), 2
             )
-        ])
+        ], 1)
     );
     expect(parse(testcase_single2)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1564,12 +1564,12 @@ it("declaration - local declaration", () => {
                             new Expr.ValueIdentifier(10, new Lexer.AlphanumericIdentifierToken('it', 10)),
                             get42(15)
                         )
-                    ])
-                ]),
+                    ], 4)
+                ], 3),
                 new Decl.SequentialDeclaration(22, [
-                ])
+                ], 6), 2
             )
-        ])
+        ], 1)
     );
     expect(parse(testcase_multiple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1580,40 +1580,40 @@ it("declaration - local declaration", () => {
                             new Expr.ValueIdentifier(10, new Lexer.AlphanumericIdentifierToken('it', 10)),
                             get42(15)
                         )
-                    ]),
+                    ], 4),
                     new Decl.ValueDeclaration(19, [], [
                         new Decl.ValueBinding(23, false,
                             new Expr.ValueIdentifier(23, new Lexer.AlphanumericIdentifierToken('it', 23)),
                             get42(28)
                         )
-                    ])
-                ]),
+                    ], 5)
+                ], 3),
                 new Decl.SequentialDeclaration(34, [
-                ])
+                ], 7), 2
             )
-        ])
+        ], 1)
     );
     expect(parse(testcase_multiple_dec)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.LocalDeclaration(0,
                 new Decl.SequentialDeclaration(6, [
-                ]),
+                ], 3),
                 new Decl.SequentialDeclaration(9, [
                     new Decl.ValueDeclaration(9, [], [
                         new Decl.ValueBinding(13, false,
                             new Expr.ValueIdentifier(13, new Lexer.AlphanumericIdentifierToken('it', 13)),
                             get42(18)
                         )
-                    ]),
+                    ], 6),
                     new Decl.ValueDeclaration(22, [], [
                         new Decl.ValueBinding(26, false,
                             new Expr.ValueIdentifier(26, new Lexer.AlphanumericIdentifierToken('it', 26)),
                             get42(31)
                         )
-                    ])
-                ])
+                    ], 7)
+                ], 5), 2
             )
-        ])
+        ], 1)
     );
 });
 
@@ -1626,8 +1626,8 @@ it("declaration - open declaration", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.OpenDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('stru', 5)
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_multiple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1636,8 +1636,8 @@ it("declaration - open declaration", () => {
                 new Lexer.LongIdentifierToken('stra.stru', 10, [
                     new Lexer.AlphanumericIdentifierToken('stra', 10)
                 ], new Lexer.AlphanumericIdentifierToken('stru', 15))
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
 });
 
@@ -1646,7 +1646,7 @@ it("declaration - empty declaration", () => {
 
     expect(parse(testcase)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
-        ])
+        ], 1)
     );
 });
 
@@ -1660,20 +1660,20 @@ it("declaration - sequential declaration", () => {
                     new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('it', 4)),
                     get42(9)
                 )
-            ]),
+            ], 2),
             new Decl.ValueDeclaration(13, [], [
                 new Decl.ValueBinding(17, false,
                     new Expr.ValueIdentifier(17, new Lexer.AlphanumericIdentifierToken('it', 17)),
                     get42(22)
                 )
-            ]),
+            ], 3),
             new Decl.ValueDeclaration(26, [], [
                 new Decl.ValueBinding(30, false,
                     new Expr.ValueIdentifier(30, new Lexer.AlphanumericIdentifierToken('it', 30)),
                     get42(35)
                 )
-            ])
-        ])
+            ], 4)
+        ], 1)
     );
 });
 
@@ -1692,29 +1692,29 @@ it("declaration - infix (L) directive", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('f', 6)
-            ])
-        ])
+            ], 0, 2)
+        ], 1)
     );
     expect(parse(testcase_0)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('f', 8)
-            ])
-        ])
+            ], 0, 2)
+        ], 1)
     );
     expect(parse(testcase_9)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('f', 8)
-            ], 9)
-        ])
+            ], 9, 2)
+        ], 1)
     );
     expect(parse(testcase_star)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
                 new Lexer.StarToken(6)
-            ])
-        ])
+            ], 0, 2)
+        ], 1)
     );
     expect(parse(testcase_multiple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1722,8 +1722,8 @@ it("declaration - infix (L) directive", () => {
                 new Lexer.StarToken(6),
                 new Lexer.AlphanumericIdentifierToken('f', 8),
                 new Lexer.AlphanumericIdentifierToken('g', 10)
-            ])
-        ])
+            ], 0, 2)
+        ], 1)
     );
     expect(() => { parse(testcase_double_digit1); }).toThrow(Parser.ParserError);
     expect(() => { parse(testcase_double_digit2); }).toThrow(Parser.ParserError);
@@ -1746,29 +1746,29 @@ it("declaration - infix (R) directive", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixRDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('f', 7)
-            ])
-        ])
+            ], 0, 2)
+        ], 1)
     );
     expect(parse(testcase_0)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixRDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('f', 9)
-            ])
-        ])
+            ], 0, 2)
+        ], 1)
     );
     expect(parse(testcase_9)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixRDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('f', 9)
-            ], 9)
-        ])
+            ], 9, 2)
+        ], 1)
     );
     expect(parse(testcase_star)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixRDeclaration(0, [
                 new Lexer.StarToken(7)
-            ])
-        ])
+            ], 0, 2)
+        ], 1)
     );
     expect(parse(testcase_multiple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1776,8 +1776,8 @@ it("declaration - infix (R) directive", () => {
                 new Lexer.StarToken(7),
                 new Lexer.AlphanumericIdentifierToken('f', 9),
                 new Lexer.AlphanumericIdentifierToken('g', 11)
-            ])
-        ])
+            ], 0, 2)
+        ], 1)
     );
     expect(() => { parse(testcase_double_digit1); }).toThrow(Parser.ParserError);
     expect(() => { parse(testcase_double_digit2); }).toThrow(Parser.ParserError);
@@ -1796,15 +1796,15 @@ it("declaration - nonfix directive", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.NonfixDeclaration(0, [
                 new Lexer.AlphanumericIdentifierToken('f', 7)
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_star)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.NonfixDeclaration(0, [
                 new Lexer.StarToken(7)
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_multiple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1812,8 +1812,8 @@ it("declaration - nonfix directive", () => {
                 new Lexer.StarToken(7),
                 new Lexer.AlphanumericIdentifierToken('f', 9),
                 new Lexer.AlphanumericIdentifierToken('g', 11)
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(() => { parse(testcase_prime); }).toThrow(Parser.ParserError);
     expect(() => { parse(testcase_no_precedence); }).toThrow(Parser.ParserError);
@@ -1831,8 +1831,8 @@ it("value bindings - non recursive", () => {
                     new Expr.Wildcard(4),
                     get42(8)
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_multiple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1847,8 +1847,8 @@ it("value bindings - non recursive", () => {
                     )
                     createSampleExpression1(19)
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(() => { parse(testcase_disallowed_tyseq); }).toThrow(Parser.ParserError);
 });
@@ -1869,8 +1869,8 @@ it("value bindings - recursive", () => {
                         ])
                     )
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_multirec)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1883,8 +1883,8 @@ it("value bindings - recursive", () => {
                         ])
                     )
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_multiple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1917,8 +1917,8 @@ it("value bindings - recursive", () => {
                         ])
                     )
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(() => {parse(testcase_no_lambda);}).toThrow(Parser.ParserError);
 });
@@ -1943,8 +1943,8 @@ it("function value bindings", () => {
                     ],
                     new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('f', 4)),
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_op)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1958,8 +1958,8 @@ it("function value bindings", () => {
                     ],
                     new Expr.ValueIdentifier(7, prefixWithOp(new Lexer.AlphanumericIdentifierToken('f', 7))),
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_ty)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1973,8 +1973,8 @@ it("function value bindings", () => {
                     ],
                     new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('f', 4)),
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_op_ty)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -1988,8 +1988,8 @@ it("function value bindings", () => {
                     ],
                     new Expr.ValueIdentifier(7, prefixWithOp(new Lexer.AlphanumericIdentifierToken('f', 7))),
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_multiple_matches)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2007,8 +2007,8 @@ it("function value bindings", () => {
                     ],
                     new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('f', 4)),
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_multiple_bindings)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2035,8 +2035,8 @@ it("function value bindings", () => {
                     ],
                     new Expr.ValueIdentifier(44, new Lexer.AlphanumericIdentifierToken('g', 44)),
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
 });
 
@@ -2054,8 +2054,8 @@ it("type bindings", () => {
                     new Lexer.AlphanumericIdentifierToken('blub', 8),
                     new Type.TypeVariable('\'a', 15)
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_2_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2067,8 +2067,8 @@ it("type bindings", () => {
                     new Lexer.AlphanumericIdentifierToken('blub', 14),
                     new Type.TypeVariable('\'a', 21)
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_multiple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2085,8 +2085,8 @@ it("type bindings", () => {
                     new Lexer.AlphanumericIdentifierToken('blob', 25),
                     new Type.TypeVariable('\'b', 32)
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
 });
 
@@ -2106,8 +2106,8 @@ it("datatype bindings", () => {
                         [new Lexer.AlphanumericIdentifierToken('x', 19), new Type.TypeVariable('\'a', 24)]
                     ]
                 )
-            ])
-        ])
+            ], undefined, 2)
+        ], 1)
     );
     expect(parse(testcase_2_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2121,8 +2121,8 @@ it("datatype bindings", () => {
                         [new Lexer.AlphanumericIdentifierToken('x', 25), undefined]
                     ]
                 )
-            ])
-        ])
+            ], undefined, 2)
+        ], 1)
     );
     expect(parse(testcase_multiple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2143,8 +2143,8 @@ it("datatype bindings", () => {
                         [new Lexer.AlphanumericIdentifierToken('y', 41), undefined]
                     ]
                 )
-            ])
-        ])
+            ], undefined, 2)
+        ], 1)
     );
 });
 
@@ -2165,8 +2165,8 @@ it("constructor bindings", () => {
                         [new Lexer.AlphanumericIdentifierToken('X', 16), undefined]
                     ]
                 )
-            ])
-        ])
+            ], undefined, 2)
+        ], 1)
     );
     expect(parse(testcase_op)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2177,8 +2177,8 @@ it("constructor bindings", () => {
                         [prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 19)), undefined]
                     ]
                 )
-            ])
-        ])
+            ], undefined, 2)
+        ], 1)
     );
     expect(parse(testcase_of)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2189,8 +2189,8 @@ it("constructor bindings", () => {
                         [new Lexer.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', 21)]
                     ]
                 )
-            ])
-        ])
+            ], undefined, 2)
+        ], 1)
     );
     expect(parse(testcase_op_of)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2201,8 +2201,8 @@ it("constructor bindings", () => {
                         [prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', 24)]
                     ]
                 )
-            ])
-        ])
+            ], undefined, 2)
+        ], 1)
     );
     expect(parse(testcase_multiple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2214,8 +2214,8 @@ it("constructor bindings", () => {
                         [new Lexer.AlphanumericIdentifierToken('Y', 29), undefined]
                     ]
                 )
-            ])
-        ])
+            ], undefined, 2)
+        ], 1)
     );
     expect(parse(testcase_multiple_datatypes)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2233,8 +2233,8 @@ it("constructor bindings", () => {
                         [new Lexer.AlphanumericIdentifierToken('Z', 42), undefined]
                     ]
                 )
-            ])
-        ])
+            ], undefined, 2)
+        ], 1)
     );
 });
 
@@ -2255,8 +2255,8 @@ it("exception bindings", () => {
                     new Lexer.AlphanumericIdentifierToken('X', 10),
                     undefined
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_direct_op)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2265,8 +2265,8 @@ it("exception bindings", () => {
                     prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 13)),
                     undefined
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_direct_of)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2275,8 +2275,8 @@ it("exception bindings", () => {
                     new Lexer.AlphanumericIdentifierToken('X', 10),
                     new Type.TypeVariable('\'a', 15)
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_direct_op_of)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2285,8 +2285,8 @@ it("exception bindings", () => {
                     prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 13)),
                     new Type.TypeVariable('\'a', 18)
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_alias_simple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2295,8 +2295,8 @@ it("exception bindings", () => {
                     new Lexer.AlphanumericIdentifierToken('X', 10),
                     new Lexer.AlphanumericIdentifierToken('Y', 14),
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_alias_op)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2305,8 +2305,8 @@ it("exception bindings", () => {
                     prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 13)),
                     prefixWithOp(new Lexer.AlphanumericIdentifierToken('Y', 20)),
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
     expect(parse(testcase_multiple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2323,8 +2323,8 @@ it("exception bindings", () => {
                     new Lexer.AlphanumericIdentifierToken('W', 32),
                     new Lexer.AlphanumericIdentifierToken('Y', 36),
                 )
-            ])
-        ])
+            ], 2)
+        ], 1)
     );
 });
 
@@ -2541,11 +2541,11 @@ it("pattern - constructed value (infix)", () => {
     let pattern: Expr.Expression = new Expr.FunctionApplication(15, new Expr.ValueIdentifier(15, new Lexer.AlphanumericIdentifierToken("x", 15)), new Expr.Tuple(15, [new Expr.Wildcard(13), new Expr.Wildcard(17)]));
     expect(parse(pattern_infix)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
-            create_infix(0),
+            create_infix(0, 2),
             new Decl.ValueDeclaration(9, [], [
                 new Decl.ValueBinding(13, false, pattern, get42(21))
-            ])
-        ])
+            ], 3)
+        ], 1)
     )
     //TODO tests
 });

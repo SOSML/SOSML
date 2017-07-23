@@ -5,12 +5,13 @@ import {
 import { IdentifierToken, Token } from './lexer';
 import { Type, TypeVariable } from './types';
 import { State } from './state';
-import { InternalInterpreterError, Position, EvaluationError, FeatureDisabledError } from './errors';
+import { InternalInterpreterError, Position, ElaborationError,
+         EvaluationError, FeatureDisabledError } from './errors';
 import { Value, ValueConstructor, ExceptionConstructor } from './values';
 
 export abstract class Declaration {
-    hasSemanticError: boolean = false;
-    elaborate(state: State): void {
+    id: number;
+    elaborate(state: State): State {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
@@ -39,7 +40,6 @@ export class ValueBinding {
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
-        // TODO nicify this
         let res = '';
         if (this.isRecursive) {
             res += 'rec ';
@@ -131,8 +131,6 @@ export class FunctionValueBinding {
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
-        // TODO
-        // public parameters: [PatternExpression[], Type|undefined, Expression][]
         let res = '';
         for (let i = 0; i < this.parameters.length; ++i) {
             if (i > 0) {
@@ -217,7 +215,8 @@ export class ExceptionAlias implements ExceptionBinding {
 }
 
 export class ExceptionDeclaration extends Declaration {
-    constructor(public position: Position, public bindings: ExceptionBinding[]) {
+    constructor(public position: Position, public bindings: ExceptionBinding[],
+                public id: number = 0) {
         super();
     }
 
@@ -227,6 +226,10 @@ export class ExceptionDeclaration extends Declaration {
 
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
+
+    elaborate(state: State): State {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
@@ -246,7 +249,7 @@ export class ExceptionDeclaration extends Declaration {
 export class ValueDeclaration extends Declaration {
 // val typeVariableSequence valueBinding
     constructor(public position: Position, public typeVariableSequence: TypeVariable[],
-                public valueBinding: ValueBinding[]) {
+                public valueBinding: ValueBinding[], public id: number = 0) {
         super();
     }
 
@@ -259,6 +262,10 @@ export class ValueDeclaration extends Declaration {
                                          this.valueBinding[i].expression.simplify()));
         }
         return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd);
+    }
+
+    elaborate(state: State): State {
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
@@ -317,7 +324,7 @@ export class ValueDeclaration extends Declaration {
 export class FunctionDeclaration extends Declaration {
 // fun typeVariableSequence functionValueBinding
     constructor(public position: Position, public typeVariableSequence: TypeVariable[],
-                public functionValueBinding: FunctionValueBinding[]) {
+                public functionValueBinding: FunctionValueBinding[], public id: number = 0) {
         super();
     }
 
@@ -344,7 +351,7 @@ export class FunctionDeclaration extends Declaration {
 
 export class TypeDeclaration extends Declaration {
 // type typeBinding
-    constructor(public position: Position, public typeBinding: TypeBinding[]) {
+    constructor(public position: Position, public typeBinding: TypeBinding[], public id: number = 0) {
         super();
     }
 
@@ -357,6 +364,10 @@ export class TypeDeclaration extends Declaration {
                                       this.typeBinding[i].type.simplify()));
         }
         return new TypeDeclaration(this.position, bnds);
+    }
+
+    elaborate(state: State): State {
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
@@ -380,7 +391,7 @@ export class TypeDeclaration extends Declaration {
 export class DatatypeDeclaration extends Declaration {
 // datatype datatypeBinding <withtype typeBinding>
     constructor(public position: Position, public datatypeBinding: DatatypeBinding[],
-                public typeBinding: (TypeBinding[]) | undefined) {
+                public typeBinding: (TypeBinding[]) | undefined, public id: number = 0) {
         super();
 
         if (this.typeBinding !== undefined) {
@@ -407,7 +418,7 @@ export class DatatypeDeclaration extends Declaration {
                 ntype));
         }
 
-        // TODO Correctly implement the withtype ~> type transition
+        // TODO Correctly implement the withtype ~> type transition or clean up this mess
         /*
         if (this.typeBinding) {
             return new SequentialDeclaration(this.position, [
@@ -416,6 +427,10 @@ export class DatatypeDeclaration extends Declaration {
         } else { */
         return new DatatypeDeclaration(this.position, datbnd, undefined);
         /* } */
+    }
+
+    elaborate(state: State): State {
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
@@ -431,12 +446,12 @@ export class DatatypeDeclaration extends Declaration {
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
-        // TODO
         let res = 'datatype';
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
             if (i > 0) {
                 res += ' and';
             }
+            // TODO Replace <stuff> with something proper
             res += ' <stuff> ' + this.datatypeBinding[i].name.getText() + ' =';
             for (let j = 0; j < this.datatypeBinding[i].type.length; ++j) {
                 if (j > 0) {
@@ -453,15 +468,25 @@ export class DatatypeDeclaration extends Declaration {
 }
 
 export class DatatypeReplication extends Declaration {
-// datatype name -=- datatype oldname
+// datatype name = datatype oldname
     constructor(public position: Position, public name: IdentifierToken,
-                public oldname: Token) {
+                public oldname: Token, public id: number = 0) {
         super();
     }
 
     simplify(): DatatypeReplication {
         return this;
     }
+
+    elaborate(state: State): State {
+        let res = state.getStaticType(this.oldname.getText());
+        if (res === undefined) {
+            throw new ElaborationError(this.position,
+                'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
+        }
+        state.setStaticType(this.name.getText(), res.type, res.constructors);
+        return state;
+   }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
         let res = state.getDynamicType(this.oldname.getText());
@@ -474,15 +499,15 @@ export class DatatypeReplication extends Declaration {
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
-        // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        return 'datatype ' + this.name.getText() + ' = datatype ' + this.oldname.getText() + ';';
     }
 }
 
 export class AbstypeDeclaration extends Declaration {
 // abstype datatypeBinding <withtype typeBinding> with declaration end
     constructor(public position: Position, public datatypeBinding: DatatypeBinding[],
-                public typeBinding: (TypeBinding[]) | undefined, public declaration: Declaration) {
+                public typeBinding: (TypeBinding[]) | undefined, public declaration: Declaration,
+                public id: number = 0) {
         super();
 
         if (this.typeBinding !== undefined) {
@@ -509,7 +534,7 @@ export class AbstypeDeclaration extends Declaration {
                 ntype));
         }
 
-        // TODO Correctly implement the withtype ~> type transition
+        // TODO Correctly implement the withtype ~> type transition or clean up this mess
         /* if (this.typeBinding) {
             return new AbstypeDeclaration(this.position, datbnd, undefined,
                 new SequentialDeclaration(this.position, [
@@ -520,6 +545,11 @@ export class AbstypeDeclaration extends Declaration {
             this.declaration.simplify());
         /* } */
 
+    }
+
+    elaborate(state: State): State {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
@@ -542,12 +572,22 @@ export class AbstypeDeclaration extends Declaration {
 
 export class LocalDeclaration extends Declaration {
 // local declaration in body end
-    constructor(public position: Position, public declaration: Declaration, public body: Declaration) {
+    constructor(public position: Position, public declaration: Declaration,
+                public body: Declaration, public id: number = 0) {
         super();
     }
 
     simplify(): LocalDeclaration {
         return new LocalDeclaration(this.position, this.declaration.simplify(), this.body.simplify());
+    }
+
+    elaborate(state: State): State {
+        let nstate = state.getNestedState();
+        nstate = this.declaration.elaborate(nstate).getNestedState();
+        nstate = this.body.elaborate(nstate);
+        // Forget all local definitions
+        nstate.parent = state;
+        return nstate;
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
@@ -566,7 +606,6 @@ export class LocalDeclaration extends Declaration {
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
-        // TODO this is just something that works but not pretty
         let res = 'local ' + this.declaration.prettyPrint(indentation, oneLine);
         res += ' in ' + this.body.prettyPrint(indentation, oneLine);
         res += ' end;';
@@ -576,12 +615,18 @@ export class LocalDeclaration extends Declaration {
 
 export class OpenDeclaration extends Declaration {
 // open name_1 ... name_n
-    constructor(public position: Position, public names: Token[]) {
+    constructor(public position: Position, public names: Token[], public id: number = 0) {
         super();
     }
 
     simplify(): OpenDeclaration {
         return this;
+    }
+
+    elaborate(state: State): State {
+        // TODO Yeah, if we had structs, we could actually implement this
+        throw new InternalInterpreterError(-1,
+            'Yeah, you better wait a little before trying this again.');
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
@@ -591,7 +636,6 @@ export class OpenDeclaration extends Declaration {
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
-        // TODO this is just something that works but not pretty
         let res = 'open';
         for (let i = 0; i < this.names.length; ++i) {
             res += ' ' + this.names[i].getText();
@@ -602,7 +646,7 @@ export class OpenDeclaration extends Declaration {
 
 export class SequentialDeclaration extends Declaration {
 // declaration1 <;> declaration2
-    constructor(public position: Position, public declarations: Declaration[]) {
+    constructor(public position: Position, public declarations: Declaration[], public id: number = 0) {
         super();
     }
 
@@ -614,13 +658,16 @@ export class SequentialDeclaration extends Declaration {
         return new SequentialDeclaration(this.position, decls);
     }
 
+    elaborate(state: State): State {
+        for (let i = 0; i < this.declarations.length; ++i) {
+            state = this.declarations[i].elaborate(state.getNestedState());
+        }
+        return state;
+    }
+
     evaluate(state: State): [State, boolean, Value|undefined] {
         for (let i = 0; i < this.declarations.length; ++i) {
             let nstate = state.getNestedState();
-            if (this.declarations[i].hasSemanticError) {
-                // If the declaration doesn't type, we shall just ignore it
-                continue;
-            }
             let res = this.declarations[i].evaluate(nstate);
             if (res[1]) {
                 // Something blew up, so let someone else handle the mess
@@ -632,7 +679,6 @@ export class SequentialDeclaration extends Declaration {
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
-        // TODO this is just something that works but not pretty
         let res = '';
         for (let i = 0; i < this.declarations.length; ++i) {
             if (i > 0) {
@@ -647,12 +693,16 @@ export class SequentialDeclaration extends Declaration {
 export class InfixDeclaration extends Declaration {
 // infix <d> vid1 .. vidn
     constructor(public position: Position, public operators: IdentifierToken[],
-                public precedence: number = 0) {
+                public precedence: number = 0, public id: number = 0) {
         super();
     }
 
     simplify(): InfixDeclaration {
         return this;
+    }
+
+    elaborate(state: State): State {
+        return state;
     }
 
     evaluate(state: State): [State, boolean, Value|undefined]  {
@@ -663,7 +713,6 @@ export class InfixDeclaration extends Declaration {
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
-        // TODO this is just something that works but not pretty
         let res = 'infix';
         res += ' ' + this.precedence;
         for (let i = 0; i < this.operators.length; ++i) {
@@ -676,12 +725,16 @@ export class InfixDeclaration extends Declaration {
 export class InfixRDeclaration extends Declaration {
 // infixr <d> vid1 .. vidn
     constructor(public position: Position, public operators: IdentifierToken[],
-                public precedence: number = 0) {
+                public precedence: number = 0, public id: number = 0) {
         super();
     }
 
     simplify(): InfixRDeclaration {
         return this;
+    }
+
+    elaborate(state: State): State {
+        return state;
     }
 
     evaluate(state: State): [State, boolean, Value|undefined]  {
@@ -692,7 +745,6 @@ export class InfixRDeclaration extends Declaration {
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
-        // TODO this is just something that works but not pretty
         let res = 'infixr';
         res += ' ' + this.precedence;
         for (let i = 0; i < this.operators.length; ++i) {
@@ -704,12 +756,17 @@ export class InfixRDeclaration extends Declaration {
 
 export class NonfixDeclaration extends Declaration {
 // nonfix <d> vid1 .. vidn
-    constructor(public position: Position, public operators: IdentifierToken[]) {
+    constructor(public position: Position, public operators: IdentifierToken[],
+                public id: number = 0) {
         super();
     }
 
     simplify(): NonfixDeclaration {
         return this;
+    }
+
+    elaborate(state: State): State {
+        return state;
     }
 
     evaluate(state: State): [State, boolean, Value|undefined]  {
@@ -720,7 +777,6 @@ export class NonfixDeclaration extends Declaration {
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
-        // TODO use the params
         let res = 'nonfix';
         for (let i = 0; i < this.operators.length; ++i) {
             res += ' ' + this.operators[i].getText();
@@ -731,12 +787,16 @@ export class NonfixDeclaration extends Declaration {
 
 export class EmptyDeclaration extends Declaration {
 // exactly what it says on the tin.
-    constructor() {
+    constructor(public id: number = 0) {
         super();
     }
 
     simplify(): EmptyDeclaration {
         return this;
+    }
+
+    elaborate(state: State): State {
+        return state;
     }
 
     evaluate(state: State): [State, boolean, Value|undefined]  {

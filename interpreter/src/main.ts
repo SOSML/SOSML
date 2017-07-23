@@ -24,15 +24,20 @@ export class Interpreter {
     /* Think of some additional flags n stuff etc */
     static interpret(nextInstruction: string,
                      oldState: State = getInitialState()): [State, boolean, Value|undefined] {
-        let state = oldState.getNestedState(true);
-        let tkn = Lexer.lex(nextInstruction);
+        let state = oldState.getNestedState();
 
+        let tkn = Lexer.lex(nextInstruction);
         let ast = Parser.parse(tkn, state);
 
         state = oldState.getNestedState();
         ast = ast.simplify();
-        ast.elaborate(state);
-        return ast.evaluate(state);
+        state = ast.elaborate(state);
+
+        // Use a fresh state to be able to piece types and values together
+        let res = ast.evaluate(oldState.getNestedState(true));
+
+        // TODO Come up with some algorithm to combine types and values
+        return res;
     }
 
     constructor(public settings: Settings) {}

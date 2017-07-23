@@ -88,6 +88,7 @@ let emptyStdFile: DynamicValueEnvironment = {
 export class State {
     private stdfiles = emptyStdFile;
 
+    // The states' ids are non-decreasing; a single declaration uses the same ids
     constructor(public id: number,
                 public parent: State | undefined,
                 public staticBasis: StaticBasis,
@@ -96,8 +97,11 @@ export class State {
                 private infixEnvironment: InfixEnvironment) {
     }
 
-    getNestedState(redefinePrint: boolean = false) {
-        let res = new State(this.id + 1, this,
+    getNestedState(redefinePrint: boolean = false, newId: number|undefined = undefined) {
+        if (newId === undefined) {
+            newId = this.id + 1;
+        }
+        let res = new State(<number> newId, this,
             new StaticBasis({}, {}),
             new DynamicBasis({}, {}),
             {}, {});
