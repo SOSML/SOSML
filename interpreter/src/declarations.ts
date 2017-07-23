@@ -280,7 +280,7 @@ export class ValueDeclaration extends Declaration {
             if (val[1]) {
                 return [state, true, val[0]];
             }
-            result = this.valueBinding[i].pattern.matches(state.getNestedState(), val[0]);
+            result = this.valueBinding[i].pattern.matches(state.getNestedState(false, state.id), val[0]);
 
             if (result === undefined) {
                 return [state, true, state.getDynamicValue('Bind')];
@@ -582,8 +582,8 @@ export class LocalDeclaration extends Declaration {
     }
 
     elaborate(state: State): State {
-        let nstate = state.getNestedState();
-        nstate = this.declaration.elaborate(nstate).getNestedState();
+        let nstate = state.getNestedState(false, state.id);
+        nstate = this.declaration.elaborate(nstate).getNestedState(false, state.id);
         nstate = this.body.elaborate(nstate);
         // Forget all local definitions
         nstate.parent = state;
@@ -591,13 +591,13 @@ export class LocalDeclaration extends Declaration {
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
-        let nstate = state.getNestedState();
+        let nstate = state.getNestedState(false, state.id);
         let res = this.declaration.evaluate(nstate);
         if (res[1]) {
             // Something came flying in our direction. So hide we were here and let it flow.
             return [state, true, res[2]];
         }
-        nstate = res[0].getNestedState();
+        nstate = res[0].getNestedState(false, state.id);
         res = this.body.evaluate(nstate);
 
         // Forget all local definitions
@@ -660,14 +660,14 @@ export class SequentialDeclaration extends Declaration {
 
     elaborate(state: State): State {
         for (let i = 0; i < this.declarations.length; ++i) {
-            state = this.declarations[i].elaborate(state.getNestedState());
+            state = this.declarations[i].elaborate(state.getNestedState(false, this.declarations[i].id));
         }
         return state;
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
         for (let i = 0; i < this.declarations.length; ++i) {
-            let nstate = state.getNestedState();
+            let nstate = state.getNestedState(false, this.declarations[i].id);
             let res = this.declarations[i].evaluate(nstate);
             if (res[1]) {
                 // Something blew up, so let someone else handle the mess

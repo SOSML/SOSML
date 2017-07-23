@@ -137,7 +137,7 @@ export class Match {
                 for (let j = 0; j < res.length; ++j) {
                     state.setDynamicValue(res[j][0], res[j][1]);
                 }
-                return this.matches[i][1].compute(state.getNestedState());
+                return this.matches[i][1].compute(state.getNestedState(false, state.id));
             }
         }
         return [<Value> state.getDynamicValue('Match'), true];
@@ -580,7 +580,7 @@ export class LocalDeclarationExpression extends Expression {
     }
 
     compute(state: State): [Value, boolean] {
-        let nstate = state.getNestedState();
+        let nstate = state.getNestedState(false, state.id);
         let res = this.declaration.evaluate(nstate);
         if (res[1]) {
             return [<Value> res[2], true];

@@ -36,7 +36,47 @@ export class Interpreter {
         // Use a fresh state to be able to piece types and values together
         let res = ast.evaluate(oldState.getNestedState(true));
 
-        // TODO Come up with some algorithm to combine types and values
+        if (res[1]) {
+            return res;
+        }
+
+        let curState = res[0];
+
+        while (curState.id > oldState.id) {
+            if (curState.dynamicBasis !== undefined) {
+                // For every new bound value, try to find its type
+                for (let i in curState.dynamicBasis.valueEnvironment) {
+                    if (Object.prototype.hasOwnProperty.call(
+                        curState.dynamicBasis.valueEnvironment, i)) {
+
+                        let tp = state.getStaticValue(i, curState.id);
+                        if (tp !== undefined) {
+                            curState.setStaticValue(i, tp);
+                        }
+                    }
+                }
+
+                // For every new bound type, try to find its type
+                for (let i in curState.dynamicBasis.typeEnvironment) {
+                    if (Object.prototype.hasOwnProperty.call(
+                        curState.dynamicBasis.typeEnvironment, i)) {
+
+                        let tp = state.getStaticType(i, curState.id);
+                        if (tp !== undefined) {
+                            curState.setStaticType(i, tp.type, tp.constructors);
+                        }
+                    }
+                }
+            }
+            if (state.parent === undefined) {
+                break;
+            }
+            curState = <State> curState.parent;
+            while (state.id > curState.id && state.parent !== undefined) {
+                state = <State> state.parent;
+            }
+        }
+
         return res;
     }
 
