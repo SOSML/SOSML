@@ -1,4 +1,4 @@
-import { Type, PrimitiveType } from './types';
+import { Type, PrimitiveType, FunctionType, TypeVariable } from './types';
 import { Value, StringValue, PredefinedFunction, RecordValue } from './values';
 import { Token, LongIdentifierToken } from './lexer';
 import { InternalInterpreterError } from './errors';
@@ -71,8 +71,8 @@ export class StaticBasis {
         return this.typeEnvironment[name];
     }
 
-    setValue(name: string, value: Type): void {
-        this.valueEnvironment[name] = [value];
+    setValue(name: string, value: Type[]): void {
+        this.valueEnvironment[name] = value;
     }
 
     setType(name: string, type: Type, constructors: string[]) {
@@ -110,6 +110,8 @@ export class State {
                 }
                 return new RecordValue();
             }));
+            res.setStaticValue('print', [new FunctionType(new TypeVariable('\'a'),
+                new PrimitiveType('string'))]);
         }
         return res;
     }
@@ -184,7 +186,7 @@ export class State {
         }
     }
 
-    setStaticValue(name: string, type: Type, atId: number|undefined = undefined) {
+    setStaticValue(name: string, type: Type[], atId: number|undefined = undefined) {
         if (this.stdfiles[name] !== undefined) {
             return;
         }

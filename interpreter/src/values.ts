@@ -278,7 +278,7 @@ export class FunctionValue extends Value {
     }
 
     prettyPrint(): string {
-        return '[some function]';
+        return 'fn';
     }
 
     // Computes the function on the given argument,
@@ -404,10 +404,7 @@ export class ValueConstructor extends Value {
     }
 
     prettyPrint() {
-        if (this.numArgs === 1) {
-            return this.constructorName + ' <arg> [value constructor]';
-        }
-        return this.constructorName + ' [value constructor]';
+        return this.constructorName;
     }
 
     isSimpleValue(): boolean {
@@ -432,7 +429,7 @@ export class ExceptionConstructor extends Value {
     }
 
     prettyPrint() {
-        return this.exceptionName + ' [exception constructor]';
+        return this.exceptionName;
     }
 
     isSimpleValue(): boolean {

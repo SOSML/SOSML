@@ -10,7 +10,7 @@ import { Value, ValueConstructor, ExceptionConstructor } from './values';
 
 export abstract class Declaration {
     hasSemanticError: boolean = false;
-    checkStaticSemantics(state: State): void {
+    elaborate(state: State): void {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 

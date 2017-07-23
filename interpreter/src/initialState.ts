@@ -15,10 +15,10 @@ let stringType = new PrimitiveType('string');
 let charType = new PrimitiveType('char');
 
 function functionType(type: Type): Type {
-    return new FunctionType(new TupleType([type, type]), type);
+    return new FunctionType(new TupleType([type, type]), type).simplify();
 }
 function bfunctionType(type: Type): Type {
-    return new FunctionType(new TupleType([type, type]), boolType);
+    return new FunctionType(new TupleType([type, type]), boolType).simplify();
 }
 
 let typeVar = new TypeVariable('\'a');
@@ -56,7 +56,7 @@ let initialState: State = new State(
                          bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)],
             '>=':       [bfunctionType(intType), bfunctionType(wordType),
                          bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)],
-            '=':        [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType)],
+            '=':        [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify()],
             // ':='
             // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
             'true':     [new PrimitiveType('bool')],
@@ -64,9 +64,12 @@ let initialState: State = new State(
             'nil':      [new PrimitiveType('list', [typeVar])],
             '::':       [new FunctionType(
                             new TupleType([typeVar, new PrimitiveType('list', [typeVar])]),
-                            new PrimitiveType('list', [typeVar]))],
+                            new PrimitiveType('list', [typeVar])).simplify()],
             'Match':    [new PrimitiveType('exn')],
-            'Bind':     [new PrimitiveType('exn')]
+            'Bind':     [new PrimitiveType('exn')],
+            '^':        [functionType(stringType)],
+            'explode':  [new FunctionType(new TupleType([stringType, stringType]),
+                            new PrimitiveType('list', [charType])).simplify()]
         }
     ),
     new DynamicBasis(
