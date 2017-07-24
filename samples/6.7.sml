@@ -1,5 +1,5 @@
 (* should be predefined *)
-datatype ’a option = NONE | SOME of ’a;
+datatype 'a option = NONE | SOME of ’a;
 
 fun nth n xs = if n<0 orelse null xs then NONE
                 else if n=0 then SOME (hd xs) else nth (n-1) (tl xs)
@@ -22,10 +22,10 @@ Int.maxInt;
 valOf Int.minInt + valOf Int.maxInt;
 
 fun findDouble compare xs = let
-    exception Double of ’a
-    fun compare’ (x,y) = case compare (x,y) of
+    exception Double of 'a
+    fun compare' (x,y) = case compare (x,y) of
         EQUAL => raise Double x | v => v
 in
-    (List.sort compare’ xs ; NONE)
+    (List.sort compare' xs ; NONE)
     handle Double x => SOME x
 end;

@@ -41,7 +41,7 @@ ty [LPAR, BOOL];
 fun match (a,ts) t = if null ts orelse hd ts <> t
                       then raise Error "match"
                       else (a, tl ts)
-fun extend (a,ts) p f = let val (a’,tr) = p ts in (f(a,a’),tr) end
+fun extend (a,ts) p f = let val (a',tr) = p ts in (f(a,a’),tr) end
 fun parse p ts = case p ts of
                   (a,nil) => a
                   | _ => raise Error "parse"

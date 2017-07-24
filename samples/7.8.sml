@@ -4,7 +4,7 @@ val t2 = T[t1, t1, t1];
 val t3 = T[T[t2], t1, t2];
 fun compareTree (T ts, T tr) = List.collate compareTree (ts,tr);
 
-fun strict(t::t’::tr) = compareTree(t,t’)=LESS andalso strict(t’::tr)
+fun strict(t::t'::tr) = compareTree(t,t’)=LESS andalso strict(t’::tr)
   | strict _ = true;
 fun directed (T ts) = strict ts andalso List.all directed ts;
 

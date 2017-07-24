@@ -13,8 +13,8 @@ structure ISet :> ISET = struct
 end;
 
 val s = ISet.set [3,2];
-val s’ = ISet.set [5,9,4];
-ISet.subset s s’;
+val s' = ISet.set [5,9,4];
+ISet.subset s s';
 
 open ISet;
 val s = union (set[1,2,3]) (set[3,4]);

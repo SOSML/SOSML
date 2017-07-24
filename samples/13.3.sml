@@ -13,15 +13,15 @@ datatype tree = A | B of tree | C of tree * tree
 
 fun rep A = [0]
   | rep (B t) = 1 :: rep t
-  | rep (C(t,t’)) = 2 :: rep t @ rep t’;
+  | rep (C(t,t')) = 2 :: rep t @ rep t’;
 
 rep (C(B A, C(A, A)));
 
 fun parse (0::tr) = (A, tr)
   | parse (1::tr) = let val (s,ts) = parse tr in (B s, ts) end
   | parse (2::tr) = let val (s,ts) = parse tr
-                        val (s’, ts’) = parse ts
-                    in (C(s,s’), ts’) end
+                        val (s', ts’) = parse ts
+                    in (C(s,s'), ts’) end
   | parse _ = raise Error "parse";
 
 parse [2,0,1,0,7];

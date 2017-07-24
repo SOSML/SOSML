@@ -10,7 +10,7 @@ val env = fn "x" => 5 | "y" => 3 | _ => raise Unbound;
 
 fun eval env (C c) = c
   | eval env (V v) = env v
-  | eval env (A(e,e’)) = eval env e + eval env e’
-  | eval env (M(e,e’)) = eval env e * eval env e’;
+  | eval env (A(e,e')) = eval env e + eval env e’
+  | eval env (M(e,e')) = eval env e * eval env e’;
 
 eval env e;
