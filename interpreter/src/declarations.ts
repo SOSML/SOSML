@@ -307,7 +307,7 @@ export class ValueDeclaration extends Declaration {
                                          this.valueBinding[i].pattern.simplify(),
                                          this.valueBinding[i].expression.simplify()));
         }
-        return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd);
+        return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd, this.id);
     }
 
     elaborate(state: State): State {
@@ -380,7 +380,7 @@ export class FunctionDeclaration extends Declaration {
         for (let i = 0; i < this.functionValueBinding.length; ++i) {
             valbnd.push(this.functionValueBinding[i].simplify());
         }
-        return new ValueDeclaration(this.position, this.typeVariableSequence, valbnd);
+        return new ValueDeclaration(this.position, this.typeVariableSequence, valbnd, this.id);
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -410,7 +410,7 @@ export class TypeDeclaration extends Declaration {
                                       this.typeBinding[i].name,
                                       this.typeBinding[i].type.simplify()));
         }
-        return new TypeDeclaration(this.position, bnds);
+        return new TypeDeclaration(this.position, bnds, this.id);
     }
 
     elaborate(state: State): State {
@@ -479,7 +479,7 @@ export class DatatypeDeclaration extends Declaration {
                 new DatatypeDeclaration(this.position, datbnd, undefined),
                 new TypeDeclaration(this.position, this.typeBinding).simplify()]);
         } else { */
-        return new DatatypeDeclaration(this.position, datbnd, undefined);
+        return new DatatypeDeclaration(this.position, datbnd, undefined, this.id);
         /* } */
     }
 
@@ -597,7 +597,7 @@ export class AbstypeDeclaration extends Declaration {
                     this.declaration.simplify()]));
         } else { */
         return new AbstypeDeclaration(this.position, datbnd, this.typeBinding,
-            this.declaration.simplify());
+            this.declaration.simplify(), this.id);
         /* } */
 
     }
@@ -633,7 +633,7 @@ export class LocalDeclaration extends Declaration {
     }
 
     simplify(): LocalDeclaration {
-        return new LocalDeclaration(this.position, this.declaration.simplify(), this.body.simplify());
+        return new LocalDeclaration(this.position, this.declaration.simplify(), this.body.simplify(), this.id);
     }
 
     elaborate(state: State): State {
@@ -710,7 +710,7 @@ export class SequentialDeclaration extends Declaration {
         for (let i = 0; i < this.declarations.length; ++i) {
             decls.push(this.declarations[i].simplify());
         }
-        return new SequentialDeclaration(this.position, decls);
+        return new SequentialDeclaration(this.position, decls, this.id);
     }
 
     elaborate(state: State): State {
@@ -722,7 +722,7 @@ export class SequentialDeclaration extends Declaration {
 
     evaluate(state: State): [State, boolean, Value|undefined] {
         for (let i = 0; i < this.declarations.length; ++i) {
-            let nstate = state.getNestedState(false, this.declarations[i].id);
+            let nstate = state.getNestedState(true, this.declarations[i].id);
             let res = this.declarations[i].evaluate(nstate);
             if (res[1]) {
                 // Something blew up, so let someone else handle the mess

@@ -349,5 +349,5 @@ let initialState: State = new State(
 );
 
 export function getInitialState(): State {
-    return initialState.getNestedState(true);
+    return initialState.getNestedState();
 }

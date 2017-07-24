@@ -117,8 +117,8 @@ export class Word extends Value {
         return 2;
     }
 
-    equals(value: Value): boolean { return this.compareTo(value) === 0; }
     negate(): Word { return new Word(-this.value); }
+    equals(value: Value): boolean { return this.compareTo(value) === 0; }
     add(other: Word): Word { return new Word(this.value + other.value); }
     multiply(other: Word): Word { return new Word(this.value * other.value); }
     divide(other: Word): Word { return new Word(Math.floor(this.value / other.value)); }
