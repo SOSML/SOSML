@@ -57,10 +57,10 @@ export class LexerError extends InterpreterError {
     }
 }
 
-export class SemanticError extends InterpreterError {
+export class ElaborationError extends InterpreterError {
     constructor(position: Position, message: string) {
         super(position, message);
-        Object.setPrototypeOf(this, SemanticError.prototype);
+        Object.setPrototypeOf(this, ElaborationError.prototype);
     }
 }
 
