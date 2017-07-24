@@ -29,9 +29,9 @@ function expression_tester(expression: Expr.Expression) {
                         new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
                         expression
                     )
-                ]
+                ], 2
             )
-        ]
+        ], 1
     )
 }
 
@@ -189,8 +189,8 @@ function pattern_tester(pattern: Expr.Pattern, pos42: Errors.Position): Decl.Dec
     return new Decl.SequentialDeclaration(0, [
         new Decl.ValueDeclaration(0, [], [
             new Decl.ValueBinding(4, false, pattern, get42(pos42))
-        ])
-    ]);
+        ], 2)
+    ], 1);
 }
 
 it("pat", () => {
@@ -277,8 +277,8 @@ function fvalbind_helper(expr: Expr.Expression) {
                 ],
                 new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('f', 4)),
             )
-        ])
-    ])
+        ], 2)
+    ], 1)
 }
 
 it("fvalbind", () => {
@@ -312,8 +312,8 @@ it("dec", () => {
                          ])
                      )
                  )
-             ])
-        ])
+             ], 2)
+        ], 1)
     )
     expect(parse("fun 'a f x = 42 and g x = 42;").simplify()).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -354,8 +354,8 @@ it("dec", () => {
                          ])
                      )
                  )
-             ])
-        ])
+             ], 2)
+        ], 1)
     )
     //TODO withtype
 });
@@ -382,8 +382,8 @@ it("program", () => {
                 false,
                 new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken("it", -1)),
                 new Expr.Constant(0, new Lexer.NumericToken("1",0,1))
-            )]
-        )])
+            )], 2
+        )], 1)
     )
     //TODO
 });

@@ -57,6 +57,7 @@ let initialState: State = new State(
             '>=':       [bfunctionType(intType), bfunctionType(wordType),
                          bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)],
             '=':        [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify()],
+            '<>':       [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify()],
             // ':='
             // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
             'true':     [new PrimitiveType('bool')],
@@ -67,9 +68,11 @@ let initialState: State = new State(
                             new PrimitiveType('list', [typeVar])).simplify()],
             'Match':    [new PrimitiveType('exn')],
             'Bind':     [new PrimitiveType('exn')],
+            'Div':      [new PrimitiveType('exn')],
             '^':        [functionType(stringType)],
             'explode':  [new FunctionType(new TupleType([stringType, stringType]),
-                            new PrimitiveType('list', [charType])).simplify()]
+                new PrimitiveType('list', [charType])).simplify()],
+            '~':        [new FunctionType(intType, intType), new FunctionType(realType, realType)],
         }
     ),
     new DynamicBasis(
@@ -92,8 +95,14 @@ let initialState: State = new State(
                     let val2 = (<RecordValue> val).getValue('2');
 
                     if (val1 instanceof Integer && val2 instanceof Integer) {
+                        if ((<Integer> val2).value === 0) {
+                            return new ExceptionConstructor('Div').construct();
+                        }
                         return (<Integer> val1).divide(<Integer> val2);
                     } else if (val1 instanceof Word && val2 instanceof Word) {
+                        if ((<Word> val2).value === 0) {
+                            return new ExceptionConstructor('Div').construct();
+                        }
                         return (<Word> val1).divide(<Word> val2);
                     }
                 }
@@ -106,8 +115,14 @@ let initialState: State = new State(
                     let val2 = (<RecordValue> val).getValue('2');
 
                     if (val1 instanceof Integer && val2 instanceof Integer) {
+                        if ((<Integer> val2).value === 0) {
+                            return new ExceptionConstructor('Div').construct();
+                        }
                         return (<Integer> val1).modulo(<Integer> val2);
                     } else if (val1 instanceof Word && val2 instanceof Word) {
+                        if ((<Word> val2).value === 0) {
+                            return new ExceptionConstructor('Div').construct();
+                        }
                         return (<Word> val1).modulo(<Word> val2);
                     }
                 }
@@ -136,6 +151,9 @@ let initialState: State = new State(
                     let val2 = (<RecordValue> val).getValue('2');
 
                     if (val1 instanceof Real && val2 instanceof Real) {
+                        if ((<Real> val2).value === 0) {
+                            return new ExceptionConstructor('Div').construct();
+                        }
                         return (<Real> val1).divide(<Real> val2);
                     }
                 }
@@ -284,6 +302,7 @@ let initialState: State = new State(
             '::':       new ValueConstructor('::', 1),
             'Match':    new ExceptionConstructor('Match').construct(),
             'Bind':     new ExceptionConstructor('Bind').construct(),
+            'Div':      new ExceptionConstructor('Div').construct(),
             '^':        new PredefinedFunction('^', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');

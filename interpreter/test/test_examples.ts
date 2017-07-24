@@ -67,7 +67,7 @@ val z = ~x*(y-2);
         }],
         ['val z = ~x*(y-2);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('y')).toEqualWithType(new Val.Integer(-1188));
+            expect(state.getDynamicValue('z')).toEqualWithType(new Val.Integer(-1188));
             //expect(state.getStaticValue('z')).toEqualWithType(new Type.PrimitiveType('int'));
         }]
     ]);
@@ -741,13 +741,13 @@ sqrt 81.0;
         ['sqrt 2.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             //TODO adjust the significant digits
-            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(1.41421356237));
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(1.414213562373095));
             //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('real'));
         }],
         ['sqrt 81.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             //TODO adjust the significant digits
-            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(9.00000941552));
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(9.000009415515176));
             //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('real'));
         }]
     ]);
