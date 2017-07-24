@@ -262,6 +262,17 @@ let initialState: State = new State(
                 throw new InternalInterpreterError(-1,
                     'Called "=" on value of the wrong type (' + val.constructor.name + ').');
             }),
+            '<>': new PredefinedFunction('=', (val: Value) => {
+                if (val instanceof RecordValue) {
+                    let val1 = (<RecordValue> val).getValue('1');
+                    let val2 = (<RecordValue> val).getValue('2');
+
+                    return new BoolValue(!val1.equals(val2));
+                }
+                throw new InternalInterpreterError(-1,
+                    'Called "<>" on value of the wrong type (' + val.constructor.name + ').');
+            }),
+
             // ':='
             // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
             'true':     new BoolValue(true),
@@ -288,6 +299,15 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
+            }),
+            '~':        new PredefinedFunction('~', (val: Value) => {
+                if (val instanceof Integer) {
+                    return (<Integer> val).negate();
+                } else if (val instanceof Real) {
+                    return (<Real> val).negate();
+                }
+                throw new InternalInterpreterError(-1,
+                    'Called "~" on something weird.');
             }),
         }
     ),
@@ -318,6 +338,7 @@ let initialState: State = new State(
 
         '::': new InfixStatus(true, 5, true),
         '=': new InfixStatus(true, 4, false),
+        '<>': new InfixStatus(true, 4, false),
         ':=': new InfixStatus(true, 3, false),
 
         '^': new InfixStatus(true, 6, false),
