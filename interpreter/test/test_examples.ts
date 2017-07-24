@@ -763,3 +763,23 @@ Math.pi;
      */
     //TODO add the real test once we have modules
 });
+
+//TODO Chapter 2
+
+//TODO Chapter 3
+
+//TODO Chapter 4
+
+//TODO Chapter 5
+
+//TODO Chapter 6
+
+//TODO Chapter 7
+
+//TODO Chapter 12
+
+//TODO Chapter 13
+
+//TODO Chapter 14
+
+//TODO Exercises
