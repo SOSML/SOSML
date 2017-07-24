@@ -95,7 +95,21 @@ export class State {
                 public staticBasis: StaticBasis,
                 public dynamicBasis: DynamicBasis,
                 private typeNames: TypeNames,
-                private infixEnvironment: InfixEnvironment) {
+                private infixEnvironment: InfixEnvironment,
+                private declaredIdentifiers: Set<string> = new Set<string>()) {
+    }
+
+    getDefinedIdentifiers(idLimit: number = 0): Set<string> {
+        if (this.parent === undefined || this.parent.id < this.id) {
+            return this.declaredIdentifiers;
+        }
+
+        let rec = this.parent.getDefinedIdentifiers();
+
+        this.declaredIdentifiers.forEach((val: string) => {
+            rec.add(val);
+        });
+        return rec;
     }
 
     getNestedState(redefinePrint: boolean = false, newId: number|undefined = undefined) {
@@ -245,6 +259,7 @@ export class State {
                 }
             }
             this.dynamicBasis.setValue(name, value, intermediate);
+            this.declaredIdentifiers.add(name);
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {

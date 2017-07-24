@@ -272,7 +272,15 @@ export class Lambda extends Expression {
     }
 
     compute(state: State): [Value, boolean, State] {
-        return [new FunctionValue(state, this.match), false, state];
+        let recbnds: [string, Value][] = [];
+
+        state.getDefinedIdentifiers().forEach((val: string) => {
+            if (state.getDynamicValue(val) !== undefined) {
+                recbnds.push([val, <Value> state.getDynamicValue(val)]);
+            }
+        });
+
+        return [new FunctionValue(recbnds, this.match), false, state];
     }
 }
 

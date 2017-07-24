@@ -275,18 +275,25 @@ export class RecordValue extends Value {
 }
 
 export class FunctionValue extends Value {
-    constructor(public state: State, public body: Match) {
+    constructor(public state: [string, Value][], public body: Match) {
         super();
     }
 
     prettyPrint(): string {
-        return 'fn ' + this.body.prettyPrint();
+        return 'fn';
     }
 
     // Computes the function on the given argument,
     // returns [result, is thrown]
     compute(state: State, argument: Value): [Value, boolean, State] {
-        return this.body.compute(state, argument);
+        // adjoin the bindings in this.state into the state
+        let nstate = state.getNestedState();
+        for (let i = 0; i < this.state.length; ++i) {
+            nstate.setDynamicValue(this.state[i][0], this.state[i][1], true);
+        }
+
+        let res = this.body.compute(nstate, argument);
+        return [res[0], res[1], state];
     }
 }
 
