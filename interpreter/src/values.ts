@@ -34,6 +34,8 @@ export class BoolValue extends Value {
             return 'false';
         }
     }
+
+    isConstructedValue(): boolean { return true; }
 }
 
 export class CharValue extends Value {

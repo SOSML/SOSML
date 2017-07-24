@@ -423,6 +423,9 @@ export class ValueIdentifier extends Expression implements Pattern {
         if (res !== undefined && (<Value> res).isConstructedValue()) {
             if (v.equals(<Value> res)) {
                 return [];
+            } else if ((<Value> res).isSimpleValue()) {
+                // Some vars may not be redefined.
+                return undefined;
             }
         }
         return [[this.name.getText(), v]];
