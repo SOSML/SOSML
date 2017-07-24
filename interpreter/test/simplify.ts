@@ -245,8 +245,8 @@ it("ty", () => {
     expect(parse("val x = 42:int * int;").simplify()).toEqualWithType(
         type_tester(new Type.RecordType(
             new Map([
-                ["1", new Type.CustomType(new Lexer.LongIdentifierToken("int", 11, [], new Lexer.AlphanumericIdentifierToken("int", 11)), [], 0)],
-                ["2", new Type.CustomType(new Lexer.LongIdentifierToken("int", 17, [], new Lexer.AlphanumericIdentifierToken("int", 17)), [], 0)]]
+                ["1", new Type.PrimitiveType("int", [], 11)],
+                ["2", new Type.PrimitiveType("int", [], 17)]
             ]),
             true,
         ))
@@ -255,9 +255,9 @@ it("ty", () => {
     expect(parse("val x = 42:int * int * int;").simplify()).toEqualWithType(
         type_tester(new Type.RecordType(
             new Map([
-                ["1", new Type.CustomType(new Lexer.LongIdentifierToken("int", 11, [], new Lexer.AlphanumericIdentifierToken("int", 11)), [], 0)],
-                ["2", new Type.CustomType(new Lexer.LongIdentifierToken("int", 17, [], new Lexer.AlphanumericIdentifierToken("int", 17)), [], 0)],
-                ["3", new Type.CustomType(new Lexer.LongIdentifierToken("int", 23, [], new Lexer.AlphanumericIdentifierToken("int", 23)), [], 0)],
+                ["1", new Type.PrimitiveType("int", [], 11)],
+                ["2", new Type.PrimitiveType("int", [], 17)],
+                ["3", new Type.PrimitiveType("int", [], 23)]
             ]),
             true,
         ))
@@ -293,7 +293,7 @@ it("fvalbind", () => {
 it("dec", () => {
     expect(parse("fun 'a f x = 42;").simplify()).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
-             new Decl.ValueDeclaration(0, [new Type.TypeVariable('\'a', 4)], [
+             new Decl.ValueDeclaration(0, [new Type.TypeVariable('\'a', false, 4)], [
                  new Decl.ValueBinding(7,
                      true,
                      new Expr.ValueIdentifier(7, new Lexer.AlphanumericIdentifierToken('f', 7)),
@@ -317,7 +317,7 @@ it("dec", () => {
     )
     expect(parse("fun 'a f x = 42 and g x = 42;").simplify()).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
-             new Decl.ValueDeclaration(0, [new Type.TypeVariable('\'a', 4)], [
+             new Decl.ValueDeclaration(0, [new Type.TypeVariable('\'a', false, 4)], [
                  new Decl.ValueBinding(7,
                      true,
                      new Expr.ValueIdentifier(7, new Lexer.AlphanumericIdentifierToken('f', 7)),

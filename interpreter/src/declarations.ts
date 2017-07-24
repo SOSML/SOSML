@@ -3,7 +3,7 @@ import {
     Pattern, TypedExpression, Tuple, PatternExpression, Wildcard
 } from './expressions';
 import { IdentifierToken, Token } from './lexer';
-import { Type, TypeVariable } from './types';
+import { Type, TypeVariable, FunctionType, PrimitiveType } from './types';
 import { State } from './state';
 import { InternalInterpreterError, Position, ElaborationError,
          EvaluationError, FeatureDisabledError } from './errors';
@@ -31,6 +31,7 @@ export abstract class Declaration {
 
 export interface ExceptionBinding {
     evaluate(state: State): [State, boolean, Value|undefined];
+    elaborate(state: State): State;
 }
 
 export class ValueBinding {
@@ -187,6 +188,37 @@ export class DirectExceptionBinding implements ExceptionBinding {
                 public type: Type | undefined) {
     }
 
+    elaborate(state: State): State {
+        if (this.type !== undefined) {
+            let tyvars = this.type.getTypeVariables(true);
+            if (tyvars.size > 0) {
+                let res = '';
+                if (tyvars.size > 1) {
+                    res += 's';
+                }
+                res += ' ';
+                let first = true;
+                tyvars.forEach((val: TypeVariable) => {
+                    if (first) {
+                        first = false;
+                    } else {
+                        res += ', ';
+                    }
+                    res += '"' + val.name + '"';
+                });
+                throw new ElaborationError(this.position,
+                    'Unguarded type variable' + res + '.');
+            }
+
+            state.setStaticValue(this.name.getText(),
+                [new FunctionType(this.type.simplify(), new PrimitiveType('exn'))]);
+        } else {
+            state.setStaticValue(this.name.getText(),
+                [new PrimitiveType('exn')]);
+        }
+        return state;
+    }
+
     evaluate(state: State): [State, boolean, Value|undefined] {
         let numArg = 0;
         if (this.type !== undefined) {
@@ -201,6 +233,17 @@ export class DirectExceptionBinding implements ExceptionBinding {
 export class ExceptionAlias implements ExceptionBinding {
 // <op> name = <op> oldname
     constructor(public position: Position, public name: IdentifierToken, public oldname: Token) {
+    }
+
+    elaborate(state: State): State {
+        let res = state.getStaticValue(this.oldname.getText());
+        if (res === undefined) {
+            throw new ElaborationError(this.position, 'Unbound value identifier "'
+                + this.oldname.getText() + '".');
+        }
+        state.setStaticValue(this.name.getText(), <Type[]> res);
+        return state;
+
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
@@ -226,11 +269,14 @@ export class ExceptionDeclaration extends Declaration {
 
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        throw new InternalInterpreterError(-1, 'Not yet implemented.');
     }
 
     elaborate(state: State): State {
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        for (let i = 0; i < this.bindings.length; ++i) {
+            state = this.bindings[i].elaborate(state);
+        }
+        return state;
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
@@ -265,6 +311,7 @@ export class ValueDeclaration extends Declaration {
     }
 
     elaborate(state: State): State {
+        // TODO
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
@@ -367,7 +414,14 @@ export class TypeDeclaration extends Declaration {
     }
 
     elaborate(state: State): State {
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        for (let i = 0; i < this.typeBinding.length; ++i) {
+            // TODO
+            // Make tyvars from seq as unfree
+            // instantiate
+            // return all resulting types without free type vars
+        }
+
+        return state;
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
@@ -430,6 +484,7 @@ export class DatatypeDeclaration extends Declaration {
     }
 
     elaborate(state: State): State {
+        // TODO
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 

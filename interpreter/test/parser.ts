@@ -851,16 +851,16 @@ it("expression - typed expression", () => {
     expect(parse(testcase_simple)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
-            new Type.TypeVariable('\'a', 4)
+            new Type.TypeVariable('\'a', true, 4)
         )
     ));
     expect(parse(testcase_nested)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             new Expr.TypedExpression(0,
                 get42(0),
-                new Type.TypeVariable('\'a', 4)
+                new Type.TypeVariable('\'a', true, 4)
             )
-            new Type.TypeVariable('\'b', 8)
+            new Type.TypeVariable('\'b', true, 8)
         )
     ));
     expect(parse(testcase_precedence_conj)).toEqualWithType(createItExpression(
@@ -869,8 +869,8 @@ it("expression - typed expression", () => {
             new Expr.TypedExpression(11,
                 get42(11),
                 new Type.FunctionType(
-                    new Type.TypeVariable('\'a', 15),
-                    new Type.TypeVariable('\'b', 21),
+                    new Type.TypeVariable('\'a', true, 15),
+                    new Type.TypeVariable('\'b', true, 21),
                     18
                 )
             )
@@ -882,8 +882,8 @@ it("expression - typed expression", () => {
             new Expr.TypedExpression(10,
                 get42(10),
                 new Type.FunctionType(
-                    new Type.TypeVariable('\'a', 14),
-                    new Type.TypeVariable('\'b', 20),
+                    new Type.TypeVariable('\'a', true, 14),
+                    new Type.TypeVariable('\'b', true, 20),
                     17
                 )
             )
@@ -897,8 +897,8 @@ it("expression - typed expression", () => {
                     new Expr.TypedExpression(15,
                         get42(15),
                         new Type.FunctionType(
-                            new Type.TypeVariable('\'a', 20),
-                            new Type.TypeVariable('\'b', 26),
+                            new Type.TypeVariable('\'a', true, 20),
+                            new Type.TypeVariable('\'b', true, 26),
                             23
                         )
                     )
@@ -911,8 +911,8 @@ it("expression - typed expression", () => {
             new Expr.TypedExpression(6,
                 get42(6),
                 new Type.FunctionType(
-                    new Type.TypeVariable('\'a', 10),
-                    new Type.TypeVariable('\'b', 16),
+                    new Type.TypeVariable('\'a', true, 10),
+                    new Type.TypeVariable('\'b', true, 16),
                     13
                 )
             )
@@ -925,8 +925,8 @@ it("expression - typed expression", () => {
             new Expr.TypedExpression(51,
                 get42(51),
                 new Type.FunctionType(
-                    new Type.TypeVariable('\'a', 55),
-                    new Type.TypeVariable('\'b', 61),
+                    new Type.TypeVariable('\'a', true, 55),
+                    new Type.TypeVariable('\'b', true, 61),
                     58
                 )
             )
@@ -1280,7 +1280,7 @@ it("declaration - value declaration", () => {
     expect(parse(testcase_1_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.ValueDeclaration(0, [
-                    new Type.TypeVariable('\'a', 4)
+                    new Type.TypeVariable('\'a', false, 4)
                 ], [
                     new Decl.ValueBinding(7, false,
                         new Expr.ValueIdentifier(7, new Lexer.AlphanumericIdentifierToken('x', 7)),
@@ -1293,7 +1293,7 @@ it("declaration - value declaration", () => {
     expect(parse(testcase_1_tyvar_seq)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.ValueDeclaration(0, [
-                    new Type.TypeVariable('\'a', 5)
+                    new Type.TypeVariable('\'a', false, 5)
                 ], [
                     new Decl.ValueBinding(9, false,
                         new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken('x', 9)),
@@ -1306,8 +1306,8 @@ it("declaration - value declaration", () => {
     expect(parse(testcase_2_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.ValueDeclaration(0, [
-                    new Type.TypeVariable('\'a', 5),
-                    new Type.TypeVariable('\'b', 9)
+                    new Type.TypeVariable('\'a', false, 5),
+                    new Type.TypeVariable('\'b', false, 9)
                 ], [
                     new Decl.ValueBinding(13, false,
                         new Expr.ValueIdentifier(13, new Lexer.AlphanumericIdentifierToken('x', 13)),
@@ -1320,9 +1320,9 @@ it("declaration - value declaration", () => {
     expect(parse(testcase_3_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.ValueDeclaration(0, [
-                    new Type.TypeVariable('\'a', 5),
-                    new Type.TypeVariable('\'b', 9),
-                    new Type.TypeVariable('\'c', 13)
+                    new Type.TypeVariable('\'a', false, 5),
+                    new Type.TypeVariable('\'b', false, 9),
+                    new Type.TypeVariable('\'c', false, 13)
                 ], [
                     new Decl.ValueBinding(17, false,
                         new Expr.ValueIdentifier(17, new Lexer.AlphanumericIdentifierToken('x', 17)),
@@ -1359,7 +1359,7 @@ it("declaration - function declaration", () => {
     expect(parse(testcase_1_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.FunctionDeclaration(0, [
-                    new Type.TypeVariable('\'a', 4)
+                    new Type.TypeVariable('\'a', false, 4)
                 ], [
                     new Decl.FunctionValueBinding(7,[
                             [
@@ -1377,7 +1377,7 @@ it("declaration - function declaration", () => {
     expect(parse(testcase_1_tyvar_seq)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.FunctionDeclaration(0, [
-                    new Type.TypeVariable('\'a', 5)
+                    new Type.TypeVariable('\'a', false, 5)
                 ], [
                     new Decl.FunctionValueBinding(9,[
                             [
@@ -1395,8 +1395,8 @@ it("declaration - function declaration", () => {
     expect(parse(testcase_2_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.FunctionDeclaration(0, [
-                    new Type.TypeVariable('\'a', 5),
-                    new Type.TypeVariable('\'b', 9)
+                    new Type.TypeVariable('\'a', false, 5),
+                    new Type.TypeVariable('\'b', false, 9)
                 ], [
                     new Decl.FunctionValueBinding(13,[
                             [
@@ -1414,9 +1414,9 @@ it("declaration - function declaration", () => {
     expect(parse(testcase_3_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.FunctionDeclaration(0, [
-                    new Type.TypeVariable('\'a', 5),
-                    new Type.TypeVariable('\'b', 9),
-                    new Type.TypeVariable('\'c', 13)
+                    new Type.TypeVariable('\'a', false, 5),
+                    new Type.TypeVariable('\'b', false, 9),
+                    new Type.TypeVariable('\'c', false, 13)
                 ], [
                     new Decl.FunctionValueBinding(17,[
                             [
@@ -1444,7 +1444,7 @@ it("declaration - type declaration", () => {
             new Decl.TypeDeclaration(0, [
                 new Decl.TypeBinding(5, [] ,
                     new Lexer.AlphanumericIdentifierToken('blub', 5),
-                    new Type.TypeVariable('\'a', 12)
+                    new Type.TypeVariable('\'a', true, 12)
                 )
             ], 2)
         ], 1)
@@ -1454,7 +1454,7 @@ it("declaration - type declaration", () => {
             new Decl.TypeDeclaration(0, [
                 new Decl.TypeBinding(5, [] ,
                     new Lexer.IdentifierToken('####', 5),
-                    new Type.TypeVariable('\'a', 12)
+                    new Type.TypeVariable('\'a', true, 12)
                 )
             ], 2)
         ], 1)
@@ -1476,7 +1476,7 @@ it("declaration - datatype declaration", () => {
                 new Decl.DatatypeBinding(9, [] ,
                     new Lexer.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [new Lexer.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', 21)]
+                        [new Lexer.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', true, 21)]
                     ]
                 )
             ], undefined, 2)
@@ -1488,7 +1488,7 @@ it("declaration - datatype declaration", () => {
                 new Decl.DatatypeBinding(9, [] ,
                     new Lexer.IdentifierToken('####', 9),
                     [
-                        [new Lexer.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', 21)]
+                        [new Lexer.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', true, 21)]
                     ]
                 )
             ], undefined, 2)
@@ -1525,7 +1525,7 @@ it("declaration - exception declaration", () => {
             new Decl.ExceptionDeclaration(0, [
                 new Decl.DirectExceptionBinding(10,
                     new Lexer.AlphanumericIdentifierToken('X', 10),
-                    new Type.TypeVariable('\'a', 15)
+                    new Type.TypeVariable('\'a', true, 15)
                 )
             ], 2)
         ], 1)
@@ -1967,7 +1967,7 @@ it("function value bindings", () => {
                 new Decl.FunctionValueBinding(4,[
                         [
                             [new Expr.ValueIdentifier(6, new Lexer.AlphanumericIdentifierToken('x', 6))],
-                            new Type.TypeVariable('\'a', 10),
+                            new Type.TypeVariable('\'a', true, 10),
                             get42(15),
                         ]
                     ],
@@ -1982,7 +1982,7 @@ it("function value bindings", () => {
                 new Decl.FunctionValueBinding(4,[
                         [
                             [new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken('x', 9))],
-                            new Type.TypeVariable('\'a', 13),
+                            new Type.TypeVariable('\'a', true, 13),
                             get42(18),
                         ]
                     ],
@@ -2049,10 +2049,10 @@ it("type bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.TypeDeclaration(0, [
                 new Decl.TypeBinding(5, [
-                        new Type.TypeVariable('\'a', 5)
+                        new Type.TypeVariable('\'a', false, 5)
                     ],
                     new Lexer.AlphanumericIdentifierToken('blub', 8),
-                    new Type.TypeVariable('\'a', 15)
+                    new Type.TypeVariable('\'a', true, 15)
                 )
             ], 2)
         ], 1)
@@ -2061,11 +2061,11 @@ it("type bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.TypeDeclaration(0, [
                 new Decl.TypeBinding(5, [
-                        new Type.TypeVariable('\'a', 6),
-                        new Type.TypeVariable('\'b', 10)
+                        new Type.TypeVariable('\'a', false, 6),
+                        new Type.TypeVariable('\'b', false, 10)
                     ],
                     new Lexer.AlphanumericIdentifierToken('blub', 14),
-                    new Type.TypeVariable('\'a', 21)
+                    new Type.TypeVariable('\'a', true, 21)
                 )
             ], 2)
         ], 1)
@@ -2074,16 +2074,16 @@ it("type bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.TypeDeclaration(0, [
                 new Decl.TypeBinding(5, [
-                        new Type.TypeVariable('\'a', 5)
+                        new Type.TypeVariable('\'a', false, 5)
                     ],
                     new Lexer.AlphanumericIdentifierToken('blub', 8),
-                    new Type.TypeVariable('\'a', 15)
+                    new Type.TypeVariable('\'a', true, 15)
                 ),
                 new Decl.TypeBinding(22, [
-                        new Type.TypeVariable('\'b', 22)
+                        new Type.TypeVariable('\'b', false, 22)
                     ],
                     new Lexer.AlphanumericIdentifierToken('blob', 25),
-                    new Type.TypeVariable('\'b', 32)
+                    new Type.TypeVariable('\'b', true, 32)
                 )
             ], 2)
         ], 1)
@@ -2099,11 +2099,11 @@ it("datatype bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.DatatypeDeclaration(0, [
                 new Decl.DatatypeBinding(9, [
-                        new Type.TypeVariable('\'a', 9)
+                        new Type.TypeVariable('\'a', false, 9)
                     ],
                     new Lexer.AlphanumericIdentifierToken('blub', 12),
                     [
-                        [new Lexer.AlphanumericIdentifierToken('x', 19), new Type.TypeVariable('\'a', 24)]
+                        [new Lexer.AlphanumericIdentifierToken('x', 19), new Type.TypeVariable('\'a', true, 24)]
                     ]
                 )
             ], undefined, 2)
@@ -2113,8 +2113,8 @@ it("datatype bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.DatatypeDeclaration(0, [
                 new Decl.DatatypeBinding(9, [
-                        new Type.TypeVariable('\'a', 10),
-                        new Type.TypeVariable('\'b', 14)
+                        new Type.TypeVariable('\'a', false, 10),
+                        new Type.TypeVariable('\'b', false, 14)
                     ],
                     new Lexer.AlphanumericIdentifierToken('blub', 18),
                     [
@@ -2128,15 +2128,15 @@ it("datatype bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.DatatypeDeclaration(0, [
                 new Decl.DatatypeBinding(9, [
-                        new Type.TypeVariable('\'a', 9)
+                        new Type.TypeVariable('\'a', false, 9)
                     ],
                     new Lexer.AlphanumericIdentifierToken('blub', 12),
                     [
-                        [new Lexer.AlphanumericIdentifierToken('x', 19), new Type.TypeVariable('\'a', 24)]
+                        [new Lexer.AlphanumericIdentifierToken('x', 19), new Type.TypeVariable('\'a', true, 24)]
                     ]
                 ),
                 new Decl.DatatypeBinding(31, [
-                        new Type.TypeVariable('\'b', 31)
+                        new Type.TypeVariable('\'b', false, 31)
                     ],
                     new Lexer.AlphanumericIdentifierToken('blob', 34),
                     [
@@ -2186,7 +2186,7 @@ it("constructor bindings", () => {
                 new Decl.DatatypeBinding(9, [] ,
                     new Lexer.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [new Lexer.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', 21)]
+                        [new Lexer.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', true, 21)]
                     ]
                 )
             ], undefined, 2)
@@ -2198,7 +2198,7 @@ it("constructor bindings", () => {
                 new Decl.DatatypeBinding(9, [] ,
                     new Lexer.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', 24)]
+                        [prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', true, 24)]
                     ]
                 )
             ], undefined, 2)
@@ -2210,7 +2210,7 @@ it("constructor bindings", () => {
                 new Decl.DatatypeBinding(9, [] ,
                     new Lexer.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', 24)],
+                        [prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', true, 24)],
                         [new Lexer.AlphanumericIdentifierToken('Y', 29), undefined]
                     ]
                 )
@@ -2223,7 +2223,7 @@ it("constructor bindings", () => {
                 new Decl.DatatypeBinding(9, [] ,
                     new Lexer.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', 24)],
+                        [prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', true, 24)],
                         [new Lexer.AlphanumericIdentifierToken('Y', 29), undefined]
                     ]
                 )
@@ -2273,7 +2273,7 @@ it("exception bindings", () => {
             new Decl.ExceptionDeclaration(0, [
                 new Decl.DirectExceptionBinding(10,
                     new Lexer.AlphanumericIdentifierToken('X', 10),
-                    new Type.TypeVariable('\'a', 15)
+                    new Type.TypeVariable('\'a', true, 15)
                 )
             ], 2)
         ], 1)
@@ -2283,7 +2283,7 @@ it("exception bindings", () => {
             new Decl.ExceptionDeclaration(0, [
                 new Decl.DirectExceptionBinding(10,
                     prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 13)),
-                    new Type.TypeVariable('\'a', 18)
+                    new Type.TypeVariable('\'a', true, 18)
                 )
             ], 2)
         ], 1)
@@ -2317,7 +2317,7 @@ it("exception bindings", () => {
                 ),
                 new Decl.DirectExceptionBinding(20,
                     new Lexer.AlphanumericIdentifierToken('Z', 20),
-                    new Type.TypeVariable('\'a', 25)
+                    new Type.TypeVariable('\'a', true, 25)
                 ),
                 new Decl.ExceptionAlias(32,
                     new Lexer.AlphanumericIdentifierToken('W', 32),
@@ -2372,7 +2372,7 @@ it("atomic pattern - record", () => {
     let atomic_pattern_record_non_atomic: string = "val { x = _:int } = 42;";
     expect(parse(atomic_pattern_record_non_atomic)).toEqualWithType(pattern_tester(
         new Expr.Record(6, true, [["x", new Expr.TypedExpression(10, new Expr.Wildcard(10),
-            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 12), [], 12))]])
+            new Type.PrimitiveType('int', [], 12))]])
     , 20));
 });
 
@@ -2405,7 +2405,7 @@ it("atomic pattern - n-tuple", () => {
     let atomic_pattern_tuple_pat:string = "val (_:int,_) = 42;";
     expect(parse(atomic_pattern_tuple_pat)).toEqualWithType(pattern_tester(
         new Expr.Tuple(4, [new Expr.TypedExpression(5, new Expr.Wildcard(5),
-            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 7), [], 7)),
+            new Type.PrimitiveType('int', [], 7)),
             new Expr.Wildcard(11)
         ])
     , 16));
@@ -2427,7 +2427,7 @@ it("atomic pattern - list", () => {
     let atomic_pattern_list_pat:string = "val [_:int] = 42;";
     expect(parse(atomic_pattern_list_pat)).toEqualWithType(pattern_tester(
         new Expr.List(4, [new Expr.TypedExpression(5, new Expr.Wildcard(5),
-            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 7), [], 7))])
+            new Type.PrimitiveType('int', [], 7))])
     , 14));
 });
 
@@ -2498,7 +2498,8 @@ it("pattern row - label as variable", () => {
         new Expr.Record(
             5,
             true,
-            [["x", new Expr.TypedExpression(5, new Expr.Wildcard(14), new Type.CustomType(new Lexer.AlphanumericIdentifierToken("int", 7), [], 7)) ]]
+            [["x", new Expr.TypedExpression(5, new Expr.Wildcard(14),
+                new Type.PrimitiveType("int", [], 7)) ]]
         ),
         19
     ));
@@ -2555,7 +2556,7 @@ it("pattern - typed", () => {
     expect(parse(pattern_type)).toEqualWithType(pattern_tester(
         new Expr.TypedExpression(4,
         new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
-        new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 8), [], 8)
+        new Type.PrimitiveType('int', [], 8)
     ), 14));
 
     let pattern_func_type:string = "val x : int -> int = 42;";
@@ -2563,8 +2564,8 @@ it("pattern - typed", () => {
         new Expr.TypedExpression(4,
         new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
         new Type.FunctionType(
-            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 8), [], 8),
-        new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 15), [], 15), 12))
+            new Type.PrimitiveType('int', [], 8),
+        new Type.PrimitiveType('int', [], 15), 12))
     , 21));
 
     let double_typed: string = "val x:int:int = 42;";
@@ -2574,9 +2575,9 @@ it("pattern - typed", () => {
             new Expr.TypedExpression(
                 4,
                 new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
-                new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 6), [], 6)
+                new Type.PrimitiveType('int', [], 6)
             ),
-            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 10), [], 10)
+            new Type.PrimitiveType('int', [], 10)
         )
     , 16))
 
@@ -2585,7 +2586,7 @@ it("pattern - typed", () => {
         new Expr.TypedExpression(
             4,
             new Expr.List(4, []),
-            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('int', 7), [], 7)
+            new Type.PrimitiveType('int', [], 7)
         )
     , 13));
 });
@@ -2618,11 +2619,7 @@ it("pattern - layered", () => {
         new Expr.LayeredPattern(
             4,
             new Lexer.AlphanumericIdentifierToken("x", 4),
-            new Type.CustomType(
-                new Lexer.AlphanumericIdentifierToken("int", 7),
-                [],
-                7
-            ),
+            new Type.PrimitiveType("int", [], 7),
             new Expr.Wildcard(14)
         ),
         18
@@ -2632,11 +2629,7 @@ it("pattern - layered", () => {
         new Expr.LayeredPattern(
             4,
             x,
-            new Type.CustomType(
-                new Lexer.AlphanumericIdentifierToken("int", 9),
-                [],
-                9
-            ),
+            new Type.PrimitiveType("int", [], 9),
             new Expr.Wildcard(16)
         ),
         20
@@ -2650,13 +2643,13 @@ it("type - type variable", () => {
     expect(parse(testcase_tyvar)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
-            new Type.TypeVariable('\'a', 4)
+            new Type.TypeVariable('\'a', true, 4)
         )
     ));
     expect(parse(testcase_etyvar)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
-            new Type.TypeVariable('\'\'meaningoflive', 4)
+            new Type.TypeVariable('\'\'meaningoflive', true, 4)
         )
     ));
 });
@@ -2683,7 +2676,7 @@ it("type - record type expression", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["hi", new Type.TypeVariable('\'int', 11)]
+                    ["hi", new Type.TypeVariable('\'int', true, 11)]
                 ]),
                 true,
                 6
@@ -2695,8 +2688,8 @@ it("type - record type expression", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["hello", new Type.TypeVariable('\'a', 13)],
-                    ["world", new Type.TypeVariable('\'b', 24)]
+                    ["hello", new Type.TypeVariable('\'a', true, 13)],
+                    ["world", new Type.TypeVariable('\'b', true, 24)]
                 ]),
                 true,
                 6
@@ -2715,32 +2708,26 @@ it("type - type construction", () => {
     expect(parse(testcase_small)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
-            new Type.CustomType(new Lexer.AlphanumericIdentifierToken('list', 4), [], 4)
+            new Type.PrimitiveType('list', [], 4)
         )
     ));
     expect(parse(testcase_single)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
-            new Type.CustomType(
-                new Lexer.AlphanumericIdentifierToken('list', 7), [
-                    new Type.TypeVariable('\'a', 4),
-                ],
-                4
-            )
+            new Type.PrimitiveType('list', [new Type.TypeVariable('\'a', true, 4)], 4)
         )
     ));
     expect(parse(testcase_multiple)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
-            new Type.CustomType(
-                new Lexer.AlphanumericIdentifierToken('list', 18), [
+            new Type.PrimitiveType('list', [
                     new Type.TupleType([
-                            new Type.TypeVariable('\'a', 5),
-                            new Type.TypeVariable('\'b', 10)
+                            new Type.TypeVariable('\'a', true, 5),
+                            new Type.TypeVariable('\'b', true, 10)
                         ],
                         8
                     ),
-                    new Type.TypeVariable('\'c', 14),
+                    new Type.TypeVariable('\'c', true, 14),
                 ],
                 4
             )
@@ -2757,8 +2744,8 @@ it("type - tuple type", () => {
         new Expr.TypedExpression(0,
             get42(0),
             new Type.TupleType([
-                    new Type.TypeVariable('\'a', 4),
-                    new Type.TypeVariable('\'b', 9)
+                    new Type.TypeVariable('\'a', true, 4),
+                    new Type.TypeVariable('\'b', true, 9)
                 ],
                 7
             )
@@ -2768,9 +2755,9 @@ it("type - tuple type", () => {
         new Expr.TypedExpression(0,
             get42(0),
             new Type.TupleType([
-                    new Type.TypeVariable('\'a', 4),
-                    new Type.TypeVariable('\'b', 9),
-                    new Type.TypeVariable('\'c', 14)
+                    new Type.TypeVariable('\'a', true, 4),
+                    new Type.TypeVariable('\'b', true, 9),
+                    new Type.TypeVariable('\'c', true, 14)
                 ],
                 7
             )
@@ -2780,10 +2767,10 @@ it("type - tuple type", () => {
         new Expr.TypedExpression(0,
             get42(0),
             new Type.TupleType([
-                    new Type.TypeVariable('\'a', 4),
+                    new Type.TypeVariable('\'a', true, 4),
                     new Type.TupleType([
-                            new Type.TypeVariable('\'b', 10),
-                            new Type.TypeVariable('\'c', 15)
+                            new Type.TypeVariable('\'b', true, 10),
+                            new Type.TypeVariable('\'c', true, 15)
                         ],
                         13
                     )
@@ -2803,8 +2790,8 @@ it("type - function type expression", () => {
         new Expr.TypedExpression(0,
             get42(0),
             new Type.FunctionType(
-                new Type.TypeVariable('\'a', 4),
-                new Type.TypeVariable('\'b', 10),
+                new Type.TypeVariable('\'a', true, 4),
+                new Type.TypeVariable('\'b', true, 10),
                 7
             )
         )
@@ -2813,10 +2800,10 @@ it("type - function type expression", () => {
         new Expr.TypedExpression(0,
             get42(0),
             new Type.FunctionType(
-                new Type.TypeVariable('\'a', 4),
+                new Type.TypeVariable('\'a', true, 4),
                 new Type.FunctionType(
-                    new Type.TypeVariable('\'b', 10),
-                    new Type.TypeVariable('\'c', 16),
+                    new Type.TypeVariable('\'b', true, 10),
+                    new Type.TypeVariable('\'c', true, 16),
                     13
                 ),
                 7
@@ -2828,11 +2815,11 @@ it("type - function type expression", () => {
             get42(0),
             new Type.FunctionType(
                 new Type.FunctionType(
-                    new Type.TypeVariable('\'a', 5),
-                    new Type.TypeVariable('\'b', 11),
+                    new Type.TypeVariable('\'a', true, 5),
+                    new Type.TypeVariable('\'b', true, 11),
                     8
                 ),
-                new Type.TypeVariable('\'c', 18),
+                new Type.TypeVariable('\'c', true, 18),
                 15
             )
         )
@@ -2847,15 +2834,15 @@ it("type - bracketed", () => {
     expect(parse(testcase_simple)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
-            new Type.TypeVariable('\'a', 5)]
+            new Type.TypeVariable('\'a', true, 5)]
         )
     ));
     expect(parse(testcase_multiple_nested)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.FunctionType(
-                new Type.TypeVariable('\'a', 8),
-                new Type.TypeVariable('\'b', 14),
+                new Type.TypeVariable('\'a', true, 8),
+                new Type.TypeVariable('\'b', true, 14),
                 11
             )
         )
@@ -2865,7 +2852,7 @@ it("type - bracketed", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["hi", new Type.TypeVariable('\'a', 12)]
+                    ["hi", new Type.TypeVariable('\'a', true, 12)]
                 ]),
                 true,
                 7
@@ -2891,7 +2878,7 @@ it("type row", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["hi", new Type.TypeVariable('\'a', 10)]
+                    ["hi", new Type.TypeVariable('\'a', true, 10)]
                 ]),
                 true,
                 6
@@ -2903,7 +2890,7 @@ it("type row", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["1337", new Type.TypeVariable('\'a', 12)]
+                    ["1337", new Type.TypeVariable('\'a', true, 12)]
                 ]),
                 true,
                 6
@@ -2915,7 +2902,7 @@ it("type row", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["###", new Type.TypeVariable('\'a', 12)]
+                    ["###", new Type.TypeVariable('\'a', true, 12)]
                 ]),
                 true,
                 6
@@ -2927,7 +2914,7 @@ it("type row", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["*", new Type.TypeVariable('\'a', 10)]
+                    ["*", new Type.TypeVariable('\'a', true, 10)]
                 ]),
                 true,
                 6
@@ -2944,8 +2931,7 @@ it("type row", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["hi", new Type.CustomType(
-                        new Lexer.AlphanumericIdentifierToken('a', 10), [], 10)]
+                    ["hi", new Type.CustomType('a', [], 10)]
                 ]),
                 true,
                 6
@@ -2957,7 +2943,7 @@ it("type row", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["hi", new Type.TypeVariable('\'a', 10)]
+                    ["hi", new Type.TypeVariable('\'a', true, 10)]
                 ]),
                 true,
                 6
@@ -2969,7 +2955,7 @@ it("type row", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["hi", new Type.TypeVariable('\'\'a', 10)]
+                    ["hi", new Type.TypeVariable('\'\'a', true, 10)]
                 ]),
                 true,
                 6

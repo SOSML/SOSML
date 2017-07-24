@@ -1,4 +1,4 @@
-import { Type, PrimitiveType, FunctionType, TypeVariable } from './types';
+import { Type, PrimitiveType, FunctionType, TypeVariable, RecordType } from './types';
 import { Value, StringValue, PredefinedFunction, RecordValue } from './values';
 import { Token, LongIdentifierToken } from './lexer';
 import { InternalInterpreterError } from './errors';
@@ -21,7 +21,8 @@ type StaticTypeEnvironment = { [name: string]: TypeInformation };
 
 export class TypeNameInformation {
     constructor(public arity: number,
-                public allowsEquality: boolean) {
+                public allowsEquality: boolean,
+                public isPrimitiveType: boolean = true) {
     }
 }
 
@@ -115,7 +116,7 @@ export class State {
                 return new RecordValue();
             }));
             res.setStaticValue('print', [new FunctionType(new TypeVariable('\'a'),
-                new PrimitiveType('string'))]);
+                new RecordType(new Map<string, Type>()))]);
         }
         return res;
     }

@@ -3,7 +3,8 @@ import { Expression, Tuple, Constant, ValueIdentifier, Wildcard,
          Sequence, RecordSelector, Lambda, Conjunction, LocalDeclarationExpression,
          Disjunction, Conditional, CaseAnalysis, RaiseException,
          HandleException, Match, InfixExpression, PatternExpression, While } from './expressions';
-import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } from './types';
+import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType,
+         PrimitiveType } from './types';
 import { InterpreterError, InternalInterpreterError, IncompleteError, Position } from './errors';
 import { Token, KeywordToken, IdentifierToken, ConstantToken,
          TypeVariableToken, LongIdentifierToken, IntegerConstantToken,
@@ -820,12 +821,16 @@ export class Parser {
 
         if (curTok instanceof TypeVariableToken) {
             ++this.position;
-            return new TypeVariable(curTok.getText(), curTok.position);
+            return new TypeVariable(curTok.getText(), true, curTok.position);
         }
 
         if (this.checkIdentifierOrLongToken(curTok)) {
             ++this.position;
-            return new CustomType(curTok as (IdentifierToken | LongIdentifierToken), [], curTok.position);
+            if (this.state.getPrimitiveType(curTok.getText()) !== undefined
+                && this.state.getPrimitiveType(curTok.getText()).isPrimitiveType) {
+                return new PrimitiveType(curTok.getText(), [], curTok.position);
+            }
+            return new CustomType(curTok.getText(), [], curTok.position);
         }
 
         if (this.checkKeywordToken(curTok, '{')) {
@@ -854,7 +859,11 @@ export class Parser {
                     this.assertIdentifierOrLongToken(this.currentToken());
                     let name = this.currentToken();
                     ++this.position;
-                    return new CustomType(name as (IdentifierToken | LongIdentifierToken), res, curTok.position);
+                    if (this.state.getPrimitiveType(name.getText()) !== undefined
+                        && this.state.getPrimitiveType(name.getText()).isPrimitiveType) {
+                        return new PrimitiveType(name.getText(), res, curTok.position);
+                    }
+                    return new CustomType(name.getText(), res, curTok.position);
                 }
                 throw new ParserError('Expected "," or ")", got "' +
                     nextTok.getText() + '".', nextTok.position);
@@ -904,12 +913,22 @@ export class Parser {
         let ty = this.parseSimpleType();
         while (this.position < this.tokens.length) {
             let nextTok = this.currentToken();
-            if (this.checkIdentifierOrLongToken(nextTok)) {
-                ++this.position;
-                ty = new CustomType(nextTok as (IdentifierToken | LongIdentifierToken), [ty], curTok.position);
-                continue;
+            if (!this.checkIdentifierOrLongToken(nextTok)) {
+                return ty;
             }
-            return ty;
+            if (this.state.getPrimitiveType(nextTok.getText()) !== undefined) {
+                if (this.state.getPrimitiveType(nextTok.getText()).arity === 0) {
+                    return ty;
+                }
+                if (this.state.getPrimitiveType(nextTok.getText()).isPrimitiveType) {
+                    ++this.position;
+                    ty = new PrimitiveType(nextTok.getText(), [ty], curTok.position);
+                    continue;
+                }
+            }
+            ++this.position;
+            ty = new CustomType(nextTok.getText(), [ty], curTok.position);
+            continue;
         }
         return ty;
     }
@@ -1145,7 +1164,7 @@ export class Parser {
         let curTok = this.currentToken();
         let res: TypeVariable[] = [];
         if (curTok instanceof TypeVariableToken) {
-            res.push(new TypeVariable(curTok.text, curTok.position));
+            res.push(new TypeVariable(curTok.text, false, curTok.position));
             ++this.position;
             return res;
         }
@@ -1159,7 +1178,7 @@ export class Parser {
                     }
                     throw new ParserError('Expected a type varible.', curTok.position);
                 }
-                res.push(new TypeVariable(curTok.text, curTok.position));
+                res.push(new TypeVariable(curTok.text, false, curTok.position));
                 ++this.position;
                 curTok = this.currentToken();
                 if (this.checkKeywordToken(curTok, ',')) {

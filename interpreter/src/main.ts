@@ -34,7 +34,7 @@ export class Interpreter {
         state = ast.elaborate(state);
 
         // Use a fresh state to be able to piece types and values together
-        let res = ast.evaluate(oldState.getNestedState(true));
+        let res = ast.evaluate(oldState.getNestedState());
 
         if (res[1]) {
             return res;

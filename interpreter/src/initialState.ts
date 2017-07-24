@@ -303,7 +303,7 @@ let initialState: State = new State(
         'word':     new TypeNameInformation(0, true),
         'list':     new TypeNameInformation(1, true),
         'ref':      new TypeNameInformation(1, true),
-        'exn':      new TypeNameInformation(0, false)
+        'exn':      new TypeNameInformation(0, false, false)
     },
     {
         'div': new InfixStatus(true, 7, false),
