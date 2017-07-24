@@ -84,4 +84,31 @@ it("exception shadowing", () => {
             expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Match'));
         }]
     ]);
+    run_test([
+        ['exception Div;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['(1 div 0) handle Div => 42;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(true);
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Div'));
+        }]
+    ]);
+    run_test([
+        ['exception Bind;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['let val 1 = 2; in true end handle Bind => false;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(true);
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Bind'));
+        }]
+    ]);
+    run_test([
+        ['exception Blob; fun f x = raise Blob; exception Blob;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['f 42 handle Blob => false;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(true);
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Blob'));
+        }]
+    ]);
 });
