@@ -1,89 +1,31 @@
-import { InternalInterpreterError, Position, InterpreterError } from './errors';
-import { IdentifierToken, LongIdentifierToken } from './lexer';
+import { Position } from './errors';
 import { State } from './state';
 
-export class TypeUnificationError extends InterpreterError {
-    constructor(public type1: Type, public type2: Type) {
-        super(0, 'cannot unify ' + type2.prettyPrint() + ' with ' + type1.prettyPrint());
-        Object.setPrototypeOf(this, TypeUnificationError.prototype);
-    }
-}
-
-type Instantiations = [[string, Type][], [string, Type][]];
-
 export abstract class Type {
-    // TODO: state may not accurately represent which type variables are free at the position where the
-    // instantiation is made
-    static findMapping(instantiations: Instantiations, state: State): Map<string, Type> {
-        let mapping: Map<string, Type> = new Map<string, Type>();
-        for (let i: number = 0; i < 2; ++i) {
-            instantiations[i].forEach((element: [string, Type]) => {
-                let name: string = element[0];
-                let value: Type = element[1];
-                if (mapping.has(name)) {
-                    mapping.set(name, (mapping.get(name) as Type).unify(value, state));
-                } else {
-                    mapping.set(name, value);
-                }
-            });
-        }
-        return mapping;
-    }
-
     abstract prettyPrint(): string;
-
-    // Finds the unification of two types. If the types cannot be unified, throws a TypeUnificationException.
-    // In the notation of the SML Definition, unify returns the most general type that is generalised by both this
-    // and other. (chapter 4.5)
-    // TODO: free variables are currently ignored, and there are problems with type variable naming
-    unify(other: Type, state: State, errorLocation: Position = 0): Type {
-        if (this.equals(other)) {
-            return this;
-        }
-
-        let instantiations: Instantiations = [[], []];
-        try {
-            this.findInstantiations(other, instantiations);
-            let mapping: Map<string, Type> = Type.findMapping(instantiations, state);
-            let result: Type = this.replaceTypeVariables(mapping);
-            result = this.unifyImpl(result);
-            result = other.unifyImpl(result);
-            return result;
-        } catch (e) {
-            if (e instanceof TypeUnificationError) {
-                e.position = errorLocation;
-            }
-            throw e;
-        }
-    }
-
-    findInstantiations(other: Type, instantiations: Instantiations): void {
-        if (this instanceof TypeVariable) {
-            instantiations[0].push([this.name, other]);
-        } else if (other instanceof TypeVariable) {
-            instantiations[1].push([other.name, this]);
-            return;
-        }
-        this.findInstantiationsImpl(other, instantiations);
-    }
-
-    findInstantiationsImpl(other: Type, instantiations: Instantiations): void {
-        // must be overloaded for Types which have children
-    }
-
-    abstract unifyImpl(other: Type): Type;
-
-    // TODO: allow differently named Type Variables?
     abstract equals(other: any): boolean;
 
-    findFreeTypeVariables(names: Set<string>, boundVariables: Set<string>): void {
-        // TODO
+    // Constructs types with type variables instantiated as much as possible
+    instantiate(state: State): Type[] {
+        return this.simplify().instantiate(state);
     }
 
-    replaceTypeVariables(mapping: Map<string, Type>): Type { return this; }
+    // Return all (free) type variables
+    getTypeVariables(free: boolean): Set<TypeVariable> {
+        return this.simplify().getTypeVariables(free);
+    }
+
+    // Checks if two types are unifyable; returns all required type variable bindings
+    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+        return this.simplify().matches(state, type);
+    }
 
     simplify(): Type {
         return this;
+    }
+
+    admitsEquality(state: State): boolean {
+        return false;
     }
 }
 
@@ -92,20 +34,35 @@ export class PrimitiveType extends Type {
         super();
     }
 
+    instantiate(state: State): Type[] {
+        return [this];
+    }
+
+    getTypeVariables(free: boolean): Set<TypeVariable> {
+        return new Set<TypeVariable>();
+    }
+
+    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+        for (let i = 0; i < type.length; ++i) {
+            if (type[i].equals(this)) {
+                return [];
+            }
+        }
+
+        // None of the possible types matched
+        return undefined;
+    }
+
+    admitsEquality(state: State): boolean {
+        return state.getPrimitiveType(this.name).allowsEquality;
+    }
+
     prettyPrint(): string {
         let res = '';
         for (let i = 0; i < this.parameters.length; ++i) {
             res += this.parameters[i].prettyPrint() + ' ';
         }
         return res += this.name;
-    }
-
-    unifyImpl(other: Type): Type {
-        if (this.equals(other)) {
-            return other;
-        } else {
-            throw new TypeUnificationError(this, other);
-        }
     }
 
     equals(other: any): boolean {
@@ -136,7 +93,7 @@ export class PrimitiveType extends Type {
 }
 
 export class TypeVariable extends Type {
-    constructor(public name: string, public position: Position = 0) {
+    constructor(public name: string, public isFree: boolean = true, public position: Position = 0) {
         super();
     }
 
@@ -144,28 +101,40 @@ export class TypeVariable extends Type {
         return this.name;
     }
 
-    findFreeTypeVariables(names: Set<string>, boundVariables: Set<string>): void {
-        if (!boundVariables.has(this.name)) {
-            names.add(this.name);
+    instantiate(state: State): Type[] {
+        let res = state.getStaticValue(this.name);
+        if (!this.isFree || res === undefined) {
+            return [this];
         }
+        return <Type[]> res;
     }
 
-    replaceTypeVariables(mapping: Map<string, Type>): Type {
-        if (mapping.has(this.name)) {
-            return mapping.get(this.name) as Type;
-        } else {
-            return this;
+    getTypeVariables(free: boolean): Set<TypeVariable> {
+        let res = new Set<TypeVariable>();
+        if (free === this.isFree) {
+            res.add(this);
         }
+        return res;
     }
 
-    unifyImpl(other: Type): Type {
-        /*    if (other.admitsEquality || !this.admitsEquality) {
-            return other;
+    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+        if (this.isFree) {
+            // TODO Filter out <this> type var from type?
+            return [[this.name, type]];
         } else {
-            throw new TypeUnificationError(this, other);
-        }*/
+            for (let i = 0; i < type.length; ++i) {
+                if (type[i].equals(this)) {
+                    return [];
+                }
+            }
+        }
 
-        throw new InternalInterpreterError(-1, 'nyi\'an');
+        // None of the possible types matched
+        return undefined;
+    }
+
+    admitsEquality(state: State): boolean {
+        return this.name[1] === '\'';
     }
 
     equals(other: any): boolean {
@@ -177,6 +146,27 @@ export class RecordType extends Type {
     constructor(public elements: Map<string, Type>, public complete: boolean = true, public position: Position = 0) {
         super();
     }
+
+    instantiate(state: State): Type[] {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
+    getTypeVariables(free: boolean): Set<TypeVariable> {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
+    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
+    admitsEquality(state: State): boolean {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
 
     prettyPrint(): string {
         // TODO: print as Tuple if possible
@@ -199,73 +189,12 @@ export class RecordType extends Type {
         return result + '}';
     }
 
-    findFreeTypeVariables(names: Set<string>, boundVariables: Set<string>): void {
-        this.elements.forEach((type: Type, key: string) => {
-            type.findFreeTypeVariables(names, boundVariables);
-        });
-    }
-
-    findInstantiationsImpl(other: Type, instantiations: Instantiations): void {
-        if (!(other instanceof RecordType)) {
-            throw new TypeUnificationError(this, other);
-        }
-        this.elements.forEach((type: Type, key: string) => {
-            if (other.elements.has(key)) {
-                type.findInstantiations(other.elements.get(key) as Type, instantiations);
-            }
-        });
-    }
-
     simplify(): RecordType {
         let newElements: Map<string, Type> = new Map<string, Type>();
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.simplify());
         });
         return new RecordType(newElements, this.complete);
-    }
-
-    replaceTypeVariables(mapping: Map<string, Type>): RecordType {
-        let newElements: Map<string, Type> = new Map<string, Type>();
-        this.elements.forEach((type: Type, key: string) => {
-            newElements.set(key, type.replaceTypeVariables(mapping));
-        });
-        return new RecordType(newElements, this.complete);
-    }
-
-    unifyImpl(other: Type): RecordType {
-        if (!(other instanceof RecordType)) {
-            throw new TypeUnificationError(this, other);
-        }
-        let complete = this.complete || other.complete;
-        let names: Set<string> = new Set<string>();
-        let addNames = (ignored: Type, name: string) => {
-            names.add(name);
-        };
-        this.elements.forEach(addNames);
-        other.elements.forEach(addNames);
-
-        if ((this.complete && names.size > this.elements.size)) {
-            throw new TypeUnificationError(this, other);
-        }
-
-        let newElements: Map<string, Type> = new Map<string, Type>();
-        if (other.complete) {
-            names.forEach((name: string) => {
-                if (!other.elements.has(name)) {
-                    throw new TypeUnificationError(this, other);
-                }
-            });
-        }
-
-        names.forEach((name: string) => {
-            if (this.elements.has(name)) {
-                newElements.set(name, (this.elements.get(name) as Type).unifyImpl(other.elements.get(name) as Type));
-            } else {
-                newElements.set(name, other.elements.get(name) as Type);
-            }
-        });
-
-        return new RecordType(newElements, complete);
     }
 
     equals(other: any): boolean {
@@ -299,39 +228,33 @@ export class FunctionType extends Type {
         super();
     }
 
+    instantiate(state: State): Type[] {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
+    getTypeVariables(free: boolean): Set<TypeVariable> {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
+    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
+    admitsEquality(state: State): boolean {
+        return this.parameterType.admitsEquality(state) && this.returnType.admitsEquality(state);
+    }
+
+
     prettyPrint(): string {
         return '( ' + this.parameterType.prettyPrint()
             + ' -> ' + this.returnType.prettyPrint() + ' )';
     }
 
-    findFreeTypeVariables(names: Set<string>, boundVariables: Set<string>): void {
-        this.parameterType.findFreeTypeVariables(names, boundVariables);
-        this.returnType.findFreeTypeVariables(names, boundVariables);
-    }
-
-    findInstantiationsImpl(other: Type, instantiations: Instantiations): void {
-        if (!(other instanceof FunctionType)) {
-            throw new TypeUnificationError(this, other);
-        }
-        this.parameterType.findInstantiations(other.parameterType, instantiations);
-        this.returnType.findInstantiations(other.returnType, instantiations);
-    }
-
     simplify(): FunctionType {
         return new FunctionType(this.parameterType.simplify(), this.returnType.simplify(), this.position);
-    }
-
-    replaceTypeVariables(mapping: Map<string, Type>): FunctionType {
-        return new FunctionType(this.parameterType.replaceTypeVariables(mapping),
-            this.returnType.replaceTypeVariables(mapping));
-    }
-
-    unifyImpl(other: Type): Type {
-        if (!(other instanceof FunctionType)) {
-            throw new TypeUnificationError(this, other);
-        }
-        return new FunctionType(this.parameterType.unifyImpl(other.parameterType),
-            this.returnType.unifyImpl(other.returnType));
     }
 
     equals(other: any): boolean {
@@ -340,21 +263,44 @@ export class FunctionType extends Type {
     }
 }
 
-// a custom type using type constructors
+// A custom defined type similar to "list" or "option".
+// May have a type argument.
 export class CustomType extends Type {
-    public fullName: LongIdentifierToken;
-
-    // fullName: a unique name for this type
-    // typeArguments: instantiations for any type variables this datatype may have
-    constructor(name: IdentifierToken | LongIdentifierToken,
-                public typeArguments: Type[],
+    constructor(public name: string,
+                public typeArguments: Type[] = [],
                 public position: Position = 0) {
         super();
-        if (name instanceof LongIdentifierToken) {
-            this.fullName = name;
+    }
+
+    instantiate(state: State): Type[] {
+        if (this.typeArguments.length > 0) {
+            // TODO
+            throw new Error('ニャ－');
         } else {
-            this.fullName = new LongIdentifierToken(name.text, name.position, [], name);
+            return [this];
         }
+    }
+
+    getTypeVariables(free: boolean): Set<TypeVariable> {
+        if (this.typeArguments.length > 0) {
+            // TODO
+            throw new Error('ニャ－');
+        }
+        return new Set<TypeVariable>();
+    }
+
+    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
+    admitsEquality(state: State): boolean {
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            if (!this.typeArguments[i].admitsEquality(state)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     prettyPrint(): string {
@@ -374,21 +320,8 @@ export class CustomType extends Type {
         if (this.typeArguments.length > 0) {
             result += ' ';
         }
-        result += this.fullName.getText();
+        result += this.name;
         return result;
-    }
-
-    findFreeTypeVariables(names: Set<string>, boundVariables: Set<string>): void {
-        throw new InternalInterpreterError(0, 'not yet implemented');
-    }
-
-    findInstantiationsImpl(other: Type, instantiations: Instantiations): void {
-        if (!(other instanceof CustomType) || other.fullName !== this.fullName) {
-            throw new TypeUnificationError(this, other);
-        }
-        for (let i: number = 0; i < this.typeArguments.length; ++i) {
-            this.typeArguments[i].findInstantiations(other.typeArguments[i], instantiations);
-        }
     }
 
     simplify(): Type {
@@ -396,30 +329,11 @@ export class CustomType extends Type {
         for (let i: number = 0; i < this.typeArguments.length; ++i) {
             args.push(this.typeArguments[i].simplify());
         }
-        return new CustomType(this.fullName, this.typeArguments);
-    }
-
-    replaceTypeVariables(mapping: Map<string, Type>): CustomType {
-        let args: Type[] = [];
-        for (let i: number = 0; i < this.typeArguments.length; ++i) {
-            args.push(this.typeArguments[i].replaceTypeVariables(mapping));
-        }
-        return new CustomType(this.fullName, this.typeArguments);
-    }
-
-    unifyImpl(other: Type): Type {
-        if (!(other instanceof CustomType) || other.fullName !== this.fullName) {
-            throw new TypeUnificationError(this, other);
-        }
-        let args: Type[] = [];
-        for (let i: number = 0; i < this.typeArguments.length; ++i) {
-            args.push(this.typeArguments[i].unifyImpl(other.typeArguments[i]));
-        }
-        return new CustomType(this.fullName, args);
+        return new CustomType(this.name, args);
     }
 
     equals(other: any): boolean {
-        if (!(other instanceof CustomType) || this.fullName !== other.fullName) {
+        if (!(other instanceof CustomType) || this.name !== other.name) {
             return false;
         }
         for (let i: number = 0; i < this.typeArguments.length; ++i) {
@@ -431,7 +345,6 @@ export class CustomType extends Type {
     }
 }
 
-// this is a derived form used only for type annotations
 export class TupleType extends Type {
     constructor(public elements: Type[], public position: Position = 0) {
         super();
@@ -448,10 +361,6 @@ export class TupleType extends Type {
         return result + ' )';
     }
 
-    findInstantiationsImpl(other: Type, instantiations: Instantiations): void {
-        throw new InternalInterpreterError(0, 'called Type.findInstantiationsImpl on a derived form');
-    }
-
     simplify(): RecordType {
         let entries: Map<string, Type> = new Map<string, Type>();
         for (let i: number = 0; i < this.elements.length; ++i) {
@@ -460,19 +369,7 @@ export class TupleType extends Type {
         return new RecordType(entries, true);
     }
 
-    findFreeTypeVariables(names: Set<string>, boundVariables: Set<string>): void {
-        throw new InternalInterpreterError(0, 'called Type.findFreeTypeVariables on a derived form');
-    }
-
-    replaceTypeVariables(mapping: Map<string, Type>): FunctionType {
-        throw new InternalInterpreterError(0, 'called Type.replaceTypeVariables on a derived form');
-    }
-
-    unifyImpl(other: Type): Type {
-        throw new InternalInterpreterError(0, 'called Type.unifyImpl on a derived form');
-    }
-
     equals(other: any): boolean {
-        throw new InternalInterpreterError(0, 'called Type.equals on a derived form');
+        return this.simplify().equals(other);
     }
 }
