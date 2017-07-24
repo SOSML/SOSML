@@ -1,5 +1,5 @@
-fun components (A(e,e')) = [e, e’]
-  | components (M(e,e')) = [e, e’]
+fun components (A(e,e')) = [e, e']
+  | components (M(e,e')) = [e, e']
   | components _ = nil;
 
 components (A(C 3, V "z"));

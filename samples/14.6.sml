@@ -1,12 +1,12 @@
 signature QUEUE = sig
   type 'a queue
   val empty : 'a queue
-  val snoc : 'a queue -> ’a -> ’a queue
-  val head : 'a queue -> ’a (* Empty *)
-  val tail : 'a queue -> ’a queue (* Empty *)
+  val snoc : 'a queue -> 'a -> ’a queue
+  val head : 'a queue -> 'a (* Empty *)
+  val tail : 'a queue -> 'a queue (* Empty *)
 end;
 structure Queue :> QUEUE = struct
-  type 'a queue = ’a list
+  type 'a queue = 'a list
   val empty = nil
   fun snoc q x = q@[x]
   val head = hd
@@ -14,7 +14,7 @@ structure Queue :> QUEUE = struct
 end;
 
 structure FQueue :> QUEUE = struct
-  type 'a queue = ’a list * ’a list
+  type 'a queue = 'a list * ’a list
   val empty = ([],[])
   fun snoc ([],_) x = ([x],[])
     | snoc (q, r) x = (q, x::r)

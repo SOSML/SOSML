@@ -1,5 +1,5 @@
 (* should be predefined *)
-datatype 'a option = NONE | SOME of ’a;
+datatype 'a option = NONE | SOME of 'a;
 
 fun nth n xs = if n<0 orelse null xs then NONE
                 else if n=0 then SOME (hd xs) else nth (n-1) (tl xs)

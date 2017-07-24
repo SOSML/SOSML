@@ -1,7 +1,7 @@
-fun invert (compare : 'a * ’a -> order) (x,y) = compare (y,x);
+fun invert (compare : 'a * 'a -> order) (x,y) = compare (y,x);
 pisort (invert Int.compare) [5, 2, 2, 13, 4, 9, 9, 13, ~2];
 
-fun lex (compare : 'a * ’a -> order) p = case p of
+fun lex (compare : 'a * 'a -> order) p = case p of
                                         (nil, _::_) => LESS
                                         | (nil, nil) => EQUAL
                                         | (_::_, nil) => GREATER

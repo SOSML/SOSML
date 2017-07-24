@@ -14,7 +14,7 @@ datatype exp = (* expressions *)
   | App of exp * exp (* procedure application *)
 ;
 
-type 'a env = id -> ’a (* environments *)
+type 'a env = id -> 'a (* environments *)
 exception Unbound of id
 fun empty x = raise Unbound x
 fun update env x a y = if y=x then a else env y
@@ -37,7 +37,7 @@ fun elab f (Con c) = elabCon c
             | _ => raise Error "T If2")
   | elab f (Abs(x,t,e)) = Arrow(t, elab (update f x t) e)
   | elab f (App(e1,e2)) = (case elab f e1 of
-                          Arrow(t,t') => if t = elab f e2 then t’
+                          Arrow(t,t') => if t = elab f e2 then t'
                                           else raise Error "T App1"
                           | _ => raise Error "T App2")
 ;

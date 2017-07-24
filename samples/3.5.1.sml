@@ -1,4 +1,4 @@
-fun 'a id (x:’a) = x;
+fun 'a id (x:'a) = x;
 
 val x = id 5;
 

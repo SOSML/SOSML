@@ -11,4 +11,4 @@ fun fac n = if n<1 then 1 else n*fac(n-1);
 fac 15;
 test (fn () => fac 15);
 
-fun adjoin env env' x = env’ x handle Unbound => env x;
+fun adjoin env env' x = env' x handle Unbound => env x;

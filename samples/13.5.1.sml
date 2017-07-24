@@ -15,9 +15,9 @@ fun lex nil = nil
 and lexInt s v cs = if null cs orelse not(Char.isDigit (hd cs))
                     then ICON(s*v) :: lex cs
                     else lexInt s (10*v+(ord(hd cs)-ord#"0")) (tl cs)
-and lexId cs cs' = if null cs’ orelse not(Char.isAlpha (hd cs’))
+and lexId cs cs' = if null cs' orelse not(Char.isAlpha (hd cs’))
                     then ID(implode(rev cs)) :: lex cs'
-                    else lexId (hd cs' ::cs) (tl cs’)
+                    else lexId (hd cs' ::cs) (tl cs')
 ;
 
 lex (explode "(int->bool)->int");

@@ -36,7 +36,7 @@ IV 1 => eval f e2
   | _ => raise Error "R If")
   | eval f (Abs(x,t,e)) = Proc(x, e, f)
   | eval f (App(e1,e2)) = (case (eval f e1, eval f e2) of
-                          (Proc(x,e,f'), v) => eval (update f’ x v) e
+                          (Proc(x,e,f'), v) => eval (update f' x v) e
   | _ => raise Error "R App")
 ;
 
