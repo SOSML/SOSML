@@ -31,16 +31,15 @@ export class Interpreter {
 
         state = oldState.getNestedState();
         ast = ast.simplify();
-        // state = ast.elaborate(state);
+        state = ast.elaborate(state);
 
         // Use a fresh state to be able to piece types and values together
         let res = ast.evaluate(oldState.getNestedState());
 
-        // if (res[1]) {
+        if (res[1]) {
         return res;
-        // }
+        }
 
-        /*
         let curState = res[0];
 
         while (curState.id > oldState.id) {
@@ -79,7 +78,6 @@ export class Interpreter {
         }
 
         return res;
-         */
     }
 
     constructor(public settings: Settings) {}
