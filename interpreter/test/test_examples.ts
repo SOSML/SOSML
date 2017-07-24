@@ -684,7 +684,7 @@ it("1.13.2", () => {
             expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(15.5));
             //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('real'));
         }],
-        ['2 * 5.5;', (x) => { expect(x).toThrow(Errors.SemanticError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['2 * 5.5;', (x) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
         }]
     ]);
 });
@@ -1228,7 +1228,7 @@ fun f (x,y,z) = if x=y then x else z;
             expect(state.getDynamicValue('f')).not.toEqualWithType(undefined);
             //expect(state.getStaticValue('f')).toEqualWithType(TODO);
         }],
-        ['(fn x => 2*x) = (fn x => 2*x);', (x) => { expect(x).toThrow(Errors.SemanticError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['(fn x => 2*x) = (fn x => 2*x);', (x) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
         }]
     ]);
 });
@@ -1238,7 +1238,7 @@ it("3.8.1", () => {
 fn x => fn y => z x (y x);
      */
     run_test([
-        ['fn x => fn y => z x (y x);', (x) => { expect(x).toThrow(Errors.SemanticError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['fn x => fn y => z x (y x);', (x) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
         }]
     ]);
 });
@@ -1256,7 +1256,7 @@ in
 end;
      */
     run_test([
-        ['let val x = 2*x val x = 2*x fun f x = if x<2 then x else f(x-1) val f = fn x => f x in f x - y end;', (x) => { expect(x).toThrow(Errors.SemanticError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['let val x = 2*x val x = 2*x fun f x = if x<2 then x else f(x-1) val f = fn x => f x in f x - y end;', (x) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
         }]
     ]);
 });
