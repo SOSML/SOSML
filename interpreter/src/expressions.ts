@@ -18,7 +18,7 @@ export abstract class Expression {
     }
 
     // Computes the value of an expression, returns [computed value, is thrown exception]
-    compute(state: State): [Value, boolean] {
+    compute(state: State): [Value, boolean, State] {
         throw new InternalInterpreterError(this.position, 'Called "getValue" on a derived form.');
     }
 
@@ -49,7 +49,7 @@ export class Wildcard extends Expression implements Pattern {
         return [new TypeVariable('\'\'__wc'), new TypeVariable('\'__wc')];
     }
 
-    compute(state: State): [Value, boolean] {
+    compute(state: State): [Value, boolean, State] {
         throw new InternalInterpreterError(this.position,
             'Wildcards are far too wild to have a value.');
     }
@@ -73,7 +73,7 @@ export class LayeredPattern extends Expression implements Pattern {
                 public typeAnnotation: Type | undefined,
                 public pattern: Expression|PatternExpression) { super(); }
 
-    compute(state: State): [Value, boolean] {
+    compute(state: State): [Value, boolean, State] {
         throw new InternalInterpreterError(this.position,
             'Layered patterns are far too layered to have a value.');
     }
@@ -130,17 +130,17 @@ export class Match {
         return res;
     }
 
-    compute(state: State, value: Value): [Value, boolean] {
+    compute(state: State, value: Value): [Value, boolean, State] {
         for (let i = 0; i < this.matches.length; ++i) {
             let res = this.matches[i][0].matches(state, value);
             if (res !== undefined) {
                 for (let j = 0; j < res.length; ++j) {
-                    state.setDynamicValue(res[j][0], res[j][1]);
+                    state.setDynamicValue(res[j][0], res[j][1], true);
                 }
                 return this.matches[i][1].compute(state.getNestedState(false, state.id));
             }
         }
-        return [<Value> state.getDynamicValue('Match'), true];
+        return [<Value> state.getDynamicValue('Match'), true, state];
     }
 
     getType(state: State): Type[] {
@@ -184,7 +184,7 @@ export class TypedExpression extends Expression implements Pattern {
         return res + ' )';
     }
 
-    compute(state: State): [Value, boolean] {
+    compute(state: State): [Value, boolean, State] {
         return this.expression.compute(state);
     }
 }
@@ -211,10 +211,10 @@ export class HandleException extends Expression {
         throw new InternalInterpreterError(this.position, 'nyi\'an :3');
     }
 
-    compute(state: State): [Value, boolean] {
+    compute(state: State): [Value, boolean, State] {
         let res = this.expression.compute(state);
         if (res[1]) {
-            let next = this.match.compute(state, res[0]);
+            let next = this.match.compute(res[2], res[0]);
             if (!next[1] || (<ExceptionValue> next[0]).constructorName !== 'Match') {
                 // Exception got handled
                 return next;
@@ -242,14 +242,14 @@ export class RaiseException extends Expression {
         throw new InternalInterpreterError(this.position, 'nyi\'an :3');
     }
 
-    compute(state: State): [Value, boolean] {
+    compute(state: State): [Value, boolean, State] {
         let res = this.expression.compute(state);
         if (!(res[0] instanceof ExceptionValue)) {
             throw new EvaluationError(this.position,
                 'Cannot "raise" value of type "' + res.constructor.name
                 + '" (type must be "exn").');
         }
-        return [res[0], true];
+        return [res[0], true, res[2]];
     }
 }
 
@@ -271,8 +271,8 @@ export class Lambda extends Expression {
         throw new InternalInterpreterError(this.position, 'nyi\'an :3');
     }
 
-    compute(state: State): [Value, boolean] {
-        return [new FunctionValue(state, this.match), false];
+    compute(state: State): [Value, boolean, State] {
+        return [new FunctionValue(state, this.match), false, state];
     }
 }
 
@@ -339,24 +339,25 @@ export class FunctionApplication extends Expression implements Pattern {
         return res + ' )';
     }
 
-    compute(state: State): [Value, boolean] {
+    compute(state: State): [Value, boolean, State] {
         let funcVal = this.func.compute(state);
         if (funcVal[1]) {
             // computing the function failed
             return funcVal;
         }
-        let argVal = this.argument.compute(state);
+        let argVal = this.argument.compute(funcVal[2]);
         if (argVal[1]) {
             return argVal;
         }
         if (funcVal[0] instanceof FunctionValue) {
-            return (<FunctionValue> funcVal[0]).compute(state, argVal[0]);
+            return (<FunctionValue> funcVal[0]).compute(argVal[2], argVal[0]);
         } else if (funcVal[0] instanceof ValueConstructor) {
-            return [(<ValueConstructor> funcVal[0]).construct(argVal[0]), false];
+            return [(<ValueConstructor> funcVal[0]).construct(argVal[0]), false, state];
         } else if (funcVal[0] instanceof ExceptionConstructor) {
-            return [(<ExceptionConstructor> funcVal[0]).construct(argVal[0]), false];
+            return [(<ExceptionConstructor> funcVal[0]).construct(argVal[0]), false, state];
         } else if (funcVal[0] instanceof PredefinedFunction) {
-            return (<PredefinedFunction> funcVal[0]).apply(argVal[0]);
+            let res = (<PredefinedFunction> funcVal[0]).apply(argVal[0]);
+            return [res[0], res[1], state];
         }
         throw new EvaluationError(this.position, 'Cannot evaluate the function "'
             + this.func.prettyPrint() + '" (' + funcVal[0].constructor.name + ').');
@@ -398,17 +399,17 @@ export class Constant extends Expression implements Pattern {
         return this.token.getText();
     }
 
-    compute(state: State): [Value, boolean] {
+    compute(state: State): [Value, boolean, State] {
         if (this.token instanceof IntegerConstantToken || this.token instanceof NumericToken) {
-            return [new Integer((<IntegerConstantToken | NumericToken> this.token).value), false];
+            return [new Integer((<IntegerConstantToken | NumericToken> this.token).value), false, state];
         } else if (this.token instanceof RealConstantToken) {
-            return [new Real((<RealConstantToken> this.token).value), false];
+            return [new Real((<RealConstantToken> this.token).value), false, state];
         } else if (this.token instanceof WordConstantToken) {
-            return [new Word((<WordConstantToken> this.token).value), false];
+            return [new Word((<WordConstantToken> this.token).value), false, state];
         } else if (this.token instanceof CharacterConstantToken) {
-            return [new CharValue((<CharacterConstantToken> this.token).value), false];
+            return [new CharValue((<CharacterConstantToken> this.token).value), false, state];
         } else if (this.token instanceof StringConstantToken) {
-            return [new StringValue((<StringConstantToken> this.token).value), false];
+            return [new StringValue((<StringConstantToken> this.token).value), false, state];
         }
         throw new EvaluationError(this.token.position, 'You sure that this is a constant?');
     }
@@ -445,7 +446,7 @@ export class ValueIdentifier extends Expression implements Pattern {
         throw new InternalInterpreterError(this.position, 'nyi\'an :3');
     }
 
-    compute(state: State): [Value, boolean] {
+    compute(state: State): [Value, boolean, State] {
         let res = state.getDynamicValue(this.name.getText());
         if (res === undefined) {
             throw new EvaluationError(this.position, 'Unbound value identifier "'
@@ -461,7 +462,7 @@ export class ValueIdentifier extends Expression implements Pattern {
             res = (<ExceptionConstructor> res).construct();
         }
 
-        return [res, false];
+        return [res, false, state];
     }
 }
 
@@ -548,7 +549,7 @@ export class Record extends Expression implements Pattern {
         return result + '}';
     }
 
-    compute(state: State): [Value, boolean] {
+    compute(state: State): [Value, boolean, State] {
         let nentr = new Map<string, Value>();
         for (let i = 0; i < this.entries.length; ++i) {
             let res = this.entries[i][1].compute(state);
@@ -558,7 +559,7 @@ export class Record extends Expression implements Pattern {
             }
             nentr = nentr.set(this.entries[i][0], res[0]);
         }
-        return [new RecordValue(nentr), false];
+        return [new RecordValue(nentr), false, state];
     }
 }
 
@@ -584,11 +585,11 @@ export class LocalDeclarationExpression extends Expression {
         throw new InternalInterpreterError(this.position, 'nyi\'an :3');
     }
 
-    compute(state: State): [Value, boolean] {
+    compute(state: State): [Value, boolean, State] {
         let nstate = state.getNestedState(false, state.id);
         let res = this.declaration.evaluate(nstate);
         if (res[1]) {
-            return [<Value> res[2], true];
+            return [<Value> res[2], true, state];
         }
         return this.expression.compute(res[0]);
     }

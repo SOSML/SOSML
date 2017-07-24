@@ -29,67 +29,67 @@ let initialState: State = new State(
     undefined,
     new StaticBasis(
         {
-            'unit':     new TypeInformation(
-                new FunctionType(new TupleType([]), new TupleType([])).simplify(), []),
-            'bool':     new TypeInformation(new PrimitiveType('bool'),  ['true', 'false']),
-            'int':      new TypeInformation(new PrimitiveType('int'),   []),
-            'word':     new TypeInformation(new PrimitiveType('word'),  []),
-            'real':     new TypeInformation(new PrimitiveType('real'),  []),
-            'string':   new TypeInformation(new PrimitiveType('string'), []),
-            'char':     new TypeInformation(new PrimitiveType('char'),  []),
-            'list':     new TypeInformation(new PrimitiveType('list', [typeVar]), ['nil', '::']),
-            'ref':      new TypeInformation(new PrimitiveType('ref', [typeVar]), ['ref']),
-            'exn':      new TypeInformation(new PrimitiveType('exn'), [])
+            'unit':     [new TypeInformation(
+                new FunctionType(new TupleType([]), new TupleType([])).simplify(), []), false],
+            'bool':     [new TypeInformation(new PrimitiveType('bool'),  ['true', 'false']), false],
+            'int':      [new TypeInformation(new PrimitiveType('int'),   []), false],
+            'word':     [new TypeInformation(new PrimitiveType('word'),  []), false],
+            'real':     [new TypeInformation(new PrimitiveType('real'),  []), false],
+            'string':   [new TypeInformation(new PrimitiveType('string'), []), false],
+            'char':     [new TypeInformation(new PrimitiveType('char'),  []), false],
+            'list':     [new TypeInformation(new PrimitiveType('list', [typeVar]), ['nil', '::']), false],
+            'ref':      [new TypeInformation(new PrimitiveType('ref', [typeVar]), ['ref']), false],
+            'exn':      [new TypeInformation(new PrimitiveType('exn'), []), false]
         },
         {
-            'div':      [functionType(intType), functionType(wordType)],
-            'mod':      [functionType(intType), functionType(wordType)],
-            '*':        [functionType(intType), functionType(wordType), functionType(realType)],
-            '/':        [functionType(realType)],
-            '+':        [functionType(intType), functionType(wordType), functionType(realType)],
-            '-':        [functionType(intType), functionType(wordType), functionType(realType)],
-            '<':        [bfunctionType(intType), bfunctionType(wordType),
-                         bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)],
-            '<=':       [bfunctionType(intType), bfunctionType(wordType),
-                         bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)],
-            '>':        [bfunctionType(intType), bfunctionType(wordType),
-                         bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)],
-            '>=':       [bfunctionType(intType), bfunctionType(wordType),
-                         bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)],
-            '=':        [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify()],
-            '<>':       [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify()],
+            'div':      [[functionType(intType), functionType(wordType)], false],
+            'mod':      [[functionType(intType), functionType(wordType)], false],
+            '*':        [[functionType(intType), functionType(wordType), functionType(realType)], false],
+            '/':        [[functionType(realType)], false],
+            '+':        [[functionType(intType), functionType(wordType), functionType(realType)], false],
+            '-':        [[functionType(intType), functionType(wordType), functionType(realType)], false],
+            '<':        [[bfunctionType(intType), bfunctionType(wordType),
+                         bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
+            '<=':       [[bfunctionType(intType), bfunctionType(wordType),
+                         bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
+            '>':        [[bfunctionType(intType), bfunctionType(wordType),
+                         bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
+            '>=':       [[bfunctionType(intType), bfunctionType(wordType),
+                         bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
+            '=':        [[new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify()], false],
+            '<>':       [[new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify()], false],
             // ':='
             // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
-            'true':     [new PrimitiveType('bool')],
-            'false':    [new PrimitiveType('bool')],
-            'nil':      [new PrimitiveType('list', [typeVar])],
-            '::':       [new FunctionType(
+            'true':     [[new PrimitiveType('bool')], false],
+            'false':    [[new PrimitiveType('bool')], false],
+            'nil':      [[new PrimitiveType('list', [typeVar])], false],
+            '::':       [[new FunctionType(
                             new TupleType([typeVar, new PrimitiveType('list', [typeVar])]),
-                            new PrimitiveType('list', [typeVar])).simplify()],
-            'Match':    [new PrimitiveType('exn')],
-            'Bind':     [new PrimitiveType('exn')],
-            'Div':      [new PrimitiveType('exn')],
-            '^':        [functionType(stringType)],
-            'explode':  [new FunctionType(new TupleType([stringType, stringType]),
-                new PrimitiveType('list', [charType])).simplify()],
-            '~':        [new FunctionType(intType, intType), new FunctionType(realType, realType)],
+                            new PrimitiveType('list', [typeVar])).simplify()], false],
+            'Match':    [[new PrimitiveType('exn')], false],
+            'Bind':     [[new PrimitiveType('exn')], false],
+            'Div':      [[new PrimitiveType('exn')], false],
+            '^':        [[functionType(stringType)], false],
+            'explode':  [[new FunctionType(new TupleType([stringType, stringType]),
+                new PrimitiveType('list', [charType])).simplify()], false],
+            '~':        [[new FunctionType(intType, intType), new FunctionType(realType, realType)], false],
         }
     ),
     new DynamicBasis(
         {
-            'unit':     [],
-            'bool':     ['true', 'false'],
-            'int':      [],
-            'word':     [],
-            'real':     [],
-            'string':   [],
-            'char':     [],
-            'list':     ['nil', '::'],
-            'ref':      ['ref'],
-            'exn':      []
+            'unit':     [[], false],
+            'bool':     [['true', 'false'], false],
+            'int':      [[], false],
+            'word':     [[], false],
+            'real':     [[], false],
+            'string':   [[], false],
+            'char':     [[], false],
+            'list':     [['nil', '::'], false],
+            'ref':      [['ref'], false],
+            'exn':      [[], false],
         },
         {
-            'div': new PredefinedFunction('div', (val: Value) => {
+            'div':      [new PredefinedFunction('div', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -108,8 +108,8 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "div" on value of the wrong type (' + val.constructor.name + ').');
-            }),
-            'mod': new PredefinedFunction('mod', (val: Value) => {
+            }), false],
+            'mod':      [new PredefinedFunction('mod', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -128,8 +128,8 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "mod" on value of the wrong type (' + val.constructor.name + ').');
-            }),
-            '*': new PredefinedFunction('*', (val: Value) => {
+            }), false],
+            '*':        [new PredefinedFunction('*', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -144,8 +144,8 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "*" on value of the wrong type (' + val.constructor.name + ').');
-            }),
-            '/': new PredefinedFunction('/', (val: Value) => {
+            }), false],
+            '/':        [new PredefinedFunction('/', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -159,8 +159,8 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "/" on value of the wrong type (' + val.constructor.name + ').');
-            }),
-            '+': new PredefinedFunction('+', (val: Value) => {
+            }), false],
+            '+':        [new PredefinedFunction('+', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -175,8 +175,8 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "+" on value of the wrong type (' + val.constructor.name + ').');
-            }),
-            '-': new PredefinedFunction('-', (val: Value) => {
+            }), false],
+            '-':        [new PredefinedFunction('-', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -191,9 +191,9 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "-" on value of the wrong type (' + val.constructor.name + ').');
-            }),
+            }), false],
 
-            '<': new PredefinedFunction('<', (val: Value) => {
+            '<':        [new PredefinedFunction('<', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -212,8 +212,8 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "<" on value of the wrong type (' + val.constructor.name + ').');
-            }),
-            '>': new PredefinedFunction('<', (val: Value) => {
+            }), false],
+            '>':        [new PredefinedFunction('<', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -232,8 +232,8 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called ">" on value of the wrong type (' + val.constructor.name + ').');
-            }),
-            '<=': new PredefinedFunction('<', (val: Value) => {
+            }), false],
+            '<=':       [new PredefinedFunction('<', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -252,8 +252,8 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "<=" on value of the wrong type (' + val.constructor.name + ').');
-            }),
-            '>=': new PredefinedFunction('<', (val: Value) => {
+            }), false],
+            '>=':       [new PredefinedFunction('<', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -272,8 +272,8 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called ">=" on value of the wrong type (' + val.constructor.name + ').');
-            }),
-            '=': new PredefinedFunction('=', (val: Value) => {
+            }), false],
+            '=':        [new PredefinedFunction('=', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -282,8 +282,8 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "=" on value of the wrong type (' + val.constructor.name + ').');
-            }),
-            '<>': new PredefinedFunction('=', (val: Value) => {
+            }), false],
+            '<>':       [new PredefinedFunction('=', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -292,18 +292,18 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "<>" on value of the wrong type (' + val.constructor.name + ').');
-            }),
+            }), false],
 
             // ':='
             // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
-            'true':     new BoolValue(true),
-            'false':    new BoolValue(false),
-            'nil':      new ValueConstructor('nil').construct(),
-            '::':       new ValueConstructor('::', 1),
-            'Match':    new ExceptionConstructor('Match').construct(),
-            'Bind':     new ExceptionConstructor('Bind').construct(),
-            'Div':      new ExceptionConstructor('Div').construct(),
-            '^':        new PredefinedFunction('^', (val: Value) => {
+            'true':     [new BoolValue(true), false],
+            'false':    [new BoolValue(false), false],
+            'nil':      [new ValueConstructor('nil').construct(), false],
+            '::':       [new ValueConstructor('::', 1), false],
+            'Match':    [new ExceptionConstructor('Match').construct(), false],
+            'Bind':     [new ExceptionConstructor('Bind').construct(), false],
+            'Div':      [new ExceptionConstructor('Div').construct(), false],
+            '^':        [new PredefinedFunction('^', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -314,15 +314,15 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "^" on value of the wrong type (' + val.constructor.name + ').');
-            }),
-            'explode':  new PredefinedFunction('explode', (val: Value) => {
+            }), false],
+            'explode':  [new PredefinedFunction('explode', (val: Value) => {
                 if (val instanceof StringValue) {
                     return [(<StringValue> val).explode(), false];
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
-            }),
-            '~':        new PredefinedFunction('~', (val: Value) => {
+            }), false],
+            '~':        [new PredefinedFunction('~', (val: Value) => {
                 if (val instanceof Integer) {
                     return [(<Integer> val).negate(), false];
                 } else if (val instanceof Real) {
@@ -330,7 +330,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "~" on something weird.');
-            }),
+            }), false],
         }
     ),
     {
@@ -342,7 +342,7 @@ let initialState: State = new State(
         'word':     new TypeNameInformation(0, true),
         'list':     new TypeNameInformation(1, true),
         'ref':      new TypeNameInformation(1, true),
-        'exn':      new TypeNameInformation(0, false, false)
+        'exn':      new TypeNameInformation(0, false, false),
     },
     {
         'div': new InfixStatus(true, 7, false),

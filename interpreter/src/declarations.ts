@@ -51,7 +51,7 @@ export class ValueBinding {
     }
 
     // Computes for recursive bindings the function triple to be added to the environment
-    compute(state: State): [string, [Value|undefined, boolean]] {
+    compute(state: State): [string, [Value|undefined, boolean, State]] {
         if (!this.isRecursive) {
             throw new InternalInterpreterError(this.position,
                 'Well, consider reading the docs next time.'
@@ -60,7 +60,7 @@ export class ValueBinding {
 
         if (!(this.pattern instanceof ValueIdentifier)) {
             if (this.pattern instanceof Wildcard) {
-                return ['_', [undefined, true]];
+                return ['_', [undefined, true, state]];
             }
             throw new EvaluationError(this.pattern.position,
                 'When using "rec", exactly one name is required here.');
@@ -324,6 +324,7 @@ export class ValueDeclaration extends Declaration {
                 break;
             }
             let val = this.valueBinding[i].expression.compute(state);
+            state = val[2];
             if (val[1]) {
                 return [state, true, val[0]];
             }
@@ -346,6 +347,7 @@ export class ValueDeclaration extends Declaration {
                 if (res[1][1] && res[1][0] === undefined) {
                     continue;
                 }
+                state = res[1][2];
                 if (res[1][1]) {
                     return [state, true, <Value> res[1][0]];
                 }

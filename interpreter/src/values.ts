@@ -280,12 +280,12 @@ export class FunctionValue extends Value {
     }
 
     prettyPrint(): string {
-        return 'fn';
+        return 'fn ' + this.body.prettyPrint();
     }
 
     // Computes the function on the given argument,
     // returns [result, is thrown]
-    compute(state: State, argument: Value): [Value, boolean] {
+    compute(state: State, argument: Value): [Value, boolean, State] {
         return this.body.compute(state, argument);
     }
 }
