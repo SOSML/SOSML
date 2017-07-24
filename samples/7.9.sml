@@ -1,6 +1,6 @@
 datatype tree = T of tree list;
 
-datatype 'a ltr = L of 'a * ’a ltr list;
+datatype 'a ltr = L of 'a * 'a ltr list;
 
 val t1 = L(7,[]);
 val t2 = L(1, [L(2,[]), t1, t1]);
