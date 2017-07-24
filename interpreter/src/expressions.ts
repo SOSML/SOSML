@@ -356,7 +356,7 @@ export class FunctionApplication extends Expression implements Pattern {
         } else if (funcVal[0] instanceof ExceptionConstructor) {
             return [(<ExceptionConstructor> funcVal[0]).construct(argVal[0]), false];
         } else if (funcVal[0] instanceof PredefinedFunction) {
-            return [(<PredefinedFunction> funcVal[0]).apply(argVal[0]), false];
+            return (<PredefinedFunction> funcVal[0]).apply(argVal[0]);
         }
         throw new EvaluationError(this.position, 'Cannot evaluate the function "'
             + this.func.prettyPrint() + '" (' + funcVal[0].constructor.name + ').');

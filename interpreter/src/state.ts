@@ -113,7 +113,7 @@ export class State {
                 } else {
                     res.setDynamicValue('__stdout', new StringValue(val.prettyPrint()));
                 }
-                return new RecordValue();
+                return [new RecordValue(), false];
             }));
             res.setStaticValue('print', [new FunctionType(new TypeVariable('\'a'),
                 new RecordType(new Map<string, Type>()))]);

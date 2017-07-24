@@ -369,7 +369,7 @@ export class ExceptionValue extends Value {
 
 export class PredefinedFunction extends Value {
     constructor(public name: string,
-                public apply: (arg: Value|undefined) => Value) {
+                public apply: (arg: Value|undefined) => [Value, boolean]) {
         super();
     }
 
