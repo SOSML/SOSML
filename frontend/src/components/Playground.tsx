@@ -71,11 +71,13 @@ class Playground extends React.Component<Props, State> {
                 </Modal.Header>
                 <Modal.Body>
                     <pre>{this.state.shareLink}</pre>
-                    Diesen Link können Sie anderen Personen geben, die dann den
-                    Code sehen können den Sie gerade geschrieben haben.
-                    Wenn Sie ihren Code weiter verändern wird dies nicht von
-                    dem Link übernommen, Sie müssen in diesem Fall noch einen
-                    neuen Link erstellen.
+                    <p className="text-justify">
+                        Diesen Link können Sie anderen Personen geben, die dann den
+                        Code sehen können den Sie gerade geschrieben haben.
+                        Wenn Sie ihren Code weiter verändern wird dies nicht von
+                        dem Link übernommen, Sie müssen in diesem Fall noch einen
+                        neuen Link erstellen.
+                    </p>
                 </Modal.Body>
                 <Modal.Footer>
                     <Button onClick={this.closeShareModal}>Schließen</Button>
