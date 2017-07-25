@@ -347,11 +347,14 @@ export class ConstructedValue extends Value {
     }
 
     equals(other: Value): boolean {
+        if (other instanceof ValueConstructor) {
+            other = other.construct();
+        }
+
         if (!(other instanceof ConstructedValue)) {
             return false;
         }
-        if (this.constructorName !== (<ConstructedValue> other).constructorName
-            || this.id !== (<ConstructedValue> other).id) {
+        if (this.constructorName !== (<ConstructedValue> other).constructorName) {
             return false;
         }
         if (this.argument !== undefined) {
@@ -392,11 +395,14 @@ export class ExceptionValue extends Value {
     }
 
     equals(other: Value): boolean {
+        if (other instanceof ExceptionConstructor) {
+            other = other.construct();
+        }
+
         if (!(other instanceof ExceptionValue)) {
             return false;
         }
-        if (this.constructorName !== (<ExceptionValue> other).constructorName
-            || this.id !== (<ExceptionValue> other).id) {
+        if (this.constructorName !== (<ExceptionValue> other).constructorName) {
             return false;
         }
         if (this.argument !== undefined) {

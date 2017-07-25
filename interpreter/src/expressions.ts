@@ -102,7 +102,7 @@ export class ValueIdentifier extends Expression implements Pattern {
         if (res === undefined || state.getRebindStatus(this.name.getText())) {
             return [[this.name.getText(), v]];
         }
-        if (v.equals(<Value> res)) {
+        if (v.equals(res)) {
             return [];
         }
         return undefined;
@@ -318,9 +318,8 @@ export class FunctionApplication extends Expression implements Pattern {
                 if ((<ConstructedValue> v).argument !== undefined) {
                     return (<PatternExpression> this.argument).matches(
                         state, <Value> (<ConstructedValue> v).argument);
-                } else {
-                    return undefined;
                 }
+                return [];
             }
             return undefined;
         } else if (v instanceof ExceptionValue) {
@@ -331,8 +330,9 @@ export class FunctionApplication extends Expression implements Pattern {
                     return (<PatternExpression> this.argument).matches(
                         state, <Value> (<ExceptionValue> v).argument);
                 }
+                return [];
             }
-            return [];
+            return undefined;
         } else if (v instanceof PredefinedFunction) {
             throw new EvaluationError(this.position,
                 'You simply cannot match predefined functions.');
