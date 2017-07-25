@@ -5,6 +5,7 @@ require('codemirror/lib/codemirror.css');
 require('codemirror/mode/mllike/mllike.js');
 require('codemirror/addon/edit/matchbrackets.js');
 import './CodeMirrorWrapper.css';
+import {API} from '../API';
 
 class CodeMirrorSubset {
     cm: any;
@@ -24,52 +25,66 @@ class CodeMirrorSubset {
     }
 }
 
+enum ErrorType {
+    OK = 0, // Interpret successfull
+    INCOMPLETE, // The given partial string was incomplete SML code
+    INTERPRETER, // The interpreter failed, e.g. compile error etc.
+    SML // SML raised an exception
+}
+
 class IncrementalInterpretationHelper {
     semicoli: any[];
     states: any[];
     markers: any[];
     output: any[];
+    error: any[];
     debounceTimeout: any;
     debounceMinimumPosition: any;
     debounceCallNecessary: boolean;
+    interpreter: any;
+    outputCallback: (code: string) => any;
+    disabled: boolean;
 
-    constructor() {
+    constructor(outputCallback: (code: string) => any) {
         this.semicoli = [];
         this.states = [];
         this.markers = [];
         this.output = [];
+        this.error = [];
 
+        this.disabled = false;
         this.debounceCallNecessary = false;
+
+        this.interpreter = API.createInterpreter();
+        this.outputCallback = outputCallback;
     }
 
     clear() {
         this.semicoli.length = 0;
         this.states.length = 0;
+        for (let i = 0; i < this.markers.length; i++) {
+            if (this.markers[i]) {
+                this.markers[i].clear();
+            }
+        }
+        this.markers.length = 0;
+        this.output.length = 0;
+        this.error.length = 0;
+    }
+
+    disable() {
+        this.disabled = true;
+        this.clear();
+    }
+
+    enable() {
+        this.disabled = false;
     }
 
     handleChangeAt(pos: any, added: string[], removed: string[], codemirror: CodeMirrorSubset) {
-        /*
-        if (!this.isHandlingNecessary(pos, added, removed)) {
-            // console.log('NO');
+        if (this.disabled) {
             return;
         }
-        // console.log('YEA');
-        let anchor = this.binarySearch(pos);
-        this.deleteAllAfter(anchor);
-        let baseIndex = this.findBaseIndex(anchor);
-        let basePos: any;
-        if (baseIndex !== -1) {
-            basePos = this.copyPos(this.semicoli[baseIndex]);
-        } else {
-            basePos = {line: 0, ch: 0};
-        }
-        let remainingText = codemirror.getCode(basePos);
-        if (baseIndex !== -1) {
-            remainingText = remainingText.substr(1);
-            basePos.ch = basePos.ch + 1;
-        }
-        this.reEvaluateFrom(basePos, baseIndex, anchor, remainingText, codemirror);
-        */
         this.doDebounce(pos, added, removed, codemirror);
     }
 
@@ -96,6 +111,7 @@ class IncrementalInterpretationHelper {
 
     private debouncedHandleChangeAt(pos: any, codemirror: CodeMirrorSubset) {
         let anchor = this.binarySearch(pos);
+        anchor = this.findNonErrorAnchor(anchor);
         this.deleteAllAfter(anchor);
         let baseIndex = this.findBaseIndex(anchor);
         let basePos: any;
@@ -110,6 +126,15 @@ class IncrementalInterpretationHelper {
             basePos.ch = basePos.ch + 1;
         }
         this.reEvaluateFrom(basePos, baseIndex, anchor, remainingText, codemirror);
+        this.recomputeOutput();
+    }
+
+    private recomputeOutput() {
+        let out = '';
+        for (let i = 0; i < this.output.length; i++) {
+            out += this.output[i];
+        }
+        this.outputCallback(out);
     }
 
     private copyPos(pos: any): any {
@@ -122,6 +147,7 @@ class IncrementalInterpretationHelper {
         let lastPos = basePos;
         // console.log(remainingText);
         let partial = '';
+        let errorEncountered = false;
         let previousState = (baseIndex === -1) ? null : this.states[baseIndex];
         for (let i = 0; i < splitByLine.length; i++) {
             let lineOffset = 0;
@@ -139,21 +165,47 @@ class IncrementalInterpretationHelper {
                 if (baseIndex >= anchor) {
                     // actually need to handle this
 
-                    // TODO: eval
-                    let newState = {'partial': partial, 'prev': previousState};
                     let semiPos = {line: (basePos.line + i), ch: sc + lineOffset};
-                    if (partial.indexOf('NOPE') !== -1 && partial.indexOf(';') === -1) {
-                        // Simulate failure
-                        this.addSemicolon(semiPos, null, null);
-                        partial += ';';
-                    } else {
-
-                        this.addSemicolon(semiPos, newState, codemirror.markText(lastPos, semiPos, 'eval-success'));
+                    if (errorEncountered) {
+                        this.addErrorSemicolon(semiPos, '', codemirror.markText(lastPos, semiPos, 'eval-fail'));
                         lastPos = this.copyPos(semiPos);
                         lastPos.ch++;
-                        previousState = newState;
+                        previousState = null;
 
-                        partial = ''; // ONLY do this if the evaluation was successfull, else append ';' to partial
+                        partial = '';
+                    } else {
+                        let ret = this.evaluate(previousState, partial);
+                        if (ret[1] === ErrorType.INCOMPLETE) {
+                            this.addIncompleteSemicolon(semiPos);
+                            partial += ';';
+                        } else if (ret[1] === ErrorType.OK) {
+                            this.addSemicolon(semiPos, ret[0], codemirror.markText(lastPos, semiPos, 'eval-success'));
+                            lastPos = this.copyPos(semiPos);
+                            lastPos.ch++;
+                            previousState = ret[0];
+
+                            partial = '';
+                        } else if (ret[1] === ErrorType.SML) {
+                            // TODO
+                            this.addSMLErrorSemicolon(semiPos, ret[2],
+                                codemirror.markText(lastPos, semiPos, 'eval-fail'));
+                            lastPos = this.copyPos(semiPos);
+                            lastPos.ch++;
+                            previousState = ret[0];
+
+                            partial = '';
+                        } else {
+                            // TODO: mark error position with red color
+                            let errorMessage = this.getErrorMessage(ret[2], partial, lastPos);
+                            this.addErrorSemicolon(semiPos, errorMessage,
+                                codemirror.markText(lastPos, semiPos, 'eval-fail'));
+                            lastPos = this.copyPos(semiPos);
+                            lastPos.ch++;
+                            previousState = null;
+                            errorEncountered = true;
+
+                            partial = '';
+                        }
                     }
                 } else { // no need
                     partial += ';';
@@ -166,11 +218,102 @@ class IncrementalInterpretationHelper {
         // console.log(this);
     }
 
+    private evaluate(oldState: any, partial: string): [any, ErrorType, any] {
+        let ret: any;
+        try {
+            if (oldState === null) {
+                ret = this.interpreter.interpret(partial + ';');
+            } else {
+                ret = this.interpreter.interpret(partial + ';', oldState);
+            }
+        } catch (e) {
+            // TODO: switch over e's type
+            // console.log(e);
+            let proto: any = Object.getPrototypeOf(e);
+            if (proto.constructor && proto.constructor.name && proto.constructor.name === 'IncompleteError') {
+                return [null, ErrorType.INCOMPLETE, e];
+            } else {
+                return [null, ErrorType.INTERPRETER, e];
+            }
+        }
+        if (ret[1]) {
+            return [ret[0], ErrorType.SML, ret[2]];
+        } else {
+            return [ret[0], ErrorType.OK, null];
+        }
+    }
+
+    private getErrorMessage(error: any, partial: string, startPos: any): string {
+        if (error.position !== undefined) {
+            let position = this.calculateErrorPos(partial, startPos, error.position);
+            return 'Zeile ' + position[0] + ' Spalte ' + position[1] + ': ' + error.toString();
+        } else {
+            return 'Unbekannte Position: ' + error.toString();
+        }
+    }
+
+    private calculateErrorPos(partial: string, startPos: any, offset: number): [number, number] {
+        let pos = {line: startPos.line, ch: startPos.ch};
+        for (let i = 0; i < offset; i++) {
+            let char = partial.charAt(i);
+            if (char === '\n') {
+                pos.line ++;
+                pos.ch = 0;
+            } else {
+                pos.ch++;
+            }
+        }
+        return [pos.line + 1, pos.ch + 1];
+    }
+
     private addSemicolon(pos: any, newState: any, marker: any) {
         this.semicoli.push(pos);
         this.states.push(newState);
-        this.output.push('');
+        this.output.push(this.computeNewStateOutput(newState));
         this.markers.push(marker);
+        this.error.push(false);
+    }
+
+    private addIncompleteSemicolon(pos: any) {
+        this.semicoli.push(pos);
+        this.states.push(null);
+        this.output.push('');
+        this.markers.push(null);
+        this.error.push(false);
+    }
+
+    private addErrorSemicolon(pos: any, errorMessage: any, marker: any) {
+        this.semicoli.push(pos);
+        this.states.push(null);
+        this.output.push(errorMessage);
+        this.markers.push(marker);
+        this.error.push(true);
+    }
+
+    private addSMLErrorSemicolon(pos: any, error: any, marker: any) {
+        this.semicoli.push(pos);
+        this.states.push(null);
+        if (error.prettyPrint) {
+            this.output.push('Uncaught SML exception: ' + error.prettyPrint() + '\n');
+        } else {
+            this.output.push('Unknown Uncaught SML exception\n');
+        }
+        this.markers.push(marker);
+        this.error.push(true);
+    }
+
+    private computeNewStateOutput(state: any) {
+        let output = '';
+        if (state.dynamicBasis.valueEnvironment !== undefined) {
+            let valEnv = state.dynamicBasis.valueEnvironment;
+            for (let i in valEnv) {
+                if (valEnv.hasOwnProperty(i)) {
+                    output = 'val ' + i + ' = ' + state.getDynamicValue(i).prettyPrint() + ';';
+                }
+            }
+            output += '\n';
+        }
+        return output;
     }
 
     private stringArrayContains(arr: string[], search: string) {
@@ -205,6 +348,15 @@ class IncrementalInterpretationHelper {
         return -1;
     }
 
+    private findNonErrorAnchor(anchor: number) {
+        for (let i = anchor; i >= 0; i--) {
+            if (!this.error[i]) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     private deleteAllAfter(index: number) {
         this.semicoli.length = index + 1;
         this.states.length = index + 1;
@@ -215,6 +367,7 @@ class IncrementalInterpretationHelper {
             }
         }
         this.markers.length = index + 1;
+        this.error.length = index + 1;
     }
 
     private binarySearch(pos: any): number {
@@ -253,8 +406,10 @@ class IncrementalInterpretationHelper {
 export interface Props {
     flex?: boolean;
     onChange?: (x: string) => void;
-    code?: string;
+    code: string;
     readOnly?: boolean;
+    outputCallback: (code: string) => any;
+    useInterpreter?: boolean;
 }
 
 class CodeMirrorWrapper extends React.Component<Props, any> {
@@ -264,7 +419,7 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
     constructor(props: Props) {
         super(props);
 
-        this.evalHelper = new IncrementalInterpretationHelper();
+        this.evalHelper = new IncrementalInterpretationHelper(this.props.outputCallback);
 
         this.handleChange = this.handleChange.bind(this);
         this.handleChangeEvent = this.handleChangeEvent.bind(this);
@@ -298,11 +453,28 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
         if (prevProps.code !== this.props.code) {
             if (this.editor) {
                 this.editor.getCodeMirror().setValue(this.props.code);
+                if (this.props.onChange) {
+                    this.props.onChange(this.props.code);
+                }
+            }
+        } else if (prevProps.useInterpreter !== this.props.useInterpreter) {
+            if (this.props.useInterpreter) {
+                this.evalHelper.enable();
+                this.handleChangeEvent(this.editor.getCodeMirror(), {
+                    from: {line: 0, ch: 0},
+                    text: this.editor.getCodeMirror().getValue().split('\n'),
+                    removed: []
+                });
+            } else {
+                this.evalHelper.disable();
             }
         }
     }
 
     componentDidMount() {
+        if (!this.props.useInterpreter) {
+            this.evalHelper.disable();
+        }
         var GCodeMirror = this.editor.getCodeMirrorInstance();
         let keyMap = GCodeMirror.keyMap;
         keyMap.default['Shift-Tab'] = 'indentLess';
@@ -317,8 +489,6 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
         cm.refresh();
         cm.on('change', this.handleChangeEvent);
 
-        // TODO: propagate value
-        this.handleChange(this.editor.getCodeMirror().getValue());
         this.evalHelper.clear();
     }
 
