@@ -14,14 +14,38 @@ const Val = require("../src/values.ts");
 const TestHelper = require("./test_helper.ts");
 TestHelper.init();
 
+function createBasicStdlib(): State.State {
+    let [state, unused1, unused2] = API.Interpreter.interpret("exception Domain;", InitialState.getInitialState(), true);
+    state = state.getNestedState();
+
+    state.setDynamicValue('Math.sqrt', new Val.PredefinedFunction('Math.sqrt', (val: Val.Value) => {
+        if (val instanceof Val.Real) {
+            let value = (<Val.Real> val).value;
+            if (value < 0)
+                return [new Val.ExceptionConstructor('Domain').construct(), true];
+            return [new Val.Real(Math.sqrt(value)), false];
+        } else {
+            throw new Errors.InternalInterpreterError('std type mismatch');
+        }
+    }));
+    state.setStaticValue('Math.sqrt', [new Type.FunctionType(new Type.PrimitiveType('real'), new Type.PrimitiveType('real'))]);
+
+    state.setDynamicValue('Math.pi', new Val.Real(3.14159265359));
+    state.setStaticValue('Math.pi', [new Type.PrimitiveType('real'));
+
+    return state;
+}
+
 //TODO determine actual types
 function run_test(commands): void {
     let oldTests = [];
-    let state = InitialState.getInitialState();
+    let state = createBasicStdlib();
     let exception;
     let value;
+    //TODO use a real stdlib instead of a preamble
+    state = createBasicStdlib();
     for(let step of commands) {
-        step[1](() => { [state, exception, value] = API.Interpreter.interpret(step[0], state); });
+        step[1](() => { [state, exception, value] = API.Interpreter.interpret(step[0], state, true); });
 
         step[2](state, exception, value);
 
@@ -684,7 +708,7 @@ it("1.13.2", () => {
             expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(15.5));
             //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('real'));
         }],
-        ['2 * 5.5;', (x) => { expect(x).toThrow(Errors.SemanticError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['2 * 5.5;', (x) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
         }]
     ]);
 });
@@ -1228,7 +1252,7 @@ fun f (x,y,z) = if x=y then x else z;
             expect(state.getDynamicValue('f')).not.toEqualWithType(undefined);
             //expect(state.getStaticValue('f')).toEqualWithType(TODO);
         }],
-        ['(fn x => 2*x) = (fn x => 2*x);', (x) => { expect(x).toThrow(Errors.SemanticError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['(fn x => 2*x) = (fn x => 2*x);', (x) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
         }]
     ]);
 });
@@ -1238,7 +1262,7 @@ it("3.8.1", () => {
 fn x => fn y => z x (y x);
      */
     run_test([
-        ['fn x => fn y => z x (y x);', (x) => { expect(x).toThrow(Errors.SemanticError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['fn x => fn y => z x (y x);', (x) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
         }]
     ]);
 });
@@ -1256,7 +1280,7 @@ in
 end;
      */
     run_test([
-        ['let val x = 2*x val x = 2*x fun f x = if x<2 then x else f(x-1) val f = fn x => f x in f x - y end;', (x) => { expect(x).toThrow(Errors.SemanticError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['let val x = 2*x val x = 2*x fun f x = if x<2 then x else f(x-1) val f = fn x => f x in f x - y end;', (x) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
         }]
     ]);
 });
@@ -1471,7 +1495,74 @@ fun iterdn n m s f = if n<m then s else iterdn (n-1) m (f(n,s)) f;
 
 //TODO Chapter 5
 
-//TODO Chapter 6
+it("6.1", () => {
+    /*
+datatype shape =
+    Circle of real
+  | Square of real
+  | Triangle of real * real * real;
+
+Circle 4.0;
+Square 3.0;
+Triangle (4.0, 3.0, 5.0);
+
+fun area (Circle r) = Math.pi*r*r
+  | area (Square a) = a*a
+  | area (Triangle(a,b,c)) = let val s = (a+b+c)/2.0
+                            in Math.sqrt(s*(s-a)*(s-b)*(s-c))
+                            end;
+area (Square 3.0);
+area (Triangle(6.0, 6.0, Math.sqrt 72.0));
+     */
+    //TODO test types
+    run_test([
+        ['datatype shape = Circle of real | Square of real | Triangle of real * real * real;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('Circle')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Circle')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Square')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Square')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Triangle')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Triangle')).toEqualWithType(TODO);
+        }],
+        ['Circle 4.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('Circle', new Val.Real(4)));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['Square 3.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('Square', new Val.Real(3)));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['Triangle (4.0, 3.0, 5.0);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('Triangle', 
+                new Val.RecordValue(new Map([
+                    ['1', new Val.Real(4)],
+                    ['2', new Val.Real(3)],
+                    ['3', new Val.Real(5)]
+                ]))
+            ));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['fun area (Circle r) = Math.pi*r*r | area (Square a) = a*a | area (Triangle(a,b,c)) = let val s = (a+b+c)/2.0 in Math.sqrt(s*(s-a)*(s-b)*(s-c)) end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('area')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('area')).toEqualWithType(TODO);
+        }],
+        ['area (Square 3.0);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(9));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('real'));
+        }],
+        ['area (Triangle(6.0, 6.0, Math.sqrt 72.0));', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(17.99999999999999));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('real'));
+        }],
+    ]);
+});
 
 //TODO Chapter 7
 
