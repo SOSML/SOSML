@@ -24,3 +24,8 @@
 .rootPage {
     max-height: 100vh;
 }
+
+.miniSpacer {
+    display: inline-block;
+    margin-left: 0.2em;
+}

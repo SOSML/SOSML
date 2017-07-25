@@ -43,6 +43,7 @@ class IncrementalInterpretationHelper {
     debounceCallNecessary: boolean;
     interpreter: any;
     outputCallback: (code: string) => any;
+    disabled: boolean;
 
     constructor(outputCallback: (code: string) => any) {
         this.semicoli = [];
@@ -51,6 +52,7 @@ class IncrementalInterpretationHelper {
         this.output = [];
         this.error = [];
 
+        this.disabled = false;
         this.debounceCallNecessary = false;
 
         this.interpreter = API.createInterpreter();
@@ -60,12 +62,29 @@ class IncrementalInterpretationHelper {
     clear() {
         this.semicoli.length = 0;
         this.states.length = 0;
+        for (let i = 0; i < this.markers.length; i++) {
+            if (this.markers[i]) {
+                this.markers[i].clear();
+            }
+        }
         this.markers.length = 0;
         this.output.length = 0;
         this.error.length = 0;
     }
 
+    disable() {
+        this.disabled = true;
+        this.clear();
+    }
+
+    enable() {
+        this.disabled = false;
+    }
+
     handleChangeAt(pos: any, added: string[], removed: string[], codemirror: CodeMirrorSubset) {
+        if (this.disabled) {
+            return;
+        }
         this.doDebounce(pos, added, removed, codemirror);
     }
 
@@ -387,9 +406,10 @@ class IncrementalInterpretationHelper {
 export interface Props {
     flex?: boolean;
     onChange?: (x: string) => void;
-    code?: string;
+    code: string;
     readOnly?: boolean;
     outputCallback: (code: string) => any;
+    useInterpreter?: boolean;
 }
 
 class CodeMirrorWrapper extends React.Component<Props, any> {
@@ -433,11 +453,28 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
         if (prevProps.code !== this.props.code) {
             if (this.editor) {
                 this.editor.getCodeMirror().setValue(this.props.code);
+                if (this.props.onChange) {
+                    this.props.onChange(this.props.code);
+                }
+            }
+        } else if (prevProps.useInterpreter !== this.props.useInterpreter) {
+            if (this.props.useInterpreter) {
+                this.evalHelper.enable();
+                this.handleChangeEvent(this.editor.getCodeMirror(), {
+                    from: {line: 0, ch: 0},
+                    text: this.editor.getCodeMirror().getValue().split('\n'),
+                    removed: []
+                });
+            } else {
+                this.evalHelper.disable();
             }
         }
     }
 
     componentDidMount() {
+        if (!this.props.useInterpreter) {
+            this.evalHelper.disable();
+        }
         var GCodeMirror = this.editor.getCodeMirrorInstance();
         let keyMap = GCodeMirror.keyMap;
         keyMap.default['Shift-Tab'] = 'indentLess';
@@ -452,8 +489,6 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
         cm.refresh();
         cm.on('change', this.handleChangeEvent);
 
-        // TODO: propagate value
-        this.handleChange(this.editor.getCodeMirror().getValue());
         this.evalHelper.clear();
     }
 

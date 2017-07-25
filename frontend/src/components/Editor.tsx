@@ -18,7 +18,7 @@ class Editor extends React.Component<any, State> {
         super(props);
 
         this.state = { shareReadMode: false, code: '', fileName: '',
-            initialCode: this.unNullify(localStorage.getItem('tmpCode')),
+            initialCode: '',
             shareHash: ''
         };
 
@@ -57,7 +57,9 @@ class Editor extends React.Component<any, State> {
                     return {initialCode: content, shareReadMode: true, shareHash: this.props.match.params.hash};
                 });
             });
+            return;
         }
+        this.setState({initialCode: this.unNullify(localStorage.getItem('tmpCode'))});
     }
 
     render() {
@@ -109,7 +111,7 @@ class Editor extends React.Component<any, State> {
                 return db.saveFile(this.state.fileName, this.state.code);
             });
         } else {
-            localStorage.setItem('tmpCode', this.state.code);
+            localStorage.setItem('tmpCode', newCode);
         }
     }
 
