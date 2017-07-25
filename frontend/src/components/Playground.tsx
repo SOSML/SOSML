@@ -83,7 +83,7 @@ class Playground extends React.Component<Props, State> {
             </Modal>
         );
         let errorModal = (
-            <Modal show={this.state.shareLink === ':ERROR'} onHide={this.closeShareModal}>
+            <Modal show={this.state.shareLink === SHARE_LINK_ERROR} onHide={this.closeShareModal}>
                 <Modal.Header closeButton={true}>
                     <Modal.Title>Fehler beim Teilen</Modal.Title>
                 </Modal.Header>
