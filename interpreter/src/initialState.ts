@@ -69,6 +69,7 @@ let initialState: State = new State(
             'Match':    [[new PrimitiveType('exn')], false],
             'Bind':     [[new PrimitiveType('exn')], false],
             'Div':      [[new PrimitiveType('exn')], false],
+            'Overflow': [[new PrimitiveType('exn')], false],
             '^':        [[functionType(stringType)], false],
             'explode':  [[new FunctionType(new TupleType([stringType, stringType]),
                 new PrimitiveType('list', [charType])).simplify()], false],
@@ -135,11 +136,23 @@ let initialState: State = new State(
                     let val2 = (<RecordValue> val).getValue('2');
 
                     if (val1 instanceof Integer && val2 instanceof Integer) {
-                        return [(<Integer> val1).multiply(<Integer> val2), false];
+                        let result = (<Integer> val1).multiply(<Integer> val2);
+                        if (result.hasOverflow()) {
+                            return [new ExceptionConstructor('Overflow').construct(), true];
+                        }
+                        return [result, false];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
-                        return [(<Word> val1).multiply(<Word> val2), false];
+                        let result = (<Word> val1).multiply(<Word> val2);
+                        if (result.hasOverflow()) {
+                            return [new ExceptionConstructor('Overflow').construct(), true];
+                        }
+                        return [result, false];
                     } else if (val1 instanceof Real && val2 instanceof Real) {
-                        return [(<Real> val1).multiply(<Real> val2), false];
+                        let result = (<Real> val1).multiply(<Real> val2);
+                        if (result.hasOverflow()) {
+                            return [new ExceptionConstructor('Overflow').construct(), true];
+                        }
+                        return [result, false];
                     }
                 }
                 throw new InternalInterpreterError(-1,
@@ -166,11 +179,23 @@ let initialState: State = new State(
                     let val2 = (<RecordValue> val).getValue('2');
 
                     if (val1 instanceof Integer && val2 instanceof Integer) {
-                        return [(<Integer> val1).add(<Integer> val2), false];
+                        let result = (<Integer> val1).add(<Integer> val2);
+                        if (result.hasOverflow()) {
+                            return [new ExceptionConstructor('Overflow').construct(), true];
+                        }
+                        return [result, false];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
-                        return [(<Word> val1).add(<Word> val2), false];
+                        let result = (<Word> val1).add(<Word> val2);
+                        if (result.hasOverflow()) {
+                            return [new ExceptionConstructor('Overflow').construct(), true];
+                        }
+                        return [result, false];
                     } else if (val1 instanceof Real && val2 instanceof Real) {
-                        return [(<Real> val1).add(<Real> val2), false];
+                        let result = (<Real> val1).add(<Real> val2);
+                        if (result.hasOverflow()) {
+                            return [new ExceptionConstructor('Overflow').construct(), true];
+                        }
+                        return [result, false];
                     }
                 }
                 throw new InternalInterpreterError(-1,
@@ -182,11 +207,23 @@ let initialState: State = new State(
                     let val2 = (<RecordValue> val).getValue('2');
 
                     if (val1 instanceof Integer && val2 instanceof Integer) {
-                        return [(<Integer> val1).add((<Integer> val2).negate()), false];
+                        let result = (<Integer> val1).add((<Integer> val2).negate());
+                        if (result.hasOverflow()) {
+                            return [new ExceptionConstructor('Overflow').construct(), true];
+                        }
+                        return [result, false];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
-                        return [(<Word> val1).add((<Word> val2).negate()), false];
+                        let result = (<Word> val1).add((<Word> val2).negate());
+                        if (result.hasOverflow()) {
+                            return [new ExceptionConstructor('Overflow').construct(), true];
+                        }
+                        return [result, false];
                     } else if (val1 instanceof Real && val2 instanceof Real) {
-                        return [(<Real> val1).add((<Real> val2).negate()), false];
+                        let result = (<Real> val1).add((<Real> val2).negate());
+                        if (result.hasOverflow()) {
+                            return [new ExceptionConstructor('Overflow').construct(), true];
+                        }
+                        return [result, false];
                     }
                 }
                 throw new InternalInterpreterError(-1,
@@ -303,6 +340,7 @@ let initialState: State = new State(
             'Match':    [new ExceptionConstructor('Match').construct(), false],
             'Bind':     [new ExceptionConstructor('Bind').construct(), false],
             'Div':      [new ExceptionConstructor('Div').construct(), false],
+            'Overflow': [new ExceptionConstructor('Overflow').construct(), false],
             '^':        [new PredefinedFunction('^', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');

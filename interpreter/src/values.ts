@@ -126,6 +126,7 @@ export class Word extends Value {
     divide(other: Word): Word { return new Word(Math.floor(this.value / other.value)); }
     modulo(other: Word): Word { return new Word(this.value % other.value); }
     toReal(): Real { return new Real(this.value); }
+    hasOverflow(): boolean { return this.value > 1073741823 || this.value < -1073741824; }
 }
 
 
@@ -162,6 +163,7 @@ export class Integer extends Value {
     divide(other: Integer): Integer { return new Integer(Math.floor(this.value / other.value)); }
     modulo(other: Integer): Integer { return new Integer(this.value % other.value); }
     toReal(): Real { return new Real(this.value); }
+    hasOverflow(): boolean { return this.value > 1073741823 || this.value < -1073741824; }
 }
 
 export class Real extends Value {
@@ -210,6 +212,10 @@ export class Real extends Value {
 
     toInteger(): Integer {
         return new Integer(Math.floor(this.value));
+    }
+    hasOverflow(): boolean {
+        // TODO how do we implement Overflow for reals?
+        return false;
     }
 }
 
