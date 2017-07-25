@@ -99,17 +99,13 @@ export class ValueIdentifier extends Expression implements Pattern {
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         let res = state.getDynamicValue(this.name.getText());
-        if (res !== undefined && (<Value> res).isConstructedValue()) {
-            if (v.equals(<Value> res)) {
-                return [];
-            } else if (this.name.getText() === 'true'
-                || this.name.getText() === 'false') {
-                // Some vars may not be redefined.
-                // TODO, hardcoding true and false seems inherently wrong.
-                return undefined;
-            }
+        if (res === undefined || state.getRebindStatus(this.name.getText())) {
+            return [[this.name.getText(), v]];
         }
-        return [[this.name.getText(), v]];
+        if (v.equals(<Value> res)) {
+            return [];
+        }
+        return undefined;
     }
 
     simplify(): ValueIdentifier { return this; }
@@ -161,6 +157,9 @@ export class Record extends Expression implements Pattern {
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         if (!(v instanceof RecordValue)) {
+            return undefined;
+        }
+        if (this.complete && this.entries.length !== (<RecordValue> v).entries.size) {
             return undefined;
         }
 
@@ -505,13 +504,23 @@ export class Match {
     }
 
     compute(state: State, value: Value): [Value, boolean] {
+        let dg = '';
+        state.getDefinedIdentifiers().forEach((val: string) => {
+            dg += val + ' ';
+        });
         for (let i = 0; i < this.matches.length; ++i) {
             let nstate = state.getNestedState(false, state.id);
+
             let res = this.matches[i][0].matches(nstate, value);
             if (res !== undefined) {
                 for (let j = 0; j < res.length; ++j) {
                     nstate.setDynamicValue(res[j][0], res[j][1], true);
                 }
+
+                dg = 'Successful ';
+                nstate.getDefinedIdentifiers().forEach((val: string) => {
+                    dg += val + ' ';
+                });
                 return this.matches[i][1].compute(nstate);
             }
         }
@@ -533,34 +542,7 @@ export class Match {
     }
 }
 
-
-
-
-
-
-
-
-
 // Pure Patterns
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export class Wildcard extends Expression implements Pattern {
     constructor(public position: Position) { super(); }
@@ -627,17 +609,6 @@ export class LayeredPattern extends Expression implements Pattern {
         return this.identifier.getText() + ' as ' + this.pattern.prettyPrint(indentation, oneLine);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 // The following classes are derived forms.

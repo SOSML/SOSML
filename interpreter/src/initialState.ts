@@ -364,6 +364,24 @@ let initialState: State = new State(
         ':=': new InfixStatus(true, 3, false),
 
         '^': new InfixStatus(true, 6, false),
+    },
+    {
+        'bool':     false,
+        'int':      false,
+        'real':     false,
+        'string':   false,
+        'char':     false,
+        'word':     false,
+        'list':     false,
+        'ref':      false,
+        'exn':      false,
+
+        '=':        false,
+
+        'true':     false,
+        'false':    false,
+        'nil':      false,
+        '::':       false
     }
 );
 

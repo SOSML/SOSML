@@ -282,14 +282,19 @@ export class FunctionValue extends Value {
     }
 
     prettyPrint(): string {
-        let res = 'fn >stuff< ' + '[';
+        let res = 'fn ' + '[';
         for (let i = 0; i < this.recursives.length; ++i) {
             if (i > 0) {
                 res += ', ';
             }
             res += this.recursives[i][0] + ' ↦ ' + this.recursives[i][1].prettyPrint();
         }
-        return res + ']';
+        res += '] (';
+
+        this.state.getDefinedIdentifiers().forEach((val: string) => {
+            res += ' ' + val;
+        });
+        return res + ' )';
     }
 
     // Computes the function on the given argument,

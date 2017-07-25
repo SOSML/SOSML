@@ -83,6 +83,7 @@ export class ValueDeclaration extends Declaration {
         for (let j = 0; j < result.length; ++j) {
             state.setDynamicValue(result[j][0], result[j][1]);
         }
+
         for (let j = 0; j < recursives.length; ++j) {
             if (recursives[j][1] instanceof FunctionValue) {
                 state.setDynamicValue(recursives[j][0], new FunctionValue(

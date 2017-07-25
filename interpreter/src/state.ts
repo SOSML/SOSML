@@ -1,11 +1,12 @@
 import { Type, PrimitiveType, FunctionType, TypeVariable, RecordType } from './types';
-import { Value, StringValue, PredefinedFunction, RecordValue } from './values';
+import { Value, StringValue, PredefinedFunction, RecordValue, ValueConstructor,
+         ExceptionConstructor } from './values';
 import { Token, LongIdentifierToken } from './lexer';
 import { InternalInterpreterError } from './errors';
 
-// maps id to Value
+// maps id to [Value, rebindable, intermediate]
 type DynamicValueEnvironment = { [name: string]: [Value, boolean] };
-// maps id to type (multiple if overloaded)
+// maps id to [type (multiple if overloaded), intermediate]
 type StaticValueEnvironment = { [name: string]: [Type[], boolean] };
 
 export class TypeInformation {
@@ -37,6 +38,9 @@ export class InfixStatus {
 }
 
 type InfixEnvironment = { [name: string]: InfixStatus };
+
+// Maps id to whether that id can be rebound
+type RebindEnvironment = { [name: string]: boolean };
 
 export class DynamicBasis {
     constructor(public typeEnvironment: DynamicTypeEnvironment,
@@ -100,18 +104,20 @@ export class State {
                 public dynamicBasis: DynamicBasis,
                 private typeNames: TypeNames,
                 private infixEnvironment: InfixEnvironment,
+                private rebindEnvironment: RebindEnvironment,
                 private declaredIdentifiers: Set<string> = new Set<string>()) {
     }
 
     getDefinedIdentifiers(idLimit: number = 0): Set<string> {
         let rec = new Set<string>();
-        if (this.parent !== undefined && this.parent.id < this.id) {
+        if (this.parent !== undefined && this.parent.id >= idLimit) {
             rec = this.parent.getDefinedIdentifiers();
         }
 
         this.declaredIdentifiers.forEach((val: string) => {
             rec.add(val);
         });
+
         return rec;
     }
 
@@ -122,7 +128,7 @@ export class State {
         let res = new State(<number> newId, this,
             new StaticBasis({}, {}),
             new DynamicBasis({}, {}),
-            {}, {});
+            {}, {}, {});
         if (redefinePrint) {
             res.setDynamicValue('print', new PredefinedFunction('print', (val: Value) => {
                 if (val instanceof StringValue) {
@@ -136,6 +142,16 @@ export class State {
                 new RecordType(new Map<string, Type>()))], true);
         }
         return res;
+    }
+
+    getRebindStatus(name: string): boolean {
+        if ((this.rebindEnvironment[name] === undefined && this.parent === undefined)
+            || this.rebindEnvironment[name]) {
+            return true;
+        } else if (this.rebindEnvironment[name] === undefined) {
+            return (<State> this.parent).getRebindStatus(name);
+        }
+        return false;
     }
 
     // Gets an identifier's type. The value  intermediate  determines whether to return intermediate results
@@ -266,6 +282,11 @@ export class State {
             }
             this.dynamicBasis.setValue(name, value, intermediate);
             this.declaredIdentifiers.add(name);
+            if (value instanceof ValueConstructor || value instanceof ExceptionConstructor) {
+                this.rebindEnvironment[name] = false;
+            } else {
+                this.rebindEnvironment[name] = true;
+            }
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
@@ -281,6 +302,7 @@ export class State {
         if (atId === undefined || atId === this.id) {
             this.dynamicBasis.setType(name, constructors, id, intermediate);
             this.declaredIdentifiers.add(name);
+            this.rebindEnvironment[name] = false;
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
