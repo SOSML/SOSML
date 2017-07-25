@@ -784,9 +784,7 @@ export class DatatypeBinding {
                 numArg = 1;
             }
             let id = 0;
-            if (state.getDynamicValue(this.type[i][0].getText()) instanceof ValueConstructor) {
-                id = 1 + (<ValueConstructor> state.getDynamicValue(this.type[i][0].getText())).id;
-            }
+            // TODO id
 
             ve.push([this.type[i][0].getText(), new ValueConstructor(this.type[i][0].getText(), numArg, id)]);
             connames.push(this.type[i][0].getText());
