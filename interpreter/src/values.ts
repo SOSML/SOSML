@@ -275,37 +275,55 @@ export class RecordValue extends Value {
 }
 
 export class FunctionValue extends Value {
-    constructor(public state: [string, Value][], public body: Match) {
+    constructor(public state: State,
+                public recursives: [string, Value][],
+                public body: Match) {
         super();
     }
 
     prettyPrint(): string {
-        return 'fn';
+        let res = 'fn >stuff< ' + '[';
+        for (let i = 0; i < this.recursives.length; ++i) {
+            if (i > 0) {
+                res += ', ';
+            }
+            res += this.recursives[i][0] + ' ↦ ' + this.recursives[i][1].prettyPrint();
+        }
+        return res + ']';
     }
 
     // Computes the function on the given argument,
     // returns [result, is thrown]
-    compute(state: State, argument: Value): [Value, boolean, State] {
+    compute(argument: Value): [Value, boolean] {
         // adjoin the bindings in this.state into the state
-        let nstate = state.getNestedState();
-        for (let i = 0; i < this.state.length; ++i) {
-            nstate.setDynamicValue(this.state[i][0], this.state[i][1], true);
+        let nstate = this.state.getNestedState(false, this.state.id);
+        for (let i = 0; i < this.recursives.length; ++i) {
+            if (this.recursives[i][1] instanceof FunctionValue) {
+                nstate.setDynamicValue(this.recursives[i][0],
+                    new FunctionValue(this.state, this.recursives,
+                        (<FunctionValue> this.recursives[i][1]).body), true);
+            } else {
+                nstate.setDynamicValue(this.recursives[i][0], this.recursives[i][1], true);
+            }
         }
 
-        let res = this.body.compute(nstate, argument);
-        return [res[0], res[1], state];
+        return this.body.compute(nstate, argument);
     }
 }
 
 // Values that were constructed from type constructors
 export class ConstructedValue extends Value {
     constructor(public constructorName: string,
-                public argument: Value|undefined = undefined) {
+                public argument: Value|undefined = undefined,
+                public id: number = 0) {
         super();
     }
 
     prettyPrint(): string {
         let result: string =  this.constructorName;
+        if (this.id !== 0) {
+            result += '/' + this.id;
+        }
         if (this.argument) {
             result += ' ' + this.argument.prettyPrint();
         }
@@ -316,7 +334,8 @@ export class ConstructedValue extends Value {
         if (!(other instanceof ConstructedValue)) {
             return false;
         }
-        if (this.constructorName !== (<ConstructedValue> other).constructorName) {
+        if (this.constructorName !== (<ConstructedValue> other).constructorName
+            || this.id !== (<ConstructedValue> other).id) {
             return false;
         }
         if (this.argument !== undefined) {
@@ -340,12 +359,16 @@ export class ConstructedValue extends Value {
 
 export class ExceptionValue extends Value {
     constructor(public constructorName: string,
-                public argument: Value|undefined = undefined) {
+                public argument: Value|undefined = undefined,
+                public id: number = 0) {
         super();
     }
 
     prettyPrint(): string {
         let result: string = this.constructorName;
+        if (this.id !== 0) {
+            result += '/' + this.id;
+        }
         if (this.argument) {
             result += ' ' + this.argument.prettyPrint();
         }
@@ -356,7 +379,8 @@ export class ExceptionValue extends Value {
         if (!(other instanceof ExceptionValue)) {
             return false;
         }
-        if (this.constructorName !== (<ExceptionValue> other).constructorName) {
+        if (this.constructorName !== (<ExceptionValue> other).constructorName
+            || this.id !== (<ExceptionValue> other).id) {
             return false;
         }
         if (this.argument !== undefined) {
@@ -397,7 +421,8 @@ export class PredefinedFunction extends Value {
 }
 
 export class ValueConstructor extends Value {
-    constructor(public constructorName: string, public numArgs: number = 0) {
+    constructor(public constructorName: string, public numArgs: number = 0,
+                public id: number = 0) {
         super();
     }
 
@@ -405,15 +430,20 @@ export class ValueConstructor extends Value {
         if (!(other instanceof ValueConstructor)) {
             return false;
         }
-        return this.constructorName === (<ValueConstructor> other).constructorName;
+        return this.constructorName === (<ValueConstructor> other).constructorName
+            && this.id === (<ValueConstructor> other).id;
     }
 
     construct(parameter: Value|undefined = undefined): ConstructedValue {
-        return new ConstructedValue(this.constructorName, parameter);
+        return new ConstructedValue(this.constructorName, parameter, this.id);
     }
 
     prettyPrint() {
-        return this.constructorName;
+        let result = this.constructorName;
+        if (this.id !== 0) {
+            result += '/' + this.id;
+        }
+        return result;
     }
 
     isSimpleValue(): boolean {
@@ -422,7 +452,8 @@ export class ValueConstructor extends Value {
 }
 
 export class ExceptionConstructor extends Value {
-    constructor(public exceptionName: string, public numArgs: number = 0) {
+    constructor(public exceptionName: string, public numArgs: number = 0,
+                public id: number = 0) {
         super();
     }
 
@@ -430,15 +461,20 @@ export class ExceptionConstructor extends Value {
         if (!(other instanceof ExceptionConstructor)) {
             return false;
         }
-        return this.exceptionName === (<ExceptionConstructor> other).exceptionName;
+        return this.exceptionName === (<ExceptionConstructor> other).exceptionName
+            && this.id === (<ExceptionConstructor> other).id;
     }
 
     construct(parameter: Value|undefined = undefined): ExceptionValue {
-        return new ExceptionValue(this.exceptionName, parameter);
+        return new ExceptionValue(this.exceptionName, parameter, this.id);
     }
 
     prettyPrint() {
-        return this.exceptionName;
+        let result = this.exceptionName;
+        if (this.id !== 0) {
+            result += '/' + this.id;
+        }
+        return result;
     }
 
     isSimpleValue(): boolean {

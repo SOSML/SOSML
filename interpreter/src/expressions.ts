@@ -9,6 +9,7 @@ import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
          ExceptionValue, ConstructedValue } from './values';
 import { ParserError } from './parser';
+import { getInitialState } from './initialState';
 
 export abstract class Expression {
     position: Position;
@@ -18,7 +19,7 @@ export abstract class Expression {
     }
 
     // Computes the value of an expression, returns [computed value, is thrown exception]
-    compute(state: State): [Value, boolean, State] {
+    compute(state: State): [Value, boolean] {
         throw new InternalInterpreterError(this.position, 'Called "getValue" on a derived form.');
     }
 
@@ -41,336 +42,6 @@ export interface Pattern {
 }
 
 export type PatternExpression = Pattern & Expression;
-
-export class Wildcard extends Expression implements Pattern {
-    constructor(public position: Position) { super(); }
-
-    getType(state: State): Type[] {
-        return [new TypeVariable('\'\'__wc'), new TypeVariable('\'__wc')];
-    }
-
-    compute(state: State): [Value, boolean, State] {
-        throw new InternalInterpreterError(this.position,
-            'Wildcards are far too wild to have a value.');
-    }
-
-    matches(state: State, v: Value): [string, Value][] | undefined {
-        return [];
-    }
-
-    simplify(): Wildcard {
-        return this;
-    }
-
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        return '_';
-    }
-}
-
-export class LayeredPattern extends Expression implements Pattern {
-// <op> identifier <:type> as pattern
-    constructor(public position: Position, public identifier: IdentifierToken,
-                public typeAnnotation: Type | undefined,
-                public pattern: Expression|PatternExpression) { super(); }
-
-    compute(state: State): [Value, boolean, State] {
-        throw new InternalInterpreterError(this.position,
-            'Layered patterns are far too layered to have a value.');
-    }
-
-    getType(state: State): Type[] {
-        throw new Error('nyian');
-    }
-
-    matches(state: State, v: Value): [string, Value][] | undefined {
-        let res = (<PatternExpression> this.pattern).matches(state, v);
-        if (res === undefined) {
-            return res;
-        }
-        let result: [string, Value][] = [[this.identifier.getText(), v]];
-        for (let i = 0; i < (<[string, Value][]> res).length; ++i) {
-            result.push((<[string, Value][]> res)[i]);
-        }
-        return result;
-    }
-
-    simplify(): LayeredPattern {
-        if (this.typeAnnotation) {
-            return new LayeredPattern(this.position, this.identifier, this.typeAnnotation.simplify(),
-                this.pattern.simplify());
-        } else {
-            return new LayeredPattern(this.position, this.identifier, undefined, this.pattern.simplify());
-        }
-    }
-
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
-        return this.identifier.getText() + ' as ' + this.pattern.prettyPrint(indentation, oneLine);
-    }
-}
-
-
-export class Match {
-// pat => exp or pat => exp | match
-    patternType: Type;
-    returnType: Type;
-
-    constructor(public position: Position, public matches: [PatternExpression, Expression][]) { }
-
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
-        let res = '';
-        for (let i = 0; i < this.matches.length; ++i) {
-            if (i > 0) {
-                res += ' | ';
-            }
-            res += this.matches[i][0].prettyPrint(indentation, oneLine);
-            res += ' => ' + this.matches[i][1].prettyPrint(indentation, oneLine);
-        }
-        return res;
-    }
-
-    compute(state: State, value: Value): [Value, boolean, State] {
-        for (let i = 0; i < this.matches.length; ++i) {
-            let res = this.matches[i][0].matches(state, value);
-            if (res !== undefined) {
-                for (let j = 0; j < res.length; ++j) {
-                    state.setDynamicValue(res[j][0], res[j][1], true);
-                }
-                return this.matches[i][1].compute(state.getNestedState(false, state.id));
-            }
-        }
-        return [<Value> state.getDynamicValue('Match'), true, state];
-    }
-
-    getType(state: State): Type[] {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
-    }
-
-    simplify(): Match {
-        let newMatches: [PatternExpression, Expression][] = [];
-        for (let i = 0; i < this.matches.length; ++i) {
-            let m: [PatternExpression, Expression] = this.matches[i];
-            newMatches.push([m[0].simplify(), m[1].simplify()]);
-        }
-        return new Match(this.position, newMatches);
-    }
-}
-
-export class TypedExpression extends Expression implements Pattern {
-// expression: type (L)
-    constructor(public position: Position, public expression: Expression,
-                public typeAnnotation: Type) { super(); }
-
-    matches(state: State, v: Value): [string, Value][] | undefined {
-        return (<PatternExpression> this.expression).matches(state, v);
-    }
-
-    getType(state: State): Type[] {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
-    }
-
-    simplify(): TypedExpression {
-        return new TypedExpression(this.position,
-            this.expression.simplify(), this.typeAnnotation.simplify());
-    }
-
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
-        let res = '( ' + this.expression.prettyPrint(indentation, oneLine);
-        res += ': ' + this.typeAnnotation.prettyPrint();
-        return res + ' )';
-    }
-
-    compute(state: State): [Value, boolean, State] {
-        return this.expression.compute(state);
-    }
-}
-
-export class HandleException extends Expression {
-// expression handle match
-    constructor(public position: Position, public expression: Expression, public match: Match) {
-        super();
-    }
-
-    simplify(): HandleException {
-        return new HandleException(this.position, this.expression.simplify(), this.match.simplify());
-    }
-
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
-        let res = '( ( ' + this.expression.prettyPrint(indentation, oneLine) + ' )';
-        res += ' handle ' + this.match.prettyPrint(indentation, oneLine) + ' )';
-        return res;
-    }
-
-    getType(state: State): Type[] {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
-    }
-
-    compute(state: State): [Value, boolean, State] {
-        let res = this.expression.compute(state);
-        if (res[1]) {
-            let next = this.match.compute(res[2], res[0]);
-            if (!next[1] || (<ExceptionValue> next[0]).constructorName !== 'Match') {
-                // Exception got handled
-                return next;
-            }
-        }
-        return res;
-    }
-}
-
-export class RaiseException extends Expression {
-// raise expression
-    constructor(public position: Position, public expression: Expression) { super(); }
-
-    simplify(): RaiseException {
-        return new RaiseException(this.position, this.expression.simplify());
-    }
-
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
-        return 'raise ' + this.expression.prettyPrint(indentation, oneLine);
-    }
-
-    getType(state: State): Type[] {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
-    }
-
-    compute(state: State): [Value, boolean, State] {
-        let res = this.expression.compute(state);
-        if (!(res[0] instanceof ExceptionValue)) {
-            throw new EvaluationError(this.position,
-                'Cannot "raise" value of type "' + res.constructor.name
-                + '" (type must be "exn").');
-        }
-        return [res[0], true, res[2]];
-    }
-}
-
-export class Lambda extends Expression {
-// fn match
-    constructor(public position: Position, public match: Match) { super(); }
-
-    simplify(): Lambda {
-        return new Lambda(this.position, this.match.simplify());
-    }
-
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
-        return '( fn ' + this.match.prettyPrint(indentation, oneLine) + ' )';
-    }
-
-    getType(state: State): Type[] {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
-    }
-
-    compute(state: State): [Value, boolean, State] {
-        let recbnds: [string, Value][] = [];
-
-        state.getDefinedIdentifiers().forEach((val: string) => {
-            if (state.getDynamicValue(val) !== undefined) {
-                recbnds.push([val, <Value> state.getDynamicValue(val)]);
-            }
-        });
-
-        return [new FunctionValue(recbnds, this.match), false, state];
-    }
-}
-
-// May represent either a function application or a constructor with an argument
-export class FunctionApplication extends Expression implements Pattern {
-// function argument
-    constructor(public position: Position,
-                public func: Expression,
-                public argument: Expression|PatternExpression) { super(); }
-
-    matches(state: State, v: Value): [string, Value][] | undefined {
-        if (v instanceof FunctionValue) {
-            throw new EvaluationError(this.position,
-                'You simply cannot match function values.');
-        } else if (v instanceof ConstructedValue) {
-            if (this.func instanceof ValueIdentifier
-                && (<ValueIdentifier> this.func).name.getText()
-                === (<ConstructedValue> v).constructorName) {
-                if ((<ConstructedValue> v).argument !== undefined) {
-                    return (<PatternExpression> this.argument).matches(
-                        state, <Value> (<ConstructedValue> v).argument);
-                } else {
-                    return undefined;
-                }
-            }
-            return undefined;
-        } else if (v instanceof ExceptionValue) {
-            if (this.func instanceof ValueIdentifier
-                && (<ValueIdentifier> this.func).name.getText()
-                    === (<ExceptionValue> v).constructorName) {
-                if ((<ExceptionValue> v).argument !== undefined) {
-                    return (<PatternExpression> this.argument).matches(
-                        state, <Value> (<ExceptionValue> v).argument);
-                }
-            }
-            return [];
-        } else if (v instanceof PredefinedFunction) {
-            throw new EvaluationError(this.position,
-                'You simply cannot match predefined functions.');
-        }
-        throw new EvaluationError(this.position, 'Help me, I\'m broken. ('
-            + v.constructor.name + ').' );
-    }
-
-    getType(state: State): Type[] {
-        /* let f: Type = this.func.getType(state);
-        let arg: Type = this.argument.getType(state);
-        if (f instanceof FunctionType) {
-            f.parameterType.unify(arg, state, this.argument.position);
-            return f.returnType;
-        } else { */
-            throw new ElaborationError(this.func.position, this.func.prettyPrint() + ' is not a function.');
-        // }
-    }
-
-    simplify(): FunctionApplication {
-        return new FunctionApplication(this.position, this.func.simplify(), this.argument.simplify());
-    }
-
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
-        let res = '( ' +  this.func.prettyPrint(indentation, oneLine);
-        res += ' ' + this.argument.prettyPrint(indentation, oneLine);
-        return res + ' )';
-    }
-
-    compute(state: State): [Value, boolean, State] {
-        let funcVal = this.func.compute(state);
-        if (funcVal[1]) {
-            // computing the function failed
-            return funcVal;
-        }
-        let argVal = this.argument.compute(funcVal[2]);
-        if (argVal[1]) {
-            return argVal;
-        }
-        if (funcVal[0] instanceof FunctionValue) {
-            return (<FunctionValue> funcVal[0]).compute(argVal[2], argVal[0]);
-        } else if (funcVal[0] instanceof ValueConstructor) {
-            return [(<ValueConstructor> funcVal[0]).construct(argVal[0]), false, state];
-        } else if (funcVal[0] instanceof ExceptionConstructor) {
-            return [(<ExceptionConstructor> funcVal[0]).construct(argVal[0]), false, state];
-        } else if (funcVal[0] instanceof PredefinedFunction) {
-            let res = (<PredefinedFunction> funcVal[0]).apply(argVal[0]);
-            return [res[0], res[1], state];
-        }
-        throw new EvaluationError(this.position, 'Cannot evaluate the function "'
-            + this.func.prettyPrint() + '" (' + funcVal[0].constructor.name + ').');
-    }
-}
 
 export class Constant extends Expression implements Pattern {
     constructor(public position: Position, public token: ConstantToken) { super(); }
@@ -403,21 +74,20 @@ export class Constant extends Expression implements Pattern {
     simplify(): Constant { return this; }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
         return this.token.getText();
     }
 
-    compute(state: State): [Value, boolean, State] {
+    compute(state: State): [Value, boolean] {
         if (this.token instanceof IntegerConstantToken || this.token instanceof NumericToken) {
-            return [new Integer((<IntegerConstantToken | NumericToken> this.token).value), false, state];
+            return [new Integer((<IntegerConstantToken | NumericToken> this.token).value), false];
         } else if (this.token instanceof RealConstantToken) {
-            return [new Real((<RealConstantToken> this.token).value), false, state];
+            return [new Real((<RealConstantToken> this.token).value), false];
         } else if (this.token instanceof WordConstantToken) {
-            return [new Word((<WordConstantToken> this.token).value), false, state];
+            return [new Word((<WordConstantToken> this.token).value), false];
         } else if (this.token instanceof CharacterConstantToken) {
-            return [new CharValue((<CharacterConstantToken> this.token).value), false, state];
+            return [new CharValue((<CharacterConstantToken> this.token).value), false];
         } else if (this.token instanceof StringConstantToken) {
-            return [new StringValue((<StringConstantToken> this.token).value), false, state];
+            return [new StringValue((<StringConstantToken> this.token).value), false];
         }
         throw new EvaluationError(this.token.position, 'You sure that this is a constant?');
     }
@@ -454,7 +124,7 @@ export class ValueIdentifier extends Expression implements Pattern {
         throw new InternalInterpreterError(this.position, 'nyi\'an :3');
     }
 
-    compute(state: State): [Value, boolean, State] {
+    compute(state: State): [Value, boolean] {
         let res = state.getDynamicValue(this.name.getText());
         if (res === undefined) {
             throw new EvaluationError(this.position, 'Unbound value identifier "'
@@ -470,7 +140,7 @@ export class ValueIdentifier extends Expression implements Pattern {
             res = (<ExceptionConstructor> res).construct();
         }
 
-        return [res, false, state];
+        return [res, false];
     }
 }
 
@@ -537,7 +207,6 @@ export class Record extends Expression implements Pattern {
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
         let result: string = '{';
         let first: boolean = true;
         for (let i = 0; i < this.entries.length; ++i) {
@@ -557,7 +226,7 @@ export class Record extends Expression implements Pattern {
         return result + '}';
     }
 
-    compute(state: State): [Value, boolean, State] {
+    compute(state: State): [Value, boolean] {
         let nentr = new Map<string, Value>();
         for (let i = 0; i < this.entries.length; ++i) {
             let res = this.entries[i][1].compute(state);
@@ -567,7 +236,7 @@ export class Record extends Expression implements Pattern {
             }
             nentr = nentr.set(this.entries[i][0], res[0]);
         }
-        return [new RecordValue(nentr), false, state];
+        return [new RecordValue(nentr), false];
     }
 }
 
@@ -582,7 +251,6 @@ export class LocalDeclarationExpression extends Expression {
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
         let res = 'let ' + this.declaration.prettyPrint(indentation, oneLine);
         res += ' in ' + this.expression.prettyPrint(indentation, oneLine) + ' end';
         return res;
@@ -593,15 +261,384 @@ export class LocalDeclarationExpression extends Expression {
         throw new InternalInterpreterError(this.position, 'nyi\'an :3');
     }
 
-    compute(state: State): [Value, boolean, State] {
+    compute(state: State): [Value, boolean] {
         let nstate = state.getNestedState(false, state.id);
         let res = this.declaration.evaluate(nstate);
         if (res[1]) {
-            return [<Value> res[2], true, state];
+            return [<Value> res[2], true];
         }
         return this.expression.compute(res[0]);
     }
 }
+
+export class TypedExpression extends Expression implements Pattern {
+// expression: type (L)
+    constructor(public position: Position, public expression: Expression,
+                public typeAnnotation: Type) { super(); }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        return (<PatternExpression> this.expression).matches(state, v);
+    }
+
+    getType(state: State): Type[] {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
+    }
+
+    simplify(): TypedExpression {
+        return new TypedExpression(this.position,
+            this.expression.simplify(), this.typeAnnotation.simplify());
+    }
+
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+        let res = '( ' + this.expression.prettyPrint(indentation, oneLine);
+        res += ': ' + this.typeAnnotation.prettyPrint();
+        return res + ' )';
+    }
+
+    compute(state: State): [Value, boolean] {
+        return this.expression.compute(state);
+    }
+}
+
+// May represent either a function application or a constructor with an argument
+export class FunctionApplication extends Expression implements Pattern {
+// function argument
+    constructor(public position: Position,
+                public func: Expression,
+                public argument: Expression|PatternExpression) { super(); }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        if (v instanceof FunctionValue) {
+            throw new EvaluationError(this.position,
+                'You simply cannot match function values.');
+        } else if (v instanceof ConstructedValue) {
+            if (this.func instanceof ValueIdentifier
+                && (<ValueIdentifier> this.func).name.getText()
+                === (<ConstructedValue> v).constructorName) {
+                if ((<ConstructedValue> v).argument !== undefined) {
+                    return (<PatternExpression> this.argument).matches(
+                        state, <Value> (<ConstructedValue> v).argument);
+                } else {
+                    return undefined;
+                }
+            }
+            return undefined;
+        } else if (v instanceof ExceptionValue) {
+            if (this.func instanceof ValueIdentifier
+                && (<ValueIdentifier> this.func).name.getText()
+                    === (<ExceptionValue> v).constructorName) {
+                if ((<ExceptionValue> v).argument !== undefined) {
+                    return (<PatternExpression> this.argument).matches(
+                        state, <Value> (<ExceptionValue> v).argument);
+                }
+            }
+            return [];
+        } else if (v instanceof PredefinedFunction) {
+            throw new EvaluationError(this.position,
+                'You simply cannot match predefined functions.');
+        }
+        throw new EvaluationError(this.position, 'Help me, I\'m broken. ('
+            + v.constructor.name + ').' );
+    }
+
+    getType(state: State): Type[] {
+        /* let f: Type = this.func.getType(state);
+        let arg: Type = this.argument.getType(state);
+        if (f instanceof FunctionType) {
+            f.parameterType.unify(arg, state, this.argument.position);
+            return f.returnType;
+        } else { */
+            throw new ElaborationError(this.func.position, this.func.prettyPrint() + ' is not a function.');
+        // }
+    }
+
+    simplify(): FunctionApplication {
+        return new FunctionApplication(this.position, this.func.simplify(), this.argument.simplify());
+    }
+
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+        let res = '( ' +  this.func.prettyPrint(indentation, oneLine);
+        res += ' ' + this.argument.prettyPrint(indentation, oneLine);
+        return res + ' )';
+    }
+
+    compute(state: State): [Value, boolean] {
+        let funcVal = this.func.compute(state);
+        if (funcVal[1]) {
+            // computing the function failed
+            return funcVal;
+        }
+        let argVal = this.argument.compute(state);
+        if (argVal[1]) {
+            return argVal;
+        }
+        if (funcVal[0] instanceof FunctionValue) {
+            return (<FunctionValue> funcVal[0]).compute(argVal[0]);
+        } else if (funcVal[0] instanceof ValueConstructor) {
+            return [(<ValueConstructor> funcVal[0]).construct(argVal[0]), false];
+        } else if (funcVal[0] instanceof ExceptionConstructor) {
+            return [(<ExceptionConstructor> funcVal[0]).construct(argVal[0]), false];
+        } else if (funcVal[0] instanceof PredefinedFunction) {
+            return (<PredefinedFunction> funcVal[0]).apply(argVal[0]);
+        }
+        throw new EvaluationError(this.position, 'Cannot evaluate the function "'
+            + this.func.prettyPrint() + '" (' + funcVal[0].constructor.name + ').');
+    }
+}
+
+export class HandleException extends Expression {
+// expression handle match
+    constructor(public position: Position, public expression: Expression, public match: Match) {
+        super();
+    }
+
+    simplify(): HandleException {
+        return new HandleException(this.position, this.expression.simplify(), this.match.simplify());
+    }
+
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+        let res = '( ( ' + this.expression.prettyPrint(indentation, oneLine) + ' )';
+        res += ' handle ' + this.match.prettyPrint(indentation, oneLine) + ' )';
+        return res;
+    }
+
+    getType(state: State): Type[] {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
+    }
+
+    compute(state: State): [Value, boolean] {
+        let res = this.expression.compute(state);
+        if (res[1]) {
+            let next = this.match.compute(state, res[0]);
+            if (!next[1] || !next[0].equals(new ExceptionValue('Match', undefined, 0))) {
+                // Exception got handled
+                return next;
+            }
+        }
+        return res;
+    }
+}
+
+export class RaiseException extends Expression {
+// raise expression
+    constructor(public position: Position, public expression: Expression) { super(); }
+
+    simplify(): RaiseException {
+        return new RaiseException(this.position, this.expression.simplify());
+    }
+
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+        return 'raise ' + this.expression.prettyPrint(indentation, oneLine);
+    }
+
+    getType(state: State): Type[] {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
+    }
+
+    compute(state: State): [Value, boolean] {
+        let res = this.expression.compute(state);
+        if (!(res[0] instanceof ExceptionValue)) {
+            throw new EvaluationError(this.position,
+                'Cannot "raise" value of type "' + res.constructor.name
+                + '" (type must be "exn").');
+        }
+        return [res[0], true];
+    }
+}
+
+export class Lambda extends Expression {
+// fn match
+    constructor(public position: Position, public match: Match) { super(); }
+
+    simplify(): Lambda {
+        return new Lambda(this.position, this.match.simplify());
+    }
+
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+        // TODO
+        return '( fn ' + this.match.prettyPrint(indentation, oneLine) + ' )';
+    }
+
+    getType(state: State): Type[] {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
+    }
+
+    compute(state: State): [Value, boolean] {
+        // We need to ensure that the function value receives a capture
+        // of the current state, and that that capture stays that way
+        let nstate = getInitialState().getNestedState(true, state.id);
+
+        state.getDefinedIdentifiers().forEach((val: string) => {
+            if (state.getDynamicValue(val) !== undefined) {
+                nstate.setDynamicValue(val, <Value> state.getDynamicValue(val), true);
+            }
+            if (state.getDynamicType(val) !== undefined) {
+                let tp = <[string[], number]> state.getDynamicType(val);
+                nstate.setDynamicType(val, tp[0], tp[1], true);
+            }
+        });
+
+        return [new FunctionValue(nstate, [], this.match), false];
+    }
+}
+
+// Matches
+
+export class Match {
+// pat => exp or pat => exp | match
+    constructor(public position: Position, public matches: [PatternExpression, Expression][]) { }
+
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+        let res = '';
+        for (let i = 0; i < this.matches.length; ++i) {
+            if (i > 0) {
+                res += ' | ';
+            }
+            res += this.matches[i][0].prettyPrint(indentation, oneLine);
+            res += ' => ' + this.matches[i][1].prettyPrint(indentation, oneLine);
+        }
+        return res;
+    }
+
+    compute(state: State, value: Value): [Value, boolean] {
+        for (let i = 0; i < this.matches.length; ++i) {
+            let nstate = state.getNestedState(false, state.id);
+            let res = this.matches[i][0].matches(nstate, value);
+            if (res !== undefined) {
+                for (let j = 0; j < res.length; ++j) {
+                    nstate.setDynamicValue(res[j][0], res[j][1], true);
+                }
+                return this.matches[i][1].compute(nstate);
+            }
+        }
+        return [new ExceptionValue('Match', undefined, 0), true];
+    }
+
+    getType(state: State): Type[] {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
+    }
+
+    simplify(): Match {
+        let newMatches: [PatternExpression, Expression][] = [];
+        for (let i = 0; i < this.matches.length; ++i) {
+            let m: [PatternExpression, Expression] = this.matches[i];
+            newMatches.push([m[0].simplify(), m[1].simplify()]);
+        }
+        return new Match(this.position, newMatches);
+    }
+}
+
+
+
+
+
+
+
+
+
+// Pure Patterns
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+export class Wildcard extends Expression implements Pattern {
+    constructor(public position: Position) { super(); }
+
+    getType(state: State): Type[] {
+        return [new TypeVariable('\'\'__wc'), new TypeVariable('\'__wc')];
+    }
+
+    compute(state: State): [Value, boolean] {
+        throw new InternalInterpreterError(this.position,
+            'Wildcards are far too wild to have a value.');
+    }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        return [];
+    }
+
+    simplify(): Wildcard {
+        return this;
+    }
+
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+        return '_';
+    }
+}
+
+export class LayeredPattern extends Expression implements Pattern {
+// <op> identifier <:type> as pattern
+    constructor(public position: Position, public identifier: IdentifierToken,
+                public typeAnnotation: Type | undefined,
+                public pattern: Expression|PatternExpression) { super(); }
+
+    compute(state: State): [Value, boolean] {
+        throw new InternalInterpreterError(this.position,
+            'Layered patterns are far too layered to have a value.');
+    }
+
+    getType(state: State): Type[] {
+        throw new Error('nyian');
+    }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        let res = (<PatternExpression> this.pattern).matches(state, v);
+        if (res === undefined) {
+            return res;
+        }
+        let result: [string, Value][] = [[this.identifier.getText(), v]];
+        for (let i = 0; i < (<[string, Value][]> res).length; ++i) {
+            result.push((<[string, Value][]> res)[i]);
+        }
+        return result;
+    }
+
+    simplify(): LayeredPattern {
+        if (this.typeAnnotation) {
+            return new LayeredPattern(this.position, this.identifier, this.typeAnnotation.simplify(),
+                this.pattern.simplify());
+        } else {
+            return new LayeredPattern(this.position, this.identifier, undefined, this.pattern.simplify());
+        }
+    }
+
+    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+        return this.identifier.getText() + ' as ' + this.pattern.prettyPrint(indentation, oneLine);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 // The following classes are derived forms.
 // They will not be present in the simplified AST and do not implement elaborate/getType
@@ -701,7 +738,6 @@ export class Conjunction extends Expression {
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
         return '( ' + this.leftOperand.prettyPrint(indentation, oneLine) + ' andalso '
         + this.rightOperand.prettyPrint(indentation, oneLine) + ' )';
     }
@@ -716,7 +752,6 @@ export class Disjunction extends Expression {
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
         return '( ' + this.leftOperand.prettyPrint(indentation, oneLine) + ' orelse '
         + this.rightOperand.prettyPrint(indentation, oneLine) + ' )';
     }
@@ -739,7 +774,6 @@ export class Tuple extends Expression implements Pattern {
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
         let res = '( ';
         for (let i = 0; i < this.expressions.length; ++i) {
             if (i > 0) {
@@ -769,7 +803,6 @@ export class List extends Expression implements Pattern {
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
         let res = '[ ';
         for (let i = 0; i < this.expressions.length; ++i) {
             if (i > 0) {
@@ -797,7 +830,6 @@ export class Sequence extends Expression {
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
         let res = '( ';
         for (let i = 0; i < this.expressions.length; ++i) {
             if (i > 0) {
@@ -820,7 +852,6 @@ export class RecordSelector extends Expression {
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
         return '#' + this.label.getText();
     }
 }
@@ -836,7 +867,6 @@ export class CaseAnalysis extends Expression {
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
         let res = 'case ' + this.expression.prettyPrint(indentation, oneLine);
         res += ' of ' + this.match.prettyPrint(indentation, oneLine);
         return res;
@@ -855,7 +885,6 @@ export class Conditional extends Expression {
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
         let res = 'if ' + this.condition.prettyPrint(indentation, oneLine);
         res += ' then ' + this.consequence.prettyPrint(indentation, oneLine);
         res += ' else ' + this.alternative.prettyPrint(indentation, oneLine);
@@ -884,7 +913,6 @@ export class While extends Expression {
     }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
         return '( while ' + this.condition.prettyPrint(indentation, oneLine)
             + ' do ' + this.body.prettyPrint(indentation, oneLine) + ' )';
     }
