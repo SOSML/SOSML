@@ -153,21 +153,21 @@ var LexerError = (function (_super) {
     return LexerError;
 }(InterpreterError));
 exports.LexerError = LexerError;
-var SemanticError = (function (_super) {
-    __extends(SemanticError, _super);
-    function SemanticError(position, message) {
+var ElaborationError = (function (_super) {
+    __extends(ElaborationError, _super);
+    function ElaborationError(position, message) {
         var _this = _super.call(this, position, message) || this;
-        Object.setPrototypeOf(_this, SemanticError.prototype);
+        Object.setPrototypeOf(_this, ElaborationError.prototype);
         return _this;
     }
-    return SemanticError;
+    return ElaborationError;
 }(InterpreterError));
-exports.SemanticError = SemanticError;
+exports.ElaborationError = ElaborationError;
 var EvaluationError = (function (_super) {
     __extends(EvaluationError, _super);
     function EvaluationError(position, message) {
         var _this = _super.call(this, position, message) || this;
-        Object.setPrototypeOf(_this, LexerError.prototype);
+        Object.setPrototypeOf(_this, EvaluationError.prototype);
         return _this;
     }
     return EvaluationError;
@@ -423,7 +423,7 @@ var LongIdentifierToken = (function () {
             }
             res += this.qualifiers[i].getText();
         }
-        return res + this.text;
+        return res + '.' + this.id.getText();
     };
     LongIdentifierToken.prototype.isValidRecordLabel = function () { return false; };
     LongIdentifierToken.prototype.isVid = function () { return false; };
@@ -855,85 +855,26 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var errors_1 = __webpack_require__(0);
-var lexer_1 = __webpack_require__(1);
-var TypeUnificationError = (function (_super) {
-    __extends(TypeUnificationError, _super);
-    function TypeUnificationError(type1, type2) {
-        var _this = _super.call(this, 0, 'cannot unify ' + type2.prettyPrint() + ' with ' + type1.prettyPrint()) || this;
-        _this.type1 = type1;
-        _this.type2 = type2;
-        Object.setPrototypeOf(_this, TypeUnificationError.prototype);
-        return _this;
-    }
-    return TypeUnificationError;
-}(errors_1.InterpreterError));
-exports.TypeUnificationError = TypeUnificationError;
 var Type = (function () {
     function Type() {
     }
-    // TODO: state may not accurately represent which type variables are free at the position where the
-    // instantiation is made
-    Type.findMapping = function (instantiations, state) {
-        var mapping = new Map();
-        for (var i = 0; i < 2; ++i) {
-            instantiations[i].forEach(function (element) {
-                var name = element[0];
-                var value = element[1];
-                if (mapping.has(name)) {
-                    mapping.set(name, mapping.get(name).unify(value, state));
-                }
-                else {
-                    mapping.set(name, value);
-                }
-            });
-        }
-        return mapping;
+    // Constructs types with type variables instantiated as much as possible
+    Type.prototype.instantiate = function (state) {
+        return this.simplify().instantiate(state);
     };
-    // Finds the unification of two types. If the types cannot be unified, throws a TypeUnificationException.
-    // In the notation of the SML Definition, unify returns the most general type that is generalised by both this
-    // and other. (chapter 4.5)
-    // TODO: free variables are currently ignored, and there are problems with type variable naming
-    Type.prototype.unify = function (other, state, errorLocation) {
-        if (errorLocation === void 0) { errorLocation = 0; }
-        if (this.equals(other)) {
-            return this;
-        }
-        var instantiations = [[], []];
-        try {
-            this.findInstantiations(other, instantiations);
-            var mapping = Type.findMapping(instantiations, state);
-            var result = this.replaceTypeVariables(mapping);
-            result = this.unifyImpl(result);
-            result = other.unifyImpl(result);
-            return result;
-        }
-        catch (e) {
-            if (e instanceof TypeUnificationError) {
-                e.position = errorLocation;
-            }
-            throw e;
-        }
+    // Return all (free) type variables
+    Type.prototype.getTypeVariables = function (free) {
+        return this.simplify().getTypeVariables(free);
     };
-    Type.prototype.findInstantiations = function (other, instantiations) {
-        if (this instanceof TypeVariable) {
-            instantiations[0].push([this.name, other]);
-        }
-        else if (other instanceof TypeVariable) {
-            instantiations[1].push([other.name, this]);
-            return;
-        }
-        this.findInstantiationsImpl(other, instantiations);
+    // Checks if two types are unifyable; returns all required type variable bindings
+    Type.prototype.matches = function (state, type) {
+        return this.simplify().matches(state, type);
     };
-    Type.prototype.findInstantiationsImpl = function (other, instantiations) {
-        // must be overloaded for Types which have children
-    };
-    Type.prototype.findFreeTypeVariables = function (names, boundVariables) {
-        // TODO
-    };
-    Type.prototype.replaceTypeVariables = function (mapping) { return this; };
     Type.prototype.simplify = function () {
         return this;
+    };
+    Type.prototype.admitsEquality = function (state) {
+        return false;
     };
     return Type;
 }());
@@ -949,20 +890,30 @@ var PrimitiveType = (function (_super) {
         _this.position = position;
         return _this;
     }
+    PrimitiveType.prototype.instantiate = function (state) {
+        return [this];
+    };
+    PrimitiveType.prototype.getTypeVariables = function (free) {
+        return new Set();
+    };
+    PrimitiveType.prototype.matches = function (state, type) {
+        for (var i = 0; i < type.length; ++i) {
+            if (type[i].equals(this)) {
+                return [];
+            }
+        }
+        // None of the possible types matched
+        return undefined;
+    };
+    PrimitiveType.prototype.admitsEquality = function (state) {
+        return state.getPrimitiveType(this.name).allowsEquality;
+    };
     PrimitiveType.prototype.prettyPrint = function () {
         var res = '';
         for (var i = 0; i < this.parameters.length; ++i) {
             res += this.parameters[i].prettyPrint() + ' ';
         }
         return res += this.name;
-    };
-    PrimitiveType.prototype.unifyImpl = function (other) {
-        if (this.equals(other)) {
-            return other;
-        }
-        else {
-            throw new TypeUnificationError(this, other);
-        }
     };
     PrimitiveType.prototype.equals = function (other) {
         if (!(other instanceof PrimitiveType)) {
@@ -993,36 +944,49 @@ var PrimitiveType = (function (_super) {
 exports.PrimitiveType = PrimitiveType;
 var TypeVariable = (function (_super) {
     __extends(TypeVariable, _super);
-    function TypeVariable(name, position) {
+    function TypeVariable(name, isFree, position) {
+        if (isFree === void 0) { isFree = true; }
         if (position === void 0) { position = 0; }
         var _this = _super.call(this) || this;
         _this.name = name;
+        _this.isFree = isFree;
         _this.position = position;
         return _this;
     }
     TypeVariable.prototype.prettyPrint = function () {
         return this.name;
     };
-    TypeVariable.prototype.findFreeTypeVariables = function (names, boundVariables) {
-        if (!boundVariables.has(this.name)) {
-            names.add(this.name);
+    TypeVariable.prototype.instantiate = function (state) {
+        var res = state.getStaticValue(this.name);
+        if (!this.isFree || res === undefined) {
+            return [this];
         }
+        return res;
     };
-    TypeVariable.prototype.replaceTypeVariables = function (mapping) {
-        if (mapping.has(this.name)) {
-            return mapping.get(this.name);
+    TypeVariable.prototype.getTypeVariables = function (free) {
+        var res = new Set();
+        if (free === this.isFree) {
+            res.add(this);
+        }
+        return res;
+    };
+    TypeVariable.prototype.matches = function (state, type) {
+        if (this.isFree) {
+            // TODO Filter out <this> type var from type?
+            return [[this.name, type]];
         }
         else {
-            return this;
+            for (var i = 0; i < type.length; ++i) {
+                if (type[i].equals(this)) {
+                    return [];
+                }
+            }
         }
+        // None of the possible types matched
+        return undefined;
     };
-    TypeVariable.prototype.unifyImpl = function (other) {
-        /*    if (other.admitsEquality || !this.admitsEquality) {
-            return other;
-        } else {
-            throw new TypeUnificationError(this, other);
-        }*/
-        throw new errors_1.InternalInterpreterError(-1, 'nyi\'an');
+    TypeVariable.prototype.admitsEquality = function (state) {
+        return this.name[1] === '\'';
     };
     TypeVariable.prototype.equals = function (other) {
         return other instanceof TypeVariable && this.name === other.name;
@@ -1041,6 +1005,22 @@ var RecordType = (function (_super) {
         _this.position = position;
         return _this;
     }
+    RecordType.prototype.instantiate = function (state) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    RecordType.prototype.getTypeVariables = function (free) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    RecordType.prototype.matches = function (state, type) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    RecordType.prototype.admitsEquality = function (state) {
+        // TODO
+        throw new Error('ニャ－');
+    };
     RecordType.prototype.prettyPrint = function () {
         // TODO: print as Tuple if possible
         var result = '{';
@@ -1062,67 +1042,12 @@ var RecordType = (function (_super) {
         }
         return result + '}';
     };
-    RecordType.prototype.findFreeTypeVariables = function (names, boundVariables) {
-        this.elements.forEach(function (type, key) {
-            type.findFreeTypeVariables(names, boundVariables);
-        });
-    };
-    RecordType.prototype.findInstantiationsImpl = function (other, instantiations) {
-        if (!(other instanceof RecordType)) {
-            throw new TypeUnificationError(this, other);
-        }
-        this.elements.forEach(function (type, key) {
-            if (other.elements.has(key)) {
-                type.findInstantiations(other.elements.get(key), instantiations);
-            }
-        });
-    };
     RecordType.prototype.simplify = function () {
         var newElements = new Map();
         this.elements.forEach(function (type, key) {
             newElements.set(key, type.simplify());
         });
         return new RecordType(newElements, this.complete);
-    };
-    RecordType.prototype.replaceTypeVariables = function (mapping) {
-        var newElements = new Map();
-        this.elements.forEach(function (type, key) {
-            newElements.set(key, type.replaceTypeVariables(mapping));
-        });
-        return new RecordType(newElements, this.complete);
-    };
-    RecordType.prototype.unifyImpl = function (other) {
-        var _this = this;
-        if (!(other instanceof RecordType)) {
-            throw new TypeUnificationError(this, other);
-        }
-        var complete = this.complete || other.complete;
-        var names = new Set();
-        var addNames = function (ignored, name) {
-            names.add(name);
-        };
-        this.elements.forEach(addNames);
-        other.elements.forEach(addNames);
-        if ((this.complete && names.size > this.elements.size)) {
-            throw new TypeUnificationError(this, other);
-        }
-        var newElements = new Map();
-        if (other.complete) {
-            names.forEach(function (name) {
-                if (!other.elements.has(name)) {
-                    throw new TypeUnificationError(_this, other);
-                }
-            });
-        }
-        names.forEach(function (name) {
-            if (_this.elements.has(name)) {
-                newElements.set(name, _this.elements.get(name).unifyImpl(other.elements.get(name)));
-            }
-            else {
-                newElements.set(name, other.elements.get(name));
-            }
-        });
-        return new RecordType(newElements, complete);
     };
     RecordType.prototype.equals = function (other) {
         if (!(other instanceof RecordType) || this.complete !== other.complete) {
@@ -1162,32 +1087,27 @@ var FunctionType = (function (_super) {
         _this.position = position;
         return _this;
     }
+    FunctionType.prototype.instantiate = function (state) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    FunctionType.prototype.getTypeVariables = function (free) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    FunctionType.prototype.matches = function (state, type) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    FunctionType.prototype.admitsEquality = function (state) {
+        return this.parameterType.admitsEquality(state) && this.returnType.admitsEquality(state);
+    };
     FunctionType.prototype.prettyPrint = function () {
         return '( ' + this.parameterType.prettyPrint()
             + ' -> ' + this.returnType.prettyPrint() + ' )';
     };
-    FunctionType.prototype.findFreeTypeVariables = function (names, boundVariables) {
-        this.parameterType.findFreeTypeVariables(names, boundVariables);
-        this.returnType.findFreeTypeVariables(names, boundVariables);
-    };
-    FunctionType.prototype.findInstantiationsImpl = function (other, instantiations) {
-        if (!(other instanceof FunctionType)) {
-            throw new TypeUnificationError(this, other);
-        }
-        this.parameterType.findInstantiations(other.parameterType, instantiations);
-        this.returnType.findInstantiations(other.returnType, instantiations);
-    };
     FunctionType.prototype.simplify = function () {
         return new FunctionType(this.parameterType.simplify(), this.returnType.simplify(), this.position);
-    };
-    FunctionType.prototype.replaceTypeVariables = function (mapping) {
-        return new FunctionType(this.parameterType.replaceTypeVariables(mapping), this.returnType.replaceTypeVariables(mapping));
-    };
-    FunctionType.prototype.unifyImpl = function (other) {
-        if (!(other instanceof FunctionType)) {
-            throw new TypeUnificationError(this, other);
-        }
-        return new FunctionType(this.parameterType.unifyImpl(other.parameterType), this.returnType.unifyImpl(other.returnType));
     };
     FunctionType.prototype.equals = function (other) {
         return other instanceof FunctionType && this.parameterType.equals(other.parameterType)
@@ -1196,24 +1116,47 @@ var FunctionType = (function (_super) {
     return FunctionType;
 }(Type));
 exports.FunctionType = FunctionType;
-// a custom type using type constructors
+// A custom defined type similar to "list" or "option".
+// May have a type argument.
 var CustomType = (function (_super) {
     __extends(CustomType, _super);
-    // fullName: a unique name for this type
-    // typeArguments: instantiations for any type variables this datatype may have
     function CustomType(name, typeArguments, position) {
+        if (typeArguments === void 0) { typeArguments = []; }
         if (position === void 0) { position = 0; }
         var _this = _super.call(this) || this;
+        _this.name = name;
         _this.typeArguments = typeArguments;
         _this.position = position;
-        if (name instanceof lexer_1.LongIdentifierToken) {
-            _this.fullName = name;
-        }
-        else {
-            _this.fullName = new lexer_1.LongIdentifierToken(name.text, name.position, [], name);
-        }
         return _this;
     }
+    CustomType.prototype.instantiate = function (state) {
+        if (this.typeArguments.length > 0) {
+            // TODO
+            throw new Error('ニャ－');
+        }
+        else {
+            return [this];
+        }
+    };
+    CustomType.prototype.getTypeVariables = function (free) {
+        if (this.typeArguments.length > 0) {
+            // TODO
+            throw new Error('ニャ－');
+        }
+        return new Set();
+    };
+    CustomType.prototype.matches = function (state, type) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    CustomType.prototype.admitsEquality = function (state) {
+        for (var i = 0; i < this.typeArguments.length; ++i) {
+            if (!this.typeArguments[i].admitsEquality(state)) {
+                return false;
+            }
+        }
+        return true;
+    };
     CustomType.prototype.prettyPrint = function () {
         var result = '';
         if (this.typeArguments.length > 1) {
@@ -1231,46 +1174,18 @@ var CustomType = (function (_super) {
         if (this.typeArguments.length > 0) {
             result += ' ';
         }
-        result += this.fullName.getText();
+        result += this.name;
         return result;
-    };
-    CustomType.prototype.findFreeTypeVariables = function (names, boundVariables) {
-        throw new errors_1.InternalInterpreterError(0, 'not yet implemented');
-    };
-    CustomType.prototype.findInstantiationsImpl = function (other, instantiations) {
-        if (!(other instanceof CustomType) || other.fullName !== this.fullName) {
-            throw new TypeUnificationError(this, other);
-        }
-        for (var i = 0; i < this.typeArguments.length; ++i) {
-            this.typeArguments[i].findInstantiations(other.typeArguments[i], instantiations);
-        }
     };
     CustomType.prototype.simplify = function () {
         var args = [];
         for (var i = 0; i < this.typeArguments.length; ++i) {
             args.push(this.typeArguments[i].simplify());
         }
-        return new CustomType(this.fullName, this.typeArguments);
-    };
-    CustomType.prototype.replaceTypeVariables = function (mapping) {
-        var args = [];
-        for (var i = 0; i < this.typeArguments.length; ++i) {
-            args.push(this.typeArguments[i].replaceTypeVariables(mapping));
-        }
-        return new CustomType(this.fullName, this.typeArguments);
-    };
-    CustomType.prototype.unifyImpl = function (other) {
-        if (!(other instanceof CustomType) || other.fullName !== this.fullName) {
-            throw new TypeUnificationError(this, other);
-        }
-        var args = [];
-        for (var i = 0; i < this.typeArguments.length; ++i) {
-            args.push(this.typeArguments[i].unifyImpl(other.typeArguments[i]));
-        }
-        return new CustomType(this.fullName, args);
+        return new CustomType(this.name, args);
     };
     CustomType.prototype.equals = function (other) {
-        if (!(other instanceof CustomType) || this.fullName !== other.fullName) {
+        if (!(other instanceof CustomType) || this.name !== other.name) {
             return false;
         }
         for (var i = 0; i < this.typeArguments.length; ++i) {
@@ -1283,7 +1198,6 @@ var CustomType = (function (_super) {
     return CustomType;
 }(Type));
 exports.CustomType = CustomType;
-// this is a derived form used only for type annotations
 var TupleType = (function (_super) {
     __extends(TupleType, _super);
     function TupleType(elements, position) {
@@ -1303,9 +1217,6 @@ var TupleType = (function (_super) {
         }
         return result + ' )';
     };
-    TupleType.prototype.findInstantiationsImpl = function (other, instantiations) {
-        throw new errors_1.InternalInterpreterError(0, 'called Type.findInstantiationsImpl on a derived form');
-    };
     TupleType.prototype.simplify = function () {
         var entries = new Map();
         for (var i = 0; i < this.elements.length; ++i) {
@@ -1313,17 +1224,8 @@ var TupleType = (function (_super) {
         }
         return new RecordType(entries, true);
     };
-    TupleType.prototype.findFreeTypeVariables = function (names, boundVariables) {
-        throw new errors_1.InternalInterpreterError(0, 'called Type.findFreeTypeVariables on a derived form');
-    };
-    TupleType.prototype.replaceTypeVariables = function (mapping) {
-        throw new errors_1.InternalInterpreterError(0, 'called Type.replaceTypeVariables on a derived form');
-    };
-    TupleType.prototype.unifyImpl = function (other) {
-        throw new errors_1.InternalInterpreterError(0, 'called Type.unifyImpl on a derived form');
-    };
     TupleType.prototype.equals = function (other) {
-        throw new errors_1.InternalInterpreterError(0, 'called Type.equals on a derived form');
+        return this.simplify().equals(other);
     };
     return TupleType;
 }(Type));
@@ -1380,6 +1282,7 @@ var BoolValue = (function (_super) {
             return 'false';
         }
     };
+    BoolValue.prototype.isConstructedValue = function () { return true; };
     return BoolValue;
 }(Value));
 exports.BoolValue = BoolValue;
@@ -1470,8 +1373,8 @@ var Word = (function (_super) {
         }
         return 2;
     };
-    Word.prototype.equals = function (value) { return this.compareTo(value) === 0; };
     Word.prototype.negate = function () { return new Word(-this.value); };
+    Word.prototype.equals = function (value) { return this.compareTo(value) === 0; };
     Word.prototype.add = function (other) { return new Word(this.value + other.value); };
     Word.prototype.multiply = function (other) { return new Word(this.value * other.value); };
     Word.prototype.divide = function (other) { return new Word(Math.floor(this.value / other.value)); };
@@ -1637,12 +1540,18 @@ var FunctionValue = (function (_super) {
         return _this;
     }
     FunctionValue.prototype.prettyPrint = function () {
-        return '( fn ' + this.body.prettyPrint(0, true) + ', <some state> )';
+        return 'fn';
     };
     // Computes the function on the given argument,
     // returns [result, is thrown]
     FunctionValue.prototype.compute = function (state, argument) {
-        return this.body.compute(state, argument);
+        // adjoin the bindings in this.state into the state
+        var nstate = state.getNestedState();
+        for (var i = 0; i < this.state.length; ++i) {
+            nstate.setDynamicValue(this.state[i][0], this.state[i][1], true);
+        }
+        var res = this.body.compute(nstate, argument);
+        return [res[0], res[1], state];
     };
     return FunctionValue;
 }(Value));
@@ -1773,10 +1682,7 @@ var ValueConstructor = (function (_super) {
         return new ConstructedValue(this.constructorName, parameter);
     };
     ValueConstructor.prototype.prettyPrint = function () {
-        if (this.numArgs === 1) {
-            return this.constructorName + ' <arg> [value constructor]';
-        }
-        return this.constructorName + ' [value constructor]';
+        return this.constructorName;
     };
     ValueConstructor.prototype.isSimpleValue = function () {
         return false;
@@ -1804,7 +1710,7 @@ var ExceptionConstructor = (function (_super) {
         return new ExceptionValue(this.exceptionName, parameter);
     };
     ExceptionConstructor.prototype.prettyPrint = function () {
-        return this.exceptionName + ' [exception constructor]';
+        return this.exceptionName;
     };
     ExceptionConstructor.prototype.isSimpleValue = function () {
         return false;
@@ -1847,9 +1753,10 @@ var ParserError = (function (_super) {
 }(errors_1.InterpreterError));
 exports.ParserError = ParserError;
 var Parser = (function () {
-    function Parser(tokens, state) {
+    function Parser(tokens, state, currentId) {
         this.tokens = tokens;
         this.state = state;
+        this.currentId = currentId;
         this.position = 0; // position of the next not yet parsed token
         if (this.state === undefined) {
             throw new errors_1.InternalInterpreterError(-1, 'What are you, stupid? Hurry up and give me ' +
@@ -2631,11 +2538,15 @@ var Parser = (function () {
         var curTok = this.currentToken();
         if (curTok instanceof lexer_1.TypeVariableToken) {
             ++this.position;
-            return new types_1.TypeVariable(curTok.getText(), curTok.position);
+            return new types_1.TypeVariable(curTok.getText(), true, curTok.position);
         }
         if (this.checkIdentifierOrLongToken(curTok)) {
             ++this.position;
-            return new types_1.CustomType(curTok, [], curTok.position);
+            if (this.state.getPrimitiveType(curTok.getText()) !== undefined
+                && this.state.getPrimitiveType(curTok.getText()).isPrimitiveType) {
+                return new types_1.PrimitiveType(curTok.getText(), [], curTok.position);
+            }
+            return new types_1.CustomType(curTok.getText(), [], curTok.position);
         }
         if (this.checkKeywordToken(curTok, '{')) {
             ++this.position;
@@ -2662,7 +2573,11 @@ var Parser = (function () {
                     this.assertIdentifierOrLongToken(this.currentToken());
                     var name_2 = this.currentToken();
                     ++this.position;
-                    return new types_1.CustomType(name_2, res, curTok.position);
+                    if (this.state.getPrimitiveType(name_2.getText()) !== undefined
+                        && this.state.getPrimitiveType(name_2.getText()).isPrimitiveType) {
+                        return new types_1.PrimitiveType(name_2.getText(), res, curTok.position);
+                    }
+                    return new types_1.CustomType(name_2.getText(), res, curTok.position);
                 }
                 throw new ParserError('Expected "," or ")", got "' +
                     nextTok.getText() + '".', nextTok.position);
@@ -2708,12 +2623,22 @@ var Parser = (function () {
         var ty = this.parseSimpleType();
         while (this.position < this.tokens.length) {
             var nextTok = this.currentToken();
-            if (this.checkIdentifierOrLongToken(nextTok)) {
-                ++this.position;
-                ty = new types_1.CustomType(nextTok, [ty], curTok.position);
-                continue;
+            if (!this.checkIdentifierOrLongToken(nextTok)) {
+                return ty;
             }
-            return ty;
+            if (this.state.getPrimitiveType(nextTok.getText()) !== undefined) {
+                if (this.state.getPrimitiveType(nextTok.getText()).arity === 0) {
+                    return ty;
+                }
+                if (this.state.getPrimitiveType(nextTok.getText()).isPrimitiveType) {
+                    ++this.position;
+                    ty = new types_1.PrimitiveType(nextTok.getText(), [ty], curTok.position);
+                    continue;
+                }
+            }
+            ++this.position;
+            ty = new types_1.CustomType(nextTok.getText(), [ty], curTok.position);
+            continue;
         }
         return ty;
     };
@@ -2931,7 +2856,7 @@ var Parser = (function () {
         var curTok = this.currentToken();
         var res = [];
         if (curTok instanceof lexer_1.TypeVariableToken) {
-            res.push(new types_1.TypeVariable(curTok.text, curTok.position));
+            res.push(new types_1.TypeVariable(curTok.text, false, curTok.position));
             ++this.position;
             return res;
         }
@@ -2945,7 +2870,7 @@ var Parser = (function () {
                     }
                     throw new ParserError('Expected a type varible.', curTok.position);
                 }
-                res.push(new types_1.TypeVariable(curTok.text, curTok.position));
+                res.push(new types_1.TypeVariable(curTok.text, false, curTok.position));
                 ++this.position;
                 curTok = this.currentToken();
                 if (this.checkKeywordToken(curTok, ',')) {
@@ -2969,6 +2894,7 @@ var Parser = (function () {
          */
         var res = [];
         var curTok = this.currentToken();
+        var curId = this.currentId++;
         while (this.position < this.tokens.length) {
             var cur = this.parseSimpleDeclaration(topLevel);
             if (cur instanceof declarations_1.EmptyDeclaration) {
@@ -2984,7 +2910,7 @@ var Parser = (function () {
                 ++this.position;
             }
         }
-        return new declarations_1.SequentialDeclaration(curTok.position, res);
+        return new declarations_1.SequentialDeclaration(curTok.position, res, curId);
     };
     Parser.prototype.parseSimpleDeclaration = function (topLevel) {
         if (topLevel === void 0) { topLevel = false; }
@@ -3006,6 +2932,7 @@ var Parser = (function () {
          *         exp                                  val it = exp
          */
         var curTok = this.currentToken();
+        var curId = this.currentId++;
         if (this.checkKeywordToken(curTok, 'val')) {
             ++this.position;
             var tyvar = this.parseTypeVarSequence(true);
@@ -3037,7 +2964,7 @@ var Parser = (function () {
                     break;
                 }
             }
-            return new declarations_1.ValueDeclaration(curTok.position, tyvar, valbinds);
+            return new declarations_1.ValueDeclaration(curTok.position, tyvar, valbinds, curId);
         }
         else if (this.checkKeywordToken(curTok, 'fun')) {
             ++this.position;
@@ -3056,11 +2983,11 @@ var Parser = (function () {
                     break;
                 }
             }
-            return new declarations_1.FunctionDeclaration(curTok.position, tyvar, fvalbinds);
+            return new declarations_1.FunctionDeclaration(curTok.position, tyvar, fvalbinds, curId);
         }
         else if (this.checkKeywordToken(curTok, 'type')) {
             ++this.position;
-            return new declarations_1.TypeDeclaration(curTok.position, this.parseTypeBindingSeq());
+            return new declarations_1.TypeDeclaration(curTok.position, this.parseTypeBindingSeq(), curId);
         }
         else if (this.checkKeywordToken(curTok, 'datatype')) {
             if (this.position + 3 < this.tokens.length &&
@@ -3071,7 +2998,7 @@ var Parser = (function () {
                 this.position += 2;
                 var old = this.currentToken();
                 this.assertIdentifierOrLongToken(old);
-                return new declarations_1.DatatypeReplication(curTok.position, nw, old);
+                return new declarations_1.DatatypeReplication(curTok.position, nw, old, curId);
             }
             else {
                 ++this.position;
@@ -3079,9 +3006,9 @@ var Parser = (function () {
                 if (this.checkKeywordToken(this.currentToken(), 'withtype')) {
                     ++this.position;
                     var tp = this.parseTypeBindingSeq();
-                    return new declarations_1.DatatypeDeclaration(curTok.position, datbind, tp);
+                    return new declarations_1.DatatypeDeclaration(curTok.position, datbind, tp, curId);
                 }
-                return new declarations_1.DatatypeDeclaration(curTok.position, datbind, undefined);
+                return new declarations_1.DatatypeDeclaration(curTok.position, datbind, undefined, curId);
             }
         }
         else if (this.checkKeywordToken(curTok, 'abstype')) {
@@ -3100,7 +3027,7 @@ var Parser = (function () {
             this.assertKeywordToken(this.currentToken(), 'end');
             ++this.position;
             this.state = nstate;
-            return new declarations_1.AbstypeDeclaration(curTok.position, datbind, tybind, dec);
+            return new declarations_1.AbstypeDeclaration(curTok.position, datbind, tybind, dec, curId);
         }
         else if (this.checkKeywordToken(curTok, 'exception')) {
             ++this.position;
@@ -3114,7 +3041,7 @@ var Parser = (function () {
                     break;
                 }
             }
-            return new declarations_1.ExceptionDeclaration(curTok.position, bnds);
+            return new declarations_1.ExceptionDeclaration(curTok.position, bnds, curId);
         }
         else if (this.checkKeywordToken(curTok, 'local')) {
             ++this.position;
@@ -3127,7 +3054,7 @@ var Parser = (function () {
             this.assertKeywordToken(this.currentToken(), 'end');
             ++this.position;
             this.state = nstate;
-            return new declarations_1.LocalDeclaration(curTok.position, dec, dec2);
+            return new declarations_1.LocalDeclaration(curTok.position, dec, dec2, curId);
         }
         else if (this.checkKeywordToken(curTok, 'open')) {
             ++this.position;
@@ -3139,7 +3066,7 @@ var Parser = (function () {
             if (res.length === 0) {
                 throw new ParserError('Empty "open" declaration.', this.currentToken().position);
             }
-            return new declarations_1.OpenDeclaration(curTok.position, res);
+            return new declarations_1.OpenDeclaration(curTok.position, res, curId);
         }
         else if (this.checkKeywordToken(curTok, 'infix')) {
             ++this.position;
@@ -3154,13 +3081,14 @@ var Parser = (function () {
             var res = [];
             while (this.currentToken().isVid()) {
                 res.push(this.currentToken());
-                this.state.setInfixStatus(this.currentToken(), precedence, false, true);
                 ++this.position;
             }
             if (res.length === 0) {
                 throw new ParserError('Empty "infix" declaration.', this.currentToken().position);
             }
-            return new declarations_1.InfixDeclaration(curTok.position, res, precedence);
+            var resdec = new declarations_1.InfixDeclaration(curTok.position, res, precedence, curId);
+            this.state = resdec.evaluate(this.state)[0];
+            return resdec;
         }
         else if (this.checkKeywordToken(curTok, 'infixr')) {
             ++this.position;
@@ -3175,40 +3103,42 @@ var Parser = (function () {
             var res = [];
             while (this.currentToken().isVid()) {
                 res.push(this.currentToken());
-                this.state.setInfixStatus(this.currentToken(), precedence, true, true);
                 ++this.position;
             }
             if (res.length === 0) {
                 throw new ParserError('Empty "infixr" declaration.', this.currentToken().position);
             }
-            return new declarations_1.InfixRDeclaration(curTok.position, res, precedence);
+            var resdec = new declarations_1.InfixRDeclaration(curTok.position, res, precedence, curId);
+            this.state = resdec.evaluate(this.state)[0];
+            return resdec;
         }
         else if (this.checkKeywordToken(curTok, 'nonfix')) {
             ++this.position;
             var res = [];
             while (this.currentToken().isVid()) {
                 res.push(this.currentToken());
-                this.state.setInfixStatus(this.currentToken(), 0, true, false);
                 ++this.position;
             }
             if (res.length === 0) {
                 throw new ParserError('Empty "nonfix" declaration.', this.currentToken().position);
             }
-            return new declarations_1.NonfixDeclaration(curTok.position, res);
+            var resdec = new declarations_1.NonfixDeclaration(curTok.position, res, curId);
+            this.state = resdec.evaluate(this.state)[0];
+            return resdec;
         }
         if (this.checkKeywordToken(curTok, ';')) {
             ++this.position;
-            return new declarations_1.EmptyDeclaration();
+            return new declarations_1.EmptyDeclaration(curId);
         }
         else if (this.checkKeywordToken(curTok, 'in')
             || this.checkKeywordToken(curTok, 'end')) {
-            return new declarations_1.EmptyDeclaration();
+            return new declarations_1.EmptyDeclaration(curId);
         }
         if (topLevel) {
             var exp = this.parseExpression();
             var valbnd = new declarations_1.ValueBinding(curTok.position, false, new expressions_1.ValueIdentifier(-1, new lexer_1.AlphanumericIdentifierToken('it', -1)), exp);
             this.assertKeywordToken(this.currentToken(), ';');
-            return new declarations_1.ValueDeclaration(curTok.position, [], [valbnd]);
+            return new declarations_1.ValueDeclaration(curTok.position, [], [valbnd], curId);
         }
         throw new ParserError('Expected a declaration.', curTok.position);
     };
@@ -3222,7 +3152,7 @@ var Parser = (function () {
 }());
 exports.Parser = Parser;
 function parse(tokens, state) {
-    var p = new Parser(tokens, state);
+    var p = new Parser(tokens, state, state.id);
     return p.parseDeclaration(true);
 }
 exports.parse = parse;
@@ -3247,13 +3177,13 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var expressions_1 = __webpack_require__(6);
 var lexer_1 = __webpack_require__(1);
+var types_1 = __webpack_require__(2);
 var errors_1 = __webpack_require__(0);
 var values_1 = __webpack_require__(3);
 var Declaration = (function () {
     function Declaration() {
-        this.hasSemanticError = false;
     }
-    Declaration.prototype.checkStaticSemantics = function (state) {
+    Declaration.prototype.elaborate = function (state) {
         throw new errors_1.InternalInterpreterError(-1, 'Not yet implemented.');
     };
     // Returns [computed state, has Error occured, Exception]
@@ -3278,7 +3208,6 @@ var ValueBinding = (function () {
         this.expression = expression;
     }
     ValueBinding.prototype.prettyPrint = function (indentation, oneLine) {
-        // TODO nicify this
         var res = '';
         if (this.isRecursive) {
             res += 'rec ';
@@ -3294,6 +3223,9 @@ var ValueBinding = (function () {
                 + ' (Called compute on a non-recursive ValBind.)');
         }
         if (!(this.pattern instanceof expressions_1.ValueIdentifier)) {
+            if (this.pattern instanceof expressions_1.Wildcard) {
+                return ['_', [undefined, true, state]];
+            }
             throw new errors_1.EvaluationError(this.pattern.position, 'When using "rec", exactly one name is required here.');
         }
         if (!(this.expression instanceof expressions_1.Lambda)) {
@@ -3361,8 +3293,6 @@ var FunctionValueBinding = (function () {
         return new ValueBinding(this.position, true, this.name, exp.simplify());
     };
     FunctionValueBinding.prototype.prettyPrint = function (indentation, oneLine) {
-        // TODO
-        // public parameters: [PatternExpression[], Type|undefined, Expression][]
         var res = '';
         for (var i = 0; i < this.parameters.length; ++i) {
             if (i > 0) {
@@ -3425,12 +3355,40 @@ var DirectExceptionBinding = (function () {
         this.name = name;
         this.type = type;
     }
+    DirectExceptionBinding.prototype.elaborate = function (state) {
+        if (this.type !== undefined) {
+            var tyvars = this.type.getTypeVariables(true);
+            if (tyvars.size > 0) {
+                var res_1 = '';
+                if (tyvars.size > 1) {
+                    res_1 += 's';
+                }
+                res_1 += ' ';
+                var first_1 = true;
+                tyvars.forEach(function (val) {
+                    if (first_1) {
+                        first_1 = false;
+                    }
+                    else {
+                        res_1 += ', ';
+                    }
+                    res_1 += '"' + val.name + '"';
+                });
+                throw new errors_1.ElaborationError(this.position, 'Unguarded type variable' + res_1 + '.');
+            }
+            state.setStaticValue(this.name.getText(), [new types_1.FunctionType(this.type.simplify(), new types_1.PrimitiveType('exn'))]);
+        }
+        else {
+            state.setStaticValue(this.name.getText(), [new types_1.PrimitiveType('exn')]);
+        }
+        return state;
+    };
     DirectExceptionBinding.prototype.evaluate = function (state) {
         var numArg = 0;
         if (this.type !== undefined) {
             numArg = 1;
         }
-        state.setDynamicValue(this.name.getText(), new values_1.ValueConstructor(this.name.getText(), numArg));
+        state.setDynamicValue(this.name.getText(), new values_1.ExceptionConstructor(this.name.getText(), numArg));
         return [state, false, undefined];
     };
     return DirectExceptionBinding;
@@ -3443,6 +3401,15 @@ var ExceptionAlias = (function () {
         this.name = name;
         this.oldname = oldname;
     }
+    ExceptionAlias.prototype.elaborate = function (state) {
+        var res = state.getStaticValue(this.oldname.getText());
+        if (res === undefined) {
+            throw new errors_1.ElaborationError(this.position, 'Unbound value identifier "'
+                + this.oldname.getText() + '".');
+        }
+        state.setStaticValue(this.name.getText(), res);
+        return state;
+    };
     ExceptionAlias.prototype.evaluate = function (state) {
         var res = state.getDynamicValue(this.oldname.getText());
         if (res === undefined) {
@@ -3457,10 +3424,12 @@ var ExceptionAlias = (function () {
 exports.ExceptionAlias = ExceptionAlias;
 var ExceptionDeclaration = (function (_super) {
     __extends(ExceptionDeclaration, _super);
-    function ExceptionDeclaration(position, bindings) {
+    function ExceptionDeclaration(position, bindings, id) {
+        if (id === void 0) { id = 0; }
         var _this = _super.call(this) || this;
         _this.position = position;
         _this.bindings = bindings;
+        _this.id = id;
         return _this;
     }
     ExceptionDeclaration.prototype.simplify = function () {
@@ -3469,6 +3438,12 @@ var ExceptionDeclaration = (function (_super) {
     ExceptionDeclaration.prototype.prettyPrint = function (indentation, oneLine) {
         // TODO
         throw new errors_1.InternalInterpreterError(-1, 'Not yet implemented.');
+    };
+    ExceptionDeclaration.prototype.elaborate = function (state) {
+        for (var i = 0; i < this.bindings.length; ++i) {
+            state = this.bindings[i].elaborate(state);
+        }
+        return state;
     };
     ExceptionDeclaration.prototype.evaluate = function (state) {
         for (var i = 0; i < this.bindings.length; ++i) {
@@ -3487,11 +3462,13 @@ exports.ExceptionDeclaration = ExceptionDeclaration;
 var ValueDeclaration = (function (_super) {
     __extends(ValueDeclaration, _super);
     // val typeVariableSequence valueBinding
-    function ValueDeclaration(position, typeVariableSequence, valueBinding) {
+    function ValueDeclaration(position, typeVariableSequence, valueBinding, id) {
+        if (id === void 0) { id = 0; }
         var _this = _super.call(this) || this;
         _this.position = position;
         _this.typeVariableSequence = typeVariableSequence;
         _this.valueBinding = valueBinding;
+        _this.id = id;
         return _this;
     }
     ValueDeclaration.prototype.simplify = function () {
@@ -3499,7 +3476,11 @@ var ValueDeclaration = (function (_super) {
         for (var i = 0; i < this.valueBinding.length; ++i) {
             valBnd.push(new ValueBinding(this.valueBinding[i].position, this.valueBinding[i].isRecursive, this.valueBinding[i].pattern.simplify(), this.valueBinding[i].expression.simplify()));
         }
-        return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd);
+        return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd, this.id);
+    };
+    ValueDeclaration.prototype.elaborate = function (state) {
+        // TODO
+        throw new errors_1.InternalInterpreterError(-1, 'Not yet implemented.');
     };
     ValueDeclaration.prototype.evaluate = function (state) {
         var result = [];
@@ -3509,10 +3490,11 @@ var ValueDeclaration = (function (_super) {
                 break;
             }
             var val = this.valueBinding[i].expression.compute(state);
+            state = val[2];
             if (val[1]) {
                 return [state, true, val[0]];
             }
-            result = this.valueBinding[i].pattern.matches(state, val[0]);
+            result = this.valueBinding[i].pattern.matches(state.getNestedState(false, state.id), val[0]);
             if (result === undefined) {
                 return [state, true, state.getDynamicValue('Bind')];
             }
@@ -3524,6 +3506,10 @@ var ValueDeclaration = (function (_super) {
             var k = i;
             for (; k < this.valueBinding.length; ++k) {
                 var res = this.valueBinding[k].compute(state);
+                if (res[1][1] && res[1][0] === undefined) {
+                    continue;
+                }
+                state = res[1][2];
                 if (res[1][1]) {
                     return [state, true, res[1][0]];
                 }
@@ -3549,11 +3535,13 @@ exports.ValueDeclaration = ValueDeclaration;
 var FunctionDeclaration = (function (_super) {
     __extends(FunctionDeclaration, _super);
     // fun typeVariableSequence functionValueBinding
-    function FunctionDeclaration(position, typeVariableSequence, functionValueBinding) {
+    function FunctionDeclaration(position, typeVariableSequence, functionValueBinding, id) {
+        if (id === void 0) { id = 0; }
         var _this = _super.call(this) || this;
         _this.position = position;
         _this.typeVariableSequence = typeVariableSequence;
         _this.functionValueBinding = functionValueBinding;
+        _this.id = id;
         return _this;
     }
     FunctionDeclaration.prototype.simplify = function () {
@@ -3561,7 +3549,7 @@ var FunctionDeclaration = (function (_super) {
         for (var i = 0; i < this.functionValueBinding.length; ++i) {
             valbnd.push(this.functionValueBinding[i].simplify());
         }
-        return new ValueDeclaration(this.position, this.typeVariableSequence, valbnd);
+        return new ValueDeclaration(this.position, this.typeVariableSequence, valbnd, this.id);
     };
     FunctionDeclaration.prototype.prettyPrint = function (indentation, oneLine) {
         // TODO
@@ -3580,10 +3568,12 @@ exports.FunctionDeclaration = FunctionDeclaration;
 var TypeDeclaration = (function (_super) {
     __extends(TypeDeclaration, _super);
     // type typeBinding
-    function TypeDeclaration(position, typeBinding) {
+    function TypeDeclaration(position, typeBinding, id) {
+        if (id === void 0) { id = 0; }
         var _this = _super.call(this) || this;
         _this.position = position;
         _this.typeBinding = typeBinding;
+        _this.id = id;
         return _this;
     }
     TypeDeclaration.prototype.simplify = function () {
@@ -3591,11 +3581,19 @@ var TypeDeclaration = (function (_super) {
         for (var i = 0; i < this.typeBinding.length; ++i) {
             bnds.push(new TypeBinding(this.typeBinding[i].position, this.typeBinding[i].typeVariableSequence, this.typeBinding[i].name, this.typeBinding[i].type.simplify()));
         }
-        return new TypeDeclaration(this.position, bnds);
+        return new TypeDeclaration(this.position, bnds, this.id);
+    };
+    TypeDeclaration.prototype.elaborate = function (state) {
+        for (var i = 0; i < this.typeBinding.length; ++i) {
+            // TODO
+            // Make tyvars from seq as unfree
+            // instantiate
+            // return all resulting types without free type vars
+        }
+        return state;
     };
     TypeDeclaration.prototype.evaluate = function (state) {
-        //    for (let i = 0; i < this.typeBinding.length; ++i) { }
-        throw new Error('');
+        return [state, false, undefined];
     };
     TypeDeclaration.prototype.prettyPrint = function (indentation, oneLine) {
         // TODO
@@ -3615,11 +3613,13 @@ exports.TypeDeclaration = TypeDeclaration;
 var DatatypeDeclaration = (function (_super) {
     __extends(DatatypeDeclaration, _super);
     // datatype datatypeBinding <withtype typeBinding>
-    function DatatypeDeclaration(position, datatypeBinding, typeBinding) {
+    function DatatypeDeclaration(position, datatypeBinding, typeBinding, id) {
+        if (id === void 0) { id = 0; }
         var _this = _super.call(this) || this;
         _this.position = position;
         _this.datatypeBinding = datatypeBinding;
         _this.typeBinding = typeBinding;
+        _this.id = id;
         if (_this.typeBinding !== undefined) {
             throw new errors_1.FeatureDisabledError(_this.position, 'Don\'t use "withtype". It is evil.');
         }
@@ -3640,15 +3640,19 @@ var DatatypeDeclaration = (function (_super) {
             }
             datbnd.push(new DatatypeBinding(this.datatypeBinding[i].position, this.datatypeBinding[i].typeVariableSequence, this.datatypeBinding[i].name, ntype));
         }
-        // TODO Correctly implement the withtype ~> type transition
+        // TODO Correctly implement the withtype ~> type transition or clean up this mess
         /*
         if (this.typeBinding) {
             return new SequentialDeclaration(this.position, [
                 new DatatypeDeclaration(this.position, datbnd, undefined),
                 new TypeDeclaration(this.position, this.typeBinding).simplify()]);
         } else { */
-        return new DatatypeDeclaration(this.position, datbnd, undefined);
+        return new DatatypeDeclaration(this.position, datbnd, undefined, this.id);
         /* } */
+    };
+    DatatypeDeclaration.prototype.elaborate = function (state) {
+        // TODO
+        throw new errors_1.InternalInterpreterError(-1, 'Not yet implemented.');
     };
     DatatypeDeclaration.prototype.evaluate = function (state) {
         // I'm assuming the withtype is empty
@@ -3662,12 +3666,12 @@ var DatatypeDeclaration = (function (_super) {
         return [state, false, undefined];
     };
     DatatypeDeclaration.prototype.prettyPrint = function (indentation, oneLine) {
-        // TODO
         var res = 'datatype';
         for (var i = 0; i < this.datatypeBinding.length; ++i) {
             if (i > 0) {
                 res += ' and';
             }
+            // TODO Replace <stuff> with something proper
             res += ' <stuff> ' + this.datatypeBinding[i].name.getText() + ' =';
             for (var j = 0; j < this.datatypeBinding[i].type.length; ++j) {
                 if (j > 0) {
@@ -3686,16 +3690,26 @@ var DatatypeDeclaration = (function (_super) {
 exports.DatatypeDeclaration = DatatypeDeclaration;
 var DatatypeReplication = (function (_super) {
     __extends(DatatypeReplication, _super);
-    // datatype name -=- datatype oldname
-    function DatatypeReplication(position, name, oldname) {
+    // datatype name = datatype oldname
+    function DatatypeReplication(position, name, oldname, id) {
+        if (id === void 0) { id = 0; }
         var _this = _super.call(this) || this;
         _this.position = position;
         _this.name = name;
         _this.oldname = oldname;
+        _this.id = id;
         return _this;
     }
     DatatypeReplication.prototype.simplify = function () {
         return this;
+    };
+    DatatypeReplication.prototype.elaborate = function (state) {
+        var res = state.getStaticType(this.oldname.getText());
+        if (res === undefined) {
+            throw new errors_1.ElaborationError(this.position, 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
+        }
+        state.setStaticType(this.name.getText(), res.type, res.constructors);
+        return state;
     };
     DatatypeReplication.prototype.evaluate = function (state) {
         var res = state.getDynamicType(this.oldname.getText());
@@ -3706,8 +3720,7 @@ var DatatypeReplication = (function (_super) {
         return [state, false, undefined];
     };
     DatatypeReplication.prototype.prettyPrint = function (indentation, oneLine) {
-        // TODO
-        throw new errors_1.InternalInterpreterError(-1, 'Not yet implemented.');
+        return 'datatype ' + this.name.getText() + ' = datatype ' + this.oldname.getText() + ';';
     };
     return DatatypeReplication;
 }(Declaration));
@@ -3715,12 +3728,14 @@ exports.DatatypeReplication = DatatypeReplication;
 var AbstypeDeclaration = (function (_super) {
     __extends(AbstypeDeclaration, _super);
     // abstype datatypeBinding <withtype typeBinding> with declaration end
-    function AbstypeDeclaration(position, datatypeBinding, typeBinding, declaration) {
+    function AbstypeDeclaration(position, datatypeBinding, typeBinding, declaration, id) {
+        if (id === void 0) { id = 0; }
         var _this = _super.call(this) || this;
         _this.position = position;
         _this.datatypeBinding = datatypeBinding;
         _this.typeBinding = typeBinding;
         _this.declaration = declaration;
+        _this.id = id;
         if (_this.typeBinding !== undefined) {
             throw new errors_1.FeatureDisabledError(_this.position, 'Don\'t use "withtype". It is evil.');
         }
@@ -3741,15 +3756,19 @@ var AbstypeDeclaration = (function (_super) {
             }
             datbnd.push(new DatatypeBinding(this.datatypeBinding[i].position, this.datatypeBinding[i].typeVariableSequence, this.datatypeBinding[i].name, ntype));
         }
-        // TODO Correctly implement the withtype ~> type transition
+        // TODO Correctly implement the withtype ~> type transition or clean up this mess
         /* if (this.typeBinding) {
             return new AbstypeDeclaration(this.position, datbnd, undefined,
                 new SequentialDeclaration(this.position, [
                     new TypeDeclaration(this.position, this.typeBinding).simplify(),
                     this.declaration.simplify()]));
         } else { */
-        return new AbstypeDeclaration(this.position, datbnd, this.typeBinding, this.declaration.simplify());
+        return new AbstypeDeclaration(this.position, datbnd, this.typeBinding, this.declaration.simplify(), this.id);
         /* } */
+    };
+    AbstypeDeclaration.prototype.elaborate = function (state) {
+        // TODO
+        throw new errors_1.InternalInterpreterError(-1, 'Not yet implemented.');
     };
     AbstypeDeclaration.prototype.evaluate = function (state) {
         // I'm assuming the withtype is empty
@@ -3772,31 +3791,40 @@ exports.AbstypeDeclaration = AbstypeDeclaration;
 var LocalDeclaration = (function (_super) {
     __extends(LocalDeclaration, _super);
     // local declaration in body end
-    function LocalDeclaration(position, declaration, body) {
+    function LocalDeclaration(position, declaration, body, id) {
+        if (id === void 0) { id = 0; }
         var _this = _super.call(this) || this;
         _this.position = position;
         _this.declaration = declaration;
         _this.body = body;
+        _this.id = id;
         return _this;
     }
     LocalDeclaration.prototype.simplify = function () {
-        return new LocalDeclaration(this.position, this.declaration.simplify(), this.body.simplify());
+        return new LocalDeclaration(this.position, this.declaration.simplify(), this.body.simplify(), this.id);
+    };
+    LocalDeclaration.prototype.elaborate = function (state) {
+        var nstate = state.getNestedState(false, state.id);
+        nstate = this.declaration.elaborate(nstate).getNestedState(false, state.id);
+        nstate = this.body.elaborate(nstate);
+        // Forget all local definitions
+        nstate.parent = state;
+        return nstate;
     };
     LocalDeclaration.prototype.evaluate = function (state) {
-        var nstate = state.getNestedState();
+        var nstate = state.getNestedState(false, state.id);
         var res = this.declaration.evaluate(nstate);
         if (res[1]) {
             // Something came flying in our direction. So hide we were here and let it flow.
             return [state, true, res[2]];
         }
-        nstate = res[0].getNestedState();
+        nstate = res[0].getNestedState(false, state.id);
         res = this.body.evaluate(nstate);
         // Forget all local definitions
         res[0].parent = state;
         return res;
     };
     LocalDeclaration.prototype.prettyPrint = function (indentation, oneLine) {
-        // TODO this is just something that works but not pretty
         var res = 'local ' + this.declaration.prettyPrint(indentation, oneLine);
         res += ' in ' + this.body.prettyPrint(indentation, oneLine);
         res += ' end;';
@@ -3808,21 +3836,26 @@ exports.LocalDeclaration = LocalDeclaration;
 var OpenDeclaration = (function (_super) {
     __extends(OpenDeclaration, _super);
     // open name_1 ... name_n
-    function OpenDeclaration(position, names) {
+    function OpenDeclaration(position, names, id) {
+        if (id === void 0) { id = 0; }
         var _this = _super.call(this) || this;
         _this.position = position;
         _this.names = names;
+        _this.id = id;
         return _this;
     }
     OpenDeclaration.prototype.simplify = function () {
         return this;
+    };
+    OpenDeclaration.prototype.elaborate = function (state) {
+        // TODO Yeah, if we had structs, we could actually implement this
+        throw new errors_1.InternalInterpreterError(-1, 'Yeah, you better wait a little before trying this again.');
     };
     OpenDeclaration.prototype.evaluate = function (state) {
         // TODO Yeah, if we had structs, we could actually implement this
         throw new errors_1.InternalInterpreterError(-1, 'Yeah, you better wait a little before trying this again.');
     };
     OpenDeclaration.prototype.prettyPrint = function (indentation, oneLine) {
-        // TODO this is just something that works but not pretty
         var res = 'open';
         for (var i = 0; i < this.names.length; ++i) {
             res += ' ' + this.names[i].getText();
@@ -3835,10 +3868,12 @@ exports.OpenDeclaration = OpenDeclaration;
 var SequentialDeclaration = (function (_super) {
     __extends(SequentialDeclaration, _super);
     // declaration1 <;> declaration2
-    function SequentialDeclaration(position, declarations) {
+    function SequentialDeclaration(position, declarations, id) {
+        if (id === void 0) { id = 0; }
         var _this = _super.call(this) || this;
         _this.position = position;
         _this.declarations = declarations;
+        _this.id = id;
         return _this;
     }
     SequentialDeclaration.prototype.simplify = function () {
@@ -3846,15 +3881,17 @@ var SequentialDeclaration = (function (_super) {
         for (var i = 0; i < this.declarations.length; ++i) {
             decls.push(this.declarations[i].simplify());
         }
-        return new SequentialDeclaration(this.position, decls);
+        return new SequentialDeclaration(this.position, decls, this.id);
+    };
+    SequentialDeclaration.prototype.elaborate = function (state) {
+        for (var i = 0; i < this.declarations.length; ++i) {
+            state = this.declarations[i].elaborate(state.getNestedState(false, this.declarations[i].id));
+        }
+        return state;
     };
     SequentialDeclaration.prototype.evaluate = function (state) {
         for (var i = 0; i < this.declarations.length; ++i) {
-            var nstate = state.getNestedState();
-            if (this.declarations[i].hasSemanticError) {
-                // If the declaration doesn't type, we shall just ignore it
-                continue;
-            }
+            var nstate = state.getNestedState(true, this.declarations[i].id);
             var res = this.declarations[i].evaluate(nstate);
             if (res[1]) {
                 // Something blew up, so let someone else handle the mess
@@ -3865,7 +3902,6 @@ var SequentialDeclaration = (function (_super) {
         return [state, false, undefined];
     };
     SequentialDeclaration.prototype.prettyPrint = function (indentation, oneLine) {
-        // TODO this is just something that works but not pretty
         var res = '';
         for (var i = 0; i < this.declarations.length; ++i) {
             if (i > 0) {
@@ -3881,22 +3917,29 @@ exports.SequentialDeclaration = SequentialDeclaration;
 var InfixDeclaration = (function (_super) {
     __extends(InfixDeclaration, _super);
     // infix <d> vid1 .. vidn
-    function InfixDeclaration(position, operators, precedence) {
+    function InfixDeclaration(position, operators, precedence, id) {
         if (precedence === void 0) { precedence = 0; }
+        if (id === void 0) { id = 0; }
         var _this = _super.call(this) || this;
         _this.position = position;
         _this.operators = operators;
         _this.precedence = precedence;
+        _this.id = id;
         return _this;
     }
     InfixDeclaration.prototype.simplify = function () {
         return this;
     };
+    InfixDeclaration.prototype.elaborate = function (state) {
+        return state;
+    };
     InfixDeclaration.prototype.evaluate = function (state) {
+        for (var i = 0; i < this.operators.length; ++i) {
+            state.setInfixStatus(this.operators[i], this.precedence, false, true);
+        }
         return [state, false, undefined];
     };
     InfixDeclaration.prototype.prettyPrint = function (indentation, oneLine) {
-        // TODO this is just something that works but not pretty
         var res = 'infix';
         res += ' ' + this.precedence;
         for (var i = 0; i < this.operators.length; ++i) {
@@ -3910,22 +3953,29 @@ exports.InfixDeclaration = InfixDeclaration;
 var InfixRDeclaration = (function (_super) {
     __extends(InfixRDeclaration, _super);
     // infixr <d> vid1 .. vidn
-    function InfixRDeclaration(position, operators, precedence) {
+    function InfixRDeclaration(position, operators, precedence, id) {
         if (precedence === void 0) { precedence = 0; }
+        if (id === void 0) { id = 0; }
         var _this = _super.call(this) || this;
         _this.position = position;
         _this.operators = operators;
         _this.precedence = precedence;
+        _this.id = id;
         return _this;
     }
     InfixRDeclaration.prototype.simplify = function () {
         return this;
     };
+    InfixRDeclaration.prototype.elaborate = function (state) {
+        return state;
+    };
     InfixRDeclaration.prototype.evaluate = function (state) {
+        for (var i = 0; i < this.operators.length; ++i) {
+            state.setInfixStatus(this.operators[i], this.precedence, true, true);
+        }
         return [state, false, undefined];
     };
     InfixRDeclaration.prototype.prettyPrint = function (indentation, oneLine) {
-        // TODO this is just something that works but not pretty
         var res = 'infixr';
         res += ' ' + this.precedence;
         for (var i = 0; i < this.operators.length; ++i) {
@@ -3939,20 +3989,27 @@ exports.InfixRDeclaration = InfixRDeclaration;
 var NonfixDeclaration = (function (_super) {
     __extends(NonfixDeclaration, _super);
     // nonfix <d> vid1 .. vidn
-    function NonfixDeclaration(position, operators) {
+    function NonfixDeclaration(position, operators, id) {
+        if (id === void 0) { id = 0; }
         var _this = _super.call(this) || this;
         _this.position = position;
         _this.operators = operators;
+        _this.id = id;
         return _this;
     }
     NonfixDeclaration.prototype.simplify = function () {
         return this;
     };
+    NonfixDeclaration.prototype.elaborate = function (state) {
+        return state;
+    };
     NonfixDeclaration.prototype.evaluate = function (state) {
+        for (var i = 0; i < this.operators.length; ++i) {
+            state.setInfixStatus(this.operators[i], 0, false, false);
+        }
         return [state, false, undefined];
     };
     NonfixDeclaration.prototype.prettyPrint = function (indentation, oneLine) {
-        // TODO use the params
         var res = 'nonfix';
         for (var i = 0; i < this.operators.length; ++i) {
             res += ' ' + this.operators[i].getText();
@@ -3965,11 +4022,17 @@ exports.NonfixDeclaration = NonfixDeclaration;
 var EmptyDeclaration = (function (_super) {
     __extends(EmptyDeclaration, _super);
     // exactly what it says on the tin.
-    function EmptyDeclaration() {
-        return _super.call(this) || this;
+    function EmptyDeclaration(id) {
+        if (id === void 0) { id = 0; }
+        var _this = _super.call(this) || this;
+        _this.id = id;
+        return _this;
     }
     EmptyDeclaration.prototype.simplify = function () {
         return this;
+    };
+    EmptyDeclaration.prototype.elaborate = function (state) {
+        return state;
     };
     EmptyDeclaration.prototype.evaluate = function (state) {
         return [state, false, undefined];
@@ -4009,17 +4072,11 @@ var Expression = (function () {
     function Expression() {
     }
     Expression.prototype.getType = function (state) {
-        if (!this.type) {
-            this.type = this.computeType(state);
-        }
-        return this.type;
-    };
-    Expression.prototype.computeType = function (state) {
-        throw new errors_1.InternalInterpreterError(this.position, 'Called "computeType" on derived form.');
+        throw new errors_1.InternalInterpreterError(this.position, 'Called "getType" on a derived form.');
     };
     // Computes the value of an expression, returns [computed value, is thrown exception]
     Expression.prototype.compute = function (state) {
-        throw new errors_1.InternalInterpreterError(this.position, 'Called "getValue" on derived form.');
+        throw new errors_1.InternalInterpreterError(this.position, 'Called "getValue" on a derived form.');
     };
     Expression.prototype.prettyPrint = function (indentation, oneLine) {
         if (indentation === void 0) { indentation = 0; }
@@ -4036,6 +4093,9 @@ var Wildcard = (function (_super) {
         _this.position = position;
         return _this;
     }
+    Wildcard.prototype.getType = function (state) {
+        return [new types_1.TypeVariable('\'\'__wc'), new types_1.TypeVariable('\'__wc')];
+    };
     Wildcard.prototype.compute = function (state) {
         throw new errors_1.InternalInterpreterError(this.position, 'Wildcards are far too wild to have a value.');
     };
@@ -4066,6 +4126,9 @@ var LayeredPattern = (function (_super) {
     }
     LayeredPattern.prototype.compute = function (state) {
         throw new errors_1.InternalInterpreterError(this.position, 'Layered patterns are far too layered to have a value.');
+    };
+    LayeredPattern.prototype.getType = function (state) {
+        throw new Error('nyian');
     };
     LayeredPattern.prototype.matches = function (state, v) {
         var res = this.pattern.matches(state, v);
@@ -4119,12 +4182,16 @@ var Match = (function () {
             var res = this.matches[i][0].matches(state, value);
             if (res !== undefined) {
                 for (var j = 0; j < res.length; ++j) {
-                    state.setDynamicValue(res[j][0], res[j][1]);
+                    state.setDynamicValue(res[j][0], res[j][1], true);
                 }
-                return this.matches[i][1].compute(state.getNestedState());
+                return this.matches[i][1].compute(state.getNestedState(false, state.id));
             }
         }
-        return [state.getDynamicValue('Match'), true];
+        return [state.getDynamicValue('Match'), true, state];
+    };
+    Match.prototype.getType = function (state) {
+        // TODO
+        throw new errors_1.InternalInterpreterError(this.position, 'nyi\'an :3');
     };
     Match.prototype.simplify = function () {
         var newMatches = [];
@@ -4150,9 +4217,9 @@ var TypedExpression = (function (_super) {
     TypedExpression.prototype.matches = function (state, v) {
         return this.expression.matches(state, v);
     };
-    TypedExpression.prototype.computeType = function (state) {
+    TypedExpression.prototype.getType = function (state) {
         // TODO
-        throw new errors_1.InternalInterpreterError(this.position, 'not yet implemented');
+        throw new errors_1.InternalInterpreterError(this.position, 'nyi\'an :3');
     };
     TypedExpression.prototype.simplify = function () {
         return new TypedExpression(this.position, this.expression.simplify(), this.typeAnnotation.simplify());
@@ -4192,10 +4259,14 @@ var HandleException = (function (_super) {
         res += ' handle ' + this.match.prettyPrint(indentation, oneLine) + ' )';
         return res;
     };
+    HandleException.prototype.getType = function (state) {
+        // TODO
+        throw new errors_1.InternalInterpreterError(this.position, 'nyi\'an :3');
+    };
     HandleException.prototype.compute = function (state) {
         var res = this.expression.compute(state);
         if (res[1]) {
-            var next = this.match.compute(state, res[0]);
+            var next = this.match.compute(res[2], res[0]);
             if (!next[1] || next[0].constructorName !== 'Match') {
                 // Exception got handled
                 return next;
@@ -4224,13 +4295,17 @@ var RaiseException = (function (_super) {
         // TODO
         return 'raise ' + this.expression.prettyPrint(indentation, oneLine);
     };
+    RaiseException.prototype.getType = function (state) {
+        // TODO
+        throw new errors_1.InternalInterpreterError(this.position, 'nyi\'an :3');
+    };
     RaiseException.prototype.compute = function (state) {
         var res = this.expression.compute(state);
         if (!(res[0] instanceof values_1.ExceptionValue)) {
             throw new errors_1.EvaluationError(this.position, 'Cannot "raise" value of type "' + res.constructor.name
                 + '" (type must be "exn").');
         }
-        return [res[0], true];
+        return [res[0], true, res[2]];
     };
     return RaiseException;
 }(Expression));
@@ -4253,8 +4328,18 @@ var Lambda = (function (_super) {
         // TODO
         return '( fn ' + this.match.prettyPrint(indentation, oneLine) + ' )';
     };
+    Lambda.prototype.getType = function (state) {
+        // TODO
+        throw new errors_1.InternalInterpreterError(this.position, 'nyi\'an :3');
+    };
     Lambda.prototype.compute = function (state) {
-        return [new values_1.FunctionValue(state, this.match), false];
+        var recbnds = [];
+        state.getDefinedIdentifiers().forEach(function (val) {
+            if (state.getDynamicValue(val) !== undefined) {
+                recbnds.push([val, state.getDynamicValue(val)]);
+            }
+        });
+        return [new values_1.FunctionValue(recbnds, this.match), false, state];
     };
     return Lambda;
 }(Expression));
@@ -4303,17 +4388,15 @@ var FunctionApplication = (function (_super) {
         throw new errors_1.EvaluationError(this.position, 'Help me, I\'m broken. ('
             + v.constructor.name + ').');
     };
-    FunctionApplication.prototype.computeType = function (state) {
-        var f = this.func.getType(state);
-        var arg = this.argument.getType(state);
-        if (f instanceof types_1.FunctionType) {
+    FunctionApplication.prototype.getType = function (state) {
+        /* let f: Type = this.func.getType(state);
+        let arg: Type = this.argument.getType(state);
+        if (f instanceof FunctionType) {
             f.parameterType.unify(arg, state, this.argument.position);
             return f.returnType;
-        }
-        else {
-            // TODO: do we need a special case for constructors?
-            throw new errors_1.SemanticError(this.func.position, this.func.prettyPrint() + ' is not a function.');
-        }
+        } else { */
+        throw new errors_1.ElaborationError(this.func.position, this.func.prettyPrint() + ' is not a function.');
+        // }
     };
     FunctionApplication.prototype.simplify = function () {
         return new FunctionApplication(this.position, this.func.simplify(), this.argument.simplify());
@@ -4332,21 +4415,22 @@ var FunctionApplication = (function (_super) {
             // computing the function failed
             return funcVal;
         }
-        var argVal = this.argument.compute(state);
+        var argVal = this.argument.compute(funcVal[2]);
         if (argVal[1]) {
             return argVal;
         }
         if (funcVal[0] instanceof values_1.FunctionValue) {
-            return funcVal[0].compute(state, argVal[0]);
+            return funcVal[0].compute(argVal[2], argVal[0]);
         }
         else if (funcVal[0] instanceof values_1.ValueConstructor) {
-            return [funcVal[0].construct(argVal[0]), false];
+            return [funcVal[0].construct(argVal[0]), false, state];
         }
         else if (funcVal[0] instanceof values_1.ExceptionConstructor) {
-            return [funcVal[0].construct(argVal[0]), false];
+            return [funcVal[0].construct(argVal[0]), false, state];
         }
         else if (funcVal[0] instanceof values_1.PredefinedFunction) {
-            return [funcVal[0].apply(argVal[0]), false];
+            var res = funcVal[0].apply(argVal[0]);
+            return [res[0], res[1], state];
         }
         throw new errors_1.EvaluationError(this.position, 'Cannot evaluate the function "'
             + this.func.prettyPrint() + '" (' + funcVal[0].constructor.name + ').');
@@ -4370,21 +4454,21 @@ var Constant = (function (_super) {
             return undefined;
         }
     };
-    Constant.prototype.computeType = function (state) {
+    Constant.prototype.getType = function (state) {
         if (this.token instanceof lexer_1.IntegerConstantToken || this.token instanceof lexer_1.NumericToken) {
-            return new types_1.PrimitiveType('int');
+            return [new types_1.PrimitiveType('int')];
         }
         else if (this.token instanceof lexer_1.RealConstantToken) {
-            return new types_1.PrimitiveType('real');
+            return [new types_1.PrimitiveType('real')];
         }
         else if (this.token instanceof lexer_1.WordConstantToken) {
-            return new types_1.PrimitiveType('word');
+            return [new types_1.PrimitiveType('word')];
         }
         else if (this.token instanceof lexer_1.CharacterConstantToken) {
-            return new types_1.PrimitiveType('char');
+            return [new types_1.PrimitiveType('char')];
         }
         else if (this.token instanceof lexer_1.StringConstantToken) {
-            return new types_1.PrimitiveType('string');
+            return [new types_1.PrimitiveType('string')];
         }
         else {
             throw new errors_1.InternalInterpreterError(this.token.position, '"' + this.prettyPrint() + '" does not seem to be a valid constant.');
@@ -4399,19 +4483,19 @@ var Constant = (function (_super) {
     };
     Constant.prototype.compute = function (state) {
         if (this.token instanceof lexer_1.IntegerConstantToken || this.token instanceof lexer_1.NumericToken) {
-            return [new values_1.Integer(this.token.value), false];
+            return [new values_1.Integer(this.token.value), false, state];
         }
         else if (this.token instanceof lexer_1.RealConstantToken) {
-            return [new values_1.Real(this.token.value), false];
+            return [new values_1.Real(this.token.value), false, state];
         }
         else if (this.token instanceof lexer_1.WordConstantToken) {
-            return [new values_1.Word(this.token.value), false];
+            return [new values_1.Word(this.token.value), false, state];
         }
         else if (this.token instanceof lexer_1.CharacterConstantToken) {
-            return [new values_1.CharValue(this.token.value), false];
+            return [new values_1.CharValue(this.token.value), false, state];
         }
         else if (this.token instanceof lexer_1.StringConstantToken) {
-            return [new values_1.StringValue(this.token.value), false];
+            return [new values_1.StringValue(this.token.value), false, state];
         }
         throw new errors_1.EvaluationError(this.token.position, 'You sure that this is a constant?');
     };
@@ -4433,13 +4517,14 @@ var ValueIdentifier = (function (_super) {
             if (v.equals(res)) {
                 return [];
             }
-            else {
+            else if (this.name.getText() === 'true'
+                || this.name.getText() === 'false') {
+                // Some vars may not be redefined.
+                // TODO, hardcoding true and false seems inherently wrong.
                 return undefined;
             }
         }
-        else {
-            return [[this.name.getText(), v]];
-        }
+        return [[this.name.getText(), v]];
     };
     ValueIdentifier.prototype.simplify = function () { return this; };
     ValueIdentifier.prototype.prettyPrint = function (indentation, oneLine) {
@@ -4447,6 +4532,10 @@ var ValueIdentifier = (function (_super) {
         if (oneLine === void 0) { oneLine = true; }
         // TODO
         return this.name.getText();
+    };
+    ValueIdentifier.prototype.getType = function (state) {
+        // TODO
+        throw new errors_1.InternalInterpreterError(this.position, 'nyi\'an :3');
     };
     ValueIdentifier.prototype.compute = function (state) {
         var res = state.getDynamicValue(this.name.getText());
@@ -4462,7 +4551,7 @@ var ValueIdentifier = (function (_super) {
             && res.numArgs === 0) {
             res = res.construct();
         }
-        return [res, false];
+        return [res, false, state];
     };
     return ValueIdentifier;
 }(Expression));
@@ -4479,7 +4568,7 @@ var Record = (function (_super) {
         _this.entries.sort();
         for (var i = 1; i < _this.entries.length; ++i) {
             if (_this.entries[i][0] === _this.entries[i - 1][0]) {
-                throw new errors_1.SemanticError(_this.position, 'Label "' + _this.entries[i][0] + '" occurs more than once in the same record.');
+                throw new errors_1.ElaborationError(_this.position, 'Label "' + _this.entries[i][0] + '" occurs more than once in the same record.');
             }
         }
         return _this;
@@ -4503,17 +4592,19 @@ var Record = (function (_super) {
         }
         return res;
     };
-    Record.prototype.computeType = function (state) {
-        var e = new Map();
-        for (var i = 0; i < this.entries.length; ++i) {
-            var name_1 = this.entries[i][0];
-            var exp = this.entries[i][1];
-            if (e.has(name_1)) {
-                throw new errors_1.SemanticError(this.position, 'Label "' + name_1 + '" occurs more than once in the same record.');
+    Record.prototype.getType = function (state) {
+        throw new Error('nyian');
+        /* let e: Map<string, Type> = new Map<string, Type>();
+        for (let i: number = 0; i < this.entries.length; ++i) {
+            let name: string = this.entries[i][0];
+            let exp: Expression = this.entries[i][1];
+            if (e.has(name)) {
+                throw new ElaborationError(this.position,
+                    'Label "' + name + '" occurs more than once in the same record.');
             }
-            e.set(name_1, exp.getType(state));
+            e.set(name, exp.getType(state));
         }
-        return new types_1.RecordType(e, this.complete);
+        return [new RecordType(e, this.complete)]; */
     };
     Record.prototype.simplify = function () {
         var newEntries = [];
@@ -4555,7 +4646,7 @@ var Record = (function (_super) {
             }
             nentr = nentr.set(this.entries[i][0], res[0]);
         }
-        return [new values_1.RecordValue(nentr), false];
+        return [new values_1.RecordValue(nentr), false, state];
     };
     return Record;
 }(Expression));
@@ -4583,11 +4674,15 @@ var LocalDeclarationExpression = (function (_super) {
         res += ' in ' + this.expression.prettyPrint(indentation, oneLine) + ' end';
         return res;
     };
+    LocalDeclarationExpression.prototype.getType = function (state) {
+        // TODO
+        throw new errors_1.InternalInterpreterError(this.position, 'nyi\'an :3');
+    };
     LocalDeclarationExpression.prototype.compute = function (state) {
-        var nstate = state.getNestedState();
+        var nstate = state.getNestedState(false, state.id);
         var res = this.declaration.evaluate(nstate);
         if (res[1]) {
-            return [res[2], true];
+            return [res[2], true, state];
         }
         return this.expression.compute(res[0]);
     };
@@ -4595,7 +4690,7 @@ var LocalDeclarationExpression = (function (_super) {
 }(Expression));
 exports.LocalDeclarationExpression = LocalDeclarationExpression;
 // The following classes are derived forms.
-// They will not be present in the simplified AST and do not implement checkSemantics/getType
+// They will not be present in the simplified AST and do not implement elaborate/getType
 var InfixExpression = (function (_super) {
     __extends(InfixExpression, _super);
     // operators: (op, idx), to simplify simplify
@@ -4959,264 +5054,302 @@ var boolType = new types_1.PrimitiveType('bool');
 var stringType = new types_1.PrimitiveType('string');
 var charType = new types_1.PrimitiveType('char');
 function functionType(type) {
-    return new types_1.FunctionType(new types_1.TupleType([type, type]), type);
+    return new types_1.FunctionType(new types_1.TupleType([type, type]), type).simplify();
 }
 function bfunctionType(type) {
-    return new types_1.FunctionType(new types_1.TupleType([type, type]), boolType);
+    return new types_1.FunctionType(new types_1.TupleType([type, type]), boolType).simplify();
 }
 var typeVar = new types_1.TypeVariable('\'a');
 var eqTypeVar = new types_1.TypeVariable('\'\'b');
 var initialState = new state_1.State(0, undefined, new state_1.StaticBasis({
-    'unit': new state_1.TypeInformation(new types_1.FunctionType(new types_1.TupleType([]), new types_1.TupleType([])).simplify(), []),
-    'bool': new state_1.TypeInformation(new types_1.PrimitiveType('bool'), ['true', 'false']),
-    'int': new state_1.TypeInformation(new types_1.PrimitiveType('int'), []),
-    'word': new state_1.TypeInformation(new types_1.PrimitiveType('word'), []),
-    'real': new state_1.TypeInformation(new types_1.PrimitiveType('real'), []),
-    'string': new state_1.TypeInformation(new types_1.PrimitiveType('string'), []),
-    'char': new state_1.TypeInformation(new types_1.PrimitiveType('char'), []),
-    'list': new state_1.TypeInformation(new types_1.PrimitiveType('list', [typeVar]), ['nil', '::']),
-    'ref': new state_1.TypeInformation(new types_1.PrimitiveType('ref', [typeVar]), ['ref']),
-    'exn': new state_1.TypeInformation(new types_1.PrimitiveType('exn'), [])
+    'unit': [new state_1.TypeInformation(new types_1.FunctionType(new types_1.TupleType([]), new types_1.TupleType([])).simplify(), []), false],
+    'bool': [new state_1.TypeInformation(new types_1.PrimitiveType('bool'), ['true', 'false']), false],
+    'int': [new state_1.TypeInformation(new types_1.PrimitiveType('int'), []), false],
+    'word': [new state_1.TypeInformation(new types_1.PrimitiveType('word'), []), false],
+    'real': [new state_1.TypeInformation(new types_1.PrimitiveType('real'), []), false],
+    'string': [new state_1.TypeInformation(new types_1.PrimitiveType('string'), []), false],
+    'char': [new state_1.TypeInformation(new types_1.PrimitiveType('char'), []), false],
+    'list': [new state_1.TypeInformation(new types_1.PrimitiveType('list', [typeVar]), ['nil', '::']), false],
+    'ref': [new state_1.TypeInformation(new types_1.PrimitiveType('ref', [typeVar]), ['ref']), false],
+    'exn': [new state_1.TypeInformation(new types_1.PrimitiveType('exn'), []), false]
 }, {
-    'div': [functionType(intType), functionType(wordType)],
-    'mod': [functionType(intType), functionType(wordType)],
-    '*': [functionType(intType), functionType(wordType), functionType(realType)],
-    '/': [functionType(realType)],
-    '+': [functionType(intType), functionType(wordType), functionType(realType)],
-    '-': [functionType(intType), functionType(wordType), functionType(realType)],
-    '<': [bfunctionType(intType), bfunctionType(wordType),
-        bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)],
-    '<=': [bfunctionType(intType), bfunctionType(wordType),
-        bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)],
-    '>': [bfunctionType(intType), bfunctionType(wordType),
-        bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)],
-    '>=': [bfunctionType(intType), bfunctionType(wordType),
-        bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)],
-    '=': [new types_1.FunctionType(new types_1.TupleType([eqTypeVar, eqTypeVar]), boolType)],
+    'div': [[functionType(intType), functionType(wordType)], false],
+    'mod': [[functionType(intType), functionType(wordType)], false],
+    '*': [[functionType(intType), functionType(wordType), functionType(realType)], false],
+    '/': [[functionType(realType)], false],
+    '+': [[functionType(intType), functionType(wordType), functionType(realType)], false],
+    '-': [[functionType(intType), functionType(wordType), functionType(realType)], false],
+    '<': [[bfunctionType(intType), bfunctionType(wordType),
+            bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
+    '<=': [[bfunctionType(intType), bfunctionType(wordType),
+            bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
+    '>': [[bfunctionType(intType), bfunctionType(wordType),
+            bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
+    '>=': [[bfunctionType(intType), bfunctionType(wordType),
+            bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
+    '=': [[new types_1.FunctionType(new types_1.TupleType([eqTypeVar, eqTypeVar]), boolType).simplify()], false],
+    '<>': [[new types_1.FunctionType(new types_1.TupleType([eqTypeVar, eqTypeVar]), boolType).simplify()], false],
     // ':='
     // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
-    'true': [new types_1.PrimitiveType('bool')],
-    'false': [new types_1.PrimitiveType('bool')],
-    'nil': [new types_1.PrimitiveType('list', [typeVar])],
-    '::': [new types_1.FunctionType(new types_1.TupleType([typeVar, new types_1.PrimitiveType('list', [typeVar])]), new types_1.PrimitiveType('list', [typeVar]))],
-    'Match': [new types_1.PrimitiveType('exn')],
-    'Bind': [new types_1.PrimitiveType('exn')]
+    'true': [[new types_1.PrimitiveType('bool')], false],
+    'false': [[new types_1.PrimitiveType('bool')], false],
+    'nil': [[new types_1.PrimitiveType('list', [typeVar])], false],
+    '::': [[new types_1.FunctionType(new types_1.TupleType([typeVar, new types_1.PrimitiveType('list', [typeVar])]), new types_1.PrimitiveType('list', [typeVar])).simplify()], false],
+    'Match': [[new types_1.PrimitiveType('exn')], false],
+    'Bind': [[new types_1.PrimitiveType('exn')], false],
+    'Div': [[new types_1.PrimitiveType('exn')], false],
+    '^': [[functionType(stringType)], false],
+    'explode': [[new types_1.FunctionType(new types_1.TupleType([stringType, stringType]), new types_1.PrimitiveType('list', [charType])).simplify()], false],
+    '~': [[new types_1.FunctionType(intType, intType), new types_1.FunctionType(realType, realType)], false],
 }), new state_1.DynamicBasis({
-    'unit': [],
-    'bool': ['true', 'false'],
-    'int': [],
-    'word': [],
-    'real': [],
-    'string': [],
-    'char': [],
-    'list': ['nil', '::'],
-    'ref': ['ref'],
-    'exn': []
+    'unit': [[], false],
+    'bool': [['true', 'false'], false],
+    'int': [[], false],
+    'word': [[], false],
+    'real': [[], false],
+    'string': [[], false],
+    'char': [[], false],
+    'list': [['nil', '::'], false],
+    'ref': [['ref'], false],
+    'exn': [[], false],
 }, {
-    'div': new values_1.PredefinedFunction('div', function (val) {
-        if (val instanceof values_1.RecordValue) {
-            var val1 = val.getValue('1');
-            var val2 = val.getValue('2');
-            if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                return val1.divide(val2);
+    'div': [new values_1.PredefinedFunction('div', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    if (val2.value === 0) {
+                        return [new values_1.ExceptionConstructor('Div').construct(), true];
+                    }
+                    return [val1.divide(val2), false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    if (val2.value === 0) {
+                        return [new values_1.ExceptionConstructor('Div').construct(), true];
+                    }
+                    return [val1.divide(val2), false];
+                }
             }
-            else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                return val1.divide(val2);
+            throw new errors_1.InternalInterpreterError(-1, 'Called "div" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    'mod': [new values_1.PredefinedFunction('mod', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    if (val2.value === 0) {
+                        return [new values_1.ExceptionConstructor('Div').construct(), true];
+                    }
+                    return [val1.modulo(val2), false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    if (val2.value === 0) {
+                        return [new values_1.ExceptionConstructor('Div').construct(), true];
+                    }
+                    return [val1.modulo(val2), false];
+                }
             }
-        }
-        throw new errors_1.InternalInterpreterError(-1, 'Called "div" on value of the wrong type (' + val.constructor.name + ').');
-    }),
-    'mod': new values_1.PredefinedFunction('mod', function (val) {
-        if (val instanceof values_1.RecordValue) {
-            var val1 = val.getValue('1');
-            var val2 = val.getValue('2');
-            if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                return val1.modulo(val2);
+            throw new errors_1.InternalInterpreterError(-1, 'Called "mod" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '*': [new values_1.PredefinedFunction('*', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    return [val1.multiply(val2), false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    return [val1.multiply(val2), false];
+                }
+                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    return [val1.multiply(val2), false];
+                }
             }
-            else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                return val1.modulo(val2);
+            throw new errors_1.InternalInterpreterError(-1, 'Called "*" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '/': [new values_1.PredefinedFunction('/', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    if (val2.value === 0) {
+                        return [new values_1.ExceptionConstructor('Div').construct(), true];
+                    }
+                    return [val1.divide(val2), false];
+                }
             }
-        }
-        throw new errors_1.InternalInterpreterError(-1, 'Called "mod" on value of the wrong type (' + val.constructor.name + ').');
-    }),
-    '*': new values_1.PredefinedFunction('*', function (val) {
-        if (val instanceof values_1.RecordValue) {
-            var val1 = val.getValue('1');
-            var val2 = val.getValue('2');
-            if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                return val1.multiply(val2);
+            throw new errors_1.InternalInterpreterError(-1, 'Called "/" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '+': [new values_1.PredefinedFunction('+', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    return [val1.add(val2), false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    return [val1.add(val2), false];
+                }
+                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    return [val1.add(val2), false];
+                }
             }
-            else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                return val1.multiply(val2);
+            throw new errors_1.InternalInterpreterError(-1, 'Called "+" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '-': [new values_1.PredefinedFunction('-', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    return [val1.add(val2.negate()), false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    return [val1.add(val2.negate()), false];
+                }
+                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    return [val1.add(val2.negate()), false];
+                }
             }
-            else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                return val1.multiply(val2);
+            throw new errors_1.InternalInterpreterError(-1, 'Called "-" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '<': [new values_1.PredefinedFunction('<', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) < 0), false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) < 0), false];
+                }
+                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) < 0), false];
+                }
+                else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) < 0), false];
+                }
+                else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) < 0), false];
+                }
             }
-        }
-        throw new errors_1.InternalInterpreterError(-1, 'Called "*" on value of the wrong type (' + val.constructor.name + ').');
-    }),
-    '/': new values_1.PredefinedFunction('/', function (val) {
-        if (val instanceof values_1.RecordValue) {
-            var val1 = val.getValue('1');
-            var val2 = val.getValue('2');
-            if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                return val1.divide(val2);
+            throw new errors_1.InternalInterpreterError(-1, 'Called "<" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '>': [new values_1.PredefinedFunction('<', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) > 0), false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) > 0), false];
+                }
+                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) > 0), false];
+                }
+                else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) > 0), false];
+                }
+                else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) > 0), false];
+                }
             }
-        }
-        throw new errors_1.InternalInterpreterError(-1, 'Called "/" on value of the wrong type (' + val.constructor.name + ').');
-    }),
-    '+': new values_1.PredefinedFunction('+', function (val) {
-        if (val instanceof values_1.RecordValue) {
-            var val1 = val.getValue('1');
-            var val2 = val.getValue('2');
-            if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                return val1.add(val2);
+            throw new errors_1.InternalInterpreterError(-1, 'Called ">" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '<=': [new values_1.PredefinedFunction('<', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) <= 0), false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) <= 0), false];
+                }
+                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) <= 0), false];
+                }
+                else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) <= 0), false];
+                }
+                else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) <= 0), false];
+                }
             }
-            else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                return val1.add(val2);
+            throw new errors_1.InternalInterpreterError(-1, 'Called "<=" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '>=': [new values_1.PredefinedFunction('<', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) >= 0), false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) >= 0), false];
+                }
+                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) >= 0), false];
+                }
+                else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) >= 0), false];
+                }
+                else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) >= 0), false];
+                }
             }
-            else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                return val1.add(val2);
+            throw new errors_1.InternalInterpreterError(-1, 'Called ">=" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '=': [new values_1.PredefinedFunction('=', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                return [new values_1.BoolValue(val1.equals(val2)), false];
             }
-        }
-        throw new errors_1.InternalInterpreterError(-1, 'Called "+" on value of the wrong type (' + val.constructor.name + ').');
-    }),
-    '-': new values_1.PredefinedFunction('-', function (val) {
-        if (val instanceof values_1.RecordValue) {
-            var val1 = val.getValue('1');
-            var val2 = val.getValue('2');
-            if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                return val1.add(val2.negate());
+            throw new errors_1.InternalInterpreterError(-1, 'Called "=" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '<>': [new values_1.PredefinedFunction('=', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                return [new values_1.BoolValue(!val1.equals(val2)), false];
             }
-            else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                return val1.add(val2.negate());
-            }
-            else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                return val1.add(val2.negate());
-            }
-        }
-        throw new errors_1.InternalInterpreterError(-1, 'Called "-" on value of the wrong type (' + val.constructor.name + ').');
-    }),
-    '<': new values_1.PredefinedFunction('<', function (val) {
-        if (val instanceof values_1.RecordValue) {
-            var val1 = val.getValue('1');
-            var val2 = val.getValue('2');
-            if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                return new values_1.BoolValue(val1.compareTo(val2) < 0);
-            }
-            else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                return new values_1.BoolValue(val1.compareTo(val2) < 0);
-            }
-            else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                return new values_1.BoolValue(val1.compareTo(val2) < 0);
-            }
-            else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
-                return new values_1.BoolValue(val1.compareTo(val2) < 0);
-            }
-            else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
-                return new values_1.BoolValue(val1.compareTo(val2) < 0);
-            }
-        }
-        throw new errors_1.InternalInterpreterError(-1, 'Called "<" on value of the wrong type (' + val.constructor.name + ').');
-    }),
-    '>': new values_1.PredefinedFunction('<', function (val) {
-        if (val instanceof values_1.RecordValue) {
-            var val1 = val.getValue('1');
-            var val2 = val.getValue('2');
-            if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                return new values_1.BoolValue(val1.compareTo(val2) > 0);
-            }
-            else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                return new values_1.BoolValue(val1.compareTo(val2) > 0);
-            }
-            else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                return new values_1.BoolValue(val1.compareTo(val2) > 0);
-            }
-            else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
-                return new values_1.BoolValue(val1.compareTo(val2) > 0);
-            }
-            else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
-                return new values_1.BoolValue(val1.compareTo(val2) > 0);
-            }
-        }
-        throw new errors_1.InternalInterpreterError(-1, 'Called ">" on value of the wrong type (' + val.constructor.name + ').');
-    }),
-    '<=': new values_1.PredefinedFunction('<', function (val) {
-        if (val instanceof values_1.RecordValue) {
-            var val1 = val.getValue('1');
-            var val2 = val.getValue('2');
-            if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                return new values_1.BoolValue(val1.compareTo(val2) <= 0);
-            }
-            else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                return new values_1.BoolValue(val1.compareTo(val2) <= 0);
-            }
-            else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                return new values_1.BoolValue(val1.compareTo(val2) <= 0);
-            }
-            else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
-                return new values_1.BoolValue(val1.compareTo(val2) <= 0);
-            }
-            else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
-                return new values_1.BoolValue(val1.compareTo(val2) <= 0);
-            }
-        }
-        throw new errors_1.InternalInterpreterError(-1, 'Called "<=" on value of the wrong type (' + val.constructor.name + ').');
-    }),
-    '>=': new values_1.PredefinedFunction('<', function (val) {
-        if (val instanceof values_1.RecordValue) {
-            var val1 = val.getValue('1');
-            var val2 = val.getValue('2');
-            if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                return new values_1.BoolValue(val1.compareTo(val2) >= 0);
-            }
-            else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                return new values_1.BoolValue(val1.compareTo(val2) >= 0);
-            }
-            else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                return new values_1.BoolValue(val1.compareTo(val2) >= 0);
-            }
-            else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
-                return new values_1.BoolValue(val1.compareTo(val2) >= 0);
-            }
-            else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
-                return new values_1.BoolValue(val1.compareTo(val2) >= 0);
-            }
-        }
-        throw new errors_1.InternalInterpreterError(-1, 'Called ">=" on value of the wrong type (' + val.constructor.name + ').');
-    }),
-    '=': new values_1.PredefinedFunction('=', function (val) {
-        if (val instanceof values_1.RecordValue) {
-            var val1 = val.getValue('1');
-            var val2 = val.getValue('2');
-            return new values_1.BoolValue(val1.equals(val2));
-        }
-        throw new errors_1.InternalInterpreterError(-1, 'Called "=" on value of the wrong type (' + val.constructor.name + ').');
-    }),
+            throw new errors_1.InternalInterpreterError(-1, 'Called "<>" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
     // ':='
     // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
-    'true': new values_1.BoolValue(true),
-    'false': new values_1.BoolValue(false),
-    'nil': new values_1.ValueConstructor('nil').construct(),
-    '::': new values_1.ValueConstructor('::', 1),
-    'Match': new values_1.ExceptionConstructor('Match').construct(),
-    'Bind': new values_1.ExceptionConstructor('Bind').construct(),
-    '^': new values_1.PredefinedFunction('^', function (val) {
-        if (val instanceof values_1.RecordValue) {
-            var val1 = val.getValue('1');
-            var val2 = val.getValue('2');
-            if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
-                return val1.concat(val2);
+    'true': [new values_1.BoolValue(true), false],
+    'false': [new values_1.BoolValue(false), false],
+    'nil': [new values_1.ValueConstructor('nil').construct(), false],
+    '::': [new values_1.ValueConstructor('::', 1), false],
+    'Match': [new values_1.ExceptionConstructor('Match').construct(), false],
+    'Bind': [new values_1.ExceptionConstructor('Bind').construct(), false],
+    'Div': [new values_1.ExceptionConstructor('Div').construct(), false],
+    '^': [new values_1.PredefinedFunction('^', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
+                    return [val1.concat(val2), false];
+                }
             }
-        }
-        throw new errors_1.InternalInterpreterError(-1, 'Called "^" on value of the wrong type (' + val.constructor.name + ').');
-    }),
-    'explode': new values_1.PredefinedFunction('explode', function (val) {
-        if (val instanceof values_1.StringValue) {
-            return val.explode();
-        }
-        throw new errors_1.InternalInterpreterError(-1, 'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
-    }),
+            throw new errors_1.InternalInterpreterError(-1, 'Called "^" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    'explode': [new values_1.PredefinedFunction('explode', function (val) {
+            if (val instanceof values_1.StringValue) {
+                return [val.explode(), false];
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '~': [new values_1.PredefinedFunction('~', function (val) {
+            if (val instanceof values_1.Integer) {
+                return [val.negate(), false];
+            }
+            else if (val instanceof values_1.Real) {
+                return [val.negate(), false];
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "~" on something weird.');
+        }), false],
 }), {
     'bool': new state_1.TypeNameInformation(0, true),
     'int': new state_1.TypeNameInformation(0, true),
@@ -5226,7 +5359,7 @@ var initialState = new state_1.State(0, undefined, new state_1.StaticBasis({
     'word': new state_1.TypeNameInformation(0, true),
     'list': new state_1.TypeNameInformation(1, true),
     'ref': new state_1.TypeNameInformation(1, true),
-    'exn': new state_1.TypeNameInformation(0, false)
+    'exn': new state_1.TypeNameInformation(0, false, false),
 }, {
     'div': new state_1.InfixStatus(true, 7, false),
     'mod': new state_1.InfixStatus(true, 7, false),
@@ -5240,11 +5373,12 @@ var initialState = new state_1.State(0, undefined, new state_1.StaticBasis({
     '>=': new state_1.InfixStatus(true, 4, false),
     '::': new state_1.InfixStatus(true, 5, true),
     '=': new state_1.InfixStatus(true, 4, false),
+    '<>': new state_1.InfixStatus(true, 4, false),
     ':=': new state_1.InfixStatus(true, 3, false),
     '^': new state_1.InfixStatus(true, 6, false),
 });
 function getInitialState() {
-    return initialState.getNestedState(true);
+    return initialState.getNestedState();
 }
 exports.getInitialState = getInitialState;
 
@@ -5278,15 +5412,74 @@ var Interpreter = (function () {
         this.settings = settings;
     }
     /* Think of some additional flags n stuff etc */
-    Interpreter.interpret = function (nextInstruction, oldState) {
+    Interpreter.interpret = function (nextInstruction, oldState, allowLongFunctionNames) {
         if (oldState === void 0) { oldState = initialState_1.getInitialState(); }
-        var state = oldState.getNestedState(true);
+        if (allowLongFunctionNames === void 0) { allowLongFunctionNames = false; }
+        var state = oldState.getNestedState();
         var tkn = Lexer.lex(nextInstruction);
+        if (allowLongFunctionNames) {
+            // this is only a replacement until we have the module language, so we can implement all testcases from the book
+            // TODO remove
+            var newTkn = [];
+            for (var _i = 0, tkn_1 = tkn; _i < tkn_1.length; _i++) {
+                var t = tkn_1[_i];
+                if (t instanceof Lexer.LongIdentifierToken) {
+                    newTkn.push(new Lexer.IdentifierToken(t.getText(), t.position));
+                }
+                else
+                    newTkn.push(t);
+            }
+            tkn = newTkn;
+        }
         var ast = Parser.parse(tkn, state);
         state = oldState.getNestedState();
         ast = ast.simplify();
-        // ast.checkStaticSemantics(state);
-        return ast.evaluate(state);
+        // state = ast.elaborate(state);
+        // Use a fresh state to be able to piece types and values together
+        var res = ast.evaluate(oldState.getNestedState());
+        // if (res[1]) {
+        return res;
+        // }
+        /*
+        let curState = res[0];
+
+        while (curState.id > oldState.id) {
+            if (curState.dynamicBasis !== undefined) {
+                // For every new bound value, try to find its type
+                for (let i in curState.dynamicBasis.valueEnvironment) {
+                    if (Object.prototype.hasOwnProperty.call(
+                        curState.dynamicBasis.valueEnvironment, i)) {
+
+                        let tp = state.getStaticValue(i, curState.id);
+                        if (tp !== undefined) {
+                            curState.setStaticValue(i, tp);
+                        }
+                    }
+                }
+
+                // For every new bound type, try to find its type
+                for (let i in curState.dynamicBasis.typeEnvironment) {
+                    if (Object.prototype.hasOwnProperty.call(
+                        curState.dynamicBasis.typeEnvironment, i)) {
+
+                        let tp = state.getStaticType(i, curState.id);
+                        if (tp !== undefined) {
+                            curState.setStaticType(i, tp.type, tp.constructors);
+                        }
+                    }
+                }
+            }
+            if (state.parent === undefined) {
+                break;
+            }
+            curState = <State> curState.parent;
+            while (state.id > curState.id && state.parent !== undefined) {
+                state = <State> state.parent;
+            }
+        }
+
+        return res;
+         */
     };
     return Interpreter;
 }());
@@ -5315,9 +5508,11 @@ var TypeInformation = (function () {
 }());
 exports.TypeInformation = TypeInformation;
 var TypeNameInformation = (function () {
-    function TypeNameInformation(arity, allowsEquality) {
+    function TypeNameInformation(arity, allowsEquality, isPrimitiveType) {
+        if (isPrimitiveType === void 0) { isPrimitiveType = true; }
         this.arity = arity;
         this.allowsEquality = allowsEquality;
+        this.isPrimitiveType = isPrimitiveType;
     }
     return TypeNameInformation;
 }());
@@ -5344,11 +5539,11 @@ var DynamicBasis = (function () {
     DynamicBasis.prototype.getType = function (name) {
         return this.typeEnvironment[name];
     };
-    DynamicBasis.prototype.setValue = function (name, value) {
-        this.valueEnvironment[name] = value;
+    DynamicBasis.prototype.setValue = function (name, value, intermediate) {
+        this.valueEnvironment[name] = [value, intermediate];
     };
-    DynamicBasis.prototype.setType = function (name, type) {
-        this.typeEnvironment[name] = type;
+    DynamicBasis.prototype.setType = function (name, type, intermediate) {
+        this.typeEnvironment[name] = [type, intermediate];
     };
     return DynamicBasis;
 }());
@@ -5364,33 +5559,51 @@ var StaticBasis = (function () {
     StaticBasis.prototype.getType = function (name) {
         return this.typeEnvironment[name];
     };
-    StaticBasis.prototype.setValue = function (name, value) {
-        this.valueEnvironment[name] = [value];
+    StaticBasis.prototype.setValue = function (name, value, intermediate) {
+        this.valueEnvironment[name] = [value, intermediate];
     };
-    StaticBasis.prototype.setType = function (name, type, constructors) {
-        this.typeEnvironment[name] = new TypeInformation(type, constructors);
+    StaticBasis.prototype.setType = function (name, type, constructors, intermediate) {
+        this.typeEnvironment[name] = [new TypeInformation(type, constructors), intermediate];
     };
     return StaticBasis;
 }());
 exports.StaticBasis = StaticBasis;
 var emptyStdFile = {
-    '__stdout': new values_1.StringValue(''),
-    '__stdin': new values_1.StringValue(''),
-    '__stderr': new values_1.StringValue('')
+    '__stdout': [new values_1.StringValue(''), true],
+    '__stdin': [new values_1.StringValue(''), true],
+    '__stderr': [new values_1.StringValue(''), true]
 };
 var State = (function () {
-    function State(id, parent, staticBasis, dynamicBasis, typeNames, infixEnvironment) {
+    // The states' ids are non-decreasing; a single declaration uses the same ids
+    function State(id, parent, staticBasis, dynamicBasis, typeNames, infixEnvironment, declaredIdentifiers) {
+        if (declaredIdentifiers === void 0) { declaredIdentifiers = new Set(); }
         this.id = id;
         this.parent = parent;
         this.staticBasis = staticBasis;
         this.dynamicBasis = dynamicBasis;
         this.typeNames = typeNames;
         this.infixEnvironment = infixEnvironment;
+        this.declaredIdentifiers = declaredIdentifiers;
         this.stdfiles = emptyStdFile;
     }
-    State.prototype.getNestedState = function (redefinePrint) {
+    State.prototype.getDefinedIdentifiers = function (idLimit) {
+        if (idLimit === void 0) { idLimit = 0; }
+        if (this.parent === undefined || this.parent.id < this.id) {
+            return this.declaredIdentifiers;
+        }
+        var rec = this.parent.getDefinedIdentifiers();
+        this.declaredIdentifiers.forEach(function (val) {
+            rec.add(val);
+        });
+        return rec;
+    };
+    State.prototype.getNestedState = function (redefinePrint, newId) {
         if (redefinePrint === void 0) { redefinePrint = false; }
-        var res = new State(this.id + 1, this, new StaticBasis({}, {}), new DynamicBasis({}, {}), {}, {});
+        if (newId === void 0) { newId = undefined; }
+        if (newId === undefined) {
+            newId = this.id + 1;
+        }
+        var res = new State(newId, this, new StaticBasis({}, {}), new DynamicBasis({}, {}), {}, {});
         if (redefinePrint) {
             res.setDynamicValue('print', new values_1.PredefinedFunction('print', function (val) {
                 if (val instanceof values_1.StringValue) {
@@ -5399,60 +5612,78 @@ var State = (function () {
                 else {
                     res.setDynamicValue('__stdout', new values_1.StringValue(val.prettyPrint()));
                 }
-                return new values_1.RecordValue();
-            }));
+                return [new values_1.RecordValue(), false];
+            }), true);
+            res.setStaticValue('print', [new types_1.FunctionType(new types_1.TypeVariable('\'a'), new types_1.RecordType(new Map()))], true);
         }
         return res;
     };
-    State.prototype.getStaticValue = function (name, idLimit) {
+    // Gets an identifier's type. The value  intermediate  determines whether to return intermediate results
+    State.prototype.getStaticValue = function (name, intermediate, idLimit) {
+        if (intermediate === void 0) { intermediate = undefined; }
         if (idLimit === void 0) { idLimit = 0; }
         if (this.stdfiles[name] !== undefined) {
             return [new types_1.PrimitiveType('string')];
         }
-        var result;
-        result = this.staticBasis.getValue(name);
-        if (result !== undefined || !this.parent || this.parent.id < idLimit) {
-            return result;
+        var result = this.staticBasis.getValue(name);
+        if ((result !== undefined && (intermediate === undefined || intermediate === result[1]))
+            || !this.parent || this.parent.id < idLimit) {
+            if (result === undefined) {
+                return undefined;
+            }
+            return result[0];
         }
         else {
-            return this.parent.getStaticValue(name, idLimit);
+            return this.parent.getStaticValue(name, intermediate, idLimit);
         }
     };
-    State.prototype.getStaticType = function (name, idLimit) {
+    State.prototype.getStaticType = function (name, intermediate, idLimit) {
+        if (intermediate === void 0) { intermediate = undefined; }
         if (idLimit === void 0) { idLimit = 0; }
-        var result;
-        result = this.staticBasis.getType(name);
-        if (result !== undefined || !this.parent || this.parent.id < idLimit) {
-            return result;
+        var result = this.staticBasis.getType(name);
+        if ((result !== undefined && (intermediate === undefined || intermediate === result[1]))
+            || !this.parent || this.parent.id < idLimit) {
+            if (result === undefined) {
+                return undefined;
+            }
+            return result[0];
         }
         else {
-            return this.parent.getStaticType(name, idLimit);
+            return this.parent.getStaticType(name, intermediate, idLimit);
         }
     };
-    State.prototype.getDynamicValue = function (name, idLimit) {
+    State.prototype.getDynamicValue = function (name, intermediate, idLimit) {
+        if (intermediate === void 0) { intermediate = undefined; }
         if (idLimit === void 0) { idLimit = 0; }
         if (this.stdfiles[name] !== undefined
-            && this.stdfiles[name].value !== '') {
-            return this.stdfiles[name];
+            && this.stdfiles[name][0].value !== '') {
+            return this.stdfiles[name][0];
         }
-        var result;
-        result = this.dynamicBasis.getValue(name);
-        if (result !== undefined || !this.parent || this.parent.id < idLimit) {
-            return result;
+        var result = this.dynamicBasis.getValue(name);
+        if ((result !== undefined && (intermediate === undefined || intermediate === result[1]))
+            || !this.parent || this.parent.id < idLimit) {
+            if (result === undefined) {
+                return undefined;
+            }
+            return result[0];
         }
         else {
-            return this.parent.getDynamicValue(name, idLimit);
+            return this.parent.getDynamicValue(name, intermediate, idLimit);
         }
     };
-    State.prototype.getDynamicType = function (name, idLimit) {
+    State.prototype.getDynamicType = function (name, intermediate, idLimit) {
+        if (intermediate === void 0) { intermediate = undefined; }
         if (idLimit === void 0) { idLimit = 0; }
-        var result;
-        result = this.dynamicBasis.getType(name);
-        if (result !== undefined || !this.parent || this.parent.id < idLimit) {
-            return result;
+        var result = this.dynamicBasis.getType(name);
+        if ((result !== undefined && (intermediate === undefined || intermediate === result[1]))
+            || !this.parent || this.parent.id < idLimit) {
+            if (result === undefined) {
+                return undefined;
+            }
+            return result[0];
         }
         else {
-            return this.parent.getDynamicType(name, idLimit);
+            return this.parent.getDynamicType(name, intermediate, idLimit);
         }
     };
     State.prototype.getInfixStatus = function (id, idLimit) {
@@ -5480,64 +5711,69 @@ var State = (function () {
             return this.parent.getPrimitiveType(name, idLimit);
         }
     };
-    State.prototype.setStaticValue = function (name, type, atId) {
+    State.prototype.setStaticValue = function (name, type, intermediate, atId) {
+        if (intermediate === void 0) { intermediate = false; }
         if (atId === void 0) { atId = undefined; }
         if (this.stdfiles[name] !== undefined) {
             return;
         }
         if (atId === undefined || atId === this.id) {
-            this.staticBasis.setValue(name, type);
+            this.staticBasis.setValue(name, type, intermediate);
         }
         else if (atId > this.id || this.parent === undefined) {
             throw new errors_1.InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         }
         else {
-            this.parent.setStaticValue(name, type, atId);
+            this.parent.setStaticValue(name, type, intermediate, atId);
         }
     };
-    State.prototype.setStaticType = function (name, type, constructors, atId) {
+    State.prototype.setStaticType = function (name, type, constructors, intermediate, atId) {
+        if (intermediate === void 0) { intermediate = false; }
         if (atId === void 0) { atId = undefined; }
         if (atId === undefined || atId === this.id) {
-            this.staticBasis.setType(name, type, constructors);
+            this.staticBasis.setType(name, type, constructors, intermediate);
         }
         else if (atId > this.id || this.parent === undefined) {
             throw new errors_1.InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         }
         else {
-            this.parent.setStaticType(name, type, constructors, atId);
+            this.parent.setStaticType(name, type, constructors, intermediate, atId);
         }
     };
-    State.prototype.setDynamicValue = function (name, value, atId) {
+    State.prototype.setDynamicValue = function (name, value, intermediate, atId) {
+        if (intermediate === void 0) { intermediate = false; }
         if (atId === void 0) { atId = undefined; }
         if (atId === undefined || atId === this.id) {
             if (this.stdfiles[name] !== undefined) {
                 if (value instanceof values_1.StringValue) {
-                    this.stdfiles[name] = this.stdfiles[name].concat(value);
+                    this.stdfiles[name] = [this.stdfiles[name][0].concat(value), true];
                     return;
                 }
                 else {
                     throw new errors_1.InternalInterpreterError(-1, 'Wrong type.');
                 }
             }
-            this.dynamicBasis.setValue(name, value);
+            this.dynamicBasis.setValue(name, value, intermediate);
+            this.declaredIdentifiers.add(name);
         }
         else if (atId > this.id || this.parent === undefined) {
             throw new errors_1.InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         }
         else {
-            this.parent.setDynamicValue(name, value, atId);
+            this.parent.setDynamicValue(name, value, intermediate, atId);
         }
     };
-    State.prototype.setDynamicType = function (name, constructors, atId) {
+    State.prototype.setDynamicType = function (name, constructors, intermediate, atId) {
+        if (intermediate === void 0) { intermediate = false; }
         if (atId === void 0) { atId = undefined; }
         if (atId === undefined || atId === this.id) {
-            this.dynamicBasis.setType(name, constructors);
+            this.dynamicBasis.setType(name, constructors, intermediate);
         }
         else if (atId > this.id || this.parent === undefined) {
             throw new errors_1.InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         }
         else {
-            this.parent.setDynamicType(name, constructors, atId);
+            this.parent.setDynamicType(name, constructors, intermediate, atId);
         }
     };
     State.prototype.setInfixStatus = function (id, precedence, rightAssociative, infix, atId) {
