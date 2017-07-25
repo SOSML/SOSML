@@ -109,7 +109,11 @@ class Playground extends React.Component<Props, State> {
     }
 
     handleBrowserResize() {
-        this.setState({sizeAnchor: -1});
+        if (this.state.sizeAnchor === -2) {
+            this.setState({sizeAnchor: -1});
+        } else {
+            this.setState({sizeAnchor: -2});
+        }
     }
 
     handleRun() {
