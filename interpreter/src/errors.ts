@@ -10,7 +10,7 @@ export interface InterpreterMessage {
 
 // A general compiler error. Different translation phases may derive their own, more specialized error classes.
 export class InterpreterError extends Error implements InterpreterMessage {
-    constructor(message: string, public position: Position) {
+    constructor(public position: Position, message: string) {
         super('error:' + position + ': ' + message);
         Object.setPrototypeOf(this, InterpreterError.prototype);
     }
@@ -20,23 +20,23 @@ export class InterpreterError extends Error implements InterpreterMessage {
 // of how absurd the input is.
 export class InternalInterpreterError extends InterpreterError {
     constructor(position: Position, message: string = 'internal compiler error') {
-        super(message, position);
+        super(position, message);
         Object.setPrototypeOf(this, InternalInterpreterError.prototype);
     }
 }
 
 // Used if the code may be valid SML, but uses a feature that this interpreter does not implement, e.g. references.
 export class FeatureNotImplementedError extends InterpreterError {
-    constructor(message: string, position: Position) {
-        super(message, position);
+    constructor(position: Position, message: string) {
+        super(position, message);
         Object.setPrototypeOf(this, FeatureNotImplementedError.prototype);
     }
 }
 
 // Used if the code may be valid SML, but uses a feature that is currently disabled in the interpreter settings.
 export class FeatureDisabledError extends InterpreterError {
-    constructor(message: string, position: Position) {
-        super(message, position);
+    constructor(position: Position, message: string) {
+        super(position, message);
         Object.setPrototypeOf(this, FeatureDisabledError.prototype);
     }
 }
@@ -44,7 +44,29 @@ export class FeatureDisabledError extends InterpreterError {
 // Used if the input is incomplete, but may be a prefix of valid SML code.
 export class IncompleteError extends InterpreterError {
     constructor(position: Position, message: string = 'unexpected end of input') {
-        super(message, position);
+        super(position, message);
         Object.setPrototypeOf(this, IncompleteError.prototype);
+    }
+}
+
+
+export class LexerError extends InterpreterError {
+    constructor(position: Position, message: string) {
+        super(position, message);
+        Object.setPrototypeOf(this, LexerError.prototype);
+    }
+}
+
+export class ElaborationError extends InterpreterError {
+    constructor(position: Position, message: string) {
+        super(position, message);
+        Object.setPrototypeOf(this, ElaborationError.prototype);
+    }
+}
+
+export class EvaluationError extends InterpreterError {
+    constructor(position: Position, message: string) {
+        super(position, message);
+        Object.setPrototypeOf(this, EvaluationError.prototype);
     }
 }
