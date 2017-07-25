@@ -29,16 +29,16 @@ export class Interpreter {
 
         let tkn = Lexer.lex(nextInstruction);
 
-        if(allowLongFunctionNames) {
+        if (allowLongFunctionNames) {
             // this is only a replacement until we have the module language, so we can implement all testcases from the book
             // TODO remove
             let newTkn: Lexer.Token[] = [];
             for (let t of tkn) {
-                if(t instanceof Lexer.LongIdentifierToken) {
+                if (t instanceof Lexer.LongIdentifierToken) {
                     newTkn.push(new Lexer.IdentifierToken(t.getText(), t.position));
-                }
-                else
+                } else {
                     newTkn.push(t);
+                }
             }
             tkn = newTkn;
         }
