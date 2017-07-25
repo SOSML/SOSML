@@ -584,6 +584,7 @@ export class Parser {
          * atpat ::= _                      Wildcard(pos)
          *           scon                   Constant(pos, token)
          *           [op] longvid           ValueIdentifier(pos, name:Taken)
+         *           [op] vid [:ty] as pat  LayeredPattern(pos, IdentifierToken, type, pattern)
          *           { [patrow] }
          *           ()                     Tuple(pos, [])
          *           ( pat1, …, patn )      Tuple(pos, (Pattern|Exp)[])
@@ -601,6 +602,25 @@ export class Parser {
             this.assertIdentifierOrLongToken(nextCurTok);
             (<IdentifierToken|LongIdentifierToken> nextCurTok).opPrefixed = true;
             ++this.position;
+
+            let newOldPos = this.position;
+            try {
+                if (!(nextCurTok instanceof LongIdentifierToken)) {
+                    let newTok = this.currentToken();
+                    let tp: Type | undefined;
+                    if (this.checkKeywordToken(newTok, ':')) {
+                        ++this.position;
+                        tp = this.parseType();
+                        newTok = this.currentToken();
+                    }
+                    this.assertKeywordToken(newTok, 'as');
+                    ++this.position;
+                    return new LayeredPattern(curTok.position, <IdentifierToken> nextCurTok, tp, this.parsePattern());
+                }
+            } catch (f) {
+                this.position = newOldPos;
+            }
+
             return new ValueIdentifier(curTok.position, nextCurTok);
         }
         if (this.checkKeywordToken(curTok, '_')) {
@@ -667,78 +687,61 @@ export class Parser {
         } else if (curTok instanceof IdentifierToken
             || curTok instanceof LongIdentifierToken) {
             ++this.position;
+
+            let newOldPos = this.position;
+            try {
+                if (!(curTok instanceof LongIdentifierToken)) {
+                    let newTok = this.currentToken();
+                    let tp: Type | undefined;
+                    if (this.checkKeywordToken(newTok, ':')) {
+                        ++this.position;
+                        tp = this.parseType();
+                        newTok = this.currentToken();
+                    }
+                    this.assertKeywordToken(newTok, 'as');
+                    ++this.position;
+                    return new LayeredPattern(curTok.position, <IdentifierToken> curTok, tp, this.parsePattern());
+                }
+            } catch (f) {
+                this.position = newOldPos;
+            }
+
             return new ValueIdentifier(curTok.position, curTok);
         }
         throw new ParserError('Expected atomic pattern but got "'
             + curTok.getText() + '".', curTok.position);
     }
 
-    parseSimplePattern(): PatternExpression {
+    parseApplicationPattern(): PatternExpression {
         /*
          *  pat ::= atpat
          *          [op] longvid atpat      FunctionApplication(pos, func, argument)
-         *          pat : ty                TypedExpression(pos, exp, type)
-         *          [op] vid [:ty] as pat   LayeredPattern(pos, IdentifierToken, type, pattern)
          */
         let curTok = this.currentToken();
-        let oldPos = this.position;
-        let opPrefixed = false;
-        let isLong = false;
-        if (this.checkKeywordToken(curTok, 'op')) {
-            opPrefixed = true;
-            ++this.position;
-        }
-        let nextTok = this.currentToken();
-        if (nextTok instanceof LongIdentifierToken) {
-            isLong = true;
-        }
-        if (this.checkIdentifierOrLongToken(nextTok)) {
-            let name: IdentifierToken|LongIdentifierToken
-                = <IdentifierToken|LongIdentifierToken> nextTok;
-            name.opPrefixed = opPrefixed;
-            ++this.position;
-            try {
-                // Check whether layered pattern
-                let newOldPos = this.position;
-                try {
-                    if (!isLong) {
-                        let newTok = this.currentToken();
-                        let tp: Type | undefined;
-                        if (this.checkKeywordToken(newTok, ':')) {
-                            ++this.position;
-                            tp = this.parseType();
-                            newTok = this.currentToken();
-                        }
-                        this.assertKeywordToken(newTok, 'as');
-                        ++this.position;
-                        return new LayeredPattern(curTok.position, name, tp, this.parsePattern());
-                    }
-                } catch (f) {
-                    this.position = newOldPos;
-                }
+        let res = this.parseAtomicPattern();
+        while (true) {
+            let oldPos = this.position;
+            let nextTok = this.currentToken();
+            if (this.checkVidOrLongToken(nextTok)
+                && this.state.getInfixStatus(nextTok) !== undefined
+                && this.state.getInfixStatus(nextTok).infix) {
+                break;
+            }
 
-                // Try if it is a FunctionApplication instead
-                return new FunctionApplication(curTok.position,
-                                               new ValueIdentifier(name.position, name),
-                                               this.parseAtomicPattern());
+            try {
+                let newExp = this.parseAtomicPattern();
+                res = new FunctionApplication(curTok.position, res, newExp);
             } catch (e) {
-                // It seems we were wrong, so try the other possibilities instead
                 this.position = oldPos;
+                break;
             }
         }
-
-        let res = this.parseAtomicPattern();
-        nextTok = this.currentToken();
-        while (this.checkKeywordToken(nextTok, ':')) {
-            ++this.position;
-            let tp = this.parseType();
-            res = new TypedExpression(curTok.position, res, tp);
-            nextTok = this.currentToken();
-        }
         return res;
+
+
     }
 
-    parsePattern(): PatternExpression {
+    parseInfixPattern(): PatternExpression {
         /*
          * pat ::= pat1 vid pat2            FunctionApplication(pos, vid, (pat1, pat2))
          */
@@ -747,7 +750,7 @@ export class Parser {
         let cnt: number = 0;
 
         while (true) {
-            pats.push(this.parseSimplePattern());
+            pats.push(this.parseApplicationPattern());
 
             let curTok = this.currentToken();
             if (this.checkIdentifierOrLongToken(curTok)
@@ -763,6 +766,21 @@ export class Parser {
             return pats[0];
         }
         return new InfixExpression(pats, ops).reParse(this.state);
+    }
+
+    parsePattern(): PatternExpression {
+        /*
+         *          pat : ty                TypedExpression(pos, exp, type)
+         */
+
+        let curTok = this.currentToken();
+        let pat = this.parseInfixPattern();
+
+        while (this.checkKeywordToken(this.currentToken(), ':')) {
+            ++this.position;
+            pat = new TypedExpression(curTok.position, pat, this.parseType());
+        }
+        return pat;
     }
 
     parseTypeRow(): RecordType {
@@ -992,12 +1010,21 @@ export class Parser {
                         throwError = true;
                         throw new ParserError('Missing "op".', nm.name.position);
                     }
+
                     while (true) {
                         if (this.checkKeywordToken(this.currentToken(), '=')
                             || this.checkKeywordToken(this.currentToken(), ':')) {
                             break;
                         }
                         let pat = this.parseAtomicPattern();
+
+                        if (pat instanceof ValueIdentifier
+                            && this.state.getInfixStatus((<ValueIdentifier> pat).name) !== undefined
+                            && this.state.getInfixStatus((<ValueIdentifier> pat).name).infix) {
+                            throw new ParserError('Cute little infix identifiers as "' +
+                                pat.prettyPrint() + '" sure should play somewher else.', pat.position);
+                        }
+
                         args.push(pat);
                     }
                 } catch (e) {

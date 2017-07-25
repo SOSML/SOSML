@@ -2530,7 +2530,7 @@ it("pattern - constructed value", () => {
     expect(parse(pattern_cons_val_with_op)).toEqualWithType(pattern_tester(
         new Expr.FunctionApplication(4,
             new Expr.ValueIdentifier(
-                7,
+                4,
                 x
             ),
             new Expr.Wildcard(9))
