@@ -302,7 +302,6 @@ export class State {
         if (atId === undefined || atId === this.id) {
             this.dynamicBasis.setType(name, constructors, id, intermediate);
             this.declaredIdentifiers.add(name);
-            this.rebindEnvironment[name] = false;
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {

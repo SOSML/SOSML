@@ -30,7 +30,8 @@ export class Interpreter {
         let tkn = Lexer.lex(nextInstruction);
 
         if (allowLongFunctionNames) {
-            // this is only a replacement until we have the module language, so we can implement all testcases from the book
+            // this is only a replacement until we have the module language,
+            // so we can implement all testcases from the book
             // TODO remove
             let newTkn: Lexer.Token[] = [];
             for (let t of tkn) {

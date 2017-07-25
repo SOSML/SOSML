@@ -320,6 +320,11 @@ export class FunctionValue extends Value {
 
         return this.body.compute(nstate, argument);
     }
+
+    equals(other: Value): boolean {
+        throw new InternalInterpreterError(-1, 'You simply cannot compare "' + this.prettyPrint()
+            + '" and "' + other.prettyPrint() + '".');
+    }
 }
 
 // Values that were constructed from type constructors
