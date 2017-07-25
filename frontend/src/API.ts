@@ -40,7 +40,11 @@ export class API {
                 body: JSON.stringify({'code': code})
             }
         ).then(function(response: any){
-            return response.text();
+            if (!response.ok) {
+                return Promise.reject(response.status);
+            } else {
+                return response.text();
+            }
         });
     }
 
@@ -62,7 +66,11 @@ export class API {
                 body: JSON.stringify({'code': code})
             }
         ).then(function(response: any){
-            return response.text();
+            if (!response.ok) {
+                return Promise.reject(response.status);
+            } else {
+                return response.text();
+            }
         });
     }
 
@@ -83,7 +91,11 @@ export class API {
                 method: 'GET'
             }
         ).then(function(response: any){
-            return response.text();
+            if (!response.ok) {
+                return Promise.reject(response.status);
+            } else {
+                return response.text();
+            }
         });
     }
 

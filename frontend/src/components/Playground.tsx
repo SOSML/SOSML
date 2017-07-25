@@ -26,6 +26,8 @@ interface Props {
     initialCode: string;
 }
 
+const SHARE_LINK_ERROR = ':ERROR';
+
 class Playground extends React.Component<Props, State> {
     constructor(props: any) {
         super(props);
@@ -62,7 +64,8 @@ class Playground extends React.Component<Props, State> {
             );
         }
         let modal = (
-            <Modal show={this.state.shareLink !== ''} onHide={this.closeShareModal}>
+            <Modal show={this.state.shareLink !== '' && this.state.shareLink !== SHARE_LINK_ERROR}
+            onHide={this.closeShareModal}>
                 <Modal.Header closeButton={true}>
                     <Modal.Title>Teilen link</Modal.Title>
                 </Modal.Header>
@@ -73,6 +76,19 @@ class Playground extends React.Component<Props, State> {
                     Wenn Sie ihren Code weiter verändern wird dies nicht von
                     dem Link übernommen, Sie müssen in diesem Fall noch einen
                     neuen Link erstellen.
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={this.closeShareModal}>Schließen</Button>
+                </Modal.Footer>
+            </Modal>
+        );
+        let errorModal = (
+            <Modal show={this.state.shareLink === ':ERROR'} onHide={this.closeShareModal}>
+                <Modal.Header closeButton={true}>
+                    <Modal.Title>Fehler beim Teilen</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    Es gab einen Fehler beim erstellen eines Links zum Teilen.
                 </Modal.Body>
                 <Modal.Footer>
                     <Button onClick={this.closeShareModal}>Schließen</Button>
@@ -109,6 +125,7 @@ class Playground extends React.Component<Props, State> {
                     </div>
                 </SplitterLayout>
                 {modal}
+                {errorModal}
             </div>
         );
     }
@@ -147,10 +164,9 @@ class Playground extends React.Component<Props, State> {
 
     handleRun() {
         WebserverAPI.fallbackInterpreter(this.state.code).then((val) => {
-            this.setState(prevState => {
-                let ret: any = {output: val};
-                return ret;
-            });
+            this.setState({output: val});
+        }).catch(() => {
+            this.setState({output: 'Fehler: konnte keine Verbindung zum Server herstellen'});
         });
     }
 
@@ -175,6 +191,8 @@ class Playground extends React.Component<Props, State> {
             this.setState(prevState => {
                 return {shareLink: window.location.host + '/share/' + hash};
             });
+        }).catch(() => {
+            this.setState({shareLink: SHARE_LINK_ERROR});
         });
     }
 
