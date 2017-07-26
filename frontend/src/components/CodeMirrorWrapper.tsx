@@ -32,12 +32,16 @@ enum ErrorType {
     SML // SML raised an exception
 }
 
+interface IncrementalStateValues {
+    state: any;
+    marker: any;
+    output: string;
+    error: boolean;
+}
+
 class IncrementalInterpretationHelper {
     semicoli: any[];
-    states: any[];
-    markers: any[];
-    output: any[];
-    error: any[];
+    data: IncrementalStateValues[];
     debounceTimeout: any;
     debounceMinimumPosition: any;
     debounceCallNecessary: boolean;
@@ -47,10 +51,7 @@ class IncrementalInterpretationHelper {
 
     constructor(outputCallback: (code: string) => any) {
         this.semicoli = [];
-        this.states = [];
-        this.markers = [];
-        this.output = [];
-        this.error = [];
+        this.data = [];
 
         this.disabled = false;
         this.debounceCallNecessary = false;
@@ -61,15 +62,12 @@ class IncrementalInterpretationHelper {
 
     clear() {
         this.semicoli.length = 0;
-        this.states.length = 0;
-        for (let i = 0; i < this.markers.length; i++) {
-            if (this.markers[i]) {
-                this.markers[i].clear();
+        for (let i = 0; i < this.data.length; i++) {
+            if (this.data[i].marker) {
+                this.data[i].marker.clear();
             }
         }
-        this.markers.length = 0;
-        this.output.length = 0;
-        this.error.length = 0;
+        this.data.length = 0;
     }
 
     disable() {
@@ -131,10 +129,23 @@ class IncrementalInterpretationHelper {
 
     private recomputeOutput() {
         let out = '';
-        for (let i = 0; i < this.output.length; i++) {
-            out += this.output[i];
+        for (let i = 0; i < this.data.length; i++) {
+            out += this.data[i].output;
         }
+        out += this.getPrintOutput();
         this.outputCallback(out);
+    }
+
+    private getPrintOutput(): string {
+        for (let i = this.data.length - 1; i >= 0; i--) {
+            if (this.data[i].state !== null) {
+                if (this.data[i].state.getDynamicValue('__stdout') !== undefined) {
+                    return '\n' + this.data[i].state.getDynamicValue('__stdout').prettyPrint();
+                }
+                return '';
+            }
+        }
+        return '';
     }
 
     private copyPos(pos: any): any {
@@ -148,7 +159,7 @@ class IncrementalInterpretationHelper {
         // console.log(remainingText);
         let partial = '';
         let errorEncountered = false;
-        let previousState = (baseIndex === -1) ? null : this.states[baseIndex];
+        let previousState = (baseIndex === -1) ? null : this.data[baseIndex].state;
         for (let i = 0; i < splitByLine.length; i++) {
             let lineOffset = 0;
             if (i === 0) {
@@ -229,8 +240,7 @@ class IncrementalInterpretationHelper {
         } catch (e) {
             // TODO: switch over e's type
             // console.log(e);
-            let proto: any = Object.getPrototypeOf(e);
-            if (proto.constructor && proto.constructor.name && proto.constructor.name === 'IncompleteError') {
+            if (this.getPrototypeName(e) === 'IncompleteError') {
                 return [null, ErrorType.INCOMPLETE, e];
             } else {
                 return [null, ErrorType.INTERPRETER, e];
@@ -240,6 +250,15 @@ class IncrementalInterpretationHelper {
             return [ret[0], ErrorType.SML, ret[2]];
         } else {
             return [ret[0], ErrorType.OK, null];
+        }
+    }
+
+    private getPrototypeName(object: any): string {
+        let proto: any = Object.getPrototypeOf(object);
+        if (proto.constructor && proto.constructor.name) {
+            return proto.constructor.name;
+        } else {
+            return '';
         }
     }
 
@@ -268,38 +287,48 @@ class IncrementalInterpretationHelper {
 
     private addSemicolon(pos: any, newState: any, marker: any) {
         this.semicoli.push(pos);
-        this.states.push(newState);
-        this.output.push(this.computeNewStateOutput(newState));
-        this.markers.push(marker);
-        this.error.push(false);
+        this.data.push({
+            state: newState,
+            marker: marker,
+            error: false,
+            output: this.computeNewStateOutput(newState)
+        });
     }
 
     private addIncompleteSemicolon(pos: any) {
         this.semicoli.push(pos);
-        this.states.push(null);
-        this.output.push('');
-        this.markers.push(null);
-        this.error.push(false);
+        this.data.push({
+            state: null,
+            marker: null,
+            error: false,
+            output: ''
+        });
     }
 
     private addErrorSemicolon(pos: any, errorMessage: any, marker: any) {
         this.semicoli.push(pos);
-        this.states.push(null);
-        this.output.push(errorMessage);
-        this.markers.push(marker);
-        this.error.push(true);
+        this.data.push({
+            state: null,
+            marker: marker,
+            error: true,
+            output: errorMessage
+        });
     }
 
     private addSMLErrorSemicolon(pos: any, error: any, marker: any) {
         this.semicoli.push(pos);
-        this.states.push(null);
+        let outputErr: string;
         if (error.prettyPrint) {
-            this.output.push('Uncaught SML exception: ' + error.prettyPrint() + '\n');
+            outputErr = 'Uncaught SML exception: ' + error.prettyPrint() + '\n';
         } else {
-            this.output.push('Unknown Uncaught SML exception\n');
+            outputErr = 'Unknown Uncaught SML exception\n';
         }
-        this.markers.push(marker);
-        this.error.push(true);
+        this.data.push({
+            state: null,
+            marker: marker,
+            error: true,
+            output: outputErr
+        });
     }
 
     private computeNewStateOutput(state: any) {
@@ -308,12 +337,52 @@ class IncrementalInterpretationHelper {
             let valEnv = state.dynamicBasis.valueEnvironment;
             for (let i in valEnv) {
                 if (valEnv.hasOwnProperty(i)) {
-                    output = 'val ' + i + ' = ' + state.getDynamicValue(i).prettyPrint() + ';';
+                    if (state.getDynamicValue(i, false) === undefined) {
+                        continue;
+                    }
+                    output = this.printBinding([i, state.getDynamicValue(i, false),
+                        state.getStaticValue( i, false )]);
                 }
             }
             output += '\n';
         }
         return output;
+    }
+
+    private printBinding(bnd: [any, any, any]) {
+        let res = '> ';
+
+        let protoName = this.getPrototypeName(bnd[1]);
+        if( protoName == 'ValueConstructor') {
+            res += 'con';
+        } else if( protoName === 'ExceptionConstructor' ) {
+            res += 'exn';
+        } else {
+            res += 'val';
+        }
+
+        if(bnd[1]) {
+            res += ' ' + bnd[0] + ' = ' + bnd[1].prettyPrint();
+        } else {
+            return res + ' ' + bnd[0] + ' = undefined;';
+        }
+
+        if(bnd[2]) {
+            if(bnd[2].length === 1) {
+                return res + ': ' + bnd[2][0].prettyPrint() + ';';
+            } else {
+                res += ': [ ';
+                for(let i = 0; i < bnd[2].length; ++i) {
+                    if( i > 0 ) {
+                        res += ', ';
+                    }
+                    res += bnd[2][i].prettyPrint();
+                }
+                return res += ' ]';
+            }
+        } else {
+            return res + ': undefined;';
+        }
     }
 
     private stringArrayContains(arr: string[], search: string) {
@@ -341,7 +410,7 @@ class IncrementalInterpretationHelper {
 
     private findBaseIndex(index: number): any {
         for (let i = index; i >= 0; i--) {
-            if (this.states[i] !== null) {
+            if (this.data[i].state !== null) {
                 return i;
             }
         }
@@ -350,7 +419,7 @@ class IncrementalInterpretationHelper {
 
     private findNonErrorAnchor(anchor: number) {
         for (let i = anchor; i >= 0; i--) {
-            if (!this.error[i]) {
+            if (!this.data[i].error) {
                 return i;
             }
         }
@@ -359,15 +428,12 @@ class IncrementalInterpretationHelper {
 
     private deleteAllAfter(index: number) {
         this.semicoli.length = index + 1;
-        this.states.length = index + 1;
-        this.output.length = index + 1;
-        for (let i = index + 1; i < this.markers.length; i++) {
-            if (this.markers[i]) {
-                this.markers[i].clear();
+        for (let i = index + 1; i < this.data.length; i++) {
+            if (this.data[i].marker) {
+                this.data[i].marker.clear();
             }
         }
-        this.markers.length = index + 1;
-        this.error.length = index + 1;
+        this.data.length = index + 1;
     }
 
     private binarySearch(pos: any): number {
