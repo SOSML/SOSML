@@ -89,14 +89,7 @@ export class StaticBasis {
     }
 }
 
-let emptyStdFile: DynamicValueEnvironment = {
-    '__stdout': [new StringValue(''), true],
-    '__stdin':  [new StringValue(''), true],
-    '__stderr': [new StringValue(''), true]
-};
 export class State {
-    private stdfiles = emptyStdFile;
-
     // The states' ids are non-decreasing; a single declaration uses the same ids
     constructor(public id: number,
                 public parent: State | undefined,
@@ -105,7 +98,12 @@ export class State {
                 private typeNames: TypeNames,
                 private infixEnvironment: InfixEnvironment,
                 private rebindEnvironment: RebindEnvironment,
-                private declaredIdentifiers: Set<string> = new Set<string>()) {
+                private declaredIdentifiers: Set<string> = new Set<string>(),
+                private stdfiles = {
+                    '__stdout': [new StringValue(''), true],
+                    '__stdin':  [new StringValue(''), true],
+                    '__stderr': [new StringValue(''), true]
+                }) {
     }
 
     getDefinedIdentifiers(idLimit: number = 0): Set<string> {
