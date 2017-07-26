@@ -5745,15 +5745,15 @@ var StaticBasis = (function () {
     return StaticBasis;
 }());
 exports.StaticBasis = StaticBasis;
-var emptyStdFile = {
-    '__stdout': [new values_1.StringValue(''), true],
-    '__stdin': [new values_1.StringValue(''), true],
-    '__stderr': [new values_1.StringValue(''), true]
-};
 var State = (function () {
     // The states' ids are non-decreasing; a single declaration uses the same ids
-    function State(id, parent, staticBasis, dynamicBasis, typeNames, infixEnvironment, rebindEnvironment, declaredIdentifiers) {
+    function State(id, parent, staticBasis, dynamicBasis, typeNames, infixEnvironment, rebindEnvironment, declaredIdentifiers, stdfiles) {
         if (declaredIdentifiers === void 0) { declaredIdentifiers = new Set(); }
+        if (stdfiles === void 0) { stdfiles = {
+            '__stdout': [new values_1.StringValue(''), true],
+            '__stdin': [new values_1.StringValue(''), true],
+            '__stderr': [new values_1.StringValue(''), true]
+        }; }
         this.id = id;
         this.parent = parent;
         this.staticBasis = staticBasis;
@@ -5762,7 +5762,7 @@ var State = (function () {
         this.infixEnvironment = infixEnvironment;
         this.rebindEnvironment = rebindEnvironment;
         this.declaredIdentifiers = declaredIdentifiers;
-        this.stdfiles = emptyStdFile;
+        this.stdfiles = stdfiles;
     }
     State.prototype.getDefinedIdentifiers = function (idLimit) {
         if (idLimit === void 0) { idLimit = 0; }
