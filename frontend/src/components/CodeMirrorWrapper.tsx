@@ -353,27 +353,27 @@ class IncrementalInterpretationHelper {
         let res = '> ';
 
         let protoName = this.getPrototypeName(bnd[1]);
-        if( protoName == 'ValueConstructor') {
+        if (protoName === 'ValueConstructor') {
             res += 'con';
-        } else if( protoName === 'ExceptionConstructor' ) {
+        } else if (protoName === 'ExceptionConstructor') {
             res += 'exn';
         } else {
             res += 'val';
         }
 
-        if(bnd[1]) {
+        if (bnd[1]) {
             res += ' ' + bnd[0] + ' = ' + bnd[1].prettyPrint();
         } else {
             return res + ' ' + bnd[0] + ' = undefined;';
         }
 
-        if(bnd[2]) {
-            if(bnd[2].length === 1) {
+        if (bnd[2]) {
+            if (bnd[2].length === 1) {
                 return res + ': ' + bnd[2][0].prettyPrint() + ';';
             } else {
                 res += ': [ ';
-                for(let i = 0; i < bnd[2].length; ++i) {
-                    if( i > 0 ) {
+                for (let i = 0; i < bnd[2].length; ++i) {
+                    if ( i > 0 ) {
                         res += ', ';
                     }
                     res += bnd[2][i].prettyPrint();
