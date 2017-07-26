@@ -1,21 +1,23 @@
 import { Type, PrimitiveType, FunctionType, TypeVariable, RecordType } from './types';
-import { Value, StringValue, PredefinedFunction, RecordValue } from './values';
+import { Value, StringValue, PredefinedFunction, RecordValue, ValueConstructor,
+         ExceptionConstructor } from './values';
 import { Token, LongIdentifierToken } from './lexer';
 import { InternalInterpreterError } from './errors';
 
-// maps id to Value
+// maps id to [Value, rebindable, intermediate]
 type DynamicValueEnvironment = { [name: string]: [Value, boolean] };
-// maps id to type (multiple if overloaded)
+// maps id to [type (multiple if overloaded), intermediate]
 type StaticValueEnvironment = { [name: string]: [Type[], boolean] };
 
 export class TypeInformation {
     // Every constructor also appears in the value environment,
     // thus it suffices to record their names here.
-    constructor(public type: Type, public constructors: string[]) { }
+    // To distinguish between redefined names, each type has its own id.
+    constructor(public type: Type, public constructors: string[], id: number = 0) { }
 }
 
 // maps type name to constructor names
-type DynamicTypeEnvironment = { [name: string]: [string[], boolean] };
+type DynamicTypeEnvironment = { [name: string]: [string[], number, boolean] };
 // maps type name to (Type, constructor name)
 type StaticTypeEnvironment = { [name: string]: [TypeInformation, boolean] };
 
@@ -37,6 +39,9 @@ export class InfixStatus {
 
 type InfixEnvironment = { [name: string]: InfixStatus };
 
+// Maps id to whether that id can be rebound
+type RebindEnvironment = { [name: string]: boolean };
+
 export class DynamicBasis {
     constructor(public typeEnvironment: DynamicTypeEnvironment,
                 public valueEnvironment: DynamicValueEnvironment) {
@@ -46,7 +51,7 @@ export class DynamicBasis {
         return this.valueEnvironment[name];
     }
 
-    getType(name: string): [string[], boolean] | undefined {
+    getType(name: string): [string[], number, boolean] | undefined {
         return this.typeEnvironment[name];
     }
 
@@ -54,8 +59,9 @@ export class DynamicBasis {
         this.valueEnvironment[name] = [value, intermediate];
     }
 
-    setType(name: string, type: string[], intermediate: boolean) {
-        this.typeEnvironment[name] = [type, intermediate];
+    setType(name: string, type: string[], id: number = 0,
+            intermediate: boolean = false) {
+        this.typeEnvironment[name] = [type, id, intermediate];
     }
 }
 
@@ -76,8 +82,10 @@ export class StaticBasis {
         this.valueEnvironment[name] = [value, intermediate];
     }
 
-    setType(name: string, type: Type, constructors: string[], intermediate: boolean) {
-        this.typeEnvironment[name] = [new TypeInformation(type, constructors), intermediate];
+    setType(name: string, type: Type, constructors: string[], id: number = 0,
+            intermediate: boolean = false) {
+        this.typeEnvironment[name] = [new TypeInformation(type, constructors, id),
+            intermediate];
     }
 }
 
@@ -96,19 +104,20 @@ export class State {
                 public dynamicBasis: DynamicBasis,
                 private typeNames: TypeNames,
                 private infixEnvironment: InfixEnvironment,
+                private rebindEnvironment: RebindEnvironment,
                 private declaredIdentifiers: Set<string> = new Set<string>()) {
     }
 
     getDefinedIdentifiers(idLimit: number = 0): Set<string> {
-        if (this.parent === undefined || this.parent.id < this.id) {
-            return this.declaredIdentifiers;
+        let rec = new Set<string>();
+        if (this.parent !== undefined && this.parent.id >= idLimit) {
+            rec = this.parent.getDefinedIdentifiers();
         }
-
-        let rec = this.parent.getDefinedIdentifiers();
 
         this.declaredIdentifiers.forEach((val: string) => {
             rec.add(val);
         });
+
         return rec;
     }
 
@@ -119,7 +128,7 @@ export class State {
         let res = new State(<number> newId, this,
             new StaticBasis({}, {}),
             new DynamicBasis({}, {}),
-            {}, {});
+            {}, {}, {});
         if (redefinePrint) {
             res.setDynamicValue('print', new PredefinedFunction('print', (val: Value) => {
                 if (val instanceof StringValue) {
@@ -133,6 +142,16 @@ export class State {
                 new RecordType(new Map<string, Type>()))], true);
         }
         return res;
+    }
+
+    getRebindStatus(name: string): boolean {
+        if ((this.rebindEnvironment[name] === undefined && this.parent === undefined)
+            || this.rebindEnvironment[name]) {
+            return true;
+        } else if (this.rebindEnvironment[name] === undefined) {
+            return (<State> this.parent).getRebindStatus(name);
+        }
+        return false;
     }
 
     // Gets an identifier's type. The value  intermediate  determines whether to return intermediate results
@@ -186,14 +205,15 @@ export class State {
     }
 
     getDynamicType(name: string, intermediate: boolean|undefined = undefined,
-                   idLimit: number = 0): string[] | undefined {
+                   idLimit: number = 0): [string[], number] | undefined {
         let result = this.dynamicBasis.getType(name);
-        if ((result !== undefined && (intermediate === undefined || intermediate === result[1]))
+        if ((result !== undefined && (intermediate === undefined || intermediate === result[2]))
             || !this.parent || this.parent.id < idLimit) {
             if (result === undefined) {
                 return undefined;
             }
-            return (<[string[], boolean]> result)[0];
+            return [(<[string[], number, boolean]> result)[0],
+                (<[string[], number, boolean]> result)[1]];
         } else {
             return this.parent.getDynamicType(name, intermediate, idLimit);
         }
@@ -237,14 +257,16 @@ export class State {
 
     setStaticType(name: string, type: Type,
                   constructors: string[],
+                  id: number = 0,
                   intermediate: boolean = false,
                   atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
-            this.staticBasis.setType(name, type, constructors, intermediate);
+            this.staticBasis.setType(name, type, constructors, id, intermediate);
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
-            (<State> this.parent).setStaticType(name, type, constructors, intermediate, atId);
+            (<State> this.parent).setStaticType(name, type, constructors, id,
+                intermediate, atId);
         }
     }
 
@@ -260,6 +282,11 @@ export class State {
             }
             this.dynamicBasis.setValue(name, value, intermediate);
             this.declaredIdentifiers.add(name);
+            if (value instanceof ValueConstructor || value instanceof ExceptionConstructor) {
+                this.rebindEnvironment[name] = false;
+            } else {
+                this.rebindEnvironment[name] = true;
+            }
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
@@ -269,14 +296,16 @@ export class State {
 
     setDynamicType(name: string,
                    constructors: string[],
+                   id: number = 0,
                    intermediate: boolean = false,
                    atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
-            this.dynamicBasis.setType(name, constructors, intermediate);
+            this.dynamicBasis.setType(name, constructors, id, intermediate);
+            this.declaredIdentifiers.add(name);
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
-            this.parent.setDynamicType(name, constructors, intermediate, atId);
+            this.parent.setDynamicType(name, constructors, id, intermediate, atId);
         }
     }
 

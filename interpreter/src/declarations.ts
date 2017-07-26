@@ -1,13 +1,14 @@
 import {
     Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
-    Pattern, TypedExpression, Tuple, PatternExpression, Wildcard
+    Pattern, TypedExpression, Tuple, PatternExpression
 } from './expressions';
 import { IdentifierToken, Token } from './lexer';
 import { Type, TypeVariable, FunctionType, PrimitiveType } from './types';
 import { State } from './state';
 import { InternalInterpreterError, Position, ElaborationError,
          EvaluationError, FeatureDisabledError } from './errors';
-import { Value, ValueConstructor, ExceptionConstructor } from './values';
+import { Value, ValueConstructor, ExceptionConstructor, ExceptionValue,
+         FunctionValue } from './values';
 
 export abstract class Declaration {
     id: number;
@@ -26,268 +27,6 @@ export abstract class Declaration {
 
     simplify(): Declaration {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
-    }
-}
-
-export interface ExceptionBinding {
-    evaluate(state: State): [State, boolean, Value|undefined];
-    elaborate(state: State): State;
-}
-
-export class ValueBinding {
-// <rec> pattern = expression
-    constructor(public position: Position, public isRecursive: boolean,
-                public pattern: Pattern, public expression: Expression) {
-    }
-
-    prettyPrint(indentation: number, oneLine: boolean): string {
-        let res = '';
-        if (this.isRecursive) {
-            res += 'rec ';
-        }
-        res += this.pattern.prettyPrint(indentation, oneLine);
-        res += ' = ';
-        return res + this.expression.prettyPrint(indentation, oneLine);
-    }
-
-    // Computes for recursive bindings the function triple to be added to the environment
-    compute(state: State): [string, [Value|undefined, boolean, State]] {
-        if (!this.isRecursive) {
-            throw new InternalInterpreterError(this.position,
-                'Well, consider reading the docs next time.'
-                + ' (Called compute on a non-recursive ValBind.)');
-        }
-
-        if (!(this.pattern instanceof ValueIdentifier)) {
-            if (this.pattern instanceof Wildcard) {
-                return ['_', [undefined, true, state]];
-            }
-            throw new EvaluationError(this.pattern.position,
-                'When using "rec", exactly one name is required here.');
-        }
-        if (!(this.expression instanceof Lambda)) {
-            throw new EvaluationError(this.expression.position,
-                'When using "rec", you must bind a lambda expression.');
-        }
-        let res = this.expression.compute(state);
-        return [(<ValueIdentifier> this.pattern).name.getText(), res];
-    }
-}
-
-export class FunctionValueBinding {
-    constructor(public position: Position,
-                public parameters: [PatternExpression[], Type|undefined, Expression][],
-                public name: ValueIdentifier) {
-    }
-
-    simplify(): ValueBinding {
-        if (this.name === undefined) {
-            throw new InternalInterpreterError(this.position,
-                'This function isn\'t ready to be simplified yet.');
-        }
-
-        // Build the case analysis, starting with the (vid1,...,vidn)
-        let arr: ValueIdentifier[] = [];
-        let matches: [PatternExpression, Expression][] = [];
-        for (let i = 0; i < this.parameters[0][0].length; ++i) {
-            arr.push(new ValueIdentifier(-1, new IdentifierToken('__arg' + i, -1)));
-        }
-        for (let i = 0; i < this.parameters.length; ++i) {
-            let pat2: PatternExpression;
-            if (this.parameters[i][0].length === 1) {
-                pat2 = this.parameters[i][0][0];
-            } else {
-                pat2 = new Tuple(-1, this.parameters[i][0]);
-            }
-
-            if (this.parameters[i][1] === undefined) {
-                matches.push([pat2, this.parameters[i][2]]);
-            } else {
-                matches.push([pat2,
-                    new TypedExpression(-1, this.parameters[i][2], <Type> this.parameters[i][1])]);
-            }
-        }
-        let pat: PatternExpression;
-        if (arr.length !== 1) {
-            pat = new Tuple(-1, arr).simplify();
-        } else {
-            pat = arr[0];
-        }
-        let mat = new Match(-1, matches);
-        let exp: Expression;
-        //        if (arr.length === 1) {
-        //    exp = new Lambda(-1, mat);
-        // } else {
-        exp = new CaseAnalysis(-1, pat, mat);
-
-        // Now build the lambdas around
-        for (let i = this.parameters[0][0].length - 1; i >= 0; --i) {
-            exp = new Lambda(-1, new Match(-1, [[
-                new ValueIdentifier(-1, new IdentifierToken('__arg' + i, -1)),
-                exp]]));
-        }
-        // }
-
-        return new ValueBinding(this.position, true, this.name, exp.simplify());
-    }
-
-    prettyPrint(indentation: number, oneLine: boolean): string {
-        let res = '';
-        for (let i = 0; i < this.parameters.length; ++i) {
-            if (i > 0) {
-                res += ' | ';
-            }
-            res += this.name.name.getText();
-            for (let j = 0; j < this.parameters[i][0].length; ++j) {
-                res += ' ' + this.parameters[i][0][j].prettyPrint(indentation, oneLine);
-            }
-            if (this.parameters[i][1] !== undefined) {
-                res += ': ' + (<Type> this.parameters[i][1]).prettyPrint();
-            }
-            res += ' = ' + this.parameters[i][2].prettyPrint(indentation, oneLine);
-        }
-        return res;
-    }
-}
-
-export class TypeBinding {
-// typeVariableSequence name = type
-    constructor(public position: Position, public typeVariableSequence: TypeVariable[],
-                public name: IdentifierToken, public type: Type) {
-    }
-}
-
-export class DatatypeBinding {
-// typeVariableSequence name = <op> constructor <of type>
-    // type: [constructorName, <type>]
-    constructor(public position: Position, public typeVariableSequence: TypeVariable[],
-                public name: IdentifierToken, public type: [IdentifierToken, Type | undefined][]) {
-    }
-
-    evaluate(state: State): [State, boolean, Value|undefined] {
-        let connames: string[] = [];
-        for (let i = 0; i < this.type.length; ++i) {
-            let numArg: number = 0;
-            if (this.type[i][1] !== undefined) {
-                numArg = 1;
-            }
-            state.setDynamicValue(this.type[i][0].getText(),
-                new ValueConstructor(this.type[i][0].getText(), numArg));
-            connames.push(this.type[i][0].getText());
-        }
-        state.setDynamicType(this.name.getText(), connames);
-
-        return [state, false, undefined];
-    }
-}
-
-export class DirectExceptionBinding implements ExceptionBinding {
-// <op> name <of type>
-    constructor(public position: Position,
-                public name: IdentifierToken,
-                public type: Type | undefined) {
-    }
-
-    elaborate(state: State): State {
-        if (this.type !== undefined) {
-            let tyvars = this.type.getTypeVariables(true);
-            if (tyvars.size > 0) {
-                let res = '';
-                if (tyvars.size > 1) {
-                    res += 's';
-                }
-                res += ' ';
-                let first = true;
-                tyvars.forEach((val: TypeVariable) => {
-                    if (first) {
-                        first = false;
-                    } else {
-                        res += ', ';
-                    }
-                    res += '"' + val.name + '"';
-                });
-                throw new ElaborationError(this.position,
-                    'Unguarded type variable' + res + '.');
-            }
-
-            state.setStaticValue(this.name.getText(),
-                [new FunctionType(this.type.simplify(), new PrimitiveType('exn'))]);
-        } else {
-            state.setStaticValue(this.name.getText(),
-                [new PrimitiveType('exn')]);
-        }
-        return state;
-    }
-
-    evaluate(state: State): [State, boolean, Value|undefined] {
-        let numArg = 0;
-        if (this.type !== undefined) {
-            numArg = 1;
-        }
-        state.setDynamicValue(this.name.getText(),
-            new ExceptionConstructor(this.name.getText(), numArg));
-        return [state, false, undefined];
-    }
-}
-
-export class ExceptionAlias implements ExceptionBinding {
-// <op> name = <op> oldname
-    constructor(public position: Position, public name: IdentifierToken, public oldname: Token) {
-    }
-
-    elaborate(state: State): State {
-        let res = state.getStaticValue(this.oldname.getText());
-        if (res === undefined) {
-            throw new ElaborationError(this.position, 'Unbound value identifier "'
-                + this.oldname.getText() + '".');
-        }
-        state.setStaticValue(this.name.getText(), <Type[]> res);
-        return state;
-
-    }
-
-    evaluate(state: State): [State, boolean, Value|undefined] {
-        let res = state.getDynamicValue(this.oldname.getText());
-        if (res === undefined) {
-            throw new EvaluationError(this.position, 'Unbound value identifier "'
-                + this.oldname.getText() + '".');
-        }
-        state.setDynamicValue(this.name.getText(), <Value> res);
-        return [state, false, undefined];
-    }
-}
-
-export class ExceptionDeclaration extends Declaration {
-    constructor(public position: Position, public bindings: ExceptionBinding[],
-                public id: number = 0) {
-        super();
-    }
-
-    simplify(): ExceptionDeclaration {
-        return this;
-    }
-
-    prettyPrint(indentation: number, oneLine: boolean): string {
-        // TODO
-        throw new InternalInterpreterError(-1, 'Not yet implemented.');
-    }
-
-    elaborate(state: State): State {
-        for (let i = 0; i < this.bindings.length; ++i) {
-            state = this.bindings[i].elaborate(state);
-        }
-        return state;
-    }
-
-    evaluate(state: State): [State, boolean, Value|undefined] {
-        for (let i = 0; i < this.bindings.length; ++i) {
-            let res = this.bindings[i].evaluate(state);
-            if (res[1]) {
-                return res;
-            }
-            state = res[0];
-        }
-        return [state, false, undefined];
     }
 }
 
@@ -312,48 +51,49 @@ export class ValueDeclaration extends Declaration {
 
     elaborate(state: State): State {
         // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        throw new InternalInterpreterError(-1, 'Not yet implemented.');
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
-        let result: [string, Value][] | undefined = [];
+        let result: [string, Value][] = [];
+        let recursives: [string, Value][] = [];
 
-        let i = 0;
-        for (; i < this.valueBinding.length; ++i) {
+        let isRec = false;
+        for (let i = 0; i < this.valueBinding.length; ++i) {
             if (this.valueBinding[i].isRecursive) {
-                break;
+                isRec = true;
             }
-            let val = this.valueBinding[i].expression.compute(state);
-            state = val[2];
-            if (val[1]) {
-                return [state, true, val[0]];
+            let val = this.valueBinding[i].compute(state);
+            if (val[1] !== undefined) {
+                return [state, true, val[1]];
             }
-            result = this.valueBinding[i].pattern.matches(state.getNestedState(false, state.id), val[0]);
-
-            if (result === undefined) {
-                return [state, true, state.getDynamicValue('Bind')];
+            if (val[0] === undefined) {
+                return [state, true, new ExceptionValue('Bind')];
             }
-        }
 
-        for (let j = 0; j < (<[string, Value][]> result).length; ++j) {
-            state.setDynamicValue((<[string, Value][]> result)[j][0],
-                (<[string, Value][]> result)[j][1]);
-        }
-
-        for (let j = 0; j < 2; ++j) {
-            let k = i;
-            for (; k < this.valueBinding.length; ++k) {
-                let res = this.valueBinding[k].compute(state);
-                if (res[1][1] && res[1][0] === undefined) {
-                    continue;
+            for (let j = 0; j < (<[string, Value][]> val[0]).length; ++j) {
+                if (!isRec) {
+                    result.push((<[string, Value][]> val[0])[j]);
+                } else {
+                    recursives.push((<[string, Value][]> val[0])[j]);
                 }
-                state = res[1][2];
-                if (res[1][1]) {
-                    return [state, true, <Value> res[1][0]];
-                }
-                state.setDynamicValue(res[0], <Value> res[1][0]);
             }
         }
+
+        for (let j = 0; j < result.length; ++j) {
+            state.setDynamicValue(result[j][0], result[j][1]);
+        }
+
+        for (let j = 0; j < recursives.length; ++j) {
+            if (recursives[j][1] instanceof FunctionValue) {
+                state.setDynamicValue(recursives[j][0], new FunctionValue(
+                    (<FunctionValue> recursives[j][1]).state, recursives,
+                    (<FunctionValue> recursives[j][1]).body));
+            } else {
+                state.setDynamicValue(recursives[j][0], recursives[j][1]);
+            }
+        }
+
         return [state, false, undefined];
     }
 
@@ -367,34 +107,6 @@ export class ValueDeclaration extends Declaration {
             res += ' ' + this.valueBinding[i].prettyPrint(indentation, oneLine);
         }
         return res += ';';
-    }
-}
-
-export class FunctionDeclaration extends Declaration {
-// fun typeVariableSequence functionValueBinding
-    constructor(public position: Position, public typeVariableSequence: TypeVariable[],
-                public functionValueBinding: FunctionValueBinding[], public id: number = 0) {
-        super();
-    }
-
-    simplify(): ValueDeclaration {
-        let valbnd: ValueBinding[] = [];
-        for (let i = 0; i < this.functionValueBinding.length; ++i) {
-            valbnd.push(this.functionValueBinding[i].simplify());
-        }
-        return new ValueDeclaration(this.position, this.typeVariableSequence, valbnd, this.id);
-    }
-
-    prettyPrint(indentation: number, oneLine: boolean): string {
-        // TODO
-        let res = 'fun <stuff>';
-        for (let i = 0; i < this.functionValueBinding.length; ++i) {
-            if (i > 0) {
-                res += ' and';
-            }
-            res += ' ' + this.functionValueBinding[i].prettyPrint(indentation, oneLine);
-        }
-        return res + ';';
     }
 }
 
@@ -427,6 +139,11 @@ export class TypeDeclaration extends Declaration {
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
+        for (let i = 0; i < this.typeBinding.length; ++i) {
+            let id = 0;
+            // TODO id
+            state.setDynamicType(this.typeBinding[i].name.getText(), [], id);
+        }
         return [state, false, undefined];
     }
 
@@ -493,11 +210,14 @@ export class DatatypeDeclaration extends Declaration {
     evaluate(state: State): [State, boolean, Value|undefined] {
         // I'm assuming the withtype is empty
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
-            let res = this.datatypeBinding[i].evaluate(state);
-            if (res[1]) {
-                return res;
+            let res = this.datatypeBinding[i].compute(state);
+
+            for (let j = 0; j < res[0].length; ++j) {
+                state.setDynamicValue(res[0][j][0], res[0][j][1]);
             }
-            state = res[0];
+            let id = 0;
+            // TODO id
+            state.setDynamicType(res[1][0], res[1][1], id);
         }
         return [state, false, undefined];
     }
@@ -541,7 +261,9 @@ export class DatatypeReplication extends Declaration {
             throw new ElaborationError(this.position,
                 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
         }
-        state.setStaticType(this.name.getText(), res.type, res.constructors);
+        let id = 0;
+        // TODO id
+        state.setStaticType(this.name.getText(), res.type, res.constructors, id);
         return state;
    }
 
@@ -551,7 +273,9 @@ export class DatatypeReplication extends Declaration {
             throw new EvaluationError(this.position,
                 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
         }
-        state.setDynamicType(this.name.getText(), res);
+        let id = 0;
+        // TODO id
+        state.setDynamicType(this.name.getText(), res[0], id);
         return [state, false, undefined];
     }
 
@@ -612,11 +336,11 @@ export class AbstypeDeclaration extends Declaration {
     evaluate(state: State): [State, boolean, Value|undefined] {
         // I'm assuming the withtype is empty
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
-            let res = this.datatypeBinding[i].evaluate(state);
-            if (res[1]) {
-                return res;
+            let res = this.datatypeBinding[i].compute(state);
+
+            for (let j = 0; j < res[0].length; ++j) {
+                state.setDynamicValue(res[0][j][0], res[0][j][1]);
             }
-            state = res[0];
         }
         return this.declaration.evaluate(state);
     }
@@ -624,6 +348,40 @@ export class AbstypeDeclaration extends Declaration {
     prettyPrint(indentation: number, oneLine: boolean): string {
         // TODO
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
+}
+
+export class ExceptionDeclaration extends Declaration {
+    constructor(public position: Position, public bindings: ExceptionBinding[],
+                public id: number = 0) {
+        super();
+    }
+
+    simplify(): ExceptionDeclaration {
+        return this;
+    }
+
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO
+        throw new InternalInterpreterError(-1, 'Not yet implemented.');
+    }
+
+    elaborate(state: State): State {
+        for (let i = 0; i < this.bindings.length; ++i) {
+            state = this.bindings[i].elaborate(state);
+        }
+        return state;
+    }
+
+    evaluate(state: State): [State, boolean, Value|undefined] {
+        for (let i = 0; i < this.bindings.length; ++i) {
+            let res = this.bindings[i].evaluate(state);
+            if (res[1]) {
+                return res;
+            }
+            state = res[0];
+        }
+        return [state, false, undefined];
     }
 }
 
@@ -701,6 +459,29 @@ export class OpenDeclaration extends Declaration {
     }
 }
 
+export class EmptyDeclaration extends Declaration {
+// exactly what it says on the tin.
+    constructor(public id: number = 0) {
+        super();
+    }
+
+    simplify(): EmptyDeclaration {
+        return this;
+    }
+
+    elaborate(state: State): State {
+        return state;
+    }
+
+    evaluate(state: State): [State, boolean, Value|undefined]  {
+        return [state, false, undefined];
+    }
+
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        return ' ;';
+    }
+}
+
 export class SequentialDeclaration extends Declaration {
 // declaration1 <;> declaration2
     constructor(public position: Position, public declarations: Declaration[], public id: number = 0) {
@@ -744,6 +525,36 @@ export class SequentialDeclaration extends Declaration {
             res += this.declarations[i].prettyPrint(indentation, oneLine);
         }
         return res;
+    }
+}
+
+// Derived Forms and semantically irrelevant stuff
+
+export class FunctionDeclaration extends Declaration {
+// fun typeVariableSequence functionValueBinding
+    constructor(public position: Position, public typeVariableSequence: TypeVariable[],
+                public functionValueBinding: FunctionValueBinding[], public id: number = 0) {
+        super();
+    }
+
+    simplify(): ValueDeclaration {
+        let valbnd: ValueBinding[] = [];
+        for (let i = 0; i < this.functionValueBinding.length; ++i) {
+            valbnd.push(this.functionValueBinding[i].simplify());
+        }
+        return new ValueDeclaration(this.position, this.typeVariableSequence, valbnd, this.id);
+    }
+
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO
+        let res = 'fun <stuff>';
+        for (let i = 0; i < this.functionValueBinding.length; ++i) {
+            if (i > 0) {
+                res += ' and';
+            }
+            res += ' ' + this.functionValueBinding[i].prettyPrint(indentation, oneLine);
+        }
+        return res + ';';
     }
 }
 
@@ -842,25 +653,229 @@ export class NonfixDeclaration extends Declaration {
     }
 }
 
-export class EmptyDeclaration extends Declaration {
-// exactly what it says on the tin.
-    constructor(public id: number = 0) {
-        super();
-    }
+// Value Bundings
 
-    simplify(): EmptyDeclaration {
-        return this;
-    }
-
-    elaborate(state: State): State {
-        return state;
-    }
-
-    evaluate(state: State): [State, boolean, Value|undefined]  {
-        return [state, false, undefined];
+export class ValueBinding {
+// <rec> pattern = expression
+    constructor(public position: Position, public isRecursive: boolean,
+                public pattern: Pattern, public expression: Expression) {
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
-        return ' ;';
+        let res = '';
+        if (this.isRecursive) {
+            res += 'rec ';
+        }
+        res += this.pattern.prettyPrint(indentation, oneLine);
+        res += ' = ';
+        return res + this.expression.prettyPrint(indentation, oneLine);
+    }
+
+    // Returns [ VE | undef, Excep | undef]
+    compute(state: State): [[string, Value][] | undefined, Value | undefined] {
+        let v = this.expression.compute(state);
+        if (v[1]) {
+            return [undefined, v[0]];
+        }
+        return [this.pattern.matches(state, v[0]), undefined];
     }
 }
+
+export class FunctionValueBinding {
+    constructor(public position: Position,
+                public parameters: [PatternExpression[], Type|undefined, Expression][],
+                public name: ValueIdentifier) {
+    }
+
+    simplify(): ValueBinding {
+        if (this.name === undefined) {
+            throw new InternalInterpreterError(this.position,
+                'This function isn\'t ready to be simplified yet.');
+        }
+
+        // Build the case analysis, starting with the (vid1,...,vidn)
+        let arr: ValueIdentifier[] = [];
+        let matches: [PatternExpression, Expression][] = [];
+        for (let i = 0; i < this.parameters[0][0].length; ++i) {
+            arr.push(new ValueIdentifier(-1, new IdentifierToken('__arg' + i, -1)));
+        }
+        for (let i = 0; i < this.parameters.length; ++i) {
+            let pat2: PatternExpression;
+            if (this.parameters[i][0].length === 1) {
+                pat2 = this.parameters[i][0][0];
+            } else {
+                pat2 = new Tuple(-1, this.parameters[i][0]);
+            }
+
+            if (this.parameters[i][1] === undefined) {
+                matches.push([pat2, this.parameters[i][2]]);
+            } else {
+                matches.push([pat2,
+                    new TypedExpression(-1, this.parameters[i][2], <Type> this.parameters[i][1])]);
+            }
+        }
+        let pat: PatternExpression;
+        if (arr.length !== 1) {
+            pat = new Tuple(-1, arr).simplify();
+        } else {
+            pat = arr[0];
+        }
+        let mat = new Match(-1, matches);
+        let exp: Expression;
+        //        if (arr.length === 1) {
+        //    exp = new Lambda(-1, mat);
+        // } else {
+        exp = new CaseAnalysis(-1, pat, mat);
+
+        // Now build the lambdas around
+        for (let i = this.parameters[0][0].length - 1; i >= 0; --i) {
+            exp = new Lambda(-1, new Match(-1, [[
+                new ValueIdentifier(-1, new IdentifierToken('__arg' + i, -1)),
+                exp]]));
+        }
+        // }
+
+        return new ValueBinding(this.position, true, this.name, exp.simplify());
+    }
+
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        let res = '';
+        for (let i = 0; i < this.parameters.length; ++i) {
+            if (i > 0) {
+                res += ' | ';
+            }
+            res += this.name.name.getText();
+            for (let j = 0; j < this.parameters[i][0].length; ++j) {
+                res += ' ' + this.parameters[i][0][j].prettyPrint(indentation, oneLine);
+            }
+            if (this.parameters[i][1] !== undefined) {
+                res += ': ' + (<Type> this.parameters[i][1]).prettyPrint();
+            }
+            res += ' = ' + this.parameters[i][2].prettyPrint(indentation, oneLine);
+        }
+        return res;
+    }
+}
+
+// Type Bindings
+
+export class TypeBinding {
+// typeVariableSequence name = type
+    constructor(public position: Position, public typeVariableSequence: TypeVariable[],
+                public name: IdentifierToken, public type: Type) {
+    }
+}
+
+// Datatype Bindings
+
+export class DatatypeBinding {
+// typeVariableSequence name = <op> constructor <of type>
+    // type: [constructorName, <type>]
+    constructor(public position: Position, public typeVariableSequence: TypeVariable[],
+                public name: IdentifierToken, public type: [IdentifierToken, Type | undefined][]) {
+    }
+
+    compute(state: State): [[string, Value][], [string, string[]]] {
+        let connames: string[] = [];
+        let ve: [string, Value][] = [];
+        for (let i = 0; i < this.type.length; ++i) {
+            let numArg: number = 0;
+            if (this.type[i][1] !== undefined) {
+                numArg = 1;
+            }
+            let id = 0;
+            // TODO id
+
+            ve.push([this.type[i][0].getText(), new ValueConstructor(this.type[i][0].getText(), numArg, id)]);
+            connames.push(this.type[i][0].getText());
+        }
+        return [ve, [this.name.getText(), connames]];
+    }
+}
+
+// Exception Bindings
+
+export interface ExceptionBinding {
+    evaluate(state: State): [State, boolean, Value|undefined];
+    elaborate(state: State): State;
+}
+
+export class DirectExceptionBinding implements ExceptionBinding {
+// <op> name <of type>
+    constructor(public position: Position,
+                public name: IdentifierToken,
+                public type: Type | undefined) {
+    }
+
+    elaborate(state: State): State {
+        if (this.type !== undefined) {
+            let tyvars = this.type.getTypeVariables(true);
+            if (tyvars.size > 0) {
+                let res = '';
+                if (tyvars.size > 1) {
+                    res += 's';
+                }
+                res += ' ';
+                let first = true;
+                tyvars.forEach((val: TypeVariable) => {
+                    if (first) {
+                        first = false;
+                    } else {
+                        res += ', ';
+                    }
+                    res += '"' + val.name + '"';
+                });
+                throw new ElaborationError(this.position,
+                    'Unguarded type variable' + res + '.');
+            }
+
+            state.setStaticValue(this.name.getText(),
+                [new FunctionType(this.type.simplify(), new PrimitiveType('exn'))]);
+        } else {
+            state.setStaticValue(this.name.getText(),
+                [new PrimitiveType('exn')]);
+        }
+        return state;
+    }
+
+    evaluate(state: State): [State, boolean, Value|undefined] {
+        let numArg = 0;
+        if (this.type !== undefined) {
+            numArg = 1;
+        }
+        let id = 0;
+        // TODO id stuff
+        state.setDynamicValue(this.name.getText(),
+            new ExceptionConstructor(this.name.getText(), numArg, id));
+        return [state, false, undefined];
+    }
+}
+
+export class ExceptionAlias implements ExceptionBinding {
+// <op> name = <op> oldname
+    constructor(public position: Position, public name: IdentifierToken, public oldname: Token) {
+    }
+
+    elaborate(state: State): State {
+        let res = state.getStaticValue(this.oldname.getText());
+        if (res === undefined) {
+            throw new ElaborationError(this.position, 'Unbound value identifier "'
+                + this.oldname.getText() + '".');
+        }
+        state.setStaticValue(this.name.getText(), <Type[]> res);
+        return state;
+
+    }
+
+    evaluate(state: State): [State, boolean, Value|undefined] {
+        let res = state.getDynamicValue(this.oldname.getText());
+        if (res === undefined) {
+            throw new EvaluationError(this.position, 'Unbound value identifier "'
+                + this.oldname.getText() + '".');
+        }
+        // TODO id stuff
+        state.setDynamicValue(this.name.getText(), <Value> res);
+        return [state, false, undefined];
+    }
+}
+

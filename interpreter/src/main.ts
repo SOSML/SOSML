@@ -23,10 +23,27 @@ import { Value } from './values';
 export class Interpreter {
     /* Think of some additional flags n stuff etc */
     static interpret(nextInstruction: string,
-                     oldState: State = getInitialState()): [State, boolean, Value|undefined] {
+                     oldState: State = getInitialState(),
+                     allowLongFunctionNames: boolean = false): [State, boolean, Value|undefined] {
         let state = oldState.getNestedState();
 
         let tkn = Lexer.lex(nextInstruction);
+
+        if (allowLongFunctionNames) {
+            // this is only a replacement until we have the module language,
+            // so we can implement all testcases from the book
+            // TODO remove
+            let newTkn: Lexer.Token[] = [];
+            for (let t of tkn) {
+                if (t instanceof Lexer.LongIdentifierToken) {
+                    newTkn.push(new Lexer.IdentifierToken(t.getText(), t.position));
+                } else {
+                    newTkn.push(t);
+                }
+            }
+            tkn = newTkn;
+        }
+
         let ast = Parser.parse(tkn, state);
 
         state = oldState.getNestedState();

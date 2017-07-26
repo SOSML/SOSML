@@ -178,7 +178,7 @@ export class LongIdentifierToken implements Token {
             }
             res += this.qualifiers[i].getText();
         }
-        return res + this.text;
+        return res + '.' + this.id.getText();
     }
     isValidRecordLabel(): boolean { return false; }
     isVid() { return false; }

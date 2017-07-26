@@ -14,14 +14,68 @@ const Val = require("../src/values.ts");
 const TestHelper = require("./test_helper.ts");
 TestHelper.init();
 
+function createBasicStdlib(): State.State {
+    let [state, unused1, unused2] = API.Interpreter.interpret(
+        'exception Domain;' +
+        'exception Overflow; ' +
+        'exception Empty; ' +
+        'exception Subscript; ' +
+
+        'fun o (f,g) x = f (g x); ' +
+        'infix 3 o; ' +
+
+        'datatype order = LESS | EQUAL | GREATER; ' +
+
+        'exception Option.Option; ' +
+        'datatype \'a option = NONE | SOME of \'a; ' +
+        'fun valOf (SOME x) = x ' +
+        '  | valOf NONE = raise Option.Option; ' +
+        'fun isSome NONE = false ' +
+        '  | isSome (SOME _) = true; ' +
+
+        'val Int.minInt = SOME ~1073741824; ' +
+        'val Int.maxInt = SOME 1073741823; ' +
+
+        'fun hd nil = raise Empty ' +
+        '| hd (x::xr) = x; ' +
+        'fun tl nil = raise Empty ' +
+        '| tl (x::xr) = xr; ' +
+        'fun null nil = true ' +
+        '| null (x::xr) = false; ' +
+
+        'fun map f nil = nil ' +
+        '  | map f (x::xr) = (f x) :: (map f xr); ' +
+        '', InitialState.getInitialState(), true);
+    state = state.getNestedState();
+
+    state.setDynamicValue('Math.sqrt', new Val.PredefinedFunction('Math.sqrt', (val: Val.Value) => {
+        if (val instanceof Val.Real) {
+            let value = (<Val.Real> val).value;
+            if (value < 0)
+                return [new Val.ExceptionConstructor('Domain').construct(), true];
+            return [new Val.Real(Math.sqrt(value)), false];
+        } else {
+            throw new Errors.InternalInterpreterError('std type mismatch');
+        }
+    }));
+    state.setStaticValue('Math.sqrt', [new Type.FunctionType(new Type.PrimitiveType('real'), new Type.PrimitiveType('real'))]);
+
+    state.setDynamicValue('Math.pi', new Val.Real(3.14159265359));
+    state.setStaticValue('Math.pi', [new Type.PrimitiveType('real'));
+
+    return state;
+}
+
 //TODO determine actual types
 function run_test(commands): void {
     let oldTests = [];
-    let state = InitialState.getInitialState();
+    let state = createBasicStdlib();
     let exception;
     let value;
+    //TODO use a real stdlib instead of a preamble
+    state = createBasicStdlib();
     for(let step of commands) {
-        step[1](() => { [state, exception, value] = API.Interpreter.interpret(step[0], state); });
+        step[1](() => { [state, exception, value] = API.Interpreter.interpret(step[0], state, true); });
 
         step[2](state, exception, value);
 
@@ -30,6 +84,24 @@ function run_test(commands): void {
 
         oldTests.push([[state, exception, value], step[2]]);
     }
+}
+
+function createTuple(list: Val.Value[]): Val.RecordValue {
+    let map = new Map<string, Val.Value>();
+
+    for(let i = 0; i < list.length; ++i)
+        map.set(''+(i+1), list[i]);
+
+    return new Val.RecordValue(map);
+}
+
+function createList(list: Val.Value[]): Val.Value {
+    let ret: Val.Value = new Val.ConstructedValue('nil');
+
+    for(let i = list.length - 1; i >= 0; --i)
+        ret = new Val.ConstructedValue('::', createTuple([list[i], ret]));
+
+    return ret;
 }
 
 //TODO maybe explicitly check the all functions? (currently only != undefined)
@@ -702,7 +774,6 @@ it("1.13.3", () => {
             //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('real'));
         }],
         ['2.0 * 5.00000000001;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
-            // not the intended result from the book, but our reals have too many significant digits
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(10.00000000002));
             //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('real'));
@@ -740,13 +811,11 @@ sqrt 81.0;
         }],
         ['sqrt 2.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            //TODO adjust the significant digits
             expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(1.414213562373095));
             //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('real'));
         }],
         ['sqrt 81.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            //TODO adjust the significant digits
             expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(9.000009415515176));
             //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('real'));
         }]
@@ -1506,7 +1575,689 @@ fun iterdn n m s f = if n<m then s else iterdn (n-1) m (f(n,s)) f;
 
 //TODO Chapter 5
 
-//TODO Chapter 6
+it("6.1", () => {
+    /*
+datatype shape =
+    Circle of real
+  | Square of real
+  | Triangle of real * real * real;
+
+Circle 4.0;
+Square 3.0;
+Triangle (4.0, 3.0, 5.0);
+
+fun area (Circle r) = Math.pi*r*r
+  | area (Square a) = a*a
+  | area (Triangle(a,b,c)) = let val s = (a+b+c)/2.0
+                            in Math.sqrt(s*(s-a)*(s-b)*(s-c))
+                            end;
+area (Square 3.0);
+area (Triangle(6.0, 6.0, Math.sqrt 72.0));
+     */
+    //TODO test types
+    run_test([
+        ['datatype shape = Circle of real | Square of real | Triangle of real * real * real;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('Circle')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Circle')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Square')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Square')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Triangle')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Triangle')).toEqualWithType(TODO);
+        }],
+        ['Circle 4.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('Circle', new Val.Real(4)));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['Square 3.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('Square', new Val.Real(3)));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['Triangle (4.0, 3.0, 5.0);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('Triangle',
+                new Val.RecordValue(new Map([
+                    ['1', new Val.Real(4)],
+                    ['2', new Val.Real(3)],
+                    ['3', new Val.Real(5)]
+                ]))
+            ));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['fun area (Circle r) = Math.pi*r*r | area (Square a) = a*a | area (Triangle(a,b,c)) = let val s = (a+b+c)/2.0 in Math.sqrt(s*(s-a)*(s-b)*(s-c)) end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('area')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('area')).toEqualWithType(TODO);
+        }],
+        ['area (Square 3.0);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(9));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('real'));
+        }],
+        ['area (Triangle(6.0, 6.0, Math.sqrt 72.0));', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(17.99999999999999));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('real'));
+        }],
+    ]);
+});
+
+it("6.2", () => {
+    /*
+datatype day = Monday | Tuesday | Wednesday
+            | Thursday | Friday | Saturday | Sunday;
+
+fun weekend Saturday = true
+  | weekend Sunday = true
+  | weekend _ = false;
+
+weekend Saturday;
+map weekend [Monday, Wednesday, Friday, Saturday, Sunday];
+
+(* rebinding is NOT allowed here *)
+datatype bool = false | true;
+datatype order = LESS | EQUAL | GREATER;
+     */
+    //TODO test types
+    //TODO maybe test the forbidden rebinding
+    run_test([
+        ['datatype day = Monday | Tuesday | Wednesday | Thursday | Friday | Saturday | Sunday;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('Monday')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Monday')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Tuesday')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Tuesday')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Wednesday')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Wednesday')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Thursday')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Thursday')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Friday')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Friday')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Saturday')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Saturday')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Sunday')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Sunday')).toEqualWithType(TODO);
+        }],
+        ['fun weekend Saturday = true | weekend Sunday = true | weekend _ = false;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('weekend')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('weekend')).toEqualWithType(TODO);
+        }],
+        ['weekend Saturday;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.BoolValue(true));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('bool'));
+        }],
+        ['map weekend [Monday, Wednesday, Friday, Saturday, Sunday];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(createList([
+                new Val.BoolValue(false),
+                new Val.BoolValue(false),
+                new Val.BoolValue(false),
+                new Val.BoolValue(true),
+                new Val.BoolValue(true)
+            ]));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('real'));
+        }]
+    ]);
+});
+
+it("6.3", () => {
+    /*
+type point = real * real;
+
+datatype object = Circle of point * real
+                | Triangle of point * point * point;
+
+fun mirror ((x,y):point) = (x,~y);
+
+datatype point = Point of real * real;
+
+Point (2.0, 3.0);
+fun mirror (Point(x,y)) = Point(x,~y);
+     */
+    //TODO test types
+    run_test([
+        ['type point = real * real;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            //TODO check type point is set
+        }],
+        ['datatype object = Circle of point * real | Triangle of point * point * point;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('Circle')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Circle')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Triangle')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Triangle')).toEqualWithType(TODO);
+        }],
+        ['fun mirror ((x,y):point) = (x,~y);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('mirror')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('mirror')).toEqualWithType(TODO);
+        }],
+        ['datatype point = Point of real * real;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('Point')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Point')).toEqualWithType(TODO);
+        }],
+        ['Point (2.0, 3.0);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('Point', new Val.RecordValue(new Map([
+                ['1', new Val.Real(2)],
+                ['2', new Val.Real(3)]
+            ]))));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['fun mirror (Point(x,y)) = Point(x,~y);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('mirror')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('mirror')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("6.4", () => {
+    /*
+type var = string;
+
+datatype exp = C of int | V of var | A of exp * exp | M of exp * exp;
+
+val e = M(A(M(C 2, V "x"), V "y"), A(V "x", C 3));
+     */
+    //TODO test types
+    run_test([
+        ['type var = string;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['datatype exp = C of int | V of var | A of exp * exp | M of exp * exp;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('C')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('C')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('V')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('V')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('A')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('A')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('M')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('M')).toEqualWithType(TODO);
+        }],
+        ['val e = M(A(M(C 2, V "x"), V "y"), A(V "x", C 3));', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('e')).toEqualWithType(new Val.ConstructedValue('M', new Val.RecordValue(new Map([
+                ['1', new Val.ConstructedValue('A', new Val.RecordValue(new Map([
+                    ['1', new Val.ConstructedValue('M', new Val.RecordValue(new Map([
+                        ['1', new Val.ConstructedValue('C',
+                            new Val.Integer(2)
+                        )],
+                        ['2', new Val.ConstructedValue('V',
+                            new Val.StringValue('x')
+                        )]
+                    ])))],
+                    ['2', new Val.ConstructedValue('V',
+                        new Val.StringValue('y')
+                    )]
+                ])))],
+                ['2', new Val.ConstructedValue('A', new Val.RecordValue(new Map([
+                    ['1', new Val.ConstructedValue('V',
+                        new Val.StringValue('x')
+                    )],
+                    ['2', new Val.ConstructedValue('C',
+                        new Val.Integer(3)
+                    )],
+                ]))))]
+            ]))));
+            //expect(state.getStaticValue('e')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("6.4.1", () => {
+    /*
+type var = string;
+datatype exp = C of int | V of var | A of exp * exp | M of exp * exp;
+
+fun components (A(e,e')) = [e, e']
+  | components (M(e,e')) = [e, e']
+  | components _ = nil;
+
+components (A(C 3, V "z"));
+
+fun subexps e = e::
+    (case e of
+        A(e1,e2) => subexps e1 @ subexps e2
+      | M(e1,e2) => subexps e1 @ subexps e2
+      | _ => nil);
+     */
+    //TODO test types
+    run_test([
+        ['type var = string;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            // copy from 6.4
+        }],
+        ['datatype exp = C of int | V of var | A of exp * exp | M of exp * exp;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            // copy from 6.4
+        }],
+        ['fun components (A(e,e\')) = [e, e\'] | components (M(e,e\')) = [e, e\'] | components _ = nil;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('components')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('components')).toEqualWithType(TODO);
+        }],
+        ['components (A(C 3, V "z"));', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(createList([
+                new Val.ConstructedValue('C', new Val.Integer(3)),
+                new Val.ConstructedValue('V', new Val.StringValue('z')),
+            ]));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['fun subexps e = e::(case e of A(e1,e2) => subexps e1 @ subexps e2 | M(e1,e2) => subexps e1 @ subexps e2 | _ => nil);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('subexps')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('subexps')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("6.4.2", () => {
+    /*
+type var = string;
+datatype exp = C of int | V of var | A of exp * exp | M of exp * exp;
+val e = M(A(M(C 2, V "x"), V "y"), A(V "x", C 3));
+
+type env = var -> int;
+
+exception Unbound;
+
+val env = fn "x" => 5 | "y" => 3 | _ => raise Unbound;
+
+fun eval env (C c) = c
+  | eval env (V v) = env v
+  | eval env (A(e,e')) = eval env e + eval env e'
+  | eval env (M(e,e')) = eval env e * eval env e';
+
+eval env e;
+     */
+    //TODO test types
+    run_test([
+        ['type var = string;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            // copy from 6.4
+        }],
+        ['datatype exp = C of int | V of var | A of exp * exp | M of exp * exp;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            // copy from 6.4
+        }],
+        ['val e = M(A(M(C 2, V "x"), V "y"), A(V "x", C 3));', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            // copy from 6.4
+        }],
+        ['type env = var -> int;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            //TODO check if type env is set
+        }],
+        ['exception Unbound;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('Unbound')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('Unbound')).toEqualWithType(TODO);
+        }],
+        ['val env = fn "x" => 5 | "y" => 3 | _ => raise Unbound;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('env')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('env')).toEqualWithType(TODO);
+        }],
+        ['fun eval env (C c) = c | eval env (V v) = env v | eval env (A(e,e\')) = eval env e + eval env e\' | eval env (M(e,e\')) = eval env e * eval env e\';', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('eval')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('eval')).toEqualWithType(TODO);
+        }],
+        ['eval env e;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(104));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('int'));
+        }]
+    ]);
+});
+
+it("6.5", () => {
+    /*
+raise Empty;
+
+Empty;
+
+exception New;
+
+exception Newer of int;
+
+(Overflow, New, Newer);
+fun test New = 0
+  | test (Newer x) = x
+  | test _ = ~1;
+test Overflow;
+test (Newer 13);
+     */
+    //TODO test types
+    run_test([
+        ['raise Empty;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(true);
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Empty'));
+        }],
+        ['Empty;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ExceptionValue('Empty'));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['exception New;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('New')).toEqualWithType(new Val.ExceptionConstructor('New'));
+            //expect(state.getStaticValue('New')).toEqualWithType(TODO);
+        }],
+        ['exception Newer of int;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('Newer')).toEqualWithType(new Val.ExceptionConstructor('Newer', 1));
+            //expect(state.getStaticValue('Newer')).toEqualWithType(TODO);
+        }],
+        ['(Overflow, New, Newer);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(createTuple([
+                new Val.ExceptionValue('Overflow'),
+                new Val.ExceptionValue('New'),
+                new Val.ExceptionConstructor('Newer', 1)
+            ]));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['fun test New = 0 | test (Newer x) = x | test _ = ~1;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('test')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('test')).toEqualWithType(TODO);
+        }],
+        ['test Overflow;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(-1));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('int'));
+        }],
+        ['test (Newer 13);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(13));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('int'));
+        }]
+    ]);
+});
+
+it("6.5.1", () => {
+    /*
+exception New;
+
+raise New;
+
+fun f x y = if x then y else raise New;
+     */
+    //TODO test types
+    run_test([
+        ['exception New;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('New')).toEqualWithType(new Val.ExceptionConstructor('New'));
+            //expect(state.getStaticValue('New')).toEqualWithType(TODO);
+        }],
+        ['raise New;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(true);
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('New'));
+        }],
+        ['fun f x y = if x then y else raise New;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('f')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('f')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("6.5.2", () => {
+    /*
+exception New;
+exception Newer of int;
+
+exception Unbound;
+
+(raise New) handle New => ();
+(raise Newer 7) handle Newer x => x;
+fun test f = f() handle Newer x => x | Overflow => ~1;
+test (fn () => raise Newer 6);
+fun fac n = if n<1 then 1 else n*fac(n-1);
+fac 15;
+test (fn () => fac 15);
+
+fun adjoin env env' x = env' x handle Unbound => env x;
+     */
+    //TODO test types
+    run_test([
+        ['exception New;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            // copy from 6.5
+        }],
+        ['exception Newer of int;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            // copy from 6.5
+        }],
+        ['exception Unbound;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('Unbound')).toEqualWithType(new Val.ExceptionConstructor('Unbound'));
+            //expect(state.getStaticValue('Unbound')).toEqualWithType(TODO);
+        }],
+        ['(raise New) handle New => ();', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(createTuple([]));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['(raise Newer 7) handle Newer x => x;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(7));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('int'));
+        }],
+        ['fun test f = f() handle Newer x => x | Overflow => ~1;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('test')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('test')).toEqualWithType(TODO);
+        }],
+        ['test (fn () => raise Newer 6);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(6));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('int'));
+        }],
+        ['fun fac n = if n<1 then 1 else n*fac(n-1);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('fac')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('fac')).toEqualWithType(TODO);
+        }],
+        ['fac 15;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(true);
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Overflow'));
+        }],
+        ['test (fn () => fac 15);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(-1));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('int'));
+        }],
+        ['fun adjoin env env\' x = env\' x handle Unbound => env x;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(state.getDynamicValue('adjoin')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('adjoin')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("6.5.3", () => {
+    /*
+exception New;
+
+(raise Overflow, raise Subscript);
+
+(5 ; 7);
+(raise New ; 7);
+
+fun testOverflow x y = (x*y ; false) handle Overflow => true;
+testOverflow 2 3;
+testOverflow 100000 100000;
+     */
+    //TODO test types
+    run_test([
+        ['exception New;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            // copy from 6.5
+        }],
+        ['(raise Overflow, raise Subscript);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(true);
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Overflow'));
+        }],
+        ['(5 ; 7);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(7));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('int'));
+        }],
+        ['fun testOverflow x y = (x*y ; false) handle Overflow => true;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('testOverflow')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('testOverflow')).toEqualWithType(TODO);
+        }],
+        ['testOverflow 2 3;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.BoolValue(false));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('bool'));
+        }],
+        ['testOverflow 100000 100000;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.BoolValue(true));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('bool'));
+        }]
+    ]);
+});
+
+it("6.5.5", () => {
+    /*
+exception Double;
+fun mask compare p = case compare p of
+    EQUAL => raise Double | v => v;
+fun testDouble compare xs =
+    (List.sort (mask compare) xs ; false)
+    handle Double => true;
+     */
+    //TODO test types
+    //TODO maybe test that testDouble also works?
+    run_test([
+        ['exception Double;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('Double')).toEqualWithType(new Val.ExceptionConstructor('Double'));
+            //expect(state.getStaticValue('Double')).toEqualWithType(TODO);
+        }],
+        ['fun mask compare p = case compare p of EQUAL => raise Double | v => v;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('mask')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('mask')).toEqualWithType(TODO);
+        }],
+        ['fun testDouble compare xs = (List.sort (mask compare) xs ; false) handle Double => true;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('testDouble')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('testDouble')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("6.6", () => {
+    /*
+datatype 'a mylist = Nil | Cons of 'a * 'a mylist;
+     */
+    //TODO test types
+    //TODO maybe test that mylist is usable?
+    run_test([
+        ['datatype \'a mylist = Nil | Cons of \'a * \'a mylist;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('Nil')).toEqualWithType(new Val.ValueConstructor('Nil'));
+            //expect(state.getStaticValue('Nil')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Cons')).toEqualWithType(new Val.ValueConstructor('Cons', 1));
+            //expect(state.getStaticValue('Cons')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("6.7", () => {
+    /*
+(* should be predefined *)
+datatype 'a option = NONE | SOME of 'a;
+
+fun nth n xs = if n<0 orelse null xs then NONE
+                else if n=0 then SOME (hd xs) else nth (n-1) (tl xs);
+nth 2 [3,4,5];
+nth 3 [3,4,5];
+
+(* should be predefined *)
+fun valOf (SOME x) = x
+  | valOf NONE = raise Option.Option;
+
+valOf (nth 2 [3,4,5]);
+
+(* should be predefined *)
+fun isSome NONE = false
+  | isSome (SOME _) = true;
+
+Int.minInt;
+
+Int.maxInt;
+valOf Int.minInt + valOf Int.maxInt;
+
+fun findDouble compare xs = let
+    exception Double of 'a
+    fun compare' (x,y) = case compare (x,y) of
+        EQUAL => raise Double x | v => v
+in
+    (List.sort compare' xs ; NONE)
+    handle Double x => SOME x
+end;
+     */
+    //TODO test types
+    //TODO maybe test that findDouble is usable?
+    run_test([
+        ['datatype \'a option = NONE | SOME of \'a;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('NONE')).toEqualWithType(new Val.ValueConstructor('NONE'));
+            //expect(state.getStaticValue('NONE')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('SOME')).toEqualWithType(new Val.ValueConstructor('SOME', 1));
+            //expect(state.getStaticValue('SOME')).toEqualWithType(TODO);
+        }],
+        ['fun nth n xs = if n<0 orelse null xs then NONE else if n=0 then SOME (hd xs) else nth (n-1) (tl xs);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('nth')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('nth')).toEqualWithType(TODO);
+        }],
+        ['nth 2 [3,4,5];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('SOME', new Val.Integer(5)));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['nth 3 [3,4,5];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('NONE'));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['Int.minInt;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('SOME', new Val.Integer(-1073741824)));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['Int.maxInt;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('SOME', new Val.Integer(1073741823)));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['valOf Int.minInt + valOf Int.maxInt;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(-1));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('int'));
+        }],
+        ['fun findDouble compare xs = let exception Double of \'a fun compare\' (x,y) = case compare (x,y) of EQUAL => raise Double x | v => v in (List.sort compare\' xs ; NONE) handle Double x => SOME x end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('findDouble')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('findDouble')).toEqualWithType(TODO);
+        }]
+    ]);
+});
 
 //TODO Chapter 7
 
