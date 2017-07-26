@@ -9,6 +9,7 @@
     "build": "webpack --env=dev",
     "dist": "webpack --env=prod",
     "start": "node-dev src/main.js",
+    "worker": "node-dev src/worker.js",
     "production-start": "node src/main.js"
   },
   "author": "SOSML Team",
