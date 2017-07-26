@@ -28,6 +28,9 @@ function createBasicStdlib(): State.State {
 
         'datatype order = LESS | EQUAL | GREATER; ' +
 
+        'fun Int.compare (x, y: int) = if x<y then LESS else if x>y then GREATER else EQUAL;' +
+        'fun Real.compare (x, y: real) = if x<y then LESS else if x>y then GREATER else EQUAL;' +
+
         'exception Option.Option; ' +
         'datatype \'a option = NONE | SOME of \'a; ' +
         'fun valOf (SOME x) = x ' +
@@ -84,6 +87,14 @@ function createBasicStdlib(): State.State {
 
         'fun List.filter p []      = [] ' +
         '  | List.filter p (x::xr) = if p x then x :: List.filter p xr else List.filter p xr; ' +
+
+        'fun List.collate (compare : \'a * \'a -> order) p = case p of ' +
+        '    (nil, _::_) => LESS ' +
+        '  | (nil, nil) => EQUAL ' +
+        '  | (_::_, nil) => GREATER ' +
+        '  | (x::xr, y::yr) => case compare(x,y) of ' +
+        '         EQUAL => List.collate compare (xr,yr) ' +
+        '       | s => s; ' +
 
         '', InitialState.getInitialState(), true);
     state = state.getNestedState();
@@ -2716,7 +2727,262 @@ map ord (explode "ABab");
     ]);
 });
 
-//TODO Chapter 5
+it("5.1", () => {
+    /*
+fun insert (x, nil) = [x]
+  | insert (x, y::yr) = if x<=y then x::y::yr else y::insert(x,yr);
+fun isort xs = foldl insert nil xs;
+
+fun pisort compare =
+    let
+        fun insert (x, nil) = [x]
+          | insert (x, y::yr) = case compare(x,y) of
+                                GREATER => y::insert(x,yr)
+                                | _ => x::y::yr
+    in
+        foldl insert nil
+    end;
+
+val xs = List.tabulate(5000, fn x => x);
+val ys = rev xs;
+     */
+    //TODO test types
+    run_test([
+        ['fun insert (x, nil) = [x] | insert (x, y::yr) = if x<=y then x::y::yr else y::insert(x,yr);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('insert')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('insert')).toEqualWithType(TODO);
+        }],
+        ['fun isort xs = foldl insert nil xs;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('isort')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('isort')).toEqualWithType(TODO);
+        }],
+        ['fun pisort compare = let fun insert (x, nil) = [x] | insert (x, y::yr) = case compare(x,y) of GREATER => y::insert(x,yr) | _ => x::y::yr in foldl insert nil end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('pisort')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('pisort')).toEqualWithType(TODO);
+        }],
+        ['val xs = List.tabulate(5000, fn x => x);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            let res = [];
+            for (let i = 0; i < 5000; ++i) {
+                res.push(new Val.Integer(i));
+            }
+            expect(state.getDynamicValue('xs')).toEqualWithType(createList(res));
+            //expect(state.getStaticValue('xs')).toEqualWithType(TODO);
+        }],
+        ['val ys = rev xs;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            let res = [];
+            for (let i = 5000-1; i >= 0; --i) {
+                res.push(new Val.Integer(i));
+            }
+            expect(state.getDynamicValue('ys')).toEqualWithType(createList(res));
+            //expect(state.getStaticValue('ys')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("5.2", () => {
+    /*
+fun insert (x, nil) = [x]
+  | insert (x, y::yr) = if x<=y then x::y::yr else y::insert(x,yr);
+fun pisort compare =
+    let
+        fun insert (x, nil) = [x]
+          | insert (x, y::yr) = case compare(x,y) of
+                                GREATER => y::insert(x,yr)
+                                | _ => x::y::yr
+    in
+        foldl insert nil
+    end;
+
+pisort Int.compare;
+pisort Int.compare [5, 2, 2, 13, 4, 9, 9, 13, ~2];
+pisort Real.compare [5.0, 2.0, 2.0, 13.0, 4.0, 9.0];
+     */
+    //TODO test types
+    run_test([
+        ['fun insert (x, nil) = [x] | insert (x, y::yr) = if x<=y then x::y::yr else y::insert(x,yr);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            // copy from 5.1
+        }],
+        ['fun pisort compare = let fun insert (x, nil) = [x] | insert (x, y::yr) = case compare(x,y) of GREATER => y::insert(x,yr) | _ => x::y::yr in foldl insert nil end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            // copy from 5.1
+        }],
+        ['pisort Int.compare;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['pisort Int.compare [5, 2, 2, 13, 4, 9, 9, 13, ~2];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(createList([
+                new Val.Integer(-2),
+                new Val.Integer(2),
+                new Val.Integer(2),
+                new Val.Integer(4),
+                new Val.Integer(5),
+                new Val.Integer(9),
+                new Val.Integer(9),
+                new Val.Integer(13),
+                new Val.Integer(13)
+            ]));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['pisort Real.compare [5.0, 2.0, 2.0, 13.0, 4.0, 9.0];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(createList([
+                new Val.Real(2),
+                new Val.Real(2),
+                new Val.Real(4),
+                new Val.Real(5),
+                new Val.Real(9),
+                new Val.Real(13)
+            ]));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("5.3", () => {
+    /*
+fun insert (x, nil) = [x]
+  | insert (x, y::yr) = if x<=y then x::y::yr else y::insert(x,yr);
+fun pisort compare =
+    let
+        fun insert (x, nil) = [x]
+          | insert (x, y::yr) = case compare(x,y) of
+                                GREATER => y::insert(x,yr)
+                                | _ => x::y::yr
+    in
+        foldl insert nil
+    end;
+
+fun invert (compare : 'a * 'a -> order) (x,y) = compare (y,x);
+pisort (invert Int.compare) [5, 2, 2, 13, 4, 9, 9, 13, ~2];
+
+fun lex (compare : 'a * 'a -> order) p = case p of
+                                        (nil, _::_) => LESS
+                                        | (nil, nil) => EQUAL
+                                        | (_::_, nil) => GREATER
+                                        | (x::xr, y::yr) => case compare(x,y) of
+                                        EQUAL => lex compare (xr,yr)
+                                        | s => s;
+
+pisort (lex Int.compare) [[4,1], [], [4], [4,1,~8]];
+     */
+    //TODO test types
+    run_test([
+        ['fun insert (x, nil) = [x] | insert (x, y::yr) = if x<=y then x::y::yr else y::insert(x,yr);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            // copy from 5.1
+        }],
+        ['fun pisort compare = let fun insert (x, nil) = [x] | insert (x, y::yr) = case compare(x,y) of GREATER => y::insert(x,yr) | _ => x::y::yr in foldl insert nil end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            // copy from 5.1
+        }],
+        ['fun invert (compare : \'a * \'a -> order) (x,y) = compare (y,x);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('invert')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('invert')).toEqualWithType(TODO);
+        }],
+        ['pisort (invert Int.compare) [5, 2, 2, 13, 4, 9, 9, 13, ~2];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(createList([
+                new Val.Integer(13),
+                new Val.Integer(13),
+                new Val.Integer(9),
+                new Val.Integer(9),
+                new Val.Integer(5),
+                new Val.Integer(4),
+                new Val.Integer(2),
+                new Val.Integer(2),
+                new Val.Integer(-2)
+            ]));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['fun lex (compare : \'a * \'a -> order) p = case p of (nil, _::_) => LESS | (nil, nil) => EQUAL | (_::_, nil) => GREATER | (x::xr, y::yr) => case compare(x,y) of EQUAL => lex compare (xr,yr) | s => s;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('lex')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('lex')).toEqualWithType(TODO);
+        }],
+       ['pisort (lex Int.compare) [[4,1], [], [4], [4,1,~8]];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+           expect(state.getDynamicValue('it')).toEqualWithType(createList([
+               createList([]),
+               createList([new Val.Integer(4)]),
+               createList([new Val.Integer(4),new Val.Integer(1)]),
+               createList([new Val.Integer(4),new Val.Integer(1),new Val.Integer(-8)])
+           ]));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("5.4", () => {
+    /*
+fun split xs = foldl (fn (x, (ys,zs)) => (zs, x::ys))
+                    (nil, nil) xs;
+fun merge (nil , ys ) = ys
+ | merge (xs , nil ) = xs
+ | merge (x::xr, y::yr) = if x<=y then x::merge(xr,y::yr)
+                            else y::merge(x::xr,yr);
+fun msort [] = []
+  | msort [x] = [x]
+  | msort xs = let val (ys,zs) = split xs
+                in merge(msort ys, msort zs) end;
+     */
+    //TODO test types
+    run_test([
+        ['fun split xs = foldl (fn (x, (ys,zs)) => (zs, x::ys)) (nil, nil) xs;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('split')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('split')).toEqualWithType(TODO);
+        }],
+        ['fun merge (nil , ys ) = ys | merge (xs , nil ) = xs | merge (x::xr, y::yr) = if x<=y then x::merge(xr,y::yr) else y::merge(x::xr,yr);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('merge')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('merge')).toEqualWithType(TODO);
+        }],
+        ['fun msort [] = [] | msort [x] = [x] | msort xs = let val (ys,zs) = split xs in merge(msort ys, msort zs) end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('msort')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('msort')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("5.6", () => {
+    /*
+fun pf'(k,n) = if k*k>n then [n] else
+                if n mod k = 0 then k::pf'(k, n div k)
+                else pf'(k+1,n);
+fun pf n = pf'(2,n);
+pf 1989;
+     */
+    //TODO test types
+    run_test([
+        ['fun pf\'(k,n) = if k*k>n then [n] else if n mod k = 0 then k::pf\'(k, n div k) else pf\'(k+1,n);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('pf\'')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('pf\'')).toEqualWithType(TODO);
+        }],
+        ['fun pf n = pf\'(2,n);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('pf')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('pf')).toEqualWithType(TODO);
+        }],
+        ['pf 1989;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(createList([
+                new Val.Integer(3),
+                new Val.Integer(3),
+                new Val.Integer(13),
+                new Val.Integer(17)
+            ]));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }]
+    ]);
+});
 
 it("6.1", () => {
     /*
@@ -3404,7 +3670,423 @@ end;
 
 //TODO Chapter 7
 
-//TODO Chapter 12
+it("12.1", () => {
+    /*
+datatype con = False | True | IC of int (* constants *)
+type id = string (* identifiers *)
+datatype opr = Add | Sub | Mul | Leq (* operators *)
+datatype ty = (* types *)
+    Bool
+  | Int
+  | Arrow of ty * ty (* procedure type *)
+datatype exp = (* expressions *)
+    Con of con (* constant *)
+  | Id of id (* identifier *)
+  | Opr of opr * exp * exp (* operator application *)
+  | If of exp * exp * exp (* conditional *)
+  | Abs of id * ty * exp (* abstraction *)
+  | App of exp * exp (* procedure application *)
+;
+
+val e1 = Opr(Leq, Id"n", Con(IC 0));
+     */
+    //TODO test types
+    run_test([
+        ['datatype con = False | True | IC of int (* constants *) ' +
+            'type id = string (* identifiers *) ' +
+            'datatype opr = Add | Sub | Mul | Leq (* operators *) ' +
+            'datatype ty = (* types *) ' +
+            '    Bool ' +
+            '  | Int ' +
+            '  | Arrow of ty * ty (* procedure type *) ' +
+            'datatype exp = (* expressions *) ' +
+            '    Con of con (* constant *) ' +
+            '  | Id of id (* identifier *) ' +
+            '  | Opr of opr * exp * exp (* operator application *) ' +
+            '  | If of exp * exp * exp (* conditional *) ' +
+            '  | Abs of id * ty * exp (* abstraction *) ' +
+            '  | App of exp * exp (* procedure application *) ' +
+            ';', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('False')).toEqualWithType(new Val.ValueConstructor('False'));
+            //expect(state.getStaticValue('False')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('True')).toEqualWithType(new Val.ValueConstructor('True'));
+            //expect(state.getStaticValue('True')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('IC')).toEqualWithType(new Val.ValueConstructor('IC', 1));
+            //expect(state.getStaticValue('IC')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Add')).toEqualWithType(new Val.ValueConstructor('Add'));
+            //expect(state.getStaticValue('Add')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Sub')).toEqualWithType(new Val.ValueConstructor('Sub'));
+            //expect(state.getStaticValue('Sub')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Mul')).toEqualWithType(new Val.ValueConstructor('Mul'));
+            //expect(state.getStaticValue('Mul')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Leq')).toEqualWithType(new Val.ValueConstructor('Leq'));
+            //expect(state.getStaticValue('Leq')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Bool')).toEqualWithType(new Val.ValueConstructor('Bool'));
+            //expect(state.getStaticValue('Bool')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Int')).toEqualWithType(new Val.ValueConstructor('Int'));
+            //expect(state.getStaticValue('Int')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Arrow')).toEqualWithType(new Val.ValueConstructor('Arrow', 1));
+            //expect(state.getStaticValue('Arrow')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Con')).toEqualWithType(new Val.ValueConstructor('Con', 1));
+            //expect(state.getStaticValue('Con')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Id')).toEqualWithType(new Val.ValueConstructor('Id', 1));
+            //expect(state.getStaticValue('Id')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Opr')).toEqualWithType(new Val.ValueConstructor('Opr', 1));
+            //expect(state.getStaticValue('Opr')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('If')).toEqualWithType(new Val.ValueConstructor('If', 1));
+            //expect(state.getStaticValue('If')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Abs')).toEqualWithType(new Val.ValueConstructor('Abs', 1));
+            //expect(state.getStaticValue('Abs')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('App')).toEqualWithType(new Val.ValueConstructor('App', 1));
+            //expect(state.getStaticValue('App')).toEqualWithType(TODO);
+        }],
+        ['val e1 = Opr(Leq, Id"n", Con(IC 0));', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('e1')).toEqualWithType(new Val.ConstructedValue('Opr', createTuple([
+                new Val.ConstructedValue('Leq'),
+                new Val.ConstructedValue('Id', new Val.StringValue('n')),
+                new Val.ConstructedValue('Con', new Val.ConstructedValue('IC', new Val.Integer(0)))
+            ])));
+            //expect(state.getStaticValue('e1')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("12.4", () => {
+    /*
+datatype con = False | True | IC of int (* constants *)
+type id = string (* identifiers *)
+datatype opr = Add | Sub | Mul | Leq (* operators *)
+datatype ty = (* types *)
+    Bool
+  | Int
+  | Arrow of ty * ty (* procedure type *)
+datatype exp = (* expressions *)
+    Con of con (* constant *)
+  | Id of id (* identifier *)
+  | Opr of opr * exp * exp (* operator application *)
+  | If of exp * exp * exp (* conditional *)
+  | Abs of id * ty * exp (* abstraction *)
+  | App of exp * exp (* procedure application *)
+;
+
+type 'a env = id -> 'a (* environments *)
+exception Unbound of id
+fun empty x = raise Unbound x
+fun update env x a y = if y=x then a else env y
+exception Error of string
+fun elabCon True = Bool
+  | elabCon False = Bool
+  | elabCon (IC _) = Int
+fun elabOpr Add Int Int = Int
+  | elabOpr Sub Int Int = Int
+  | elabOpr Mul Int Int = Int
+  | elabOpr Leq Int Int = Bool
+  | elabOpr ___= raise Error "T Opr"
+fun elab f (Con c) = elabCon c
+  | elab f (Id x) = f x
+  | elab f (Opr(opr,e1,e2)) = elabOpr opr (elab f e1) (elab f e2)
+  | elab f (If(e1,e2,e3)) =
+            (case (elab f e1, elab f e2, elab f e3) of
+            (Bool, t2, t3) => if t2=t3 then t2
+                              else raise Error "T If1"
+            | _ => raise Error "T If2")
+  | elab f (Abs(x,t,e)) = Arrow(t, elab (update f x t) e)
+  | elab f (App(e1,e2)) = (case elab f e1 of
+                          Arrow(t,t') => if t = elab f e2 then t'
+                                          else raise Error "T App1"
+                          | _ => raise Error "T App2")
+;
+
+val f = update (update empty "x" Int) "y" Bool;
+
+f "y";
+f "z";
+
+val f = update (update empty "x" Int) "y" Bool;
+val e = Abs("y", Int, Opr(Leq, Id"x", Id"y"));
+elab f e;
+
+datatype elab = T of ty | SE of string;
+fun elab' f e = T(elab f e) handle
+    Unbound s => SE("Unbound "^s)
+  | Error s => SE("Error "^s);
+elab' f e;
+elab' f (App(Id"x", Id"x"));
+elab' empty (Id "x");
+     */
+    //TODO test types
+    run_test([
+        ['datatype con = False | True | IC of int (* constants *) ' +
+            'type id = string (* identifiers *) ' +
+            'datatype opr = Add | Sub | Mul | Leq (* operators *) ' +
+            'datatype ty = (* types *) ' +
+            '    Bool ' +
+            '  | Int ' +
+            '  | Arrow of ty * ty (* procedure type *) ' +
+            'datatype exp = (* expressions *) ' +
+            '    Con of con (* constant *) ' +
+            '  | Id of id (* identifier *) ' +
+            '  | Opr of opr * exp * exp (* operator application *) ' +
+            '  | If of exp * exp * exp (* conditional *) ' +
+            '  | Abs of id * ty * exp (* abstraction *) ' +
+            '  | App of exp * exp (* procedure application *) ' +
+            ';', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+                // copy from 12.1
+        }],
+        ['type \'a env = id -> \'a (* environments *) ' +
+            'exception Unbound of id ' +
+            'fun empty x = raise Unbound x ' +
+            'fun update env x a y = if y=x then a else env y ' +
+            'exception Error of string ' +
+            'fun elabCon True = Bool ' +
+            '  | elabCon False = Bool ' +
+            '  | elabCon (IC _) = Int ' +
+            'fun elabOpr Add Int Int = Int ' +
+            '  | elabOpr Sub Int Int = Int ' +
+            '  | elabOpr Mul Int Int = Int ' +
+            '  | elabOpr Leq Int Int = Bool ' +
+            '  | elabOpr ___= raise Error "T Opr" ' +
+            'fun elab f (Con c) = elabCon c ' +
+            '  | elab f (Id x) = f x ' +
+            '  | elab f (Opr(opr,e1,e2)) = elabOpr opr (elab f e1) (elab f e2) ' +
+            '  | elab f (If(e1,e2,e3)) = ' +
+            '            (case (elab f e1, elab f e2, elab f e3) of ' +
+            '            (Bool, t2, t3) => if t2=t3 then t2 ' +
+            '                              else raise Error "T If1" ' +
+            '            | _ => raise Error "T If2") ' +
+            '  | elab f (Abs(x,t,e)) = Arrow(t, elab (update f x t) e) ' +
+            '  | elab f (App(e1,e2)) = (case elab f e1 of ' +
+            '                          Arrow(t,t\') => if t = elab f e2 then t\' ' +
+            '                                          else raise Error "T App1" ' +
+            '                          | _ => raise Error "T App2") ' +
+            '; ' +
+            '', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('Unbound')).toEqualWithType(new Val.ExceptionConstructor('Unbound', 1));
+            //expect(state.getStaticValue('Unbound')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('empty')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('empty')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('update')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('update')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Error')).toEqualWithType(new Val.ExceptionConstructor('Error', 1));
+            //expect(state.getStaticValue('Error')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('elabCon')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('elabCon')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('elabOpr')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('elabOpr')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('elab')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('elab')).toEqualWithType(TODO);
+        }],
+        ['val f = update (update empty "x" Int) "y" Bool;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('f')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('f')).toEqualWithType(TODO);
+        }],
+        ['f "y";', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('Bool'));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['f "z";', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(true);
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Unbound', new Val.StringValue('z')));
+        }],
+        ['val f = update (update empty "x" Int) "y" Bool;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('f')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('f')).toEqualWithType(TODO);
+        }],
+        ['val e = Abs("y", Int, Opr(Leq, Id"x", Id"y"));', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('e')).toEqualWithType(new Val.ConstructedValue('Abs', createTuple([
+                new Val.StringValue('y'),
+                new Val.ConstructedValue('Int'),
+                new Val.ConstructedValue('Opr', createTuple([
+                    new Val.ConstructedValue('Leq'),
+                    new Val.ConstructedValue('Id', new Val.StringValue('x')),
+                    new Val.ConstructedValue('Id', new Val.StringValue('y'))
+                ]))
+            ])));
+            //expect(state.getStaticValue('e')).toEqualWithType(TODO);
+        }],
+        ['elab f e;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('Arrow', createTuple([
+                new Val.ConstructedValue('Int'),
+                new Val.ConstructedValue('Bool')
+            ])));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['datatype elab = T of ty | SE of string;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('T')).toEqualWithType(new Val.ValueConstructor('T', 1));
+            //expect(state.getStaticValue('T')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('SE')).toEqualWithType(new Val.ValueConstructor('SE', 1));
+            //expect(state.getStaticValue('SE')).toEqualWithType(TODO);
+        }],
+        ['fun elab\' f e = T(elab f e) handle Unbound s => SE("Unbound "^s) | Error s => SE("Error "^s);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('elab\'')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('elab\'')).toEqualWithType(TODO);
+        }],
+        ['elab\' f e;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('T',
+                new Val.ConstructedValue('Arrow', createTuple([
+                    new Val.ConstructedValue('Int'),
+                    new Val.ConstructedValue('Bool')
+                ]))
+            ));
+        }],
+        ['elab\' f (App(Id"x", Id"x"));', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('SE', new Val.StringValue("Error T App2")));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['elab\' empty (Id "x");', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('SE', new Val.StringValue("Unbound x")));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+    ]);
+});
+
+it("12.5", () => {
+    /*
+datatype con = False | True | IC of int (* constants *)
+type id = string (* identifiers *)
+datatype opr = Add | Sub | Mul | Leq (* operators *)
+datatype ty = (* types *)
+    Bool
+  | Int
+  | Arrow of ty * ty (* procedure type *)
+datatype exp = (* expressions *)
+    Con of con (* constant *)
+  | Id of id (* identifier *)
+  | Opr of opr * exp * exp (* operator application *)
+  | If of exp * exp * exp (* conditional *)
+  | Abs of id * ty * exp (* abstraction *)
+  | App of exp * exp (* procedure application *)
+;
+
+type 'a env = id -> 'a (* environments *)
+exception Unbound of id
+fun empty x = raise Unbound x
+fun update env x a y = if y=x then a else env y
+;
+
+datatype value =
+    IV of int
+  | Proc of id * exp * value env
+fun evalCon False = IV 0
+  | evalCon True = IV 1
+  | evalCon (IC x) = IV x
+fun evalOpr Add (IV x1) (IV x2) = IV(x1+x2)
+  | evalOpr Sub (IV x1) (IV x2) = IV(x1-x2)
+  | evalOpr Mul (IV x1) (IV x2) = IV(x1*x2)
+  | evalOpr Leq (IV x1) (IV x2) = IV(if x1<=x2 then 1 else 0)
+  | evalOpr _ _ _ = raise Error "R Opr"
+fun eval f (Con c) = evalCon c
+  | eval f (Id x) = f x
+  | eval f (Opr(opr,e1,e2)) = evalOpr opr (eval f e1) (eval f e2)
+  | eval f (If(e1,e2,e3)) = (case eval f e1 of
+                              IV 1 => eval f e2
+                            | IV 0 => eval f e3
+                            | _ => raise Error "R If")
+  | eval f (Abs(x,t,e)) = Proc(x, e, f)
+  | eval f (App(e1,e2)) = (case (eval f e1, eval f e2) of
+                          (Proc(x,e,f'), v) => eval (update f' x v) e
+                            | _ => raise Error "R App")
+;
+
+val f = update empty "x" (IV 5);
+val e = Opr(Leq, Id"x", Con(IC 7));
+eval f e;
+     */
+    //TODO test types
+    run_test([
+        ['datatype con = False | True | IC of int (* constants *) ' +
+            'type id = string (* identifiers *) ' +
+            'datatype opr = Add | Sub | Mul | Leq (* operators *) ' +
+            'datatype ty = (* types *) ' +
+            '    Bool ' +
+            '  | Int ' +
+            '  | Arrow of ty * ty (* procedure type *) ' +
+            'datatype exp = (* expressions *) ' +
+            '    Con of con (* constant *) ' +
+            '  | Id of id (* identifier *) ' +
+            '  | Opr of opr * exp * exp (* operator application *) ' +
+            '  | If of exp * exp * exp (* conditional *) ' +
+            '  | Abs of id * ty * exp (* abstraction *) ' +
+            '  | App of exp * exp (* procedure application *) ' +
+            ';', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+                // copy from 12.1
+        }],
+        ['datatype value = ' +
+            '    IV of int ' +
+            '  | Proc of id * exp * value env ' +
+            'fun evalCon False = IV 0 ' +
+            '  | evalCon True = IV 1 ' +
+            '  | evalCon (IC x) = IV x ' +
+            'fun evalOpr Add (IV x1) (IV x2) = IV(x1+x2) ' +
+            '  | evalOpr Sub (IV x1) (IV x2) = IV(x1-x2) ' +
+            '  | evalOpr Mul (IV x1) (IV x2) = IV(x1*x2) ' +
+            '  | evalOpr Leq (IV x1) (IV x2) = IV(if x1<=x2 then 1 else 0) ' +
+            '  | evalOpr _ _ _ = raise Error "R Opr" ' +
+            'fun eval f (Con c) = evalCon c ' +
+            '  | eval f (Id x) = f x ' +
+            '  | eval f (Opr(opr,e1,e2)) = evalOpr opr (eval f e1) (eval f e2) ' +
+            '  | eval f (If(e1,e2,e3)) = (case eval f e1 of ' +
+            '                             IV 1 => eval f e2 ' +
+            '                           | IV 0 => eval f e3 ' +
+            '                           | _ => raise Error "R If") ' +
+            '  | eval f (Abs(x,t,e)) = Proc(x, e, f) ' +
+            '  | eval f (App(e1,e2)) = (case (eval f e1, eval f e2) of ' +
+            '                          (Proc(x,e,f\'), v) => eval (update f\' x v) e ' +
+            '                           | _ => raise Error "R App") ' +
+            ';', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('IV')).toEqualWithType(new Val.ValueConstructor('IV', 1));
+            //expect(state.getStaticValue('IV')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('Proc')).toEqualWithType(new Val.ValueConstructor('Proc', 1));
+            //expect(state.getStaticValue('Proc')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('evalCon')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('evalCon')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('evalOpr')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('evalOpr')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('eval')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('eval')).toEqualWithType(TODO);
+        }],
+        ['type \'a env = id -> \'a (* environments *) ' +
+            'exception Unbound of id ' +
+            'fun empty x = raise Unbound x ' +
+            'fun update env x a y = if y=x then a else env y ' +
+            ';', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+                // copy from 12.4
+        }],
+        ['val f = update empty "x" (IV 5);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('f')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('f')).toEqualWithType(TODO);
+        }],
+        ['val e = Opr(Leq, Id"x", Con(IC 7));', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('e')).toEqualWithType(new Val.ConstructedValue('Opr', createTuple([
+                new Val.ConstructedValue('Leq'),
+                new Val.ConstructedValue('Id', new Val.StringValue('x')),
+                new Val.ConstructedValue('Con', new Val.ConstructedValue('IC', new Val.Integer(7))),
+            ])));
+            //expect(state.getStaticValue('e')).toEqualWithType(TODO);
+        }],
+        ['eval f e;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('IV', new Val.Integer(1)));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }]
+    ]);
+});
 
 //TODO Chapter 13
 
