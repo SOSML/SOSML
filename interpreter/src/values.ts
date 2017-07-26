@@ -296,7 +296,7 @@ export class RecordValue extends Value {
             if (!(<RecordValue> other).entries.has(i)) {
                 fail = true;
             }
-            if (!this.entries.get(i).equals((<RecordValue> other).entries.get(i))) {
+            if (!j.equals(<Value> (<RecordValue> other).entries.get(i))) {
                 fail = true;
             }
         });
@@ -307,7 +307,7 @@ export class RecordValue extends Value {
             if (!this.entries.has(i)) {
                 fail = true;
             }
-            if (!this.entries.get(i).equals((<RecordValue> other).entries.get(i))) {
+            if (!j.equals(<Value> (<RecordValue> other).entries.get(i))) {
                 fail = true;
             }
         });
