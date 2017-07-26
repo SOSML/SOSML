@@ -764,7 +764,42 @@ Math.pi;
     //TODO add the real test once we have modules
 });
 
+
+it("2.2.1", () => {
+    /*
+     fun f (t: int*int*int) =  #1t=0 then #2t else 2*(#3t);
+     */
+    //TODO test types
+    run_test([
+        ['fun f (t: int*int*int) =  #1t=0 then #2t else 2*(#3t);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("2.4", () => {
+    /*
+     fun p (x:int) = x;
+     fun q (x:int) = 3+(p x);
+
+     fun f (x:int) : int =  x<1 then 1 else x*f(x-1);
+
+     */
+    //TODO test types
+    run_test([
+        ['fun p (x:int) = x;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
 //TODO Chapter 2
+
+
 
 it("3.1", () => {
     /*
