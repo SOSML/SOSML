@@ -1,7 +1,7 @@
 import { State, StaticBasis, DynamicBasis, InfixStatus, TypeInformation,
          TypeNameInformation } from './state';
 import { FunctionType, PrimitiveType, TupleType, Type, TypeVariable } from './types';
-import { CharValue, Real, Integer, StringValue, PredefinedFunction, Word,
+import { CharValue, Real, Integer, StringValue, PredefinedFunction, Word, ConstructedValue,
          ValueConstructor, ExceptionConstructor, BoolValue, Value, RecordValue } from './values';
 import { InternalInterpreterError } from './errors';
 
@@ -71,8 +71,8 @@ let initialState: State = new State(
             'Div':      [[new PrimitiveType('exn')], false],
             'Overflow': [[new PrimitiveType('exn')], false],
             '^':        [[functionType(stringType)], false],
-            'explode':  [[new FunctionType(new TupleType([stringType, stringType]),
-                new PrimitiveType('list', [charType])).simplify()], false],
+            'explode':  [[new FunctionType(stringType, new PrimitiveType('list', [charType])).simplify()], false],
+            'implode':  [[new FunctionType(new PrimitiveType('list', [charType]), stringType).simplify()], false],
             '~':        [[new FunctionType(intType, intType), new FunctionType(realType, realType)], false],
             'abs':      [[new FunctionType(intType, intType), new FunctionType(realType, realType)], false],
         }
@@ -357,6 +357,13 @@ let initialState: State = new State(
             'explode':  [new PredefinedFunction('explode', (val: Value) => {
                 if (val instanceof StringValue) {
                     return [(<StringValue> val).explode(), false];
+                }
+                throw new InternalInterpreterError(-1,
+                    'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
+            }), false],
+            'implode':  [new PredefinedFunction('implode', (val: Value) => {
+                if (val instanceof ConstructedValue) {
+                    return [StringValue.implode(val), false];
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
