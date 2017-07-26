@@ -1930,6 +1930,8 @@ it("function value bindings", () => {
     let testcase_op_ty: string = 'fun op f x : \'a = 42;';
     let testcase_multiple_matches: string = 'fun f x = 42 | f _ = ' + sampleExpression1 + ';';
     let testcase_multiple_bindings: string = 'fun f x = 42 | f _ = ' + sampleExpression1 + ' and g x = ' + sampleExpression2 + ';';
+    let testcase_infix: string = 'infix f; fun a f b = 42;';
+    //TODO more infix tests!!
 
     expect(parse(testcase_simple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -2036,6 +2038,25 @@ it("function value bindings", () => {
                     new Expr.ValueIdentifier(44, new Lexer.AlphanumericIdentifierToken('g', 44)),
                 )
             ], 2)
+        ], 1)
+    );
+    expect(parse(testcase_infix)).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Decl.InfixDeclaration(0, [new Lexer.AlphanumericIdentifierToken("f", 6)], 0, 2),
+            new Decl.FunctionDeclaration(9, [], [
+                new Decl.FunctionValueBinding(13, [
+                        [
+                            [new Expr.Tuple(13, [
+                                new Expr.ValueIdentifier(13, new Lexer.AlphanumericIdentifierToken('a', 13),
+                                new Expr.ValueIdentifier(17, new Lexer.AlphanumericIdentifierToken('b', 17)
+                            ],
+                            undefined,
+                            get42(21),
+                        ]
+                    ],
+                    new Expr.ValueIdentifier(15, new Lexer.AlphanumericIdentifierToken('f', 15)),
+                ),
+            ], 3)
         ], 1)
     );
 });
