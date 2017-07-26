@@ -64,6 +64,34 @@ export class CharValue extends Value {
 }
 
 export class StringValue extends Value {
+    // at the beginning because of linter…
+    static implode(list: ConstructedValue): StringValue {
+        let str = '';
+        while (list.constructorName !== 'nil') {
+            if (list.constructorName !== '::') {
+                throw new InternalInterpreterError(-1,
+                    'Is this a char list? I can\t implode this (' + list.constructorName + ')');
+            }
+            let arg = list.argument;
+            if (arg instanceof RecordValue) {
+                let a1 = arg.getValue('1');
+                let a2 = arg.getValue('2');
+                if (a1 instanceof CharValue && a2 instanceof ConstructedValue) {
+                    str += a1.value;
+                    list = a2;
+                } else {
+                    throw new InternalInterpreterError(-1,
+                        'Is this a char list? I can\t implode this (' + list.constructorName + ')');
+                }
+            } else {
+                throw new InternalInterpreterError(-1,
+                    'Is this a char list? I can\t implode this (' + list.constructorName + ')');
+            }
+        }
+
+        return new StringValue(str);
+    }
+
     constructor(public value: string) {
         super();
     }
@@ -91,9 +119,18 @@ export class StringValue extends Value {
     }
 
     explode(): ConstructedValue {
-        // TODO construct a list of CharValue here
-        throw new InternalInterpreterError(-1, 'Nyi\'an');
+        let ret: ConstructedValue = new ConstructedValue('nil');
+
+        for (let i = this.value.length - 1; i >= 0; --i) {
+            ret = new ConstructedValue('::', new RecordValue(new Map<string, Value>([
+                ['1', new CharValue(this.value[i])],
+                ['2', ret]
+            ])));
+        }
+
+        return ret;
     }
+
 }
 
 export class Word extends Value {
