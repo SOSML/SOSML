@@ -24,6 +24,7 @@ interface Props {
     readOnly: boolean;
     onCodeChange?: (x: string) => void;
     initialCode: string;
+    fileControls: any;
 }
 
 const SHARE_LINK_ERROR = ':ERROR';
@@ -106,15 +107,9 @@ class Playground extends React.Component<Props, State> {
                                 readOnly={this.props.readOnly} outputCallback={this.handleOutputChange}
                                 useInterpreter={!this.state.useServer} />
                             )}
-                            footer={(
-                            <div>
-                                {executeOnServer}
-                                <div className="miniSpacer" />
-                                {evaluateIn}
-                                <div className="miniSpacer" />
-                                <Button bsSize="small" bsStyle="primary" onClick={this.handleSwitchMode}>
-                                    Umschalten
-                                </Button>
+                            header={(
+                            <div className="headerButtons">
+                                {this.props.fileControls}
                                 <div className="miniSpacer" />
                                 <Button bsSize="small" bsStyle="primary" onClick={this.handleShare}>Teilen</Button>
                             </div>
@@ -123,7 +118,18 @@ class Playground extends React.Component<Props, State> {
                     <div className="flexcomponent flexy">
                         <MiniWindow content={
                             <div>{lineItems}</div>}
-                        title="Ausgabe" className="flexy" updateAnchor={this.state.sizeAnchor} />
+                        title="Ausgabe" className="flexy" updateAnchor={this.state.sizeAnchor}
+                        header={ (
+                            <div className="headerButtons">
+                                {executeOnServer}
+                                <div className="miniSpacer" />
+                                {evaluateIn}
+                                <div className="miniSpacer" />
+                                <Button bsSize="small" bsStyle="primary" onClick={this.handleSwitchMode}>
+                                    Umschalten
+                                </Button>
+                            </div>
+                        ) } />
                     </div>
                 </SplitterLayout>
                 {modal}

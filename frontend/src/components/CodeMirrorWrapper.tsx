@@ -265,9 +265,10 @@ class IncrementalInterpretationHelper {
     private getErrorMessage(error: any, partial: string, startPos: any): string {
         if (error.position !== undefined) {
             let position = this.calculateErrorPos(partial, startPos, error.position);
-            return 'Zeile ' + position[0] + ' Spalte ' + position[1] + ': ' + error.toString();
+            return 'Zeile ' + position[0] + ' Spalte ' + position[1] + ': ' +
+                this.getPrototypeName(error) + ': ' + error.message;
         } else {
-            return 'Unbekannte Position: ' + error.toString();
+            return 'Unbekannte Position: ' + this.getPrototypeName(error) + ': ' + error.message;
         }
     }
 
@@ -287,11 +288,16 @@ class IncrementalInterpretationHelper {
 
     private addSemicolon(pos: any, newState: any, marker: any) {
         this.semicoli.push(pos);
+        let baseIndex = this.findBaseIndex(this.data.length - 1);
+        let baseStateId = 1;
+        if (baseIndex !== -1) {
+            baseStateId = this.data[baseIndex].state.id + 1;
+        }
         this.data.push({
             state: newState,
             marker: marker,
             error: false,
-            output: this.computeNewStateOutput(newState)
+            output: this.computeNewStateOutput(newState, baseStateId)
         });
     }
 
@@ -331,8 +337,14 @@ class IncrementalInterpretationHelper {
         });
     }
 
-    private computeNewStateOutput(state: any) {
+    private computeNewStateOutput(state: any, id: number) {
+        if ( state.id < id ) {
+            return '';
+        }
         let output = '';
+        if ( state.parent !== undefined ) {
+            output += this.computeNewStateOutput(state.parent, id);
+        }
         if (state.dynamicBasis.valueEnvironment !== undefined) {
             let valEnv = state.dynamicBasis.valueEnvironment;
             for (let i in valEnv) {
@@ -340,8 +352,9 @@ class IncrementalInterpretationHelper {
                     if (state.getDynamicValue(i, false) === undefined) {
                         continue;
                     }
-                    output = this.printBinding([i, state.getDynamicValue(i, false),
+                    output += this.printBinding([i, state.getDynamicValue(i, false),
                         state.getStaticValue( i, false )]);
+                    output += '\n';
                 }
             }
             output += '\n';

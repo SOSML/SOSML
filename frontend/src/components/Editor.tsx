@@ -26,6 +26,7 @@ class Editor extends React.Component<any, State> {
         this.handleCodeChange = this.handleCodeChange.bind(this);
         this.handleFileNameChange = this.handleFileNameChange.bind(this);
         this.handleRedirectToEdit = this.handleRedirectToEdit.bind(this);
+        this.handleSave = this.handleSave.bind(this);
     }
 
     componentDidMount() {
@@ -64,6 +65,7 @@ class Editor extends React.Component<any, State> {
 
     render() {
         let topBar: any;
+        let fileForm: any;
         if (this.state.shareReadMode) {
             topBar = (
                 <Alert bsStyle="info">
@@ -72,10 +74,14 @@ class Editor extends React.Component<any, State> {
                 </Alert>
             );
         } else {
-            topBar = (
-                <Form inline={true}>
+            fileForm = (
+                <Form inline={true} className="inlineBlock">
                     Dateiname: <input className="form-control" type="text" onBlur={this.onFileNameBlur}
                         value={this.state.fileName} onChange={this.handleFileNameChange} />
+                    <div className="miniSpacer" />
+                    <Button bsSize="small" bsStyle="primary" onClick={this.handleSave}>
+                        Speichern
+                    </Button>
                 </Form>
             );
         }
@@ -83,7 +89,7 @@ class Editor extends React.Component<any, State> {
             <div className="flexy flexcomponent">
                 {topBar}
                 <Playground readOnly={this.state.shareReadMode} onCodeChange={this.handleCodeChange}
-                    initialCode={this.state.initialCode} />
+                    initialCode={this.state.initialCode} fileControls={fileForm}  />
             </div>
         );
     }
@@ -99,6 +105,14 @@ class Editor extends React.Component<any, State> {
         });
     }
 
+    handleSave() {
+        if (this.state.fileName !== '') {
+            Database.getInstance().then((db: Database) => {
+                return db.saveFile(this.state.fileName, this.state.code);
+            });
+        }
+    }
+
     handleCodeChange(newCode: string) {
         if (this.state.shareReadMode) {
             return;
@@ -106,17 +120,14 @@ class Editor extends React.Component<any, State> {
         this.setState(prevState => {
             return {code: newCode};
         });
-        if (this.state.fileName !== '') {
-            Database.getInstance().then((db: Database) => {
-                return db.saveFile(this.state.fileName, this.state.code);
-            });
-        } else {
+        if (this.state.fileName === '') {
             localStorage.setItem('tmpCode', newCode);
         }
     }
 
     onFileNameBlur(evt: any) {
         // save now!
+        /*
         if (this.state.fileName !== '') {
             Database.getInstance().then((db: Database) => {
                 return db.saveFile(this.state.fileName, this.state.code);
@@ -124,6 +135,7 @@ class Editor extends React.Component<any, State> {
         } else {
             localStorage.setItem('tmpCode', this.state.code);
         }
+        */
     }
 
     private unNullify(str: string | null): string {
