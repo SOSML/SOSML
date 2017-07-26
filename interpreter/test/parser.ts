@@ -2046,16 +2046,16 @@ it("function value bindings", () => {
             new Decl.FunctionDeclaration(9, [], [
                 new Decl.FunctionValueBinding(13, [
                         [
-                            [new Expr.Tuple(13, [
-                                new Expr.ValueIdentifier(13, new Lexer.AlphanumericIdentifierToken('a', 13),
-                                new Expr.ValueIdentifier(17, new Lexer.AlphanumericIdentifierToken('b', 17)
-                            ],
-                            undefined,
-                            get42(21),
+                            [new Expr.Tuple(-1, [
+                                new Expr.ValueIdentifier(13, new Lexer.AlphanumericIdentifierToken('a', 13)),
+                                new Expr.ValueIdentifier(17, new Lexer.AlphanumericIdentifierToken('b', 17))
+                            ])],
+                            undefined
+                            get42(21)
                         ]
                     ],
-                    new Expr.ValueIdentifier(15, new Lexer.AlphanumericIdentifierToken('f', 15)),
-                ),
+                    new Expr.ValueIdentifier(15, new Lexer.AlphanumericIdentifierToken('f', 15))
+                )
             ], 3)
         ], 1)
     );
