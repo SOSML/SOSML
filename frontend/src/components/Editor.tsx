@@ -11,15 +11,20 @@ interface State {
     code: string;
     initialCode: string;
     fileName: string;
+    savedFeedback: boolean;
 }
 
 class Editor extends React.Component<any, State> {
     constructor(props: any) {
         super(props);
 
-        this.state = { shareReadMode: false, code: '', fileName: '',
+        this.state = {
+            shareReadMode: false,
+            code: '',
+            fileName: '',
             initialCode: '',
-            shareHash: ''
+            shareHash: '',
+            savedFeedback: false
         };
 
         this.onFileNameBlur = this.onFileNameBlur.bind(this);
@@ -74,10 +79,15 @@ class Editor extends React.Component<any, State> {
                 </Alert>
             );
         } else {
+            let style: any = {};
+            if (this.state.savedFeedback) {
+                style['background-color'] = '#AAFFAA';
+            }
             fileForm = (
                 <Form inline={true} className="inlineBlock">
                     Dateiname: <input className="form-control" type="text" onBlur={this.onFileNameBlur}
-                        value={this.state.fileName} onChange={this.handleFileNameChange} />
+                        value={this.state.fileName} onChange={this.handleFileNameChange}
+                        style={style} />
                     <div className="miniSpacer" />
                     <Button bsSize="small" bsStyle="primary" onClick={this.handleSave}>
                         Speichern
@@ -110,6 +120,10 @@ class Editor extends React.Component<any, State> {
             Database.getInstance().then((db: Database) => {
                 return db.saveFile(this.state.fileName, this.state.code);
             });
+            this.setState({savedFeedback: true});
+            setTimeout(() => {
+                this.setState({savedFeedback: false});
+            }, 1300);
         }
     }
 
