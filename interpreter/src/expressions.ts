@@ -9,7 +9,6 @@ import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
          ExceptionValue, ConstructedValue } from './values';
 import { ParserError } from './parser';
-import { getInitialState } from './initialState';
 
 export abstract class Expression {
     position: Position;
@@ -467,23 +466,7 @@ export class Lambda extends Expression {
     }
 
     compute(state: State): [Value, boolean] {
-        // We need to ensure that the function value receives a capture
-        // of the current state, and that that capture stays that way
         let nstate = state.getNestedState(true, state.id);
-
-        /*
-         * TODO we might be able to remove this
-        state.getDefinedIdentifiers().forEach((val: string) => {
-            if (state.getDynamicValue(val) !== undefined) {
-                nstate.setDynamicValue(val, <Value> state.getDynamicValue(val), true);
-            }
-            if (state.getDynamicType(val) !== undefined) {
-                let tp = <[string[], number]> state.getDynamicType(val);
-                nstate.setDynamicType(val, tp[0], tp[1], true);
-            }
-        });
-        */
-
         return [new FunctionValue(nstate, [], this.match), false];
     }
 }
@@ -673,7 +656,8 @@ export class InfixExpression extends Expression implements Pattern {
 
                 if (info1.precedence === info2.precedence
                     && info1.rightAssociative !== info2.rightAssociative
-                    && poses[ops[i - 1][1]] === poses[ops[i][1]]) {
+                    && (poses[ops[i - 1][1] + 1] === poses[ops[i][1]]
+                        || poses[ops[i - 1][1]] === poses[ops[i][1] + 1])) {
                     throw new ParserError('Could you ever imagine left associatives '
                         + 'and right associatives living together in peace?', ops[i][0].position);
                 }
