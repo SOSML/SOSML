@@ -466,8 +466,9 @@ export class Lambda extends Expression {
     }
 
     compute(state: State): [Value, boolean] {
-        let nstate = state.getNestedState(true, state.id);
-        return [new FunctionValue(nstate, [], this.match), false];
+        // TODO thoroughly test that not nesting here suffices
+        //let nstate = state.getNestedState(true, state.id);
+        return [new FunctionValue(state, [], this.match), false];
     }
 }
 
