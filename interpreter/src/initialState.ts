@@ -362,9 +362,17 @@ let initialState: State = new State(
             }), false],
             '~':        [new PredefinedFunction('~', (val: Value) => {
                 if (val instanceof Integer) {
-                    return [(<Integer> val).negate(), false];
+                    let result = (<Integer> val).negate();
+                    if (result.hasOverflow()) {
+                        return [new ExceptionConstructor('Overflow').construct(), true];
+                    }
+                    return [result, false];
                 } else if (val instanceof Real) {
-                    return [(<Real> val).negate(), false];
+                    let result = (<Real> val).negate();
+                    if (result.hasOverflow()) {
+                        return [new ExceptionConstructor('Overflow').construct(), true];
+                    }
+                    return [result, false];
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "~" on something weird.');
