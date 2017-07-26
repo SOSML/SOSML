@@ -21,6 +21,7 @@ function createBasicStdlib(): State.State {
         'exception Empty; ' +
         'exception Subscript; ' +
         'exception Size; ' +
+        'exception Chr; ' +
 
         'fun o (f,g) x = f (g x); ' +
         'infix 3 o; ' +
@@ -98,6 +99,28 @@ function createBasicStdlib(): State.State {
         }
     }));
     state.setStaticValue('Math.sqrt', [new Type.FunctionType(new Type.PrimitiveType('real'), new Type.PrimitiveType('real'))]);
+
+    state.setDynamicValue('ord', new Val.PredefinedFunction('ord', (val: Val.Value) => {
+        if (val instanceof Val.CharValue) {
+            let value = (<Val.CharValue> val).value;
+            return [new Val.Integer(value.charCodeAt()), false];
+        } else {
+            throw new Errors.InternalInterpreterError('std type mismatch');
+        }
+    }));
+    state.setStaticValue('ord', [new Type.FunctionType(new Type.PrimitiveType('char'), new Type.PrimitiveType('int'))]);
+
+    state.setDynamicValue('chr', new Val.PredefinedFunction('chr', (val: Val.Value) => {
+        if (val instanceof Val.Integer) {
+            let value = (<Val.Interpreter> val).value;
+            if (value < 0 || value > 255)
+                return [new Val.ExceptionConstructor('Chr').construct(), true];
+            return [new Val.CharValue(String.fromCharCode(value)), false];
+        } else {
+            throw new Errors.InternalInterpreterError('std type mismatch');
+        }
+    }));
+    state.setStaticValue('chr', [new Type.FunctionType(new Type.PrimitiveType('int'), new Type.PrimitiveType('char'))]);
 
     state.setDynamicValue('Math.pi', new Val.Real(3.14159265359));
     state.setStaticValue('Math.pi', [new Type.PrimitiveType('real'));
@@ -2587,7 +2610,109 @@ fn (s,s') => implode(explode s @ explode s');
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).not.toEqualWithType(undefined);
             //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("4.7.1", () => {
+    /*
+ord #"1";
+chr 49;
+map ord (explode "019abz");
+chr 255;
+chr 256;
+
+"\"\\\t\na";
+explode "\"\\\t\na";
+     */
+    //TODO test types
+    run_test([
+        ['ord #"1";', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(49));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('int'));
         }],
+        ['chr 49;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.CharValue('1'));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('char'));
+        }],
+        ['map ord (explode "019abz");', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(createList([
+                new Val.Integer(48),
+                new Val.Integer(49),
+                new Val.Integer(57),
+                new Val.Integer(97),
+                new Val.Integer(98),
+                new Val.Integer(122)
+            ]));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['chr 255;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.CharValue(String.fromCharCode(255)));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('char'));
+        }],
+        ['chr 256;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(true);
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Chr'));
+        }],
+        ['"\\"\\\\\\t\\na";', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.StringValue('\"\\\t\na'));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('string'));
+        }],
+        ['explode "\\"\\\\\\t\\na";', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(createList([
+                new Val.CharValue('\"'),
+                new Val.CharValue('\\'),
+                new Val.CharValue('\t'),
+                new Val.CharValue('\n'),
+                new Val.CharValue('a')
+            ]));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("4.7.2", () => {
+    /*
+"Adam" < "Eva";
+"Adam" < "Adamo";
+
+"rufen" < "Zukunft";
+
+map ord (explode "ABab");
+     */
+    //TODO test types
+    run_test([
+        ['"Adam" < "Eva";', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.BoolValue(true));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('bool'));
+        }],
+        ['"Adam" < "Adamo";', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.BoolValue(true));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('bool'));
+        }],
+        ['"rufen" < "Zukunft";', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.BoolValue(false));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('bool'));
+        }],
+        ['map ord (explode "ABab");', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(createList([
+                new Val.Integer(65),
+                new Val.Integer(66),
+                new Val.Integer(97),
+                new Val.Integer(98)
+            ]));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }]
     ]);
 });
 
