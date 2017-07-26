@@ -96,6 +96,11 @@ function createBasicStdlib(): State.State {
         '         EQUAL => List.collate compare (xr,yr) ' +
         '       | s => s; ' +
 
+        'fun List.nth (xs, n) = ' +
+        '    let fun h []      _ = raise Subscript ' +
+        '      | h (x::xr) n = if n=0 then x else h xr (n-1) ' +
+        '    in if n<0 then raise Subscript else h xs n end; ' +
+
         '', InitialState.getInitialState(), true);
     state = state.getNestedState();
 
