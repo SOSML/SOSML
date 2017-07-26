@@ -74,6 +74,7 @@ let initialState: State = new State(
             'explode':  [[new FunctionType(new TupleType([stringType, stringType]),
                 new PrimitiveType('list', [charType])).simplify()], false],
             '~':        [[new FunctionType(intType, intType), new FunctionType(realType, realType)], false],
+            'abs':      [[new FunctionType(intType, intType), new FunctionType(realType, realType)], false],
         }
     ),
     new DynamicBasis(
@@ -368,6 +369,29 @@ let initialState: State = new State(
                     }
                     return [result, false];
                 } else if (val instanceof Real) {
+                    let result = (<Real> val).negate();
+                    if (result.hasOverflow()) {
+                        return [new ExceptionConstructor('Overflow').construct(), true];
+                    }
+                    return [result, false];
+                }
+                throw new InternalInterpreterError(-1,
+                    'Called "~" on something weird.');
+            }), false],
+            'abs':        [new PredefinedFunction('~', (val: Value) => {
+                if (val instanceof Integer) {
+                    if ((<Integer> val).value >= 0) {
+                        return [val, false];
+                    }
+                    let result = (<Integer> val).negate();
+                    if (result.hasOverflow()) {
+                        return [new ExceptionConstructor('Overflow').construct(), true];
+                    }
+                    return [result, false];
+                } else if (val instanceof Real) {
+                    if ((<Real> val).value >= 0) {
+                        return [val, false];
+                    }
                     let result = (<Real> val).negate();
                     if (result.hasOverflow()) {
                         return [new ExceptionConstructor('Overflow').construct(), true];
