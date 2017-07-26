@@ -254,26 +254,27 @@ export class RecordValue extends Value {
         if (!(other instanceof RecordValue)) {
             return false;
         }
-        if (!this.entries.forEach((j: Value, i: string) => {
+        let fail = false;
+        this.entries.forEach((j: Value, i: string) => {
             if (!(<RecordValue> other).entries.has(i)) {
-                return false;
+                fail = true;
             }
-            if (!this.entries[i].equals((<RecordValue> other).entries[i])) {
-                return false;
+            if (!this.entries.get(i).equals((<RecordValue> other).entries.get(i))) {
+                fail = true;
             }
-            return true;
-        })) {
+        });
+        if (fail) {
             return false;
         }
-        if (!(<RecordValue> other).entries.forEach((j: Value, i: string) => {
+        (<RecordValue> other).entries.forEach((j: Value, i: string) => {
             if (!this.entries.has(i)) {
-                return false;
+                fail = true;
             }
-            if (!this.entries[i].equals((<RecordValue> other).entries[i])) {
-                return false;
+            if (!this.entries.get(i).equals((<RecordValue> other).entries.get(i))) {
+                fail = true;
             }
-            return true;
-        })) {
+        });
+        if (fail) {
             return false;
         }
         return true;
