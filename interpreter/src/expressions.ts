@@ -490,10 +490,6 @@ export class Match {
     }
 
     compute(state: State, value: Value): [Value, boolean] {
-        let dg = '';
-        state.getDefinedIdentifiers().forEach((val: string) => {
-            dg += val + ' ';
-        });
         for (let i = 0; i < this.matches.length; ++i) {
             let nstate = state.getNestedState(false, state.id);
 
@@ -502,11 +498,6 @@ export class Match {
                 for (let j = 0; j < res.length; ++j) {
                     nstate.setDynamicValue(res[j][0], res[j][1], true);
                 }
-
-                dg = 'Successful ';
-                nstate.getDefinedIdentifiers().forEach((val: string) => {
-                    dg += val + ' ';
-                });
                 return this.matches[i][1].compute(nstate);
             }
         }
