@@ -36,7 +36,8 @@ export class Parser {
 
     assertKeywordToken(tok: Token, text: string | undefined = undefined) {
         if (!(tok instanceof KeywordToken)) {
-            throw new ParserError('Expected a reserved word.', tok.position);
+            throw new ParserError('Expected a reserved word, got "' + tok.getText()
+                + '" (' + tok.constructor.name + ').' , tok.position);
         }
         if (text !== undefined && tok.text !== text) {
             throw new ParserError('Expected "' + text + '" but got "' + tok.text + '".', tok.position);
@@ -981,23 +982,18 @@ export class Parser {
             let nm: ValueIdentifier;
 
             if (this.checkKeywordToken(this.currentToken(), '(')) {
-                ++this.position;
-                let left = this.parseAtomicPattern();
+                let pat = this.parsePattern();
 
-                this.assertIdentifierOrLongToken(this.currentToken());
-                nm = new ValueIdentifier(this.currentToken().position, this.currentToken());
-
-                if (this.state.getInfixStatus(this.currentToken()) === undefined
-                    || !this.state.getInfixStatus(this.currentToken()).infix) {
-                    throw new ParserError('"' + this.currentToken().getText()
-                        + '" does not have infix status.', this.currentToken().position);
+                if ((!(pat instanceof FunctionApplication))
+                    || (!((<FunctionApplication> pat).argument.simplify() instanceof Record))
+                    || ((<Record> ((<FunctionApplication> pat).argument.simplify())).entries.length !== 2)
+                    || (!((<FunctionApplication> pat).func instanceof ValueIdentifier))) {
+                    throw new ParserError('If you start a function declaration with a "(",'
+                        + ' some infix expression should follow. But you gave me "'
+                        + pat.prettyPrint() + '" (' + pat.constructor.name + ').', pat.position);
                 }
-                ++this.position;
-
-                let right = this.parseAtomicPattern();
-                args.push(new Tuple(-1, [left, right]));
-                this.assertKeywordToken(this.currentToken(), ')');
-                ++this.position;
+                nm = <ValueIdentifier> (<FunctionApplication> pat).func;
+                args.push(<PatternExpression> (<FunctionApplication> pat).argument);
             } else {
                 let oldPos = this.position;
                 let throwError = false;
@@ -1017,12 +1013,12 @@ export class Parser {
                             break;
                         }
                         let pat = this.parseAtomicPattern();
-
                         if (pat instanceof ValueIdentifier
                             && this.state.getInfixStatus((<ValueIdentifier> pat).name) !== undefined
                             && this.state.getInfixStatus((<ValueIdentifier> pat).name).infix) {
+
                             throw new ParserError('Cute little infix identifiers as "' +
-                                pat.prettyPrint() + '" sure should play somewher else.', pat.position);
+                                pat.prettyPrint() + '" sure should play somewhere else.', pat.position);
                         }
 
                         args.push(pat);

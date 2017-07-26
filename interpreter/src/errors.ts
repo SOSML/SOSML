@@ -11,7 +11,7 @@ export interface InterpreterMessage {
 // A general compiler error. Different translation phases may derive their own, more specialized error classes.
 export class InterpreterError extends Error implements InterpreterMessage {
     constructor(public position: Position, message: string) {
-        super('error:' + position + ': ' + message);
+        super(message);
         Object.setPrototypeOf(this, InterpreterError.prototype);
     }
 }

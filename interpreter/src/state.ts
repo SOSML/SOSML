@@ -99,7 +99,7 @@ export class State {
                 private infixEnvironment: InfixEnvironment,
                 private rebindEnvironment: RebindEnvironment,
                 private declaredIdentifiers: Set<string> = new Set<string>(),
-                private stdfiles = {
+                private stdfiles: DynamicValueEnvironment = {
                     '__stdout': [new StringValue(''), true],
                     '__stdin':  [new StringValue(''), true],
                     '__stderr': [new StringValue(''), true]
