@@ -98,6 +98,7 @@ export class State {
                 private infixEnvironment: InfixEnvironment,
                 private rebindEnvironment: RebindEnvironment,
                 private declaredIdentifiers: Set<string> = new Set<string>(),
+                private valueIdentifierId: { [name: string]: number } = {},
                 private stdfiles: DynamicValueEnvironment = {
                     '__stdout': [new StringValue(''), true],
                     '__stdin':  [new StringValue(''), true],
@@ -236,6 +237,20 @@ export class State {
         } else {
             return this.parent.getPrimitiveType(name, idLimit);
         }
+    }
+
+    getValueIdentifierId(name: string, idLimit: number = 0): number {
+        if (this.valueIdentifierId.hasOwnProperty(name)) {
+            return this.valueIdentifierId[name];
+        } else if (!this.parent || this.parent.id < idLimit) {
+            return 1;
+        } else {
+            return this.parent.getValueIdentifierId(name, idLimit);
+        }
+    }
+
+    incrementValueIdentifierId(name: string, idLimit: number = 0): void {
+        this.valueIdentifierId[name] = this.getValueIdentifierId(name, idLimit) + 1;
     }
 
     setStaticValue(name: string, type: Type[], intermediate: boolean = false, atId: number|undefined = undefined) {

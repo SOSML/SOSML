@@ -375,8 +375,8 @@ export class ConstructedValue extends Value {
 
     prettyPrint(): string {
         let result: string =  this.constructorName;
-        if (this.id !== 0) {
-            result += '/' + this.id;
+        if (this.id > 1) {
+            result += '/' + (this.id - 1);
         }
         if (this.argument) {
             result += ' ' + this.argument.prettyPrint();
@@ -392,7 +392,8 @@ export class ConstructedValue extends Value {
         if (!(other instanceof ConstructedValue)) {
             return false;
         }
-        if (this.constructorName !== (<ConstructedValue> other).constructorName) {
+        if (this.constructorName !== (<ConstructedValue> other).constructorName
+            || this.id !== (<ConstructedValue> other).id) {
             return false;
         }
         if (this.argument !== undefined) {
@@ -423,8 +424,8 @@ export class ExceptionValue extends Value {
 
     prettyPrint(): string {
         let result: string = this.constructorName;
-        if (this.id !== 0) {
-            result += '/' + this.id;
+        if (this.id > 1) {
+            result += '/' + (this.id - 1);
         }
         if (this.argument) {
             result += ' ' + this.argument.prettyPrint();
@@ -440,7 +441,8 @@ export class ExceptionValue extends Value {
         if (!(other instanceof ExceptionValue)) {
             return false;
         }
-        if (this.constructorName !== (<ExceptionValue> other).constructorName) {
+        if (this.constructorName !== (<ExceptionValue> other).constructorName
+            || this.id !== (<ExceptionValue> other).id) {
             return false;
         }
         if (this.argument !== undefined) {

@@ -259,7 +259,6 @@ export class DatatypeReplication extends Declaration {
             throw new ElaborationError(this.position,
                 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
         }
-        // TODO id
         state.setStaticType(this.name.getText(), res.type, res.constructors);
         return state;
    }
@@ -270,7 +269,6 @@ export class DatatypeReplication extends Declaration {
             throw new EvaluationError(this.position,
                 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
         }
-        // TODO id
         state.setDynamicType(this.name.getText(), res);
         return [state, false, undefined];
     }
@@ -779,9 +777,8 @@ export class DatatypeBinding {
             if (this.type[i][1] !== undefined) {
                 numArg = 1;
             }
-            let id = 0;
-            // TODO id
-
+            let id = state.getValueIdentifierId(this.type[i][0].getText());
+            state.incrementValueIdentifierId(this.type[i][0].getText());
             ve.push([this.type[i][0].getText(), new ValueConstructor(this.type[i][0].getText(), numArg, id)]);
             connames.push(this.type[i][0].getText());
         }
@@ -839,8 +836,8 @@ export class DirectExceptionBinding implements ExceptionBinding {
         if (this.type !== undefined) {
             numArg = 1;
         }
-        let id = 0;
-        // TODO id stuff
+        let id = state.getValueIdentifierId(this.name.getText());
+        state.incrementValueIdentifierId(this.name.getText());
         state.setDynamicValue(this.name.getText(),
             new ExceptionConstructor(this.name.getText(), numArg, id));
         return [state, false, undefined];
@@ -869,7 +866,6 @@ export class ExceptionAlias implements ExceptionBinding {
             throw new EvaluationError(this.position, 'Unbound value identifier "'
                 + this.oldname.getText() + '".');
         }
-        // TODO id stuff
         state.setDynamicValue(this.name.getText(), <Value> res);
         return [state, false, undefined];
     }
