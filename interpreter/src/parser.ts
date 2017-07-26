@@ -997,6 +997,7 @@ export class Parser {
             } else {
                 let oldPos = this.position;
                 let throwError = false;
+                let throwIfError = false;
                 try {
                     let tok = this.parseOpIdentifierToken();
                     nm = new ValueIdentifier(tok.position, tok);
@@ -1017,7 +1018,8 @@ export class Parser {
                             && this.state.getInfixStatus((<ValueIdentifier> pat).name) !== undefined
                             && this.state.getInfixStatus((<ValueIdentifier> pat).name).infix) {
 
-                            throw new ParserError('Cute little infix identifiers as "' +
+                            throwIfError = true;
+                            throw new ParserError('Cute little infix identifiers such as "' +
                                 pat.prettyPrint() + '" sure should play somewhere else.', pat.position);
                         }
 
@@ -1040,6 +1042,9 @@ export class Parser {
                         if (this.state.getInfixStatus(this.currentToken()) === undefined
                             || !this.state.getInfixStatus(this.currentToken()).infix) {
                             throwError = true;
+                            if (throwIfError) {
+                                throw e;
+                            }
                             throw new ParserError('"' + this.currentToken().getText()
                                 + '" does not have infix status.',
                                 this.currentToken().position);
