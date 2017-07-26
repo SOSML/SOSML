@@ -3,3 +3,13 @@
     flex-direction: column;
     display: flex;
 }
+
+.flexcomponent {
+    display: flex;
+    flex-flow: column;
+    height: 100%;
+}
+
+.flexy {
+    flex: 1 0 auto;
+}
