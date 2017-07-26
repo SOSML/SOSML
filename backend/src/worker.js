@@ -3,7 +3,7 @@
 var request = require('request');
 
 
-function evalSMLCode(payload, response) {
+function evalSMLCode(payload, callback) {
     let dockerrunner = cmd.get(
         'docker run --cpus=1 --memory=128m --rm -i --read-only derjesko/mosmlfallback',
         function (err, data, stderr) {
@@ -18,8 +18,7 @@ function evalSMLCode(payload, response) {
                 }
             }
             data = data.split(/\r?\n/).reverse().splice(2).reverse().join("\n");
-            response.set('Content-Type', 'text/plain');
-            response.end(data);
+            callback(data);
         }
     );
     dockerrunner.stdin.write(payload);
@@ -42,11 +41,16 @@ function process() {
             return;
         }
         console.log('hash:', element.hash); // Print the response status code if a response was received
-        request.post({url: 'http://localhost:8000/api/queue/', body: {hash: element.hash, result: element.code}, json: true},
-            function (error, response, body) {
-                setTimeout(process, 1);
-            });
-
+        evalSMLCode(element.code, function (result) {
+            request.post({
+                    url: 'http://localhost:8000/api/queue/',
+                    body: {hash: element.hash, result: result},
+                    json: true
+                },
+                function (error, response, body) {
+                    setTimeout(process, 1);
+                });
+        });
     });
 
 }
