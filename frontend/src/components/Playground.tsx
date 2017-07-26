@@ -121,13 +121,13 @@ class Playground extends React.Component<Props, State> {
                         title="Ausgabe" className="flexy" updateAnchor={this.state.sizeAnchor}
                         header={ (
                             <div className="headerButtons">
-                                {executeOnServer}
-                                <div className="miniSpacer" />
                                 {evaluateIn}
                                 <div className="miniSpacer" />
                                 <Button bsSize="small" bsStyle="primary" onClick={this.handleSwitchMode}>
                                     Umschalten
                                 </Button>
+                                <div className="miniSpacer" />
+                                {executeOnServer}
                             </div>
                         ) } />
                     </div>
