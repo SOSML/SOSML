@@ -79,16 +79,16 @@ let initialState: State = new State(
     ),
     new DynamicBasis(
         {
-            'unit':     [[], 0, false],
-            'bool':     [['true', 'false'], 0, false],
-            'int':      [[], 0, false],
-            'word':     [[], 0, false],
-            'real':     [[], 0, false],
-            'string':   [[], 0, false],
-            'char':     [[], 0, false],
-            'list':     [['nil', '::'], 0, false],
-            'ref':      [['ref'], 0, false],
-            'exn':      [[], 0, false],
+            'unit':     [[], false],
+            'bool':     [['true', 'false'], false],
+            'int':      [[], false],
+            'word':     [[], false],
+            'real':     [[], false],
+            'string':   [[], false],
+            'char':     [[], false],
+            'list':     [['nil', '::'], false],
+            'ref':      [['ref'], false],
+            'exn':      [[], false],
         },
         {
             'div':      [new PredefinedFunction('div', (val: Value) => {

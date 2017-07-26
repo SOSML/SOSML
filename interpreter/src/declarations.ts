@@ -140,9 +140,8 @@ export class TypeDeclaration extends Declaration {
 
     evaluate(state: State): [State, boolean, Value|undefined] {
         for (let i = 0; i < this.typeBinding.length; ++i) {
-            let id = 0;
             // TODO id
-            state.setDynamicType(this.typeBinding[i].name.getText(), [], id);
+            state.setDynamicType(this.typeBinding[i].name.getText(), []);
         }
         return [state, false, undefined];
     }
@@ -215,9 +214,8 @@ export class DatatypeDeclaration extends Declaration {
             for (let j = 0; j < res[0].length; ++j) {
                 state.setDynamicValue(res[0][j][0], res[0][j][1]);
             }
-            let id = 0;
             // TODO id
-            state.setDynamicType(res[1][0], res[1][1], id);
+            state.setDynamicType(res[1][0], res[1][1]);
         }
         return [state, false, undefined];
     }
@@ -261,9 +259,8 @@ export class DatatypeReplication extends Declaration {
             throw new ElaborationError(this.position,
                 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
         }
-        let id = 0;
         // TODO id
-        state.setStaticType(this.name.getText(), res.type, res.constructors, id);
+        state.setStaticType(this.name.getText(), res.type, res.constructors);
         return state;
    }
 
@@ -273,9 +270,8 @@ export class DatatypeReplication extends Declaration {
             throw new EvaluationError(this.position,
                 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
         }
-        let id = 0;
         // TODO id
-        state.setDynamicType(this.name.getText(), res[0], id);
+        state.setDynamicType(this.name.getText(), res);
         return [state, false, undefined];
     }
 
