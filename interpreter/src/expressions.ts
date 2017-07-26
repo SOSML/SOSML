@@ -469,8 +469,10 @@ export class Lambda extends Expression {
     compute(state: State): [Value, boolean] {
         // We need to ensure that the function value receives a capture
         // of the current state, and that that capture stays that way
-        let nstate = getInitialState().getNestedState(true, state.id);
+        let nstate = state.getNestedState(true, state.id);
 
+        /*
+         * TODO we might be able to remove this
         state.getDefinedIdentifiers().forEach((val: string) => {
             if (state.getDynamicValue(val) !== undefined) {
                 nstate.setDynamicValue(val, <Value> state.getDynamicValue(val), true);
@@ -480,6 +482,7 @@ export class Lambda extends Expression {
                 nstate.setDynamicType(val, tp[0], tp[1], true);
             }
         });
+        */
 
         return [new FunctionValue(nstate, [], this.match), false];
     }
