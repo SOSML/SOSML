@@ -1,4 +1,4 @@
-import { Type, PrimitiveType, FunctionType, RecordType } from './types';
+import { Type, PrimitiveType, FunctionType, RecordType, TypeVariable } from './types';
 import { Value, StringValue, PredefinedFunction, RecordValue, ValueConstructor,
          ExceptionConstructor } from './values';
 import { Token, LongIdentifierToken } from './lexer';
@@ -137,12 +137,11 @@ export class State {
                 if (val instanceof StringValue) {
                     res.setDynamicValue('__stdout', val);
                 } else {
-                    throw new InternalInterpreterError(-1, 'You shall not print "'
-                        + val.constructor.name + '".');
+                    res.setDynamicValue('__stdout', new StringValue(val.prettyPrint(res)));
                 }
                 return [new RecordValue(), false];
             }), true);
-            res.setStaticValue('print', new FunctionType(new PrimitiveType('string'),
+            res.setStaticValue('print', new FunctionType(new TypeVariable('\'a'),
                 new RecordType(new Map<string, Type>())), true);
         }
         return res;

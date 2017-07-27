@@ -35,7 +35,11 @@ export class PrimitiveType extends Type {
     }
 
     instantiate(state: State): Type {
-        return this;
+        let res: Type[] = [];
+        for (let i = 0; i < this.parameters.length; ++i) {
+            res.push(this.parameters[i].instantiate(state));
+        }
+        return new PrimitiveType(this.name, res, this.position);
     }
 
     getTypeVariables(free: boolean): Set<TypeVariable> {
