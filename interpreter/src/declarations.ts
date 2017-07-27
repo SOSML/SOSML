@@ -51,7 +51,7 @@ export class ValueDeclaration extends Declaration {
 
     elaborate(state: State): State {
         // TODO
-        throw new InternalInterpreterError(-1, 'Not yet implemented.');
+        return state;
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
@@ -140,7 +140,6 @@ export class TypeDeclaration extends Declaration {
 
     evaluate(state: State): [State, boolean, Value|undefined] {
         for (let i = 0; i < this.typeBinding.length; ++i) {
-            // TODO id
             state.setDynamicType(this.typeBinding[i].name.getText(), []);
         }
         return [state, false, undefined];
@@ -203,7 +202,7 @@ export class DatatypeDeclaration extends Declaration {
 
     elaborate(state: State): State {
         // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        return state;
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
@@ -324,7 +323,7 @@ export class AbstypeDeclaration extends Declaration {
 
     elaborate(state: State): State {
         // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        return state;
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {

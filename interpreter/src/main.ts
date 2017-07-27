@@ -49,16 +49,15 @@ export class Interpreter {
 
         state = oldState.getNestedState();
         ast = ast.simplify();
-        // state = ast.elaborate(state);
+        state = ast.elaborate(state);
 
         // Use a fresh state to be able to piece types and values together
         let res = ast.evaluate(oldState.getNestedState());
 
-        // if (res[1]) {
-        return res;
-        // }
+        if (res[1]) {
+            return res;
+        }
 
-        /*
         let curState = res[0];
 
         while (curState.id > oldState.id) {
@@ -68,7 +67,7 @@ export class Interpreter {
                     if (Object.prototype.hasOwnProperty.call(
                         curState.dynamicBasis.valueEnvironment, i)) {
 
-                        let tp = state.getStaticValue(i, curState.id);
+                        let tp = state.getStaticValue(i, undefined, curState.id);
                         if (tp !== undefined) {
                             curState.setStaticValue(i, tp);
                         }
@@ -80,7 +79,7 @@ export class Interpreter {
                     if (Object.prototype.hasOwnProperty.call(
                         curState.dynamicBasis.typeEnvironment, i)) {
 
-                        let tp = state.getStaticType(i, curState.id);
+                        let tp = state.getStaticType(i, undefined, curState.id);
                         if (tp !== undefined) {
                             curState.setStaticType(i, tp.type, tp.constructors);
                         }
@@ -97,7 +96,6 @@ export class Interpreter {
         }
 
         return res;
-         */
     }
 
     static getFirstState(withStdLib: boolean): State {
