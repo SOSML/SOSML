@@ -397,7 +397,7 @@ class Lexer {
                 } else {
                     let c: char = this.consumeChar();
                     switch (c) {
-                        case 'a': value += '\a'; break;
+                        case 'a': value += '\x07'; break;
                         case 'b': value += '\b'; break;
                         case 't': value += '\t'; break;
                         case 'n': value += '\n'; break;
