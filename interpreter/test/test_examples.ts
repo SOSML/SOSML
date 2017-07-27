@@ -3885,8 +3885,6 @@ end;
     ]);
 });
 
-//TODO Chapter 7
-
 it('7.1', () => {
     /*
 datatype tree = T of tree list
