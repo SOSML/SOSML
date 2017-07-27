@@ -15,6 +15,7 @@ let AST = instance.lexParse(..code..);
 
 import { State } from './state';
 import { getInitialState } from './initialState';
+import { addStdLib } from './stdlib';
 import * as Lexer from './lexer';
 import * as Parser from './parser';
 import { Settings } from './settings';
@@ -99,5 +100,13 @@ export class Interpreter {
          */
     }
 
+    static getFirstState(withStdLib: boolean): State {
+        if (withStdLib) {
+            return addStdLib(getInitialState());
+        }
+        return getInitialState();
+    }
+
     constructor(public settings: Settings) {}
 }
+
