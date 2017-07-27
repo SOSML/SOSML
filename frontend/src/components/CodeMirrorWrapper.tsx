@@ -381,18 +381,7 @@ class IncrementalInterpretationHelper {
         }
 
         if (bnd[2]) {
-            if (bnd[2].length === 1) {
-                return res + ': ' + bnd[2][0].prettyPrint() + ';';
-            } else {
-                res += ': [ ';
-                for (let i = 0; i < bnd[2].length; ++i) {
-                    if ( i > 0 ) {
-                        res += ', ';
-                    }
-                    res += bnd[2][i].prettyPrint();
-                }
-                return res += ' ]';
-            }
+            return res + ': ' + bnd[2].prettyPrint() + ';';
         } else {
             return res + ': undefined;';
         }
