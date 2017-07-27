@@ -555,7 +555,7 @@ export class Parser {
                 }
                 if (nextTok.text === 'as') {
                     ++this.position;
-                    pat = new LayeredPattern(pat.position, pat.name, tp, this.parsePattern());
+                    pat = new LayeredPattern(pat.position, <IdentifierToken> (<ValueIdentifier> pat).name, tp, this.parsePattern());
                     nextTok = this.currentToken();
                 }
                 res.push([newTok.getText(), pat]);
