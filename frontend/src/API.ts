@@ -111,6 +111,8 @@ export class API {
                     } else {
                         return [{'partial': partial, 'prev': oldState}, false, null];
                     }
+                }, getFirstState: function() {
+                    return {};
                 }
             };
         }

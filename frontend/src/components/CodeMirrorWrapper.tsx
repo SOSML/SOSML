@@ -48,6 +48,7 @@ class IncrementalInterpretationHelper {
     interpreter: any;
     outputCallback: (code: string) => any;
     disabled: boolean;
+    initialState: any;
 
     constructor(outputCallback: (code: string) => any) {
         this.semicoli = [];
@@ -58,6 +59,7 @@ class IncrementalInterpretationHelper {
 
         this.interpreter = API.createInterpreter();
         this.outputCallback = outputCallback;
+        this.initialState = this.interpreter.getFirstState(true);
     }
 
     clear() {
@@ -233,9 +235,9 @@ class IncrementalInterpretationHelper {
         let ret: any;
         try {
             if (oldState === null) {
-                ret = this.interpreter.interpret(partial + ';');
+                ret = this.interpreter.interpret(partial + ';', this.initialState, true);
             } else {
-                ret = this.interpreter.interpret(partial + ';', oldState);
+                ret = this.interpreter.interpret(partial + ';', oldState, true);
             }
         } catch (e) {
             // TODO: switch over e's type
@@ -289,7 +291,7 @@ class IncrementalInterpretationHelper {
     private addSemicolon(pos: any, newState: any, marker: any) {
         this.semicoli.push(pos);
         let baseIndex = this.findBaseIndex(this.data.length - 1);
-        let baseStateId = 1;
+        let baseStateId = this.initialState.id + 1;
         if (baseIndex !== -1) {
             baseStateId = this.data[baseIndex].state.id + 1;
         }
@@ -352,7 +354,7 @@ class IncrementalInterpretationHelper {
                     if (state.getDynamicValue(i, false) === undefined) {
                         continue;
                     }
-                    output += this.printBinding([i, state.getDynamicValue(i, false),
+                    output += this.printBinding(state, [i, state.getDynamicValue(i, false),
                         state.getStaticValue( i, false )]);
                     output += '\n';
                 }
@@ -362,7 +364,7 @@ class IncrementalInterpretationHelper {
         return output;
     }
 
-    private printBinding(bnd: [any, any, any]) {
+    private printBinding(state: any, bnd: [any, any, any]) {
         let res = '> ';
 
         let protoName = this.getPrototypeName(bnd[1]);
@@ -375,24 +377,13 @@ class IncrementalInterpretationHelper {
         }
 
         if (bnd[1]) {
-            res += ' ' + bnd[0] + ' = ' + bnd[1].prettyPrint();
+            res += ' ' + bnd[0] + ' = ' + bnd[1].prettyPrint(state);
         } else {
             return res + ' ' + bnd[0] + ' = undefined;';
         }
 
         if (bnd[2]) {
-            if (bnd[2].length === 1) {
-                return res + ': ' + bnd[2][0].prettyPrint() + ';';
-            } else {
-                res += ': [ ';
-                for (let i = 0; i < bnd[2].length; ++i) {
-                    if ( i > 0 ) {
-                        res += ', ';
-                    }
-                    res += bnd[2][i].prettyPrint();
-                }
-                return res += ' ]';
-            }
+            return res + ': ' + bnd[2].prettyPrint() + ';';
         } else {
             return res + ': undefined;';
         }
