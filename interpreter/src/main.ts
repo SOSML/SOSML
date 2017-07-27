@@ -55,7 +55,7 @@ export class Interpreter {
         let res = ast.evaluate(oldState.getNestedState());
 
         if (res[1]) {
-        return res;
+            return res;
         }
 
         let curState = res[0];
@@ -67,7 +67,7 @@ export class Interpreter {
                     if (Object.prototype.hasOwnProperty.call(
                         curState.dynamicBasis.valueEnvironment, i)) {
 
-                        let tp = state.getStaticValue(i, curState.id);
+                        let tp = state.getStaticValue(i, undefined, curState.id);
                         if (tp !== undefined) {
                             curState.setStaticValue(i, tp);
                         }
@@ -79,7 +79,7 @@ export class Interpreter {
                     if (Object.prototype.hasOwnProperty.call(
                         curState.dynamicBasis.typeEnvironment, i)) {
 
-                        let tp = state.getStaticType(i, curState.id);
+                        let tp = state.getStaticType(i, undefined, curState.id);
                         if (tp !== undefined) {
                             curState.setStaticType(i, tp.type, tp.constructors);
                         }
