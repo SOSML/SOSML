@@ -1,4 +1,4 @@
-import { Position } from './errors';
+import { Position, InternalInterpreterError } from './errors';
 import { State } from './state';
 
 export abstract class Type {
@@ -222,6 +222,30 @@ export class RecordType extends Type {
 
 
     prettyPrint(): string {
+        let isTuple = true;
+        for (let i = 1; i <= this.elements.size; ++i) {
+            if (!this.elements.has('' + i)) {
+                isTuple = false;
+            }
+        }
+
+        if (isTuple) {
+            let res: string = '(';
+            for (let i = 1; i <= this.elements.size; ++i) {
+                if (i > 1) {
+                    res += ' * ';
+                }
+                let sub = this.elements.get('' + i);
+                if (sub !== undefined) {
+                    res += sub.prettyPrint();
+                } else {
+                    throw new InternalInterpreterError(-1,
+                        'How did we loose this value? It was there before. I promise…');
+                }
+            }
+            return res + ')';
+        }
+
         // TODO: print as Tuple if possible
         let result: string = '{';
         let first: boolean = true;
