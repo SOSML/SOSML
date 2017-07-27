@@ -39,6 +39,7 @@ function createBasicStdlib(): State.State {
 
         'val Int.minInt = SOME ~1073741824; ' +
         'val Int.maxInt = SOME 1073741823; ' +
+        'fun Int.max (x, y) = if x < y then y else x : int; ' +
 
         'fun not true = false | not false = true; ' +
 
@@ -3690,30 +3691,24 @@ val t3 = T[T[t2], t1, t2]; */
     let t1 = new Val.ConstructedValue('T', createList([]), 1);
     let t2 = new Val.ConstructedValue('T', createList([t1, t1, t1]), 1);
     let t3 = new Val.ConstructedValue('T', createList([new Val.ConstructedValue('T', createList([t2]), 1), t1, t2]), 1);
-    run_test([['datatype tree = T of tree list;',
-        (x) => {
-            x();
-        }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+    run_test([
+        ['datatype tree = T of tree list;', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
             expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('T')).toEqualWithType(new Val.ValueConstructor('T', 1, 1));
+            // expect(state.getStaticValue('T')).toEqualWithType(TODO: tree);
             // TODO: check that state contains datatype tree
-        }], ['val t1 = T[];',
-        (x) => {
-            x();
-        }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+        }],
+        ['val t1 = T[];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('t1')).toEqualWithType(t1);
             // expect(state.getStaticValue('t1')).toEqualWithType(TODO: tree);
-        }], ['val t2 = T[t1, t1, t1];',
-        (x) => {
-            x();
-        }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+        }],
+        ['val t2 = T[t1, t1, t1];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('t2')).toEqualWithType(t2);
             // expect(state.getStaticValue('t2')).toEqualWithType(TODO: tree);
-        }], ['val t3 = T[T[t2], t1, t2];',
-        (x) => {
-            x();
-        }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+        }],
+        ['val t3 = T[T[t2], t1, t2];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('t3')).toEqualWithType(t3);
             // expect(state.getStaticValue('t3')).toEqualWithType(TODO: tree);
@@ -3737,47 +3732,552 @@ dst t3 3;
     let t1 = new Val.ConstructedValue('T', createList([]), 1);
     let t2 = new Val.ConstructedValue('T', createList([t1, t1, t1]), 1);
     let t3 = new Val.ConstructedValue('T', createList([new Val.ConstructedValue('T', createList([t2]), 1), t1, t2]), 1);
-    run_test([['datatype tree = T of tree list;',
-        (x) => {
-            x();
-        }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+    run_test([
+        ['datatype tree = T of tree list;', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
             // see 7.1
-        }], ['val t1 = T[];',
-        (x) => {
-            x();
-        }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+        }],
+        ['val t1 = T[];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
             // see 7.1
-        }], ['val t2 = T[t1, t1, t1];',
-        (x) => {
-            x();
-        }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+        }],
+        ['val t2 = T[t1, t1, t1];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
             // see 7.1
-        }], ['val t3 = T[T[t2], t1, t2];',
-        (x) => {
-            x();
-        }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+        }],
+        ['val t3 = T[T[t2], t1, t2];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
             // see 7.1
-        }], ['fun arity (T ts) = length ts;', (x) => { x(); },
-        (state : State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+        }],
+        ['fun arity (T ts) = length ts;', (x) => { x(); }, (state : State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('arity')).not.toEqualWithType(undefined);
             // expect(state.getStaticValue('arity')).toEqualWithType(TODO: tree -> int);
-        }], ['arity t3;',
-        (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+        }],
+        ['arity t3;', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(3));
-            // expect(state.getStaticValue('it')).toEqualWithType(TODO: int);
-        }], ['fun dst (T ts) k = List.nth(ts, k-1);',
-        (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('int'));
+        }],
+        ['fun dst (T ts) k = List.nth(ts, k-1);', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('dst')).not.toEqualWithType(undefined);
             // expect(state.getStaticValue('dst')).toEqualWithType(TODO: tree -> int -> tree);
-
-        }], ['dst t3 3;', (x) => { x(); },
-        (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+        }],
+        ['dst t3 3;', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType(t2);
             // expect(state.getDynamicValue('it').toEqualWithType(TODO: tree));
+        }],
+    ]);
+});
+
+it("7.1.2", () => {
+    /*
+datatype tree = T of tree list;
+
+datatype exp = C of int | V of string | A of exp*exp | M of exp*exp;
+
+fun shape (C _) = T[]
+  | shape (V _) = T[]
+  | shape (A(e,e')) = T[shape e, shape e']
+  | shape (M(e,e')) = T[shape e, shape e'];
+     */
+    //TODO test types
+    //TODO maybe test that shape works
+    run_test([
+        ['datatype tree = T of tree list;', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['datatype exp = C of int | V of string | A of exp*exp | M of exp*exp;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('C')).toEqualWithType(new Val.ValueConstructor('C', 1, 1));
+            // expect(state.getStaticValue('C')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('V')).toEqualWithType(new Val.ValueConstructor('V', 1, 1));
+            // expect(state.getStaticValue('V')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('A')).toEqualWithType(new Val.ValueConstructor('A', 1, 1));
+            // expect(state.getStaticValue('A')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('M')).toEqualWithType(new Val.ValueConstructor('M', 1, 1));
+            // expect(state.getStaticValue('M')).toEqualWithType(TODO);
+        }],
+        ['fun shape (C _) = T[] | shape (V _) = T[] | shape (A(e,e\')) = T[shape e, shape e\'] | shape (M(e,e\')) = T[shape e, shape e\'];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('shape')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('shape')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("7.1.3", () => {
+    /*
+datatype tree = T of tree list;
+val t1 = T[];
+val t2 = T[t1, t1, t1];
+val t3 = T[T[t2], t1, t2];
+
+fun compareTree (T ts, T tr) = List.collate compareTree (ts,tr);
+compareTree(t2,t3);
+compareTree(T[T[T[T[T[]]]]], t3);
+     */
+    //TODO test types
+    let t1 = new Val.ConstructedValue('T', createList([]), 1);
+    let t2 = new Val.ConstructedValue('T', createList([t1, t1, t1]), 1);
+    let t3 = new Val.ConstructedValue('T', createList([new Val.ConstructedValue('T', createList([t2]), 1), t1, t2]), 1);
+    run_test([
+        ['datatype tree = T of tree list;', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['val t1 = T[];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['val t2 = T[t1, t1, t1];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['val t3 = T[T[t2], t1, t2];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['fun compareTree (T ts, T tr) = List.collate compareTree (ts,tr);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('compareTree')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('compareTree')).toEqualWithType(TODO);
+        }],
+        ['compareTree(t2,t3);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('LESS', undefined, 1));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['compareTree(T[T[T[T[T[]]]]], t3);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('GREATER', undefined, 1));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("7.2", () => {
+    /*
+datatype tree = T of tree list;
+val t1 = T[];
+val t2 = T[t1, t1, t1];
+val t3 = T[T[t2], t1, t2];
+
+fun subtree t (T ts) = (t = T ts) orelse
+                        List.exists (subtree t) ts;
+subtree (T[t2]) t3;
+subtree t3 t2;
+
+fun count t (T ts) = if (t = T ts) then 1
+                    else foldl op+ 0 (map (count t) ts);
+count t1 t3;
+
+fun linear (T nil) = true
+  | linear (T [t]) = linear t
+  | linear _ = false;
+     */
+    //TODO test types
+    let t1 = new Val.ConstructedValue('T', createList([]), 1);
+    let t2 = new Val.ConstructedValue('T', createList([t1, t1, t1]), 1);
+    let t3 = new Val.ConstructedValue('T', createList([new Val.ConstructedValue('T', createList([t2]), 1), t1, t2]), 1);
+    run_test([
+        ['datatype tree = T of tree list;', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['val t1 = T[];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['val t2 = T[t1, t1, t1];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['val t3 = T[T[t2], t1, t2];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['fun subtree t (T ts) = (t = T ts) orelse List.exists (subtree t) ts;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('subtree')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('subtree')).toEqualWithType(TODO);
+        }],
+        ['subtree (T[t2]) t3;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.BoolValue(true));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('bool'));
+        }],
+        ['subtree t3 t2;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.BoolValue(false));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('bool'));
+        }],
+        ['fun count t (T ts) = if (t = T ts) then 1 else foldl op+ 0 (map (count t) ts);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('count')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('count')).toEqualWithType(TODO);
+        }],
+        ['count t1 t3;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(7));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('int'));
+        }],
+        ['fun linear (T nil) = true | linear (T [t]) = linear t | linear _ = false;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('linear')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('linear')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("7.3", () => {
+    /*
+datatype tree = T of tree list;
+val t1 = T[];
+val t2 = T[t1, t1, t1];
+val t3 = T[T[t2], t1, t2];
+fun dst (T ts) k = List.nth(ts, k-1);
+
+fun ast t nil = t
+  | ast t (n::a) = ast (dst t n) a;
+ast t3 [1,1,3];
+ast t3 [1,1];
+
+ast t3 [1,2];
+     */
+    //TODO test types
+    let t1 = new Val.ConstructedValue('T', createList([]), 1);
+    let t2 = new Val.ConstructedValue('T', createList([t1, t1, t1]), 1);
+    let t3 = new Val.ConstructedValue('T', createList([new Val.ConstructedValue('T', createList([t2]), 1), t1, t2]), 1);
+    run_test([
+        ['datatype tree = T of tree list;', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['val t1 = T[];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['val t2 = T[t1, t1, t1];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['val t3 = T[T[t2], t1, t2];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['fun dst (T ts) k = List.nth(ts, k-1);', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // copy from 7.1.1
+        }],
+        ['fun ast t nil = t | ast t (n::a) = ast (dst t n) a;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('ast')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('ast')).toEqualWithType(TODO);
+        }],
+        ['ast t3 [1,1,3];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(t1);
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['ast t3 [1,1];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(t2);
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['ast t3 [1,2];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(true);
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Subscript', undefined, 1));
+        }]
+    ]);
+});
+
+it("7.4", () => {
+    /*
+datatype tree = T of tree list;
+val t1 = T[];
+val t2 = T[t1, t1, t1];
+val t3 = T[T[t2], t1, t2];
+
+fun size (T ts) = foldl op+ 1 (map size ts);
+size t3;
+
+fun depth (T ts) = 1 + foldl Int.max ~1 (map depth ts);
+depth t3;
+     */
+    //TODO test types
+    let t1 = new Val.ConstructedValue('T', createList([]), 1);
+    let t2 = new Val.ConstructedValue('T', createList([t1, t1, t1]), 1);
+    let t3 = new Val.ConstructedValue('T', createList([new Val.ConstructedValue('T', createList([t2]), 1), t1, t2]), 1);
+    run_test([
+        ['datatype tree = T of tree list;', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['val t1 = T[];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['val t2 = T[t1, t1, t1];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['val t3 = T[T[t2], t1, t2];', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['fun size (T ts) = foldl op+ 1 (map size ts);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('size')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('size')).toEqualWithType(TODO);
+        }],
+        ['size t3;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(11));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('int'));
+        }],
+        ['fun depth (T ts) = 1 + foldl Int.max ~1 (map depth ts);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('depth')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('depth')).toEqualWithType(TODO);
+        }],
+        ['depth t3;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(3));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('int'));
+        }]
+    ]);
+});
+
+it("7.5", () => {
+    /*
+datatype tree = T of tree list;
+
+fun fold f (T ts) = f (map (fold f) ts);
+
+val size = fold (foldl op+ 1);
+     */
+    //TODO test types
+    //TODO maybe test size and fold work
+    run_test([
+        ['datatype tree = T of tree list;', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['fun fold f (T ts) = f (map (fold f) ts);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('fold')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('fold')).toEqualWithType(TODO);
+        }],
+        ['val size = fold (foldl op+ 1);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('size')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('size')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("7.6.3", () => {
+    /*
+datatype tree = T of tree list;
+
+fun pre (T ts) = length ts :: List.concat (map pre ts);
+fun post (T ts) = List.concat (map post ts) @ [length ts];
+     */
+    //TODO test types
+    //TODO maybe test pre and post work
+    run_test([
+        ['datatype tree = T of tree list;', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['fun pre (T ts) = length ts :: List.concat (map pre ts);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('pre')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('pre')).toEqualWithType(TODO);
+        }],
+        ['fun post (T ts) = List.concat (map post ts) @ [length ts];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('post')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('post')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("7.7", () => {
+    /*
+datatype tree = T of tree list;
+
+fun depth' (T nil) = 0
+  | depth' (T(t::tr)) = 1+foldl Int.max (depth' t) (map depth' tr);
+
+exception Unbalanced;
+fun check (n,m) = if n=m then n else raise Unbalanced;
+fun depthb (T nil) = 0
+  | depthb (T(t::tr)) = 1+foldl check (depthb t) (map depthb tr);
+
+fun balanced t = (depthb t ; true) handle Unbalanced => false;
+     */
+    //TODO test types
+    //TODO maybe check if the functions work
+    run_test([
+        ['datatype tree = T of tree list;', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['fun depth\' (T nil) = 0 | depth\' (T(t::tr)) = 1+foldl Int.max (depth\' t) (map depth\' tr);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('depth\'')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('depth\'')).toEqualWithType(TODO);
+        }],
+        ['exception Unbalanced;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('Unbalanced')).toEqualWithType(new Val.ExceptionConstructor('Unbalanced', 0, 1));
+            //expect(state.getStaticValue('Unbalanced')).toEqualWithType(TODO);
+        }],
+        ['fun check (n,m) = if n=m then n else raise Unbalanced;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('check')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('check')).toEqualWithType(TODO);
+        }],
+        ['fun depthb (T nil) = 0 | depthb (T(t::tr)) = 1+foldl check (depthb t) (map depthb tr);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('depthb')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('depthb')).toEqualWithType(TODO);
+        }],
+        ['fun balanced t = (depthb t ; true) handle Unbalanced => false;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('balanced')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('balanced')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("7.8", () => {
+    /*
+datatype tree = T of tree list;
+fun compareTree (T ts, T tr) = List.collate compareTree (ts,tr);
+
+fun strict(t::t'::tr) = compareTree(t,t')=LESS andalso strict(t'::tr)
+  | strict _ = true;
+fun directed (T ts) = strict ts andalso List.all directed ts;
+
+fun eqset x y = subset x y andalso subset y x
+and subset (T xs) y = List.all (fn x => member x y) xs
+and member x (T ys) = List.exists (eqset x) ys;
+     */
+    //TODO test types
+    //TODO maybe check if the functions work
+    run_test([
+        ['datatype tree = T of tree list;', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['fun compareTree (T ts, T tr) = List.collate compareTree (ts,tr);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            // copy from 7.1.3
+        }],
+        ['fun strict(t::t\'::tr) = compareTree(t,t\')=LESS andalso strict(t\'::tr) | strict _ = true;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('strict')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('strict')).toEqualWithType(TODO);
+        }],
+        ['fun directed (T ts) = strict ts andalso List.all directed ts;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('directed')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('directed')).toEqualWithType(TODO);
+        }],
+        ['fun eqset x y = subset x y andalso subset y x and subset (T xs) y = List.all (fn x => member x y) xs and member x (T ys) = List.exists (eqset x) ys;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('eqset')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('eqset')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('subset')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('subset')).toEqualWithType(TODO);
+            expect(state.getDynamicValue('member')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('member')).toEqualWithType(TODO);
+        }]
+    ]);
+});
+
+it("7.9", () => {
+    /*
+datatype tree = T of tree list;
+
+datatype 'a ltr = L of 'a * 'a ltr list;
+
+val t1 = L(7,[]);
+val t2 = L(1, [L(2,[]), t1, t1]);
+val t3 = L(3, [L(0,[t2]), L(4,[]), t2]);
+
+fun head (L(x,_)) = x;
+
+fun shape (L(_,ts)) = T(map shape ts);
+shape t2;
+
+fun sameshape t t' = shape t = shape t';
+
+sameshape t2 (L(1, [L(2,[]), L(7,[]), L(7,[])]));
+     */
+    //TODO test types
+    let t1 = new Val.ConstructedValue('L', createTuple([
+        new Val.Integer(7),
+        createList([])
+    ]), 1);
+    let t2 = new Val.ConstructedValue('L', createTuple([
+        new Val.Integer(1),
+        createList([
+            new Val.ConstructedValue('L', createTuple([
+                new Val.Integer(2),
+                createList([])
+            ]), 1),
+            t1,
+            t1
+        ])
+    ]), 1);
+    let t3 = new Val.ConstructedValue('L', createTuple([
+        new Val.Integer(3),
+        createList([
+            new Val.ConstructedValue('L', createTuple([
+                new Val.Integer(0),
+                createList([
+                    t2
+                ])
+            ]), 1),
+            new Val.ConstructedValue('L', createTuple([
+                new Val.Integer(4),
+                createList([])
+            ]), 1),
+            t2
+        ])
+    ]), 1);
+    run_test([
+        ['datatype tree = T of tree list;', (x) => { x(); }, (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => {
+            // see 7.1
+        }],
+        ['datatype \'a ltr = L of \'a * \'a ltr list;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('L')).toEqualWithType(new Val.ValueConstructor('L', 1, 1));
+            //expect(state.getStaticValue('L')).toEqualWithType(TODO);
+        }],
+        ['val t1 = L(7,[]);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('t1')).toEqualWithType(t1);
+            //expect(state.getStaticValue('t1')).toEqualWithType(TODO);
+        }],
+        ['val t2 = L(1, [L(2,[]), t1, t1]);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('t2')).toEqualWithType(t2);
+            //expect(state.getStaticValue('t2')).toEqualWithType(TODO);
+        }],
+        ['val t3 = L(3, [L(0,[t2]), L(4,[]), t2]);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('t3')).toEqualWithType(t3);
+            //expect(state.getStaticValue('t3')).toEqualWithType(TODO);
+        }],
+        ['fun head (L(x,_)) = x;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('head')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('head')).toEqualWithType(TODO);
+        }],
+        ['fun shape (L(_,ts)) = T(map shape ts);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('shape')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('shape')).toEqualWithType(TODO);
+        }],
+        ['shape t2;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.ConstructedValue('T', createList([
+                new Val.ConstructedValue('T', createList([]), 1),
+                new Val.ConstructedValue('T', createList([]), 1),
+                new Val.ConstructedValue('T', createList([]), 1)
+            ]), 1));
+            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+        }],
+        ['fun sameshape t t\' = shape t = shape t\';', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('sameshape')).not.toEqualWithType(undefined);
+            //expect(state.getStaticValue('sameshape')).toEqualWithType(TODO);
+        }],
+        ['sameshape t2 (L(1, [L(2,[]), L(7,[]), L(7,[])]));', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType(new Val.BoolValue(true));
+            //expect(state.getStaticValue('it')).toEqualWithType(new Type.PrimitiveType('bool'));
         }],
     ]);
 });
