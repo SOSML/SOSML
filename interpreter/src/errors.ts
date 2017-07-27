@@ -1,3 +1,4 @@
+import { TypeVariable } from './types';
 
 // currently this is the index of a character in the input string
 // TODO: maybe change this to line and column number
@@ -58,6 +59,25 @@ export class LexerError extends InterpreterError {
 }
 
 export class ElaborationError extends InterpreterError {
+    static getUnguarded(position: Position, tyvars: Set<TypeVariable>): ElaborationError {
+        let res = '';
+        if (tyvars.size > 1) {
+            res += 's';
+        }
+        res += ' ';
+        let first = true;
+        tyvars.forEach((val: TypeVariable) => {
+            if (first) {
+                first = false;
+            } else {
+                res += ', ';
+            }
+            res += '"' + val.name + '"';
+        });
+        return new ElaborationError(position,
+            'Unguarded type variable' + res + '.');
+    }
+
     constructor(position: Position, message: string) {
         super(position, message);
         Object.setPrototypeOf(this, ElaborationError.prototype);

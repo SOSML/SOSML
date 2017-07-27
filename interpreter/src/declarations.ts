@@ -804,26 +804,11 @@ export class DirectExceptionBinding implements ExceptionBinding {
         if (this.type !== undefined) {
             let tyvars = this.type.getTypeVariables(true);
             if (tyvars.size > 0) {
-                let res = '';
-                if (tyvars.size > 1) {
-                    res += 's';
-                }
-                res += ' ';
-                let first = true;
-                tyvars.forEach((val: TypeVariable) => {
-                    if (first) {
-                        first = false;
-                    } else {
-                        res += ', ';
-                    }
-                    res += '"' + val.name + '"';
-                });
-                throw new ElaborationError(this.position,
-                    'Unguarded type variable' + res + '.');
+                throw ElaborationError.getUnguarded(this.position, tyvars);
             }
 
             state.setStaticValue(this.name.getText(),
-                [new FunctionType(this.type.simplify(), new PrimitiveType('exn'))]);
+                [new FunctionType([this.type.simplify()], [new PrimitiveType('exn')])]);
         } else {
             state.setStaticValue(this.name.getText(),
                 [new PrimitiveType('exn')]);

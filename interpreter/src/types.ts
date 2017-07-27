@@ -1,7 +1,30 @@
-import { Position } from './errors';
+import { Position, InternalInterpreterError } from './errors';
 import { State } from './state';
 
 export abstract class Type {
+    static printTypeArray(type: Type[]): string {
+        if (type.length === 1) {
+            return type[0].prettyPrint();
+        }
+        let result = '[ ';
+        for (let i = 0; i < type.length; ++i) {
+            if (i > 0) {
+                result += ', ';
+            }
+            result += type[i].prettyPrint();
+        }
+        result += ' ]';
+        return result;
+    }
+
+    static simplifyTypeArray(type: Type[]): Type[] {
+        let result: Type[] = [];
+        for (let i = 0; i < type.length; ++i) {
+            result.push(type[i].simplify());
+        }
+        return result;
+    }
+
     abstract prettyPrint(): string;
     abstract equals(other: any): boolean;
 
@@ -30,7 +53,7 @@ export abstract class Type {
 }
 
 export class PrimitiveType extends Type {
-    constructor(public name: string, public parameters: Type[] = [], public position: Position = 0) {
+    constructor(public name: string, public parameters: Type[][] = [], public position: Position = 0) {
         super();
     }
 
@@ -43,14 +66,15 @@ export class PrimitiveType extends Type {
     }
 
     matches(state: State, type: Type[]): [string, Type[]][] | undefined {
-        for (let i = 0; i < type.length; ++i) {
+        throw new Error( 'nya' );
+        /* for (let i = 0; i < type.length; ++i) {
             if (type[i].equals(this)) {
                 return [];
             }
         }
 
         // None of the possible types matched
-        return undefined;
+        return undefined; */
     }
 
     admitsEquality(state: State): boolean {
@@ -60,12 +84,14 @@ export class PrimitiveType extends Type {
     prettyPrint(): string {
         let res = '';
         for (let i = 0; i < this.parameters.length; ++i) {
-            res += this.parameters[i].prettyPrint() + ' ';
+            res += Type.printTypeArray(this.parameters[i]) + ' ';
         }
         return res += this.name;
     }
 
     equals(other: any): boolean {
+        throw new Error('nya');
+        /*
         if (!(other instanceof PrimitiveType)) {
             return false;
         }
@@ -80,13 +106,13 @@ export class PrimitiveType extends Type {
                 return false;
             }
         }
-        return true;
+        return true; */
     }
 
     simplify(): Type {
-        let param: Type[] = [];
+        let param: Type[][] = [];
         for (let i = 0; i < this.parameters.length; ++i) {
-            param.push(this.parameters[i].simplify());
+            param.push(Type.simplifyTypeArray(this.parameters[i]));
         }
         return new PrimitiveType(this.name, param, this.position);
     }
@@ -143,7 +169,7 @@ export class TypeVariable extends Type {
 }
 
 export class RecordType extends Type {
-    constructor(public elements: Map<string, Type>, public complete: boolean = true, public position: Position = 0) {
+    constructor(public elements: Map<string, Type[]>, public complete: boolean = true, public position: Position = 0) {
         super();
     }
 
@@ -172,13 +198,13 @@ export class RecordType extends Type {
         // TODO: print as Tuple if possible
         let result: string = '{';
         let first: boolean = true;
-        this.elements.forEach((type: Type, key: string) => {
+        this.elements.forEach((type: Type[], key: string) => {
             if (!first) {
                 result += ', ';
             } else {
                 first = false;
             }
-            result += key + ' : ' + type.prettyPrint();
+            result += key + ' : ' + Type.printTypeArray(type);
         });
         if (!this.complete) {
             if (!first) {
@@ -190,14 +216,19 @@ export class RecordType extends Type {
     }
 
     simplify(): RecordType {
-        let newElements: Map<string, Type> = new Map<string, Type>();
-        this.elements.forEach((type: Type, key: string) => {
-            newElements.set(key, type.simplify());
+        let newElements: Map<string, Type[]> = new Map<string, Type[]>();
+        this.elements.forEach((type: Type[], key: string) => {
+            newElements.set(key, Type.simplifyTypeArray(type));
         });
         return new RecordType(newElements, this.complete);
     }
 
     equals(other: any): boolean {
+        // TODO Do types need an equals?
+
+        throw new InternalInterpreterError(-1, '～ニャ－～');
+
+        /*
         if (!(other instanceof RecordType) || this.complete !== other.complete) {
             return false;
         } else {
@@ -206,7 +237,7 @@ export class RecordType extends Type {
             }
             for (let name in this.elements) {
                 if (!this.elements.hasOwnProperty(name)) {
-                    if (!(this.elements.get(name) as Type).equals(other.elements.get(name))) {
+                    if (!(<Type> this.elements.get(name) as Type).equals(other.elements.get(name))) {
                         return false;
                     }
                 }
@@ -219,12 +250,12 @@ export class RecordType extends Type {
                 }
             }
         }
-        return true;
+        return true; */
     }
 }
 
 export class FunctionType extends Type {
-    constructor(public parameterType: Type, public returnType: Type, public position: Position = 0) {
+    constructor(public parameterType: Type[], public returnType: Type[], public position: Position = 0) {
         super();
     }
 
@@ -244,22 +275,25 @@ export class FunctionType extends Type {
     }
 
     admitsEquality(state: State): boolean {
-        return this.parameterType.admitsEquality(state) && this.returnType.admitsEquality(state);
+        throw new InternalInterpreterError(-1, '～ニャ－～');
+        // return this.parameterType.admitsEquality(state) && this.returnType.admitsEquality(state);
     }
 
 
     prettyPrint(): string {
-        return '( ' + this.parameterType.prettyPrint()
-            + ' -> ' + this.returnType.prettyPrint() + ' )';
+        return '( ' + Type.printTypeArray(this.parameterType)
+            + ' -> ' + Type.printTypeArray(this.returnType) + ' )';
     }
 
     simplify(): FunctionType {
-        return new FunctionType(this.parameterType.simplify(), this.returnType.simplify(), this.position);
+        return new FunctionType(Type.simplifyTypeArray(this.parameterType),
+            Type.simplifyTypeArray(this.returnType), this.position);
     }
 
     equals(other: any): boolean {
-        return other instanceof FunctionType && this.parameterType.equals(other.parameterType)
-            && this.returnType.equals(other.returnType);
+        throw new InternalInterpreterError(-1, '～ニャ－～');
+        // return other instanceof FunctionType && this.parameterType.equals(other.parameterType)
+        //  && this.returnType.equals(other.returnType);
     }
 }
 
@@ -267,7 +301,7 @@ export class FunctionType extends Type {
 // May have a type argument.
 export class CustomType extends Type {
     constructor(public name: string,
-                public typeArguments: Type[] = [],
+                public typeArguments: Type[][] = [],
                 public position: Position = 0) {
         super();
     }
@@ -295,12 +329,13 @@ export class CustomType extends Type {
     }
 
     admitsEquality(state: State): boolean {
-        for (let i = 0; i < this.typeArguments.length; ++i) {
+        throw new InternalInterpreterError(-1, '～ニャ－～');
+        /* for (let i = 0; i < this.typeArguments.length; ++i) {
             if (!this.typeArguments[i].admitsEquality(state)) {
                 return false;
             }
         }
-        return true;
+        return true; */
     }
 
     prettyPrint(): string {
@@ -312,7 +347,7 @@ export class CustomType extends Type {
             if (i > 0) {
                 result += ', ';
             }
-            result += this.typeArguments[i].prettyPrint();
+            result += Type.printTypeArray(this.typeArguments[i]);
         }
         if (this.typeArguments.length > 1) {
             result += ' )';
@@ -325,14 +360,17 @@ export class CustomType extends Type {
     }
 
     simplify(): Type {
-        let args: Type[] = [];
+        let args: Type[][] = [];
         for (let i: number = 0; i < this.typeArguments.length; ++i) {
-            args.push(this.typeArguments[i].simplify());
+            args.push(Type.simplifyTypeArray(this.typeArguments[i]));
         }
         return new CustomType(this.name, args);
     }
 
     equals(other: any): boolean {
+        throw new InternalInterpreterError(-1, '～ニャ－～');
+
+        /*
         if (!(other instanceof CustomType) || this.name !== other.name) {
             return false;
         }
@@ -341,7 +379,7 @@ export class CustomType extends Type {
                 return false;
             }
         }
-        return true;
+        return true; */
     }
 }
 
@@ -362,9 +400,9 @@ export class TupleType extends Type {
     }
 
     simplify(): RecordType {
-        let entries: Map<string, Type> = new Map<string, Type>();
+        let entries: Map<string, Type[]> = new Map<string, Type[]>();
         for (let i: number = 0; i < this.elements.length; ++i) {
-            entries.set(String(i + 1), this.elements[i].simplify());
+            entries.set('' + (i + 1), [this.elements[i].simplify()]);
         }
         return new RecordType(entries, true);
     }

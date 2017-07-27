@@ -136,8 +136,8 @@ export class State {
                 }
                 return [new RecordValue(), false];
             }), true);
-            res.setStaticValue('print', [new FunctionType(new TypeVariable('\'a'),
-                new RecordType(new Map<string, Type>()))], true);
+            res.setStaticValue('print', [new FunctionType([new TypeVariable('\'a')],
+                [new RecordType(new Map<string, Type[]>())])], true);
         }
         return res;
     }
