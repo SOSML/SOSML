@@ -1431,6 +1431,7 @@ it("declaration - function declaration", () => {
             )
         ], 1)
     );
+    expect(() => { parse("fun f = 42;"); }).toThrow(Parser.ParserError);
 });
 
 it("declaration - type declaration", () => {
