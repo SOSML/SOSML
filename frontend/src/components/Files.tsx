@@ -1,19 +1,29 @@
 import * as React from 'react';
 
 import { Grid , Table, Button, Glyphicon } from 'react-bootstrap';
-import { File, Database } from '../API';
+import { File, Database, API } from '../API';
 import './Files.css';
 import { Link } from 'react-router-dom';
 
+const EXAMPLES_LOADING = 0;
+const EXAMPLES_LOADED = 1;
+const EXAMPLES_FAILED = 2;
+
 interface State {
     files: File[];
+    examples: string[];
+    examplesStatus: number;
 }
 
 class Files extends React.Component<any, State> {
     constructor(props: any) {
         super(props);
 
-        this.state = { files: [] };
+        this.state = {
+            files: [],
+            examples: [],
+            examplesStatus: EXAMPLES_LOADING
+        };
     }
 
     componentDidMount() {
@@ -45,6 +55,39 @@ class Files extends React.Component<any, State> {
                 </tr>
             );
         });
+        let examplesView: any;
+        if (this.state.examplesStatus === EXAMPLES_LOADED) {
+            let examples = this.state.examples.map((example) => {
+                return (
+                    <tr key={example}>
+                        <td>
+                            <Link to={'/examplefile/' + example}>{example}</Link>
+                        </td>
+                    </tr>
+                );
+            });
+
+            examplesView = (
+                <Table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {examples}
+                    </tbody>
+                </Table>
+            );
+        } else if (this.state.examplesStatus === EXAMPLES_FAILED) {
+            examplesView = (
+                <p>Beispieldateien konnten nicht geladen werden</p>
+            );
+        } else {
+            examplesView = (
+                <p>Beispieldateien werden geladen...</p>
+            );
+        }
 
         return (
             <Grid>
@@ -60,6 +103,8 @@ class Files extends React.Component<any, State> {
                         {filesView}
                     </tbody>
                 </Table>
+                <h4>Beispieldateien</h4>
+                {examplesView}
             </Grid>
         );
     }
@@ -69,6 +114,11 @@ class Files extends React.Component<any, State> {
             return db.getFiles();
         }).then((data: File[]) => {
             this.setState({files: data});
+            return API.getCodeExamplesList();
+        }).then((list: string[]) => {
+            this.setState({examples: list, examplesStatus: EXAMPLES_LOADED});
+        }).catch((e) => {
+            this.setState({examplesStatus: EXAMPLES_FAILED});
         });
     }
 }

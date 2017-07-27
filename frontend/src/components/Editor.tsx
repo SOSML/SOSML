@@ -5,13 +5,18 @@ import { Form , Alert, Button } from 'react-bootstrap';
 import { Database, API } from '../API';
 import './Editor.css';
 
+const FEEDBACK_NONE = 0;
+const FEEDBACK_SUCCESS = 1;
+const FEEDBACK_FAIL = 2;
+
 interface State {
     shareReadMode: boolean;
     shareHash: string;
     code: string;
     initialCode: string;
     fileName: string;
-    savedFeedback: boolean;
+    savedFeedback: number;
+    savedFeedbackTimer: any;
 }
 
 class Editor extends React.Component<any, State> {
@@ -24,7 +29,8 @@ class Editor extends React.Component<any, State> {
             fileName: '',
             initialCode: '',
             shareHash: '',
-            savedFeedback: false
+            savedFeedback: FEEDBACK_NONE,
+            savedFeedbackTimer: null
         };
 
         this.onFileNameBlur = this.onFileNameBlur.bind(this);
@@ -38,22 +44,28 @@ class Editor extends React.Component<any, State> {
         if (this.props.history && this.props.history.location.state) {
             let state: any = this.props.history.location.state;
             if (state.fileName) {
-                Database.getInstance().then((db: Database) => {
-                    return db.getFile(state.fileName);
-                }).then((content: string) => {
+                let promis: Promise<string>;
+                if (state.example) {
+                    promis = API.getCodeExample(state);
+                } else {
+                    promis = Database.getInstance().then((db: Database) => {
+                        return db.getFile(state.fileName);
+                    });
+                }
+                promis.then((content: string) => {
                     this.setState((oldState) => {
                         return {initialCode: content, fileName: state.fileName};
                     });
-                    this.props.history.replace('/', {});
                 });
+                this.props.history.replace('/', {});
                 return;
             } else if (state.shareHash) {
                 API.loadSharedCode(state.shareHash).then((content: string) => {
                     this.setState((oldState) => {
                         return {initialCode: content};
                     });
-                    this.props.history.replace('/', {});
                 });
+                this.props.history.replace('/', {});
                 return;
             }
         }
@@ -80,8 +92,10 @@ class Editor extends React.Component<any, State> {
             );
         } else {
             let style: any = {};
-            if (this.state.savedFeedback) {
+            if (this.state.savedFeedback === FEEDBACK_SUCCESS) {
                 style['background-color'] = '#AAFFAA';
+            } else if (this.state.savedFeedback === FEEDBACK_FAIL) {
+                style['background-color'] = '#FFAAAA';
             }
             fileForm = (
                 <Form inline={true} className="inlineBlock">
@@ -115,15 +129,25 @@ class Editor extends React.Component<any, State> {
         });
     }
 
+    restartFeedbackClear(feedback: number) {
+        if (this.state.savedFeedbackTimer !== null) {
+            clearTimeout(this.state.savedFeedbackTimer);
+        }
+        let timer = setTimeout(() => {
+            this.setState({savedFeedback: FEEDBACK_NONE, savedFeedbackTimer: null});
+        }, 1300);
+        this.setState({savedFeedback: FEEDBACK_FAIL, savedFeedbackTimer: timer});
+    }
+
     handleSave() {
         if (this.state.fileName !== '') {
             Database.getInstance().then((db: Database) => {
                 return db.saveFile(this.state.fileName, this.state.code);
+            }).then(() => {
+                this.restartFeedbackClear(FEEDBACK_SUCCESS);
+            }).catch(() => {
+                this.restartFeedbackClear(FEEDBACK_FAIL);
             });
-            this.setState({savedFeedback: true});
-            setTimeout(() => {
-                this.setState({savedFeedback: false});
-            }, 1300);
         }
     }
 
