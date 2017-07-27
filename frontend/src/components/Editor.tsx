@@ -148,6 +148,8 @@ class Editor extends React.Component<any, State> {
             }).catch(() => {
                 this.restartFeedbackClear(FEEDBACK_FAIL);
             });
+        } else {
+            this.restartFeedbackClear(FEEDBACK_FAIL);
         }
     }
 

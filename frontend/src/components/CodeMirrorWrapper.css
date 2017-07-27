@@ -14,11 +14,11 @@
 }
 
 .eval-success {
-    background-color: rgba(190, 230, 190, 200);
+    background-color: rgba(220, 255, 220, 200);
 }
 
 .eval-fail {
-    background-color: rgba(230, 190, 190, 200);
+    background-color: rgba(255, 220, 220, 200);
 }
 
 span.CodeMirror-matchingbracket {
