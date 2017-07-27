@@ -1765,7 +1765,9 @@ var ConstructedValue = (function (_super) {
         }
         if (state !== undefined) {
             var infix = state.getInfixStatus(new lexer_1.IdentifierToken(this.constructorName, -1));
-            if (infix.infix && this.argument instanceof RecordValue && this.argument.entries.size == 2) {
+            if (infix !== undefined
+                && infix.infix
+                && this.argument instanceof RecordValue && this.argument.entries.size === 2) {
                 var left = this.argument.getValue('1');
                 var right = this.argument.getValue('1');
                 if (left instanceof Value && right instanceof Value) {

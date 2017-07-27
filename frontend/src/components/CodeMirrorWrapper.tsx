@@ -48,6 +48,7 @@ class IncrementalInterpretationHelper {
     interpreter: any;
     outputCallback: (code: string) => any;
     disabled: boolean;
+    initialState: any;
 
     constructor(outputCallback: (code: string) => any) {
         this.semicoli = [];
@@ -58,6 +59,7 @@ class IncrementalInterpretationHelper {
 
         this.interpreter = API.createInterpreter();
         this.outputCallback = outputCallback;
+        this.initialState = this.interpreter.getFirstState(true);
     }
 
     clear() {
@@ -233,7 +235,7 @@ class IncrementalInterpretationHelper {
         let ret: any;
         try {
             if (oldState === null) {
-                ret = this.interpreter.interpret(partial + ';', this.interpreter.getFirstState(true), true);
+                ret = this.interpreter.interpret(partial + ';', this.initialState, true);
             } else {
                 ret = this.interpreter.interpret(partial + ';', oldState, true);
             }
@@ -289,7 +291,7 @@ class IncrementalInterpretationHelper {
     private addSemicolon(pos: any, newState: any, marker: any) {
         this.semicoli.push(pos);
         let baseIndex = this.findBaseIndex(this.data.length - 1);
-        let baseStateId = 1;
+        let baseStateId = this.initialState.id + 1;
         if (baseIndex !== -1) {
             baseStateId = this.data[baseIndex].state.id + 1;
         }
@@ -362,7 +364,7 @@ class IncrementalInterpretationHelper {
         return output;
     }
 
-    private printBinding(state: any,bnd: [any, any, any]) {
+    private printBinding(state: any, bnd: [any, any, any]) {
         let res = '> ';
 
         let protoName = this.getPrototypeName(bnd[1]);
