@@ -4,7 +4,7 @@
 
 import { State } from './state';
 import { InternalInterpreterError, EvaluationError } from './errors';
-import { int, char } from './lexer';
+import { int, char, IdentifierToken } from './lexer';
 import { Match } from './expressions';
 
 export abstract class Value {
@@ -440,6 +440,23 @@ export class ConstructedValue extends Value {
             return res + ' ]';
         } else if (this.constructorName === 'nil') {
             return '[ ]';
+        }
+
+        if (state !== undefined) {
+            let infix = state.getInfixStatus(new IdentifierToken(this.constructorName, -1));
+            if (infix.infix && this.argument instanceof RecordValue && this.argument.entries.size == 2) {
+                let left = this.argument.getValue('1');
+                let right = this.argument.getValue('1');
+                if (left instanceof Value && right instanceof Value) {
+                    let result: string = '(' + left.prettyPrint(state);
+                    result += ' ' + this.constructorName;
+                    if (this.id > 0) {
+                        result += '/' + this.id;
+                    }
+                    result += ' ' + right.prettyPrint(state);
+                    return result + ')';
+                }
+            }
         }
 
         let result: string =  this.constructorName;
