@@ -644,7 +644,7 @@ var Lexer = (function () {
                     var c = this.consumeChar();
                     switch (c) {
                         case 'a':
-                            value += '\a';
+                            value += '\x07';
                             break;
                         case 'b':
                             value += '\b';
@@ -905,10 +905,20 @@ var PrimitiveType = (function (_super) {
         return _this;
     }
     PrimitiveType.prototype.instantiate = function (state) {
-        return this;
+        var res = [];
+        for (var i = 0; i < this.parameters.length; ++i) {
+            res.push(this.parameters[i].instantiate(state));
+        }
+        return new PrimitiveType(this.name, res, this.position);
     };
     PrimitiveType.prototype.getTypeVariables = function (free) {
-        return new Set();
+        var res = new Set();
+        for (var i = 0; i < this.parameters.length; ++i) {
+            this.parameters[i].getTypeVariables(free).forEach(function (value) {
+                res.add(value);
+            });
+        }
+        return res;
     };
     PrimitiveType.prototype.matches = function (state, type) {
         if (type instanceof PrimitiveType) {
@@ -1061,8 +1071,13 @@ var RecordType = (function (_super) {
         throw new Error('ニャ－');
     };
     RecordType.prototype.getTypeVariables = function (free) {
-        // TODO
-        throw new Error('ニャ－');
+        var res = new Set();
+        this.elements.forEach(function (val) {
+            val.getTypeVariables(free).forEach(function (id) {
+                res.add(id);
+            });
+        });
+        return res;
     };
     RecordType.prototype.matches = function (state, type) {
         // TODO
@@ -1143,8 +1158,14 @@ var FunctionType = (function (_super) {
         throw new Error('ニャ－');
     };
     FunctionType.prototype.getTypeVariables = function (free) {
-        // TODO
-        throw new Error('ニャ－');
+        var res = new Set();
+        this.parameterType.getTypeVariables(free).forEach(function (value) {
+            res.add(value);
+        });
+        this.returnType.getTypeVariables(free).forEach(function (value) {
+            res.add(value);
+        });
+        return res;
     };
     FunctionType.prototype.matches = function (state, type) {
         // TODO
@@ -1190,11 +1211,15 @@ var CustomType = (function (_super) {
         }
     };
     CustomType.prototype.getTypeVariables = function (free) {
+        var res = new Set();
         if (this.typeArguments.length > 0) {
-            // TODO
-            throw new Error('ニャ－');
+            for (var i = 0; i < this.typeArguments.length; ++i) {
+                this.typeArguments[i].getTypeVariables(free).forEach(function (val) {
+                    res.add(val);
+                });
+            }
         }
-        return new Set();
+        return res;
     };
     CustomType.prototype.matches = function (state, type) {
         // TODO
@@ -1411,7 +1436,7 @@ var StringValue = (function (_super) {
                 case '\r':
                     pretty += '\\r';
                     break;
-                case '\a':
+                case '\x07':
                     pretty += '\\a';
                     break;
                 case '\b':
@@ -1771,13 +1796,13 @@ var ConstructedValue = (function (_super) {
                 var left = this.argument.getValue('1');
                 var right = this.argument.getValue('1');
                 if (left instanceof Value && right instanceof Value) {
-                    var result_1 = '(' + left.prettyPrint(state);
-                    result_1 += ' ' + this.constructorName;
+                    var res = '(' + left.prettyPrint(state);
+                    res += ' ' + this.constructorName;
                     if (this.id > 0) {
-                        result_1 += '/' + this.id;
+                        res += '/' + this.id;
                     }
-                    result_1 += ' ' + right.prettyPrint(state);
-                    return result_1 + ')';
+                    res += ' ' + right.prettyPrint(state);
+                    return res + ')';
                 }
             }
         }
@@ -2097,12 +2122,11 @@ var State = (function () {
                     res.setDynamicValue('__stdout', val);
                 }
                 else {
-                    throw new errors_1.InternalInterpreterError(-1, 'You shall not print "'
-                        + val.constructor.name + '".');
+                    res.setDynamicValue('__stdout', new values_1.StringValue(val.prettyPrint(res)));
                 }
                 return [new values_1.RecordValue(), false];
             }), true);
-            res.setStaticValue('print', new types_1.FunctionType(new types_1.PrimitiveType('string'), new types_1.RecordType(new Map())), true);
+            res.setStaticValue('print', new types_1.FunctionType(new types_1.TypeVariable('\'a'), new types_1.RecordType(new Map())), true);
         }
         return res;
     };
@@ -6152,6 +6176,7 @@ var initialState = new state_1.State(0, undefined, new state_1.StaticBasis({
     'false': state_1.RebindStatus.Never,
     'nil': state_1.RebindStatus.Never,
     '::': state_1.RebindStatus.Never,
+    'print': state_1.RebindStatus.Never,
     'Match': state_1.RebindStatus.Half,
     'Bind': state_1.RebindStatus.Half,
     'Div': state_1.RebindStatus.Half,
