@@ -801,31 +801,20 @@ export class DirectExceptionBinding implements ExceptionBinding {
 
     elaborate(state: State): State {
         if (this.type !== undefined) {
-            let tyvars = this.type.getTypeVariables(true);
-            if (tyvars.size > 0) {
-                let res = '';
-                if (tyvars.size > 1) {
-                    res += 's';
+            let tyvars: TypeVariable[] = [];
+            this.type.getTypeVariables(true).forEach((val: TypeVariable) => {
+                if (val.kill() instanceof TypeVariable) {
+                    tyvars.push(val);
                 }
-                res += ' ';
-                let first = true;
-                tyvars.forEach((val: TypeVariable) => {
-                    if (first) {
-                        first = false;
-                    } else {
-                        res += ', ';
-                    }
-                    res += '"' + val.name + '"';
-                });
-                throw new ElaborationError(this.position,
-                    'Unguarded type variable' + res + '.');
+            });
+            if (tyvars.length > 0) {
+                throw ElaborationError.getUnguarded(this.position, tyvars);
             }
 
             state.setStaticValue(this.name.getText(),
-                [new FunctionType(this.type.simplify(), new PrimitiveType('exn'))]);
+                new FunctionType(this.type.simplify(), new PrimitiveType('exn')));
         } else {
-            state.setStaticValue(this.name.getText(),
-                [new PrimitiveType('exn')]);
+            state.setStaticValue(this.name.getText(), new PrimitiveType('exn'));
         }
         return state;
     }
@@ -854,7 +843,7 @@ export class ExceptionAlias implements ExceptionBinding {
             throw new ElaborationError(this.position, 'Unbound value identifier "'
                 + this.oldname.getText() + '".');
         }
-        state.setStaticValue(this.name.getText(), <Type[]> res);
+        state.setStaticValue(this.name.getText(), <Type> res);
         return state;
 
     }

@@ -7,9 +7,9 @@ import { InternalInterpreterError } from './errors';
 
 // Initial static basis (see SML Definition, appendix C through E)
 
-let intType = new PrimitiveType('int');
+// let intType = new PrimitiveType('int');
 let realType = new PrimitiveType('real');
-let wordType = new PrimitiveType('word');
+// let wordType = new PrimitiveType('word');
 let boolType = new PrimitiveType('bool');
 let stringType = new PrimitiveType('string');
 let charType = new PrimitiveType('char');
@@ -23,6 +23,13 @@ function bfunctionType(type: Type): Type {
 
 let typeVar = new TypeVariable('\'a');
 let eqTypeVar = new TypeVariable('\'\'b');
+
+let intWordType = new TypeVariable('*iw', true, 0, [new PrimitiveType('int'), new PrimitiveType('word')]);
+let intRealType = new TypeVariable('*ir', true, 0, [new PrimitiveType('int'), new PrimitiveType('real')]);
+let intWordRealType = new TypeVariable('*iwr', true, 0, [new PrimitiveType('int'), new PrimitiveType('word'),
+    new PrimitiveType('real')]);
+let anyType = new TypeVariable('*any', true, 0, [new PrimitiveType('int'), new PrimitiveType('word'),
+    new PrimitiveType('real'), new PrimitiveType('string'), new PrimitiveType('char')]);
 
 let initialState: State = new State(
     0,
@@ -42,39 +49,35 @@ let initialState: State = new State(
             'exn':      [new TypeInformation(new PrimitiveType('exn'), []), false]
         },
         {
-            'div':      [[functionType(intType), functionType(wordType)], false],
-            'mod':      [[functionType(intType), functionType(wordType)], false],
-            '*':        [[functionType(intType), functionType(wordType), functionType(realType)], false],
-            '/':        [[functionType(realType)], false],
-            '+':        [[functionType(intType), functionType(wordType), functionType(realType)], false],
-            '-':        [[functionType(intType), functionType(wordType), functionType(realType)], false],
-            '<':        [[bfunctionType(intType), bfunctionType(wordType),
-                         bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
-            '<=':       [[bfunctionType(intType), bfunctionType(wordType),
-                         bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
-            '>':        [[bfunctionType(intType), bfunctionType(wordType),
-                         bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
-            '>=':       [[bfunctionType(intType), bfunctionType(wordType),
-                         bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
-            '=':        [[new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify()], false],
-            '<>':       [[new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify()], false],
+            'div':      [functionType(intWordType), false],
+            'mod':      [functionType(intWordType), false],
+            '*':        [functionType(intWordRealType), false],
+            '/':        [functionType(realType), false],
+            '+':        [functionType(intWordRealType), false],
+            '-':        [functionType(intWordRealType), false],
+            '<':        [bfunctionType(anyType), false],
+            '<=':       [bfunctionType(anyType), false],
+            '>':        [bfunctionType(anyType), false],
+            '>=':       [bfunctionType(anyType), false],
+            '=':        [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(), false],
+            '<>':       [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(), false],
             // ':='
             // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
-            'true':     [[new PrimitiveType('bool')], false],
-            'false':    [[new PrimitiveType('bool')], false],
-            'nil':      [[new PrimitiveType('list', [typeVar])], false],
-            '::':       [[new FunctionType(
+            'true':     [new PrimitiveType('bool'), false],
+            'false':    [new PrimitiveType('bool'), false],
+            'nil':      [new PrimitiveType('list', [typeVar]), false],
+            '::':       [new FunctionType(
                             new TupleType([typeVar, new PrimitiveType('list', [typeVar])]),
-                            new PrimitiveType('list', [typeVar])).simplify()], false],
-            'Match':    [[new PrimitiveType('exn')], false],
-            'Bind':     [[new PrimitiveType('exn')], false],
-            'Div':      [[new PrimitiveType('exn')], false],
-            'Overflow': [[new PrimitiveType('exn')], false],
-            '^':        [[functionType(stringType)], false],
-            'explode':  [[new FunctionType(stringType, new PrimitiveType('list', [charType])).simplify()], false],
-            'implode':  [[new FunctionType(new PrimitiveType('list', [charType]), stringType).simplify()], false],
-            '~':        [[new FunctionType(intType, intType), new FunctionType(realType, realType)], false],
-            'abs':      [[new FunctionType(intType, intType), new FunctionType(realType, realType)], false],
+                            new PrimitiveType('list', [typeVar])).simplify(), false],
+            'Match':    [new PrimitiveType('exn'), false],
+            'Bind':     [new PrimitiveType('exn'), false],
+            'Div':      [new PrimitiveType('exn'), false],
+            'Overflow': [new PrimitiveType('exn'), false],
+            '^':        [functionType(stringType), false],
+            'explode':  [new FunctionType(stringType, new PrimitiveType('list', [charType])).simplify(), false],
+            'implode':  [new FunctionType(new PrimitiveType('list', [charType]), stringType).simplify(), false],
+            '~':        [new FunctionType(intRealType, intRealType), false],
+            'abs':      [new FunctionType(intRealType, intRealType), false],
         }
     ),
     new DynamicBasis(

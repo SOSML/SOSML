@@ -6,8 +6,8 @@ import { InternalInterpreterError } from './errors';
 
 // maps id to [Value, rebindable, intermediate]
 type DynamicValueEnvironment = { [name: string]: [Value, boolean] };
-// maps id to [type (multiple if overloaded), intermediate]
-type StaticValueEnvironment = { [name: string]: [Type[], boolean] };
+// maps id to [type, intermediate]
+type StaticValueEnvironment = { [name: string]: [Type, boolean] };
 
 export class TypeInformation {
     // Every constructor also appears in the value environment,
@@ -69,7 +69,7 @@ export class StaticBasis {
                 public valueEnvironment: StaticValueEnvironment) {
     }
 
-    getValue(name: string): [Type[], boolean] | undefined {
+    getValue(name: string): [Type, boolean] | undefined {
         return this.valueEnvironment[name];
     }
 
@@ -77,7 +77,7 @@ export class StaticBasis {
         return this.typeEnvironment[name];
     }
 
-    setValue(name: string, value: Type[], intermediate: boolean): void {
+    setValue(name: string, value: Type, intermediate: boolean): void {
         this.valueEnvironment[name] = [value, intermediate];
     }
 
@@ -136,8 +136,8 @@ export class State {
                 }
                 return [new RecordValue(), false];
             }), true);
-            res.setStaticValue('print', [new FunctionType(new TypeVariable('\'a'),
-                new RecordType(new Map<string, Type>()))], true);
+            res.setStaticValue('print', new FunctionType(new TypeVariable('\'a'),
+                new RecordType(new Map<string, Type>())), true);
         }
         return res;
     }
@@ -154,9 +154,9 @@ export class State {
 
     // Gets an identifier's type. The value  intermediate  determines whether to return intermediate results
     getStaticValue(name: string, intermediate: boolean|undefined = undefined,
-                   idLimit: number = 0): Type[] | undefined {
+                   idLimit: number = 0): Type | undefined {
         if (this.stdfiles[name] !== undefined) {
-            return [new PrimitiveType('string')];
+            return new PrimitiveType('string');
         }
         let result = this.staticBasis.getValue(name);
         if ((result !== undefined && (intermediate === undefined || intermediate === result[1]))
@@ -164,7 +164,7 @@ export class State {
             if (result === undefined) {
                 return undefined;
             }
-            return (<[Type[], boolean]> result)[0];
+            return (<[Type, boolean]> result)[0];
         } else {
             return this.parent.getStaticValue(name, intermediate, idLimit);
         }
@@ -253,7 +253,7 @@ export class State {
         this.valueIdentifierId[name] = this.getValueIdentifierId(name, idLimit) + 1;
     }
 
-    setStaticValue(name: string, type: Type[], intermediate: boolean = false, atId: number|undefined = undefined) {
+    setStaticValue(name: string, type: Type, intermediate: boolean = false, atId: number|undefined = undefined) {
         if (this.stdfiles[name] !== undefined) {
             return;
         }

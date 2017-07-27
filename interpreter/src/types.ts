@@ -6,7 +6,7 @@ export abstract class Type {
     abstract equals(other: any): boolean;
 
     // Constructs types with type variables instantiated as much as possible
-    instantiate(state: State): Type[] {
+    instantiate(state: State): Type {
         return this.simplify().instantiate(state);
     }
 
@@ -16,7 +16,7 @@ export abstract class Type {
     }
 
     // Checks if two types are unifyable; returns all required type variable bindings
-    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+    matches(state: State, type: Type): [string, Type][] | undefined {
         return this.simplify().matches(state, type);
     }
 
@@ -34,18 +34,33 @@ export class PrimitiveType extends Type {
         super();
     }
 
-    instantiate(state: State): Type[] {
-        return [this];
+    instantiate(state: State): Type {
+        return this;
     }
 
     getTypeVariables(free: boolean): Set<TypeVariable> {
         return new Set<TypeVariable>();
     }
 
-    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
-        for (let i = 0; i < type.length; ++i) {
-            if (type[i].equals(this)) {
-                return [];
+    matches(state: State, type: Type): [string, Type][] | undefined {
+        if (type instanceof PrimitiveType) {
+            if (this.name !== (<PrimitiveType> type).name
+                || this.parameters.length !== (<PrimitiveType> type).parameters.length) {
+                return undefined;
+            }
+            for (let i = 0; i < this.parameters.length; ++i) {
+                if (this.parameters[i].matches(state, (<PrimitiveType> type).parameters[i]) === undefined) {
+                    return undefined;
+                }
+            }
+
+            return [];
+        }
+
+        // TODO
+        if (type instanceof TypeVariable) {
+            if ((<TypeVariable> type).domain === []) {
+                return undefined;
             }
         }
 
@@ -54,6 +69,11 @@ export class PrimitiveType extends Type {
     }
 
     admitsEquality(state: State): boolean {
+        for (let i = 0; i < this.parameters.length; ++i) {
+            if (!this.parameters[i].admitsEquality(state)) {
+                return false;
+            }
+        }
         return state.getPrimitiveType(this.name).allowsEquality;
     }
 
@@ -93,20 +113,29 @@ export class PrimitiveType extends Type {
 }
 
 export class TypeVariable extends Type {
-    constructor(public name: string, public isFree: boolean = true, public position: Position = 0) {
+    constructor(public name: string, public isFree: boolean = true, public position: Position = 0,
+                public domain: Type[] = []) {
         super();
+    }
+
+    kill(): Type {
+        if (this.domain.length === 0) {
+            // Real type vars won't die so easily
+            return this;
+        }
+        return this.domain[0];
     }
 
     prettyPrint(): string {
         return this.name;
     }
 
-    instantiate(state: State): Type[] {
-        let res = state.getStaticValue(this.name);
-        if (!this.isFree || res === undefined) {
-            return [this];
-        }
-        return <Type[]> res;
+    instantiate(state: State): Type {
+        // let res = state.getStaticValue(this.name);
+        // if (!this.isFree || res === undefined) {
+        //     return this;
+        // }
+        throw new Error('ニャ－');
     }
 
     getTypeVariables(free: boolean): Set<TypeVariable> {
@@ -117,28 +146,37 @@ export class TypeVariable extends Type {
         return res;
     }
 
-    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
-        if (this.isFree) {
-            // TODO Filter out <this> type var from type?
-            return [[this.name, type]];
-        } else {
-            for (let i = 0; i < type.length; ++i) {
-                if (type[i].equals(this)) {
-                    return [];
-                }
-            }
-        }
-
-        // None of the possible types matched
-        return undefined;
+    matches(state: State, type: Type): [string, Type][] | undefined {
+        // TODO
+        throw new Error('ニャ－');
     }
 
     admitsEquality(state: State): boolean {
-        return this.name[1] === '\'';
+        for (let i = 0; i < this.domain.length; ++i) {
+            if (!this.domain[i].admitsEquality(state)) {
+                return false;
+            }
+        }
+        if (this.domain.length === 0 ) {
+            return this.name[1] === '\'';
+        } else {
+            return true;
+        }
     }
 
     equals(other: any): boolean {
-        return other instanceof TypeVariable && this.name === other.name;
+        if (!(other instanceof TypeVariable && this.name === other.name)) {
+            return false;
+        }
+        if (this.domain.length !== (<TypeVariable> other).domain.length) {
+            return false;
+        }
+        for (let i = 0; i < this.domain.length; ++i) {
+            if (!this.domain[i].equals((<TypeVariable> other).domain[i])) {
+                return false;
+            }
+        }
+        return true;
     }
 }
 
@@ -147,7 +185,7 @@ export class RecordType extends Type {
         super();
     }
 
-    instantiate(state: State): Type[] {
+    instantiate(state: State): Type {
         // TODO
         throw new Error('ニャ－');
     }
@@ -157,7 +195,7 @@ export class RecordType extends Type {
         throw new Error('ニャ－');
     }
 
-    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+    matches(state: State, type: Type): [string, Type][] | undefined {
         // TODO
         throw new Error('ニャ－');
     }
@@ -228,7 +266,7 @@ export class FunctionType extends Type {
         super();
     }
 
-    instantiate(state: State): Type[] {
+    instantiate(state: State): Type {
         // TODO
         throw new Error('ニャ－');
     }
@@ -238,7 +276,7 @@ export class FunctionType extends Type {
         throw new Error('ニャ－');
     }
 
-    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+    matches(state: State, type: Type): [string, Type][] | undefined {
         // TODO
         throw new Error('ニャ－');
     }
@@ -272,12 +310,12 @@ export class CustomType extends Type {
         super();
     }
 
-    instantiate(state: State): Type[] {
+    instantiate(state: State): Type {
         if (this.typeArguments.length > 0) {
             // TODO
             throw new Error('ニャ－');
         } else {
-            return [this];
+            return this;
         }
     }
 
@@ -289,7 +327,7 @@ export class CustomType extends Type {
         return new Set<TypeVariable>();
     }
 
-    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+    matches(state: State, type: Type): [string, Type][] | undefined {
         // TODO
         throw new Error('ニャ－');
     }
