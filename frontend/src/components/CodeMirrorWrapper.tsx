@@ -2,7 +2,7 @@ import * as React from 'react';
 
 const CodeMirror: any = require('react-codemirror');
 require('codemirror/lib/codemirror.css');
-require('codemirror/mode/mllike/mllike.js');
+require('../mllike.js');
 require('codemirror/addon/edit/matchbrackets.js');
 import './CodeMirrorWrapper.css';
 import {API} from '../API';
@@ -507,7 +507,7 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
     render() {
         const options = {
             lineNumbers: true,
-            mode: 'mllike',
+            mode: 'text/sml',
             indentUnit: 4,
             matchBrackets: true,
             lineWrapping: true,
