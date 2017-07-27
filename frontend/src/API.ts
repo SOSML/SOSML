@@ -74,7 +74,7 @@ export class API {
                 }
             );
         }
-        return fetch('/share/' + hash,
+        return fetch('/api/share/' + hash,
             {
                 headers: {
                   'Accept': 'text/plain',
@@ -85,6 +85,25 @@ export class API {
         ).then(function(response: any){
             return response.text();
         });
+    }
+
+    static createInterpreter(): any {
+        // TODO: return new interpreter
+        let untypedWindow: any = window;
+        if (untypedWindow.Interpreter) { // It's loaded!
+            return untypedWindow.Interpreter.Interpreter;
+        } else {
+            return {
+                interpret: function(partial: string, oldState: any): [any, boolean, any] {
+                    if (partial.indexOf('NOPE') !== -1 && partial.indexOf(';') === -1) {
+                        // Simulate failure
+                        return [null, true, 'Generic error'];
+                    } else {
+                        return [{'partial': partial, 'prev': oldState}, false, null];
+                    }
+                }
+            };
+        }
     }
 }
 

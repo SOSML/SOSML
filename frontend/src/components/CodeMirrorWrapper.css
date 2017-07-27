@@ -16,3 +16,7 @@
 .eval-success {
     background-color: rgba(190, 230, 190, 200);
 }
+
+.eval-fail {
+    background-color: rgba(230, 190, 190, 200);
+}
