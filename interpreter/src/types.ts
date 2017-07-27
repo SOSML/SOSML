@@ -1,4 +1,4 @@
-import { Position } from './errors';
+import { Position, InternalInterpreterError } from './errors';
 import { State } from './state';
 
 export abstract class Type {
@@ -255,6 +255,30 @@ export class RecordType extends Type {
 
 
     prettyPrint(): string {
+        let isTuple = true;
+        for (let i = 1; i <= this.elements.size; ++i) {
+            if (!this.elements.has('' + i)) {
+                isTuple = false;
+            }
+        }
+
+        if (isTuple) {
+            let res: string = '(';
+            for (let i = 1; i <= this.elements.size; ++i) {
+                if (i > 1) {
+                    res += ' * ';
+                }
+                let sub = this.elements.get('' + i);
+                if (sub !== undefined) {
+                    res += sub.prettyPrint();
+                } else {
+                    throw new InternalInterpreterError(-1,
+                        'How did we loose this value? It was there before. I promise…');
+                }
+            }
+            return res + ')';
+        }
+
         // TODO: print as Tuple if possible
         let result: string = '{';
         let first: boolean = true;
@@ -341,8 +365,8 @@ export class FunctionType extends Type {
 
 
     prettyPrint(): string {
-        return '( ' + this.parameterType.prettyPrint()
-            + ' -> ' + this.returnType.prettyPrint() + ' )';
+        return '(' + this.parameterType.prettyPrint()
+            + ' -> ' + this.returnType.prettyPrint() + ')';
     }
 
     simplify(): FunctionType {
@@ -401,7 +425,7 @@ export class CustomType extends Type {
     prettyPrint(): string {
         let result: string = '';
         if (this.typeArguments.length > 1) {
-            result += '( ';
+            result += '(';
         }
         for (let i = 0; i < this.typeArguments.length; ++i) {
             if (i > 0) {
@@ -410,7 +434,7 @@ export class CustomType extends Type {
             result += this.typeArguments[i].prettyPrint();
         }
         if (this.typeArguments.length > 1) {
-            result += ' )';
+            result += ')';
         }
         if (this.typeArguments.length > 0) {
             result += ' ';
@@ -448,14 +472,14 @@ export class TupleType extends Type {
     }
 
     prettyPrint(): string {
-        let result: string = '( ';
+        let result: string = '(';
         for (let i: number = 0; i < this.elements.length; ++i) {
             if (i > 0) {
                 result += ' * ';
             }
             result += this.elements[i].prettyPrint();
         }
-        return result + ' )';
+        return result + ')';
     }
 
     simplify(): RecordType {
