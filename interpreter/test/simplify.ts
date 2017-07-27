@@ -300,11 +300,9 @@ function fvalbind_helper(expr: Expr.Expression) {
 }
 
 it("fvalbind", () => {
-    /*
     expect(parse("fun f x = 1;").simplify()).toEqualWithType(
         parse("fun f = fn fish => case (fish) of (x) => 1;").simplify()
     )
-    */
     //TODO
 });
 
