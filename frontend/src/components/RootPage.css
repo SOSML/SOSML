@@ -13,3 +13,7 @@
 .flexy {
     flex: 1 0 auto;
 }
+
+nav {
+    margin-bottom: 3px !important;
+}

@@ -24,7 +24,10 @@ interface Props {
     readOnly: boolean;
     onCodeChange?: (x: string) => void;
     initialCode: string;
+    fileControls: any;
 }
+
+const SHARE_LINK_ERROR = ':ERROR';
 
 class Playground extends React.Component<Props, State> {
     constructor(props: any) {
@@ -62,17 +65,32 @@ class Playground extends React.Component<Props, State> {
             );
         }
         let modal = (
-            <Modal show={this.state.shareLink !== ''} onHide={this.closeShareModal}>
+            <Modal show={this.state.shareLink !== '' && this.state.shareLink !== SHARE_LINK_ERROR}
+            onHide={this.closeShareModal}>
                 <Modal.Header closeButton={true}>
                     <Modal.Title>Teilen link</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <pre>{this.state.shareLink}</pre>
-                    Diesen Link können Sie anderen Personen geben, die dann den
-                    Code sehen können den Sie gerade geschrieben haben.
-                    Wenn Sie ihren Code weiter verändern wird dies nicht von
-                    dem Link übernommen, Sie müssen in diesem Fall noch einen
-                    neuen Link erstellen.
+                    <p className="text-justify">
+                        Diesen Link können Sie anderen Personen geben, die dann den
+                        Code sehen können den Sie gerade geschrieben haben.
+                        Der Link beinhaltet den Code der sich beim Teilen im Editor
+                        befunden hat, wenn sie Änderungen vornehmen wollen Teilen sie erneuert.
+                    </p>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={this.closeShareModal}>Schließen</Button>
+                </Modal.Footer>
+            </Modal>
+        );
+        let errorModal = (
+            <Modal show={this.state.shareLink === SHARE_LINK_ERROR} onHide={this.closeShareModal}>
+                <Modal.Header closeButton={true}>
+                    <Modal.Title>Fehler beim Teilen</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    Es gab einen Fehler beim erstellen eines Links zum Teilen.
                 </Modal.Body>
                 <Modal.Footer>
                     <Button onClick={this.closeShareModal}>Schließen</Button>
@@ -88,15 +106,9 @@ class Playground extends React.Component<Props, State> {
                                 readOnly={this.props.readOnly} outputCallback={this.handleOutputChange}
                                 useInterpreter={!this.state.useServer} />
                             )}
-                            footer={(
-                            <div>
-                                {executeOnServer}
-                                <div className="miniSpacer" />
-                                {evaluateIn}
-                                <div className="miniSpacer" />
-                                <Button bsSize="small" bsStyle="primary" onClick={this.handleSwitchMode}>
-                                    Umschalten
-                                </Button>
+                            header={(
+                            <div className="headerButtons">
+                                {this.props.fileControls}
                                 <div className="miniSpacer" />
                                 <Button bsSize="small" bsStyle="primary" onClick={this.handleShare}>Teilen</Button>
                             </div>
@@ -105,10 +117,22 @@ class Playground extends React.Component<Props, State> {
                     <div className="flexcomponent flexy">
                         <MiniWindow content={
                             <div>{lineItems}</div>}
-                        title="Ausgabe" className="flexy" updateAnchor={this.state.sizeAnchor} />
+                        title="Ausgabe" className="flexy" updateAnchor={this.state.sizeAnchor}
+                        header={ (
+                            <div className="headerButtons">
+                                {evaluateIn}
+                                <div className="miniSpacer" />
+                                <Button bsSize="small" bsStyle="primary" onClick={this.handleSwitchMode}>
+                                    Umschalten
+                                </Button>
+                                <div className="miniSpacer" />
+                                {executeOnServer}
+                            </div>
+                        ) } />
                     </div>
                 </SplitterLayout>
                 {modal}
+                {errorModal}
             </div>
         );
     }
@@ -147,10 +171,9 @@ class Playground extends React.Component<Props, State> {
 
     handleRun() {
         WebserverAPI.fallbackInterpreter(this.state.code).then((val) => {
-            this.setState(prevState => {
-                let ret: any = {output: val};
-                return ret;
-            });
+            this.setState({output: val});
+        }).catch(() => {
+            this.setState({output: 'Fehler: konnte keine Verbindung zum Server herstellen'});
         });
     }
 
@@ -175,6 +198,8 @@ class Playground extends React.Component<Props, State> {
             this.setState(prevState => {
                 return {shareLink: window.location.host + '/share/' + hash};
             });
+        }).catch(() => {
+            this.setState({shareLink: SHARE_LINK_ERROR});
         });
     }
 
