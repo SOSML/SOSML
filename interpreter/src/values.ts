@@ -438,6 +438,8 @@ export class ConstructedValue extends Value {
             }
 
             return result + ']';
+        } else if (this.constructorName === 'nil') {
+            return '[]';
         }
 
         let result: string =  this.constructorName;
