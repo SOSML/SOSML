@@ -409,7 +409,7 @@ export class ConstructedValue extends Value {
 
     prettyPrint(state: State|undefined): string {
         if (this.constructorName === '::') {
-            let res = '[ ';
+            let res = '[';
 
             let list: ConstructedValue = this;
             while (list.constructorName !== 'nil') {
@@ -437,9 +437,9 @@ export class ConstructedValue extends Value {
                 }
             }
 
-            return res + ' ]';
+            return res + ']';
         } else if (this.constructorName === 'nil') {
-            return '[ ]';
+            return '[]';
         }
 
         if (state !== undefined) {
