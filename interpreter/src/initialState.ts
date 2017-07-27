@@ -464,12 +464,12 @@ let initialState: State = new State(
         '::':       false
     },
     {
-        'nil':      0,
-        '::':       0,
-        'Match':    0,
-        'Bind':     0,
-        'Div':      0,
-        'Overflow': 0
+        'nil':      1,
+        '::':       1,
+        'Match':    1,
+        'Bind':     1,
+        'Div':      1,
+        'Overflow': 1
     }
 );
 
