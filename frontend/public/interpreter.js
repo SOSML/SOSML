@@ -1758,7 +1758,7 @@ var ConstructedValue = (function (_super) {
     }
     ConstructedValue.prototype.prettyPrint = function (state) {
         if (this.constructorName === '::') {
-            var res = '[ ';
+            var res = '[';
             var list = this;
             while (list.constructorName !== 'nil') {
                 if (list.constructorName !== '::') {
@@ -1783,10 +1783,10 @@ var ConstructedValue = (function (_super) {
                     throw new errors_1.InternalInterpreterError(-1, 'Is this even a list? 3 "' + list.constructorName + '".');
                 }
             }
-            return res + ' ]';
+            return res + ']';
         }
         else if (this.constructorName === 'nil') {
-            return '[ ]';
+            return '[]';
         }
         if (state !== undefined) {
             var infix = state.getInfixStatus(new lexer_1.IdentifierToken(this.constructorName, -1));
