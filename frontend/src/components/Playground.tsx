@@ -75,9 +75,8 @@ class Playground extends React.Component<Props, State> {
                     <p className="text-justify">
                         Diesen Link können Sie anderen Personen geben, die dann den
                         Code sehen können den Sie gerade geschrieben haben.
-                        Wenn Sie ihren Code weiter verändern wird dies nicht von
-                        dem Link übernommen, Sie müssen in diesem Fall noch einen
-                        neuen Link erstellen.
+                        Der Link beinhaltet den Code der sich beim Teilen im Editor
+                        befunden hat, wenn sie Änderungen vornehmen wollen Teilen sie erneuert.
                     </p>
                 </Modal.Body>
                 <Modal.Footer>
