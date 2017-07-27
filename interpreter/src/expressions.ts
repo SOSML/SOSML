@@ -1,4 +1,4 @@
-import { PrimitiveType, RecordType, Type, TypeVariable } from './types';
+import { PrimitiveType, /* RecordType, */ Type, TypeVariable } from './types';
 import { Declaration, ValueBinding, ValueDeclaration } from './declarations';
 import { Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConstantToken,
          NumericToken, WordConstantToken, CharacterConstantToken,
@@ -110,16 +110,13 @@ export class ValueIdentifier extends Expression implements Pattern {
     simplify(): ValueIdentifier { return this; }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+        // TODO
         return this.name.getText();
     }
 
     getType(state: State): Type[] {
-        let res = state.getStaticValue(this.name.getText());
-        if (res === undefined) {
-            throw new ElaborationError(this.position, 'Unbound value identifier "'
-                + this.name.getText() + '".');
-        }
-        return res;
+        // TODO
+        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
     }
 
     compute(state: State): [Value, boolean] {
@@ -184,7 +181,8 @@ export class Record extends Expression implements Pattern {
     }
 
     getType(state: State): Type[] {
-        let e: Map<string, Type[]> = new Map<string, Type[]>();
+        throw new Error('nyian');
+        /* let e: Map<string, Type> = new Map<string, Type>();
         for (let i: number = 0; i < this.entries.length; ++i) {
             let name: string = this.entries[i][0];
             let exp: Expression = this.entries[i][1];
@@ -194,8 +192,7 @@ export class Record extends Expression implements Pattern {
             }
             e.set(name, exp.getType(state));
         }
-        // TODO complete stuff
-        return [new RecordType(e, this.complete)];
+        return [new RecordType(e, this.complete)]; */
     }
 
     simplify(): Record {

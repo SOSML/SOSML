@@ -15,10 +15,10 @@ let stringType = new PrimitiveType('string');
 let charType = new PrimitiveType('char');
 
 function functionType(type: Type): Type {
-    return new FunctionType([new TupleType([type, type])], [type]).simplify();
+    return new FunctionType(new TupleType([type, type]), type).simplify();
 }
 function bfunctionType(type: Type): Type {
-    return new FunctionType([new TupleType([type, type])], [boolType]).simplify();
+    return new FunctionType(new TupleType([type, type]), boolType).simplify();
 }
 
 let typeVar = new TypeVariable('\'a');
@@ -30,15 +30,15 @@ let initialState: State = new State(
     new StaticBasis(
         {
             'unit':     [new TypeInformation(
-                new FunctionType([new TupleType([])], [new TupleType([])]).simplify(), []), false],
+                new FunctionType(new TupleType([]), new TupleType([])).simplify(), []), false],
             'bool':     [new TypeInformation(new PrimitiveType('bool'),  ['true', 'false']), false],
             'int':      [new TypeInformation(new PrimitiveType('int'),   []), false],
             'word':     [new TypeInformation(new PrimitiveType('word'),  []), false],
             'real':     [new TypeInformation(new PrimitiveType('real'),  []), false],
             'string':   [new TypeInformation(new PrimitiveType('string'), []), false],
             'char':     [new TypeInformation(new PrimitiveType('char'),  []), false],
-            'list':     [new TypeInformation(new PrimitiveType('list', [[typeVar]]), ['nil', '::']), false],
-            'ref':      [new TypeInformation(new PrimitiveType('ref', [[typeVar]]), ['ref']), false],
+            'list':     [new TypeInformation(new PrimitiveType('list', [typeVar]), ['nil', '::']), false],
+            'ref':      [new TypeInformation(new PrimitiveType('ref', [typeVar]), ['ref']), false],
             'exn':      [new TypeInformation(new PrimitiveType('exn'), []), false]
         },
         {
@@ -56,27 +56,25 @@ let initialState: State = new State(
                          bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
             '>=':       [[bfunctionType(intType), bfunctionType(wordType),
                          bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
-            '=':        [[new FunctionType([new TupleType([eqTypeVar, eqTypeVar])], [boolType]).simplify()], false],
-            '<>':       [[new FunctionType([new TupleType([eqTypeVar, eqTypeVar])], [boolType]).simplify()], false],
+            '=':        [[new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify()], false],
+            '<>':       [[new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify()], false],
             // ':='
             // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
             'true':     [[new PrimitiveType('bool')], false],
             'false':    [[new PrimitiveType('bool')], false],
-            'nil':      [[new PrimitiveType('list', [[typeVar]])], false],
+            'nil':      [[new PrimitiveType('list', [typeVar])], false],
             '::':       [[new FunctionType(
-                            [new TupleType([typeVar, new PrimitiveType('list', [[typeVar]])])],
-                            [new PrimitiveType('list', [[typeVar]])]).simplify()], false],
+                            new TupleType([typeVar, new PrimitiveType('list', [typeVar])]),
+                            new PrimitiveType('list', [typeVar])).simplify()], false],
             'Match':    [[new PrimitiveType('exn')], false],
             'Bind':     [[new PrimitiveType('exn')], false],
             'Div':      [[new PrimitiveType('exn')], false],
             'Overflow': [[new PrimitiveType('exn')], false],
             '^':        [[functionType(stringType)], false],
-            'explode':  [[new FunctionType([stringType], [new PrimitiveType('list', [[charType]])]).simplify()], false],
-            'implode':  [[new FunctionType([new PrimitiveType('list', [[charType]])], [stringType]).simplify()], false],
-            '~':        [[new FunctionType([intType], [intType]),
-                new FunctionType([realType], [realType])], false],
-            'abs':      [[new FunctionType([intType], [intType]),
-                new FunctionType([realType], [realType])], false],
+            'explode':  [[new FunctionType(stringType, new PrimitiveType('list', [charType])).simplify()], false],
+            'implode':  [[new FunctionType(new PrimitiveType('list', [charType]), stringType).simplify()], false],
+            '~':        [[new FunctionType(intType, intType), new FunctionType(realType, realType)], false],
+            'abs':      [[new FunctionType(intType, intType), new FunctionType(realType, realType)], false],
         }
     ),
     new DynamicBasis(

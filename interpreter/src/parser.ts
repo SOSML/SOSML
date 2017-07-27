@@ -790,7 +790,7 @@ export class Parser {
          * tyrow ::= lab : ty [, tyrow]     Record(comp:boolean, entries: [string, Type])
          */
         let firstTok = this.currentToken();
-        let elements = new Map<string, Type[]>();
+        let elements = new Map<string, Type>();
         let firstIt = true;
         while (true) {
             let curTok = this.currentToken();
@@ -818,7 +818,7 @@ export class Parser {
                         throw new ParserError('Duplicate record label "' + curTok.getText()
                             + '".', curTok.position);
                     }
-                    elements.set(curTok.getText(), [this.parseType()]);
+                    elements.set(curTok.getText(), this.parseType());
                     continue;
                 }
                 throw new ParserError('Expected ":".', nextTok.position);
@@ -862,18 +862,18 @@ export class Parser {
                 throw new ParserError('Use "{}" or "unit" to denote the unit type.',
                     this.currentToken().position);
             }
-            let res = [[this.parseType()]];
+            let res = [this.parseType()];
             while (true) {
                 let nextTok = this.currentToken();
                 if (this.checkKeywordToken(nextTok, ',')) {
                     ++this.position;
-                    res.push([this.parseType()]);
+                    res.push(this.parseType());
                     continue;
                 }
                 if (this.checkKeywordToken(nextTok, ')')) {
                     ++this.position;
                     if (res.length === 1) {
-                        return res[0][0];
+                        return res[0];
                     }
                     this.assertIdentifierOrLongToken(this.currentToken());
                     let name = this.currentToken();
@@ -904,7 +904,7 @@ export class Parser {
         }
         ++this.position;
         let tgTy = this.parseType();
-        return new FunctionType([curTy], [tgTy], curTok.position);
+        return new FunctionType(curTy, tgTy, curTok.position);
     }
 
     parseTupleType(): Type {
@@ -941,12 +941,12 @@ export class Parser {
                 }
                 if (this.state.getPrimitiveType(nextTok.getText()).isPrimitiveType) {
                     ++this.position;
-                    ty = new PrimitiveType(nextTok.getText(), [[ty]], curTok.position);
+                    ty = new PrimitiveType(nextTok.getText(), [ty], curTok.position);
                     continue;
                 }
             }
             ++this.position;
-            ty = new CustomType(nextTok.getText(), [[ty]], curTok.position);
+            ty = new CustomType(nextTok.getText(), [ty], curTok.position);
             continue;
         }
         return ty;
