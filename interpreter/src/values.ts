@@ -102,7 +102,7 @@ export class StringValue extends Value {
                 case '\n': pretty += '\\n'; break;
                 case '\t': pretty += '\\t'; break;
                 case '\r': pretty += '\\r'; break;
-                case '\a': pretty += '\\a'; break;
+                case '\x07': pretty += '\\a'; break;
                 case '\b': pretty += '\\b'; break;
                 case '\v': pretty += '\\v'; break;
                 case '\f': pretty += '\\f'; break;

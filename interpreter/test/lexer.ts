@@ -576,6 +576,8 @@ it('string constants', () => {
     let testcase_formatting_ignore2: string = '"\\ \t\n \\working?"';
     let testcase_formatting_incomplete: string = '"\\ \n \t \t';
     let testcase_formatting_ignore_wrong: string = '"\\   a\\"';
+    let testcase_bell_escape1: string = '"\\a"';
+    let testcase_bell_escape2: string = '"\\^G"';
 
     expect(Lexer.lex(testcase_empty)).toEqualWithType([
         new Lexer.StringConstantToken(testcase_empty, 0, '')
@@ -589,7 +591,7 @@ it('string constants', () => {
     ]);
     expect(() => { Lexer.lex(testcase_newline); }).toThrow(Errors.LexerError);
     expect(Lexer.lex(testcase_all_basic_escapes)).toEqualWithType([
-        new Lexer.StringConstantToken(testcase_all_basic_escapes, 0, '\a \b \t \n \v \f \r " \\')
+        new Lexer.StringConstantToken(testcase_all_basic_escapes, 0, '\x07 \b \t \n \v \f \r " \\')
     ]);
     expect(Lexer.lex(testcase_control_escapes)).toEqualWithType([
         new Lexer.StringConstantToken(testcase_control_escapes, 0, '\x00\x0A\x1E\x1F')
@@ -625,6 +627,12 @@ it('string constants', () => {
     ]);
     expect(() => { Lexer.lex(testcase_formatting_incomplete); }).toThrow(Lexer.IncompleteError);
     expect(() => { Lexer.lex(testcase_formatting_ignore_wrong); }).toThrow(Errors.LexerError);
+    expect(Lexer.lex(testcase_bell_escape1)).toEqualWithType([
+        new Lexer.StringConstantToken(testcase_bell_escape1, 0, '\x07')
+    ]);
+    expect(Lexer.lex(testcase_bell_escape2)).toEqualWithType([
+        new Lexer.StringConstantToken(testcase_bell_escape2, 0, '\x07')
+    ]);
 });
 
 it('character constants', () => {
