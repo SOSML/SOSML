@@ -8,7 +8,7 @@ import { int, char } from './lexer';
 import { Match } from './expressions';
 
 export abstract class Value {
-    abstract prettyPrint(): string;
+    abstract prettyPrint(state: State|undefined|undefined): string;
     equals(other: Value): boolean {
         throw new InternalInterpreterError(-1,
             'Tried comparing incomparable things.');
@@ -27,7 +27,7 @@ export class BoolValue extends Value {
         return this.value === other.value;
     }
 
-    prettyPrint() {
+    prettyPrint(state: State|undefined) {
         if (this.value) {
             return 'true';
         } else {
@@ -43,9 +43,8 @@ export class CharValue extends Value {
         super();
     }
 
-    prettyPrint(): string {
-        // TODO
-        return '#"<' + this.value + '>"';
+    prettyPrint(state: State|undefined): string {
+        return '#' + new StringValue(this.value).prettyPrint(state);
     }
 
     compareTo(other: CharValue): number {
@@ -96,8 +95,29 @@ export class StringValue extends Value {
         super();
     }
 
-    prettyPrint(): string {
-        return '"' + this.value + '"';
+    prettyPrint(state: State|undefined): string {
+        let pretty = '';
+        for (let chr of this.value) {
+            switch (chr) {
+                case '\n': pretty += '\\n'; break;
+                case '\t': pretty += '\\t'; break;
+                case '\r': pretty += '\\r'; break;
+                case '\a': pretty += '\\a'; break;
+                case '\b': pretty += '\\b'; break;
+                case '\v': pretty += '\\v'; break;
+                case '\f': pretty += '\\f'; break;
+                case '\x7F': pretty += '\\127'; break;
+                case '\xFF': pretty += '\\255'; break;
+                default:
+                    if (chr.charCodeAt(0) < 32) {
+                        pretty += '\\^' + String.fromCharCode(chr.charCodeAt(0) + 64);
+                    } else {
+                        pretty += chr;
+                    }
+                    break;
+            }
+        }
+        return '"' + pretty + '"';
     }
 
     equals(other: StringValue) {
@@ -138,7 +158,7 @@ export class Word extends Value {
         super();
     }
 
-    prettyPrint(): string {
+    prettyPrint(state: State|undefined): string {
         return '' + this.value;
     }
 
@@ -172,7 +192,7 @@ export class Integer extends Value {
         super();
     }
 
-    prettyPrint(): string {
+    prettyPrint(state: State|undefined): string {
         return '' + this.value;
     }
 
@@ -208,9 +228,12 @@ export class Real extends Value {
         super();
     }
 
-    prettyPrint(): string {
-        // TODO in TS this may produce ints
-        return '' + this.value;
+    prettyPrint(state: State|undefined): string {
+        let str = '' + this.value;
+        if (str.search(/\./) === -1) {
+            str += '.0';
+        }
+        return str;
     }
 
     compareTo(val: Value) {
@@ -261,8 +284,31 @@ export class RecordValue extends Value {
         super();
     }
 
-    prettyPrint(): string {
-        // TODO: print as Tuple if possible
+    prettyPrint(state: State|undefined): string {
+        let isTuple = true;
+        for (let i = 1; i <= this.entries.size; ++i) {
+            if (!this.entries.has('' + i)) {
+                isTuple = false;
+            }
+        }
+
+        if (isTuple) {
+            let result: string = '(';
+            for (let i = 1; i <= this.entries.size; ++i) {
+                if (i > 1) {
+                    result += ', ';
+                }
+                let sub = this.entries.get('' + i);
+                if (sub !== undefined) {
+                    result += sub.prettyPrint(state);
+                } else {
+                    throw new InternalInterpreterError(-1,
+                        'How did we loose this value? It was there before. I swear…');
+                }
+            }
+            return result + ')';
+        }
+
         let result: string = '{ ';
         let first: boolean = true;
         this.entries.forEach((value: Value, key: string) => {
@@ -271,7 +317,7 @@ export class RecordValue extends Value {
             } else {
                 first = false;
             }
-            result += key + ' = ' + value.prettyPrint();
+            result += key + ' = ' + value.prettyPrint(state);
         });
         return result + ' }';
     }
@@ -325,20 +371,8 @@ export class FunctionValue extends Value {
         super();
     }
 
-    prettyPrint(): string {
-        let res = 'fn ' + '[';
-        for (let i = 0; i < this.recursives.length; ++i) {
-            if (i > 0) {
-                res += ', ';
-            }
-            res += this.recursives[i][0] + ' ↦ ' + this.recursives[i][1].prettyPrint();
-        }
-        res += '] (';
-
-        this.state.getDefinedIdentifiers().forEach((val: string) => {
-            res += ' ' + val;
-        });
-        return res + ' )';
+    prettyPrint(state: State|undefined): string {
+        return 'fn';
     }
 
     // Computes the function on the given argument,
@@ -360,8 +394,8 @@ export class FunctionValue extends Value {
     }
 
     equals(other: Value): boolean {
-        throw new InternalInterpreterError(-1, 'You simply cannot compare "' + this.prettyPrint()
-            + '" and "' + other.prettyPrint() + '".');
+        throw new InternalInterpreterError(-1, 'You simply cannot compare "' + this.prettyPrint(undefined)
+            + '" and "' + other.prettyPrint(undefined) + '".');
     }
 }
 
@@ -373,7 +407,41 @@ export class ConstructedValue extends Value {
         super();
     }
 
-    prettyPrint(): string {
+    prettyPrint(state: State|undefined): string {
+        if (this.constructorName === '::') {
+            let result = '[';
+
+            let list: ConstructedValue = this;
+            while (list.constructorName !== 'nil') {
+                if (list.constructorName !== '::') {
+                    throw new InternalInterpreterError(-1,
+                        'Is this even a list? 1 (' + list.constructorName + ')');
+                }
+                let arg = list.argument;
+                if (arg instanceof RecordValue && arg.entries.size === 2) {
+                    let a1 = arg.getValue('1');
+                    let a2 = arg.getValue('2');
+                    if (a1 instanceof Value && a2 instanceof ConstructedValue) {
+                        if (list !== this) {
+                            result += ', ';
+                        }
+                        result += a1.prettyPrint(state);
+                        list = a2;
+                    } else {
+                        throw new InternalInterpreterError(-1,
+                            'Is this even a list? 2 (' + list.constructorName + ')');
+                    }
+                } else {
+                    throw new InternalInterpreterError(-1,
+                        'Is this even a list? 3 (' + list.constructorName + ')');
+                }
+            }
+
+            return result + ']';
+        } else if (this.constructorName === 'nil') {
+            return '[]';
+        }
+
         let result: string =  this.constructorName;
         if (this.id > 1) {
             result += '/' + (this.id - 1);
@@ -381,7 +449,7 @@ export class ConstructedValue extends Value {
             result += ' (predefined)';
         }
         if (this.argument) {
-            result += ' ' + this.argument.prettyPrint();
+            result += ' ' + this.argument.prettyPrint(state);
         }
         return result;
     }
@@ -409,11 +477,6 @@ export class ConstructedValue extends Value {
         }
     }
 
-    implode(): StringValue {
-        // TODO if this CustomType is a List of CharValue, implode them into a string.
-        throw new InternalInterpreterError(-1, 'nyi\'an');
-    }
-
     isConstructedValue(): boolean { return true; }
 }
 
@@ -424,7 +487,7 @@ export class ExceptionValue extends Value {
         super();
     }
 
-    prettyPrint(): string {
+    prettyPrint(state: State|undefined): string {
         let result: string = this.constructorName;
         if (this.id > 1) {
             result += '/' + (this.id - 1);
@@ -432,7 +495,7 @@ export class ExceptionValue extends Value {
             result += ' (predefined)';
         }
         if (this.argument) {
-            result += ' ' + this.argument.prettyPrint();
+            result += ' ' + this.argument.prettyPrint(state);
         }
         return result;
     }
@@ -470,8 +533,8 @@ export class PredefinedFunction extends Value {
         super();
     }
 
-    prettyPrint(): string {
-        return this.name + ' (predefined)';
+    prettyPrint(state: State|undefined): string {
+        return 'fn';
     }
 
     equals(other: Value): boolean {
@@ -504,7 +567,7 @@ export class ValueConstructor extends Value {
         return new ConstructedValue(this.constructorName, parameter, this.id);
     }
 
-    prettyPrint() {
+    prettyPrint(state: State|undefined) {
         let result = this.constructorName;
         if (this.id > 1) {
             result += '/' + (this.id - 1);
@@ -537,7 +600,7 @@ export class ExceptionConstructor extends Value {
         return new ExceptionValue(this.exceptionName, parameter, this.id);
     }
 
-    prettyPrint() {
+    prettyPrint(state: State|undefined) {
         let result = this.exceptionName;
         if (this.id > 1) {
             result += '/' + (this.id - 1);
