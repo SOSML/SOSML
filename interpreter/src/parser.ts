@@ -1041,8 +1041,8 @@ export class Parser {
 
                         if (this.state.getInfixStatus(this.currentToken()) === undefined
                             || !this.state.getInfixStatus(this.currentToken()).infix) {
-                            throwError = true;
                             if (throwIfError) {
+                                throwError = true;
                                 throw e;
                             }
                             throw new ParserError('"' + this.currentToken().getText()
@@ -1054,9 +1054,6 @@ export class Parser {
                         let right = this.parseAtomicPattern();
                         args.push(new Tuple(-1, [left, right]));
                     } catch (f) {
-                        if (throwError) {
-                            throw f;
-                        }
                         // It wasn't infix at all, but simply wrong.
                         throw e;
                     }
