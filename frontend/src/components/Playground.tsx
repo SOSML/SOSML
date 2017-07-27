@@ -2,7 +2,7 @@ import * as React from 'react';
 
 import MiniWindow from './MiniWindow';
 import CodeMirrorWrapper from './CodeMirrorWrapper';
-import { Button, ButtonToolbar /*, Glyphicon*/ } from 'react-bootstrap';
+import { Button, Modal } from 'react-bootstrap';
 import './Playground.css';
 import {API as WebserverAPI} from '../API';
 var SplitterLayout = require('react-splitter-layout').default; // MEGA-HAX because of typescript
@@ -16,6 +16,8 @@ interface State {
     output: string;
     code: string;
     sizeAnchor: any;
+    useServer: boolean;
+    shareLink: string;
 }
 
 interface Props {
@@ -28,7 +30,10 @@ class Playground extends React.Component<Props, State> {
     constructor(props: any) {
         super(props);
 
-        this.state = { output: '', code: '', sizeAnchor: 0 };
+        this.state = {
+            output: '', code: '', sizeAnchor: 0, useServer: false,
+            shareLink: ''
+        };
 
         this.handleLeftResize = this.handleLeftResize.bind(this);
         this.handleRightResize = this.handleRightResize.bind(this);
@@ -36,54 +41,80 @@ class Playground extends React.Component<Props, State> {
         this.handleCodeChange = this.handleCodeChange.bind(this);
         this.handleSplitterUpdate = this.handleSplitterUpdate.bind(this);
         this.handleBrowserResize = this.handleBrowserResize.bind(this);
+        this.handleOutputChange = this.handleOutputChange.bind(this);
+        this.handleSwitchMode = this.handleSwitchMode.bind(this);
+        this.handleShare = this.handleShare.bind(this);
+        this.closeShareModal = this.closeShareModal.bind(this);
     }
 
     render() {
-        // <div className="container playground">
-        // let glyphLeft: string = 'resize-full';
-        // let glyphRight: string = 'resize-full';
         let lines: string[] = this.state.output.split('\n');
+        var key = 0;
         let lineItems = lines.map((line) =>
-            <div key={line}>{line}</div>
+            <div key={line + (key++)}>{line}</div>
         );
-        // let codeNull: string | null = localStorage.getItem('tmpCode');
         let code: string = this.props.initialCode;
-        /* if (typeof codeNull === 'string') {
-            code = codeNull;
-        } */
+        let evaluateIn: string = (this.state.useServer) ? 'Ausführen auf dem Server' : 'Ausführen im Browser';
+        let executeOnServer: JSX.Element | undefined;
+        if (this.state.useServer) {
+            executeOnServer = (
+                <Button bsSize="small" bsStyle="primary" onClick={this.handleRun}>Ausführen</Button>
+            );
+        }
+        let modal = (
+            <Modal show={this.state.shareLink !== ''} onHide={this.closeShareModal}>
+                <Modal.Header closeButton={true}>
+                    <Modal.Title>Teilen link</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <pre>{this.state.shareLink}</pre>
+                    Diesen Link können Sie anderen Personen geben, die dann den
+                    Code sehen können den Sie gerade geschrieben haben.
+                    Wenn Sie ihren Code weiter verändern wird dies nicht von
+                    dem Link übernommen, Sie müssen in diesem Fall noch einen
+                    neuen Link erstellen.
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={this.closeShareModal}>Schließen</Button>
+                </Modal.Footer>
+            </Modal>
+        );
         return (
             <div className="playground">
                 <SplitterLayout onUpdate={this.handleSplitterUpdate}>
                     <div className="flexcomponent flexy">
                         <MiniWindow content={(
                                 <CodeMirrorWrapper flex={true} onChange={this.handleCodeChange} code={code}
-                                readOnly={this.props.readOnly} />
+                                readOnly={this.props.readOnly} outputCallback={this.handleOutputChange}
+                                useInterpreter={!this.state.useServer} />
                             )}
                             footer={(
-                            <ButtonToolbar>
-                                <Button bsSize="small" bsStyle="primary" onClick={this.handleRun}>Ausführen</Button>
-                            </ButtonToolbar>
-                        )} /* header={(
-                            <ButtonToolbar className="pull-right">
-                                <Button bsSize="small" onClick={this.handleLeftResize}>
-                                    <Glyphicon glyph={glyphLeft} />
+                            <div>
+                                {executeOnServer}
+                                <div className="miniSpacer" />
+                                {evaluateIn}
+                                <div className="miniSpacer" />
+                                <Button bsSize="small" bsStyle="primary" onClick={this.handleSwitchMode}>
+                                    Umschalten
                                 </Button>
-                            </ButtonToolbar>
-                        )} */ title="SML" className="flexy" updateAnchor={this.state.sizeAnchor} />
+                                <div className="miniSpacer" />
+                                <Button bsSize="small" bsStyle="primary" onClick={this.handleShare}>Teilen</Button>
+                            </div>
+                        )} title="SML" className="flexy" updateAnchor={this.state.sizeAnchor} />
                     </div>
                     <div className="flexcomponent flexy">
                         <MiniWindow content={
-                            <div>{lineItems}</div>} /* header={(
-                            <ButtonToolbar className="pull-right">
-                                <Button bsSize="small" onClick={this.handleRightResize}>
-                                    <Glyphicon glyph={glyphRight} />
-                                </Button>
-                            </ButtonToolbar>
-                        )} */ title="Ausgabe" className="flexy" updateAnchor={this.state.sizeAnchor} />
+                            <div>{lineItems}</div>}
+                        title="Ausgabe" className="flexy" updateAnchor={this.state.sizeAnchor} />
                     </div>
                 </SplitterLayout>
+                {modal}
             </div>
         );
+    }
+
+    closeShareModal() {
+        this.setState({shareLink: ''});
     }
 
     componentDidMount() {
@@ -107,7 +138,11 @@ class Playground extends React.Component<Props, State> {
     }
 
     handleBrowserResize() {
-        this.setState({sizeAnchor: -1});
+        if (this.state.sizeAnchor === -2) {
+            this.setState({sizeAnchor: -1});
+        } else {
+            this.setState({sizeAnchor: -2});
+        }
     }
 
     handleRun() {
@@ -126,6 +161,27 @@ class Playground extends React.Component<Props, State> {
         if (this.props.onCodeChange) {
             this.props.onCodeChange(newCode);
         }
+    }
+
+    handleOutputChange(newOutput: string) {
+        this.setState(prevState => {
+            let ret: any = {output: newOutput};
+            return ret;
+        });
+    }
+
+    handleShare() {
+        WebserverAPI.shareCode(this.state.code).then((hash) => {
+            this.setState(prevState => {
+                return {shareLink: window.location.host + '/share/' + hash};
+            });
+        });
+    }
+
+    handleSwitchMode() {
+        this.setState(prevState => {
+            return {useServer: !prevState.useServer, output: ''};
+        });
     }
 }
 

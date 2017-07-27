@@ -1,67 +1,185 @@
-import { InternalInterpreterError, Position } from './errors';
-import { Token } from './lexer';
+import { Position } from './errors';
+import { State } from './state';
 
-export interface Type {
-    prettyPrint(): string;
+export abstract class Type {
+    abstract prettyPrint(): string;
+    abstract equals(other: any): boolean;
 
-    // Returns the unified type, if this and other can be unified, or void, if they cannot be unified.
-    // This function returns void instead of throwing an error because it does not know the error location.
-    // TODO: probably needs a helper function to find all used type variables and potentially rename them
-    unify(other: Type): Type | undefined;
+    // Constructs types with type variables instantiated as much as possible
+    instantiate(state: State): Type[] {
+        return this.simplify().instantiate(state);
+    }
 
-    simplify(): Type;
+    // Return all (free) type variables
+    getTypeVariables(free: boolean): Set<TypeVariable> {
+        return this.simplify().getTypeVariables(free);
+    }
+
+    // Checks if two types are unifyable; returns all required type variable bindings
+    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+        return this.simplify().matches(state, type);
+    }
+
+    simplify(): Type {
+        return this;
+    }
+
+    admitsEquality(state: State): boolean {
+        return false;
+    }
 }
 
-    /*
-// TODO: better name
-export enum PrimitiveTypes { int, real, word, string, char, bool }
+export class PrimitiveType extends Type {
+    constructor(public name: string, public parameters: Type[] = [], public position: Position = 0) {
+        super();
+    }
 
-export class PrimitiveType implements Type {
-    constructor(public position: Position, public type: PrimitiveTypes) {}
+    instantiate(state: State): Type[] {
+        return [this];
+    }
+
+    getTypeVariables(free: boolean): Set<TypeVariable> {
+        return new Set<TypeVariable>();
+    }
+
+    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+        for (let i = 0; i < type.length; ++i) {
+            if (type[i].equals(this)) {
+                return [];
+            }
+        }
+
+        // None of the possible types matched
+        return undefined;
+    }
+
+    admitsEquality(state: State): boolean {
+        return state.getPrimitiveType(this.name).allowsEquality;
+    }
 
     prettyPrint(): string {
-        return PrimitiveTypes[this.type];
+        let res = '';
+        for (let i = 0; i < this.parameters.length; ++i) {
+            res += this.parameters[i].prettyPrint() + ' ';
+        }
+        return res += this.name;
     }
 
-    unify(other: Type): Type | undefined {
-        // TODO
-        throw new InternalInterpreterError(0, 'not yet implemented');
+    equals(other: any): boolean {
+        if (!(other instanceof PrimitiveType)) {
+            return false;
+        }
+        if (this.name !== (<PrimitiveType> other).name) {
+            return false;
+        }
+        if (this.parameters.length !== (<PrimitiveType> other).parameters.length) {
+            return false;
+        }
+        for (let i = 0; i < this.parameters.length; ++i) {
+            if (!this.parameters[i].equals((<PrimitiveType> other).parameters[i])) {
+                return false;
+            }
+        }
+        return true;
     }
 
-    simplify(): Type { return this; }
+    simplify(): Type {
+        let param: Type[] = [];
+        for (let i = 0; i < this.parameters.length; ++i) {
+            param.push(this.parameters[i].simplify());
+        }
+        return new PrimitiveType(this.name, param, this.position);
+    }
 }
-     */
 
-export class TypeVariable implements Type {
-    constructor(public position: Position, public name: string) {}
+export class TypeVariable extends Type {
+    constructor(public name: string, public isFree: boolean = true, public position: Position = 0) {
+        super();
+    }
 
     prettyPrint(): string {
-        return name;
+        return this.name;
     }
 
-    unify(other: Type): Type | undefined {
-        // TODO
-        throw new InternalInterpreterError(0, 'not yet implemented');
+    instantiate(state: State): Type[] {
+        let res = state.getStaticValue(this.name);
+        if (!this.isFree || res === undefined) {
+            return [this];
+        }
+        return <Type[]> res;
     }
-    simplify(): Type { return this; }
+
+    getTypeVariables(free: boolean): Set<TypeVariable> {
+        let res = new Set<TypeVariable>();
+        if (free === this.isFree) {
+            res.add(this);
+        }
+        return res;
+    }
+
+    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+        if (this.isFree) {
+            // TODO Filter out <this> type var from type?
+            return [[this.name, type]];
+        } else {
+            for (let i = 0; i < type.length; ++i) {
+                if (type[i].equals(this)) {
+                    return [];
+                }
+            }
+        }
+
+        // None of the possible types matched
+        return undefined;
+    }
+
+    admitsEquality(state: State): boolean {
+        return this.name[1] === '\'';
+    }
+
+    equals(other: any): boolean {
+        return other instanceof TypeVariable && this.name === other.name;
+    }
 }
 
-export class RecordType implements Type {
-    constructor(public position: Position,
-                public complete: boolean,
-                public entries: [string, Type][]) {}
+export class RecordType extends Type {
+    constructor(public elements: Map<string, Type>, public complete: boolean = true, public position: Position = 0) {
+        super();
+    }
+
+    instantiate(state: State): Type[] {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
+    getTypeVariables(free: boolean): Set<TypeVariable> {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
+    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
+    admitsEquality(state: State): boolean {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
 
     prettyPrint(): string {
         // TODO: print as Tuple if possible
         let result: string = '{';
         let first: boolean = true;
-        for (let i: number = 0; i < this.entries.length; ++i) {
+        this.elements.forEach((type: Type, key: string) => {
             if (!first) {
                 result += ', ';
+            } else {
+                first = false;
             }
-            first = false;
-            result += this.entries[i][0] + ': ' + this.entries[i][1].prettyPrint();
-        }
+            result += key + ' : ' + type.prettyPrint();
+        });
         if (!this.complete) {
             if (!first) {
                 result += ', ';
@@ -71,99 +189,187 @@ export class RecordType implements Type {
         return result + '}';
     }
 
-    unify(other: Type): Type | undefined {
-        // TODO
-        throw new InternalInterpreterError(0, 'not yet implemented');
+    simplify(): RecordType {
+        let newElements: Map<string, Type> = new Map<string, Type>();
+        this.elements.forEach((type: Type, key: string) => {
+            newElements.set(key, type.simplify());
+        });
+        return new RecordType(newElements, this.complete);
     }
 
-    simplify(): Type {
-        let newEntries: [string, Type][] = [];
-        for (let i: number = 0; i < this.entries.length; ++i) {
-            let e: [string, Type] = this.entries[i];
-            newEntries.push([e[0], e[1].simplify()]);
+    equals(other: any): boolean {
+        if (!(other instanceof RecordType) || this.complete !== other.complete) {
+            return false;
+        } else {
+            if (other === this) {
+                return true;
+            }
+            for (let name in this.elements) {
+                if (!this.elements.hasOwnProperty(name)) {
+                    if (!(this.elements.get(name) as Type).equals(other.elements.get(name))) {
+                        return false;
+                    }
+                }
+            }
+            for (let name in other.elements) {
+                if (!other.elements.hasOwnProperty(name)) {
+                    if (!(other.elements.get(name) as Type).equals(this.elements.get(name))) {
+                        return false;
+                    }
+                }
+            }
         }
-        return new RecordType(this.position, this.complete, newEntries);
+        return true;
     }
 }
 
-export class FunctionType implements Type {
-    constructor(public position: Position,
-                public parameterType: Type,
-                public returnType: Type) {}
+export class FunctionType extends Type {
+    constructor(public parameterType: Type, public returnType: Type, public position: Position = 0) {
+        super();
+    }
+
+    instantiate(state: State): Type[] {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
+    getTypeVariables(free: boolean): Set<TypeVariable> {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
+    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
+    admitsEquality(state: State): boolean {
+        return this.parameterType.admitsEquality(state) && this.returnType.admitsEquality(state);
+    }
+
 
     prettyPrint(): string {
-        return '(' + this.parameterType + ' -> ' + this.returnType + ')';
+        return '( ' + this.parameterType.prettyPrint()
+            + ' -> ' + this.returnType.prettyPrint() + ' )';
     }
 
-    unify(other: Type): Type | undefined {
-        // TODO
-        throw new InternalInterpreterError(0, 'not yet implemented');
+    simplify(): FunctionType {
+        return new FunctionType(this.parameterType.simplify(), this.returnType.simplify(), this.position);
     }
 
-    simplify(): Type {
-        return new FunctionType(this.position, this.parameterType.simplify(), this.returnType.simplify());
+    equals(other: any): boolean {
+        return other instanceof FunctionType && this.parameterType.equals(other.parameterType)
+            && this.returnType.equals(other.returnType);
     }
 }
 
-// a custom type using type constructors
-export class CustomType implements Type {
-    // fullName: a unique name for this type
-    // typeArguments: instantiations for any type variables this datatype may have
-    constructor(public position: Position,
-                public fullName: Token,
-                public typeArguments: TypeVariable[]) {}
+// A custom defined type similar to "list" or "option".
+// May have a type argument.
+export class CustomType extends Type {
+    constructor(public name: string,
+                public typeArguments: Type[] = [],
+                public position: Position = 0) {
+        super();
+    }
+
+    instantiate(state: State): Type[] {
+        if (this.typeArguments.length > 0) {
+            // TODO
+            throw new Error('ニャ－');
+        } else {
+            return [this];
+        }
+    }
+
+    getTypeVariables(free: boolean): Set<TypeVariable> {
+        if (this.typeArguments.length > 0) {
+            // TODO
+            throw new Error('ニャ－');
+        }
+        return new Set<TypeVariable>();
+    }
+
+    matches(state: State, type: Type[]): [string, Type[]][] | undefined {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
+    admitsEquality(state: State): boolean {
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            if (!this.typeArguments[i].admitsEquality(state)) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     prettyPrint(): string {
         let result: string = '';
+        if (this.typeArguments.length > 1) {
+            result += '( ';
+        }
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            if (i > 0) {
+                result += ', ';
+            }
+            result += this.typeArguments[i].prettyPrint();
+        }
+        if (this.typeArguments.length > 1) {
+            result += ' )';
+        }
         if (this.typeArguments.length > 0) {
-            result += '(';
+            result += ' ';
         }
-        for (let i: number = 0; i < this.typeArguments.length; ++i) {
-            result += ' ' + this.typeArguments[i].prettyPrint();
-        }
-        // TODO For long identifiers, text doesn't store the whole text.
-        result += this.fullName.text;
-        if (this.typeArguments.length > 0) {
-            result += ')';
-        }
+        result += this.name;
         return result;
     }
 
-    unify(other: Type): Type | undefined {
-        // TODO
-        throw new InternalInterpreterError(0, 'not yet implemented');
+    simplify(): Type {
+        let args: Type[] = [];
+        for (let i: number = 0; i < this.typeArguments.length; ++i) {
+            args.push(this.typeArguments[i].simplify());
+        }
+        return new CustomType(this.name, args);
     }
 
-    simplify(): Type {
-        return this;
+    equals(other: any): boolean {
+        if (!(other instanceof CustomType) || this.name !== other.name) {
+            return false;
+        }
+        for (let i: number = 0; i < this.typeArguments.length; ++i) {
+            if (!this.typeArguments[i].equals(other.typeArguments[i])) {
+                return false;
+            }
+        }
+        return true;
     }
 }
 
-// this is a derived form used only for type annotations
-export class TupleType implements Type {
-    constructor(public position: Position,
-                public elements: Type[]) {}
+export class TupleType extends Type {
+    constructor(public elements: Type[], public position: Position = 0) {
+        super();
+    }
 
     prettyPrint(): string {
-        let result: string = '(';
+        let result: string = '( ';
         for (let i: number = 0; i < this.elements.length; ++i) {
             if (i > 0) {
                 result += ' * ';
             }
             result += this.elements[i].prettyPrint();
         }
-        return result + ')';
+        return result + ' )';
     }
 
-    unify(other: Type): Type | undefined {
-        throw new InternalInterpreterError(0, 'called Type.unify on a derived form');
-    }
-
-    simplify(): Type {
-        let entries: [string, Type][] = [];
+    simplify(): RecordType {
+        let entries: Map<string, Type> = new Map<string, Type>();
         for (let i: number = 0; i < this.elements.length; ++i) {
-            entries[String(i + 1)] = this.elements[i].simplify();
+            entries.set(String(i + 1), this.elements[i].simplify());
         }
-        return new RecordType(this.position, true, entries);
+        return new RecordType(entries, true);
+    }
+
+    equals(other: any): boolean {
+        return this.simplify().equals(other);
     }
 }
