@@ -453,6 +453,8 @@ let initialState: State = new State(
         'nil':      RebindStatus.Never,
         '::':       RebindStatus.Never,
 
+        'print':    RebindStatus.Never,
+
         'Match':    RebindStatus.Half,
         'Bind':     RebindStatus.Half,
         'Div':      RebindStatus.Half,

@@ -450,13 +450,13 @@ export class ConstructedValue extends Value {
                 let left = this.argument.getValue('1');
                 let right = this.argument.getValue('1');
                 if (left instanceof Value && right instanceof Value) {
-                    let result: string = '(' + left.prettyPrint(state);
-                    result += ' ' + this.constructorName;
+                    let res: string = '(' + left.prettyPrint(state);
+                    res += ' ' + this.constructorName;
                     if (this.id > 0) {
-                        result += '/' + this.id;
+                        res += '/' + this.id;
                     }
-                    result += ' ' + right.prettyPrint(state);
-                    return result + ')';
+                    res += ' ' + right.prettyPrint(state);
+                    return res + ')';
                 }
             }
         }

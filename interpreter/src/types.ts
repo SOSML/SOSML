@@ -39,7 +39,13 @@ export class PrimitiveType extends Type {
     }
 
     getTypeVariables(free: boolean): Set<TypeVariable> {
-        return new Set<TypeVariable>();
+        let res = new Set<TypeVariable>();
+        for (let i = 0; i < this.parameters.length; ++i) {
+            this.parameters[i].getTypeVariables(free).forEach((value: TypeVariable) => {
+                res.add(value);
+            });
+        }
+        return res;
     }
 
     matches(state: State, type: Type): [string, Type][] | undefined {
@@ -191,8 +197,13 @@ export class RecordType extends Type {
     }
 
     getTypeVariables(free: boolean): Set<TypeVariable> {
-        // TODO
-        throw new Error('ニャ－');
+        let res = new Set<TypeVariable>();
+        this.elements.forEach((val: Type) => {
+            val.getTypeVariables(free).forEach((id: TypeVariable) => {
+                res.add(id);
+            });
+        });
+        return res;
     }
 
     matches(state: State, type: Type): [string, Type][] | undefined {
@@ -272,8 +283,14 @@ export class FunctionType extends Type {
     }
 
     getTypeVariables(free: boolean): Set<TypeVariable> {
-        // TODO
-        throw new Error('ニャ－');
+        let res = new Set<TypeVariable>();
+        this.parameterType.getTypeVariables(free).forEach((value: TypeVariable) => {
+            res.add(value);
+        });
+        this.returnType.getTypeVariables(free).forEach((value: TypeVariable) => {
+            res.add(value);
+        });
+        return res;
     }
 
     matches(state: State, type: Type): [string, Type][] | undefined {
@@ -320,11 +337,15 @@ export class CustomType extends Type {
     }
 
     getTypeVariables(free: boolean): Set<TypeVariable> {
+        let res = new Set<TypeVariable>();
         if (this.typeArguments.length > 0) {
-            // TODO
-            throw new Error('ニャ－');
+            for (let i = 0; i < this.typeArguments.length; ++i) {
+                this.typeArguments[i].getTypeVariables(free).forEach((val: TypeVariable) => {
+                    res.add(val);
+                });
+            }
         }
-        return new Set<TypeVariable>();
+        return res;
     }
 
     matches(state: State, type: Type): [string, Type][] | undefined {
