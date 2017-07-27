@@ -68,7 +68,7 @@ class Help extends React.Component<any, any> {
                 </p>
                 <Alert bsStyle="info"><strong>Beachten Sie:</strong> Da die Dateien
                 in Ihren Browser gespeichert werden, verlieren Sie diese womöglich wenn
-                Sie alle Browserdaten.</Alert>
+                Sie Browserdaten löschen.</Alert>
             </div>
         );
     }

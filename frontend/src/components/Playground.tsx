@@ -74,9 +74,10 @@ class Playground extends React.Component<Props, State> {
                     <pre>{this.state.shareLink}</pre>
                     <p className="text-justify">
                         Diesen Link können Sie anderen Personen geben, die dann den
-                        Code sehen können den Sie gerade geschrieben haben.
+                        Code sehen können, den Sie gerade geschrieben haben. <br />
                         Der Link beinhaltet den Code der sich beim Teilen im Editor
-                        befunden hat, wenn sie Änderungen vornehmen wollen Teilen sie erneuert.
+                        befunden hat. Wenn sie Änderungen vornehmen wollen, „Teilen“
+                        Sie erneuert.
                     </p>
                 </Modal.Body>
                 <Modal.Footer>

@@ -64,7 +64,7 @@ var Interpreter =
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 8);
+/******/ 	return __webpack_require__(__webpack_require__.s = 7);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -88,7 +88,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var InterpreterError = (function (_super) {
     __extends(InterpreterError, _super);
     function InterpreterError(position, message) {
-        var _this = _super.call(this, 'error:' + position + ': ' + message) || this;
+        var _this = _super.call(this, message) || this;
         _this.position = position;
         Object.setPrototypeOf(_this, InterpreterError.prototype);
         return _this;
@@ -160,6 +160,20 @@ var ElaborationError = (function (_super) {
         Object.setPrototypeOf(_this, ElaborationError.prototype);
         return _this;
     }
+    ElaborationError.getUnguarded = function (position, tyvars) {
+        var res = '';
+        if (tyvars.length > 1) {
+            res += 's';
+        }
+        res += ' ';
+        for (var i = 0; i < tyvars.length; ++i) {
+            if (i > 0) {
+                res += ', ';
+            }
+            res += '"' + tyvars[i].name + '"';
+        }
+        return new ElaborationError(position, 'Unguarded type variable' + res + '.');
+    };
     return ElaborationError;
 }(InterpreterError));
 exports.ElaborationError = ElaborationError;
@@ -891,21 +905,39 @@ var PrimitiveType = (function (_super) {
         return _this;
     }
     PrimitiveType.prototype.instantiate = function (state) {
-        return [this];
+        return this;
     };
     PrimitiveType.prototype.getTypeVariables = function (free) {
         return new Set();
     };
     PrimitiveType.prototype.matches = function (state, type) {
-        for (var i = 0; i < type.length; ++i) {
-            if (type[i].equals(this)) {
-                return [];
+        if (type instanceof PrimitiveType) {
+            if (this.name !== type.name
+                || this.parameters.length !== type.parameters.length) {
+                return undefined;
+            }
+            for (var i = 0; i < this.parameters.length; ++i) {
+                if (this.parameters[i].matches(state, type.parameters[i]) === undefined) {
+                    return undefined;
+                }
+            }
+            return [];
+        }
+        // TODO
+        if (type instanceof TypeVariable) {
+            if (type.domain === []) {
+                return undefined;
             }
         }
         // None of the possible types matched
         return undefined;
     };
     PrimitiveType.prototype.admitsEquality = function (state) {
+        for (var i = 0; i < this.parameters.length; ++i) {
+            if (!this.parameters[i].admitsEquality(state)) {
+                return false;
+            }
+        }
         return state.getPrimitiveType(this.name).allowsEquality;
     };
     PrimitiveType.prototype.prettyPrint = function () {
@@ -944,24 +976,33 @@ var PrimitiveType = (function (_super) {
 exports.PrimitiveType = PrimitiveType;
 var TypeVariable = (function (_super) {
     __extends(TypeVariable, _super);
-    function TypeVariable(name, isFree, position) {
+    function TypeVariable(name, isFree, position, domain) {
         if (isFree === void 0) { isFree = true; }
         if (position === void 0) { position = 0; }
+        if (domain === void 0) { domain = []; }
         var _this = _super.call(this) || this;
         _this.name = name;
         _this.isFree = isFree;
         _this.position = position;
+        _this.domain = domain;
         return _this;
     }
+    TypeVariable.prototype.kill = function () {
+        if (this.domain.length === 0) {
+            // Real type vars won't die so easily
+            return this;
+        }
+        return this.domain[0];
+    };
     TypeVariable.prototype.prettyPrint = function () {
         return this.name;
     };
     TypeVariable.prototype.instantiate = function (state) {
-        var res = state.getStaticValue(this.name);
-        if (!this.isFree || res === undefined) {
-            return [this];
-        }
-        return res;
+        // let res = state.getStaticValue(this.name);
+        // if (!this.isFree || res === undefined) {
+        //     return this;
+        // }
+        throw new Error('ニャ－');
     };
     TypeVariable.prototype.getTypeVariables = function (free) {
         var res = new Set();
@@ -971,25 +1012,35 @@ var TypeVariable = (function (_super) {
         return res;
     };
     TypeVariable.prototype.matches = function (state, type) {
-        if (this.isFree) {
-            // TODO Filter out <this> type var from type?
-            return [[this.name, type]];
-        }
-        else {
-            for (var i = 0; i < type.length; ++i) {
-                if (type[i].equals(this)) {
-                    return [];
-                }
-            }
-        }
-        // None of the possible types matched
-        return undefined;
+        // TODO
+        throw new Error('ニャ－');
     };
     TypeVariable.prototype.admitsEquality = function (state) {
-        return this.name[1] === '\'';
+        for (var i = 0; i < this.domain.length; ++i) {
+            if (!this.domain[i].admitsEquality(state)) {
+                return false;
+            }
+        }
+        if (this.domain.length === 0) {
+            return this.name[1] === '\'';
+        }
+        else {
+            return true;
+        }
     };
     TypeVariable.prototype.equals = function (other) {
-        return other instanceof TypeVariable && this.name === other.name;
+        if (!(other instanceof TypeVariable && this.name === other.name)) {
+            return false;
+        }
+        if (this.domain.length !== other.domain.length) {
+            return false;
+        }
+        for (var i = 0; i < this.domain.length; ++i) {
+            if (!this.domain[i].equals(other.domain[i])) {
+                return false;
+            }
+        }
+        return true;
     };
     return TypeVariable;
 }(Type));
@@ -1135,7 +1186,7 @@ var CustomType = (function (_super) {
             throw new Error('ニャ－');
         }
         else {
-            return [this];
+            return this;
         }
     };
     CustomType.prototype.getTypeVariables = function (free) {
@@ -1253,6 +1304,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var errors_1 = __webpack_require__(0);
+var lexer_1 = __webpack_require__(1);
 var Value = (function () {
     function Value() {
     }
@@ -1274,7 +1326,7 @@ var BoolValue = (function (_super) {
     BoolValue.prototype.equals = function (other) {
         return this.value === other.value;
     };
-    BoolValue.prototype.prettyPrint = function () {
+    BoolValue.prototype.prettyPrint = function (state) {
         if (this.value) {
             return 'true';
         }
@@ -1293,9 +1345,8 @@ var CharValue = (function (_super) {
         _this.value = value;
         return _this;
     }
-    CharValue.prototype.prettyPrint = function () {
-        // TODO
-        return '#"<' + this.value + '>"';
+    CharValue.prototype.prettyPrint = function (state) {
+        return '#' + new StringValue(this.value).prettyPrint(state);
     };
     CharValue.prototype.compareTo = function (other) {
         if (this.value < other.value) {
@@ -1321,8 +1372,74 @@ var StringValue = (function (_super) {
         _this.value = value;
         return _this;
     }
-    StringValue.prototype.prettyPrint = function () {
-        return '"' + this.value + '"';
+    // at the beginning because of linter…
+    StringValue.implode = function (list) {
+        var str = '';
+        while (list.constructorName !== 'nil') {
+            if (list.constructorName !== '::') {
+                throw new errors_1.InternalInterpreterError(-1, 'Is this a char list? I can\'t implode "' + list.constructorName + '".');
+            }
+            var arg = list.argument;
+            if (arg instanceof RecordValue) {
+                var a1 = arg.getValue('1');
+                var a2 = arg.getValue('2');
+                if (a1 instanceof CharValue && a2 instanceof ConstructedValue) {
+                    str += a1.value;
+                    list = a2;
+                }
+                else {
+                    throw new errors_1.InternalInterpreterError(-1, 'Is this a char list? I can\'t implode "' + list.constructorName + '".');
+                }
+            }
+            else {
+                throw new errors_1.InternalInterpreterError(-1, 'Is this a char list? I can\'t implode "' + list.constructorName + '".');
+            }
+        }
+        return new StringValue(str);
+    };
+    StringValue.prototype.prettyPrint = function (state) {
+        var pretty = '';
+        for (var _i = 0, _a = this.value; _i < _a.length; _i++) {
+            var chr = _a[_i];
+            switch (chr) {
+                case '\n':
+                    pretty += '\\n';
+                    break;
+                case '\t':
+                    pretty += '\\t';
+                    break;
+                case '\r':
+                    pretty += '\\r';
+                    break;
+                case '\a':
+                    pretty += '\\a';
+                    break;
+                case '\b':
+                    pretty += '\\b';
+                    break;
+                case '\v':
+                    pretty += '\\v';
+                    break;
+                case '\f':
+                    pretty += '\\f';
+                    break;
+                case '\x7F':
+                    pretty += '\\127';
+                    break;
+                case '\xFF':
+                    pretty += '\\255';
+                    break;
+                default:
+                    if (chr.charCodeAt(0) < 32) {
+                        pretty += '\\^' + String.fromCharCode(chr.charCodeAt(0) + 64);
+                    }
+                    else {
+                        pretty += chr;
+                    }
+                    break;
+            }
+        }
+        return '"' + pretty + '"';
     };
     StringValue.prototype.equals = function (other) {
         return this.value === other.value;
@@ -1342,8 +1459,14 @@ var StringValue = (function (_super) {
         return new StringValue(this.value + other.value);
     };
     StringValue.prototype.explode = function () {
-        // TODO construct a list of CharValue here
-        throw new errors_1.InternalInterpreterError(-1, 'Nyi\'an');
+        var ret = new ConstructedValue('nil');
+        for (var i = this.value.length - 1; i >= 0; --i) {
+            ret = new ConstructedValue('::', new RecordValue(new Map([
+                ['1', new CharValue(this.value[i])],
+                ['2', ret]
+            ])));
+        }
+        return ret;
     };
     return StringValue;
 }(Value));
@@ -1355,7 +1478,7 @@ var Word = (function (_super) {
         _this.value = value;
         return _this;
     }
-    Word.prototype.prettyPrint = function () {
+    Word.prototype.prettyPrint = function (state) {
         return '' + this.value;
     };
     Word.prototype.compareTo = function (val) {
@@ -1391,7 +1514,7 @@ var Integer = (function (_super) {
         _this.value = value;
         return _this;
     }
-    Integer.prototype.prettyPrint = function () {
+    Integer.prototype.prettyPrint = function (state) {
         return '' + this.value;
     };
     Integer.prototype.compareTo = function (val) {
@@ -1429,9 +1552,12 @@ var Real = (function (_super) {
         _this.value = value;
         return _this;
     }
-    Real.prototype.prettyPrint = function () {
-        // TODO in TS this may produce ints
-        return '' + this.value;
+    Real.prototype.prettyPrint = function (state) {
+        var str = '' + this.value;
+        if (str.search(/\./) === -1) {
+            str += '.0';
+        }
+        return str;
     };
     Real.prototype.compareTo = function (val) {
         if (val instanceof Real) {
@@ -1481,8 +1607,29 @@ var RecordValue = (function (_super) {
         _this.entries = entries;
         return _this;
     }
-    RecordValue.prototype.prettyPrint = function () {
-        // TODO: print as Tuple if possible
+    RecordValue.prototype.prettyPrint = function (state) {
+        var isTuple = true;
+        for (var i = 1; i <= this.entries.size; ++i) {
+            if (!this.entries.has('' + i)) {
+                isTuple = false;
+            }
+        }
+        if (isTuple) {
+            var res = '(';
+            for (var i = 1; i <= this.entries.size; ++i) {
+                if (i > 1) {
+                    res += ', ';
+                }
+                var sub = this.entries.get('' + i);
+                if (sub !== undefined) {
+                    res += sub.prettyPrint(state);
+                }
+                else {
+                    throw new errors_1.InternalInterpreterError(-1, 'How did we loose this value? It was there before. I promise…');
+                }
+            }
+            return res + ')';
+        }
         var result = '{ ';
         var first = true;
         this.entries.forEach(function (value, key) {
@@ -1492,7 +1639,7 @@ var RecordValue = (function (_super) {
             else {
                 first = false;
             }
-            result += key + ' = ' + value.prettyPrint();
+            result += key + ' = ' + value.prettyPrint(state);
         });
         return result + ' }';
     };
@@ -1510,26 +1657,27 @@ var RecordValue = (function (_super) {
         if (!(other instanceof RecordValue)) {
             return false;
         }
-        if (!this.entries.forEach(function (j, i) {
+        var fail = false;
+        this.entries.forEach(function (j, i) {
             if (!other.entries.has(i)) {
-                return false;
+                fail = true;
             }
-            if (!_this.entries[i].equals(other.entries[i])) {
-                return false;
+            if (!j.equals(other.entries.get(i))) {
+                fail = true;
             }
-            return true;
-        })) {
+        });
+        if (fail) {
             return false;
         }
-        if (!other.entries.forEach(function (j, i) {
+        other.entries.forEach(function (j, i) {
             if (!_this.entries.has(i)) {
-                return false;
+                fail = true;
             }
-            if (!_this.entries[i].equals(other.entries[i])) {
-                return false;
+            if (!j.equals(other.entries.get(i))) {
+                fail = true;
             }
-            return true;
-        })) {
+        });
+        if (fail) {
             return false;
         }
         return true;
@@ -1546,19 +1694,8 @@ var FunctionValue = (function (_super) {
         _this.body = body;
         return _this;
     }
-    FunctionValue.prototype.prettyPrint = function () {
-        var res = 'fn ' + '[';
-        for (var i = 0; i < this.recursives.length; ++i) {
-            if (i > 0) {
-                res += ', ';
-            }
-            res += this.recursives[i][0] + ' ↦ ' + this.recursives[i][1].prettyPrint();
-        }
-        res += '] (';
-        this.state.getDefinedIdentifiers().forEach(function (val) {
-            res += ' ' + val;
-        });
-        return res + ' )';
+    FunctionValue.prototype.prettyPrint = function (state) {
+        return 'fn';
     };
     // Computes the function on the given argument,
     // returns [result, is thrown]
@@ -1576,8 +1713,8 @@ var FunctionValue = (function (_super) {
         return this.body.compute(nstate, argument);
     };
     FunctionValue.prototype.equals = function (other) {
-        throw new errors_1.InternalInterpreterError(-1, 'You simply cannot compare "' + this.prettyPrint()
-            + '" and "' + other.prettyPrint() + '".');
+        throw new errors_1.InternalInterpreterError(-1, 'You simply cannot compare "' + this.prettyPrint(undefined)
+            + '" and "' + other.prettyPrint(undefined) + '".');
     };
     return FunctionValue;
 }(Value));
@@ -1594,13 +1731,62 @@ var ConstructedValue = (function (_super) {
         _this.id = id;
         return _this;
     }
-    ConstructedValue.prototype.prettyPrint = function () {
+    ConstructedValue.prototype.prettyPrint = function (state) {
+        if (this.constructorName === '::') {
+            var res = '[ ';
+            var list = this;
+            while (list.constructorName !== 'nil') {
+                if (list.constructorName !== '::') {
+                    throw new errors_1.InternalInterpreterError(-1, 'Is this even a list? 1 "' + list.constructorName + '".');
+                }
+                var arg = list.argument;
+                if (arg instanceof RecordValue && arg.entries.size === 2) {
+                    var a1 = arg.getValue('1');
+                    var a2 = arg.getValue('2');
+                    if (a1 instanceof Value && a2 instanceof ConstructedValue) {
+                        if (list !== this) {
+                            res += ', ';
+                        }
+                        res += a1.prettyPrint(state);
+                        list = a2;
+                    }
+                    else {
+                        throw new errors_1.InternalInterpreterError(-1, 'Is this even a list? 2 "' + list.constructorName + '".');
+                    }
+                }
+                else {
+                    throw new errors_1.InternalInterpreterError(-1, 'Is this even a list? 3 "' + list.constructorName + '".');
+                }
+            }
+            return res + ' ]';
+        }
+        else if (this.constructorName === 'nil') {
+            return '[ ]';
+        }
+        if (state !== undefined) {
+            var infix = state.getInfixStatus(new lexer_1.IdentifierToken(this.constructorName, -1));
+            if (infix !== undefined
+                && infix.infix
+                && this.argument instanceof RecordValue && this.argument.entries.size === 2) {
+                var left = this.argument.getValue('1');
+                var right = this.argument.getValue('1');
+                if (left instanceof Value && right instanceof Value) {
+                    var result_1 = '(' + left.prettyPrint(state);
+                    result_1 += ' ' + this.constructorName;
+                    if (this.id > 0) {
+                        result_1 += '/' + this.id;
+                    }
+                    result_1 += ' ' + right.prettyPrint(state);
+                    return result_1 + ')';
+                }
+            }
+        }
         var result = this.constructorName;
-        if (this.id !== 0) {
+        if (this.id > 0) {
             result += '/' + this.id;
         }
         if (this.argument) {
-            result += ' ' + this.argument.prettyPrint();
+            result += ' ' + this.argument.prettyPrint(state);
         }
         return result;
     };
@@ -1611,7 +1797,8 @@ var ConstructedValue = (function (_super) {
         if (!(other instanceof ConstructedValue)) {
             return false;
         }
-        if (this.constructorName !== other.constructorName) {
+        if (this.constructorName !== other.constructorName
+            || this.id !== other.id) {
             return false;
         }
         if (this.argument !== undefined) {
@@ -1625,10 +1812,6 @@ var ConstructedValue = (function (_super) {
         else {
             return other.argument === undefined;
         }
-    };
-    ConstructedValue.prototype.implode = function () {
-        // TODO if this CustomType is a List of CharValue, implode them into a string.
-        throw new errors_1.InternalInterpreterError(-1, 'nyi\'an');
     };
     ConstructedValue.prototype.isConstructedValue = function () { return true; };
     return ConstructedValue;
@@ -1645,13 +1828,13 @@ var ExceptionValue = (function (_super) {
         _this.id = id;
         return _this;
     }
-    ExceptionValue.prototype.prettyPrint = function () {
+    ExceptionValue.prototype.prettyPrint = function (state) {
         var result = this.constructorName;
-        if (this.id !== 0) {
+        if (this.id > 0) {
             result += '/' + this.id;
         }
         if (this.argument) {
-            result += ' ' + this.argument.prettyPrint();
+            result += ' ' + this.argument.prettyPrint(state);
         }
         return result;
     };
@@ -1662,7 +1845,8 @@ var ExceptionValue = (function (_super) {
         if (!(other instanceof ExceptionValue)) {
             return false;
         }
-        if (this.constructorName !== other.constructorName) {
+        if (this.constructorName !== other.constructorName
+            || this.id !== other.id) {
             return false;
         }
         if (this.argument !== undefined) {
@@ -1689,8 +1873,8 @@ var PredefinedFunction = (function (_super) {
         _this.apply = apply;
         return _this;
     }
-    PredefinedFunction.prototype.prettyPrint = function () {
-        return this.name + ' (predefined)';
+    PredefinedFunction.prototype.prettyPrint = function (state) {
+        return 'fn';
     };
     PredefinedFunction.prototype.equals = function (other) {
         if (!(other instanceof PredefinedFunction)) {
@@ -1726,9 +1910,9 @@ var ValueConstructor = (function (_super) {
         if (parameter === void 0) { parameter = undefined; }
         return new ConstructedValue(this.constructorName, parameter, this.id);
     };
-    ValueConstructor.prototype.prettyPrint = function () {
+    ValueConstructor.prototype.prettyPrint = function (state) {
         var result = this.constructorName;
-        if (this.id !== 0) {
+        if (this.id > 0) {
             result += '/' + this.id;
         }
         return result;
@@ -1761,9 +1945,9 @@ var ExceptionConstructor = (function (_super) {
         if (parameter === void 0) { parameter = undefined; }
         return new ExceptionValue(this.exceptionName, parameter, this.id);
     };
-    ExceptionConstructor.prototype.prettyPrint = function () {
+    ExceptionConstructor.prototype.prettyPrint = function (state) {
         var result = this.exceptionName;
-        if (this.id !== 0) {
+        if (this.id > 0) {
             result += '/' + this.id;
         }
         return result;
@@ -1782,439 +1966,6 @@ exports.ExceptionConstructor = ExceptionConstructor;
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
-var state_1 = __webpack_require__(9);
-var types_1 = __webpack_require__(2);
-var values_1 = __webpack_require__(3);
-var errors_1 = __webpack_require__(0);
-// Initial static basis (see SML Definition, appendix C through E)
-var intType = new types_1.PrimitiveType('int');
-var realType = new types_1.PrimitiveType('real');
-var wordType = new types_1.PrimitiveType('word');
-var boolType = new types_1.PrimitiveType('bool');
-var stringType = new types_1.PrimitiveType('string');
-var charType = new types_1.PrimitiveType('char');
-function functionType(type) {
-    return new types_1.FunctionType(new types_1.TupleType([type, type]), type).simplify();
-}
-function bfunctionType(type) {
-    return new types_1.FunctionType(new types_1.TupleType([type, type]), boolType).simplify();
-}
-var typeVar = new types_1.TypeVariable('\'a');
-var eqTypeVar = new types_1.TypeVariable('\'\'b');
-var initialState = new state_1.State(0, undefined, new state_1.StaticBasis({
-    'unit': [new state_1.TypeInformation(new types_1.FunctionType(new types_1.TupleType([]), new types_1.TupleType([])).simplify(), []), false],
-    'bool': [new state_1.TypeInformation(new types_1.PrimitiveType('bool'), ['true', 'false']), false],
-    'int': [new state_1.TypeInformation(new types_1.PrimitiveType('int'), []), false],
-    'word': [new state_1.TypeInformation(new types_1.PrimitiveType('word'), []), false],
-    'real': [new state_1.TypeInformation(new types_1.PrimitiveType('real'), []), false],
-    'string': [new state_1.TypeInformation(new types_1.PrimitiveType('string'), []), false],
-    'char': [new state_1.TypeInformation(new types_1.PrimitiveType('char'), []), false],
-    'list': [new state_1.TypeInformation(new types_1.PrimitiveType('list', [typeVar]), ['nil', '::']), false],
-    'ref': [new state_1.TypeInformation(new types_1.PrimitiveType('ref', [typeVar]), ['ref']), false],
-    'exn': [new state_1.TypeInformation(new types_1.PrimitiveType('exn'), []), false]
-}, {
-    'div': [[functionType(intType), functionType(wordType)], false],
-    'mod': [[functionType(intType), functionType(wordType)], false],
-    '*': [[functionType(intType), functionType(wordType), functionType(realType)], false],
-    '/': [[functionType(realType)], false],
-    '+': [[functionType(intType), functionType(wordType), functionType(realType)], false],
-    '-': [[functionType(intType), functionType(wordType), functionType(realType)], false],
-    '<': [[bfunctionType(intType), bfunctionType(wordType),
-            bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
-    '<=': [[bfunctionType(intType), bfunctionType(wordType),
-            bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
-    '>': [[bfunctionType(intType), bfunctionType(wordType),
-            bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
-    '>=': [[bfunctionType(intType), bfunctionType(wordType),
-            bfunctionType(realType), bfunctionType(stringType), bfunctionType(charType)], false],
-    '=': [[new types_1.FunctionType(new types_1.TupleType([eqTypeVar, eqTypeVar]), boolType).simplify()], false],
-    '<>': [[new types_1.FunctionType(new types_1.TupleType([eqTypeVar, eqTypeVar]), boolType).simplify()], false],
-    // ':='
-    // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
-    'true': [[new types_1.PrimitiveType('bool')], false],
-    'false': [[new types_1.PrimitiveType('bool')], false],
-    'nil': [[new types_1.PrimitiveType('list', [typeVar])], false],
-    '::': [[new types_1.FunctionType(new types_1.TupleType([typeVar, new types_1.PrimitiveType('list', [typeVar])]), new types_1.PrimitiveType('list', [typeVar])).simplify()], false],
-    'Match': [[new types_1.PrimitiveType('exn')], false],
-    'Bind': [[new types_1.PrimitiveType('exn')], false],
-    'Div': [[new types_1.PrimitiveType('exn')], false],
-    'Overflow': [[new types_1.PrimitiveType('exn')], false],
-    '^': [[functionType(stringType)], false],
-    'explode': [[new types_1.FunctionType(new types_1.TupleType([stringType, stringType]), new types_1.PrimitiveType('list', [charType])).simplify()], false],
-    '~': [[new types_1.FunctionType(intType, intType), new types_1.FunctionType(realType, realType)], false],
-    'abs': [[new types_1.FunctionType(intType, intType), new types_1.FunctionType(realType, realType)], false],
-}), new state_1.DynamicBasis({
-    'unit': [[], 0, false],
-    'bool': [['true', 'false'], 0, false],
-    'int': [[], 0, false],
-    'word': [[], 0, false],
-    'real': [[], 0, false],
-    'string': [[], 0, false],
-    'char': [[], 0, false],
-    'list': [['nil', '::'], 0, false],
-    'ref': [['ref'], 0, false],
-    'exn': [[], 0, false],
-}, {
-    'div': [new values_1.PredefinedFunction('div', function (val) {
-            if (val instanceof values_1.RecordValue) {
-                var val1 = val.getValue('1');
-                var val2 = val.getValue('2');
-                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                    if (val2.value === 0) {
-                        return [new values_1.ExceptionConstructor('Div').construct(), true];
-                    }
-                    return [val1.divide(val2), false];
-                }
-                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                    if (val2.value === 0) {
-                        return [new values_1.ExceptionConstructor('Div').construct(), true];
-                    }
-                    return [val1.divide(val2), false];
-                }
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called "div" on value of the wrong type (' + val.constructor.name + ').');
-        }), false],
-    'mod': [new values_1.PredefinedFunction('mod', function (val) {
-            if (val instanceof values_1.RecordValue) {
-                var val1 = val.getValue('1');
-                var val2 = val.getValue('2');
-                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                    if (val2.value === 0) {
-                        return [new values_1.ExceptionConstructor('Div').construct(), true];
-                    }
-                    return [val1.modulo(val2), false];
-                }
-                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                    if (val2.value === 0) {
-                        return [new values_1.ExceptionConstructor('Div').construct(), true];
-                    }
-                    return [val1.modulo(val2), false];
-                }
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called "mod" on value of the wrong type (' + val.constructor.name + ').');
-        }), false],
-    '*': [new values_1.PredefinedFunction('*', function (val) {
-            if (val instanceof values_1.RecordValue) {
-                var val1 = val.getValue('1');
-                var val2 = val.getValue('2');
-                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                    var result = val1.multiply(val2);
-                    if (result.hasOverflow()) {
-                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
-                    }
-                    return [result, false];
-                }
-                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                    var result = val1.multiply(val2);
-                    if (result.hasOverflow()) {
-                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
-                    }
-                    return [result, false];
-                }
-                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                    var result = val1.multiply(val2);
-                    if (result.hasOverflow()) {
-                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
-                    }
-                    return [result, false];
-                }
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called "*" on value of the wrong type (' + val.constructor.name + ').');
-        }), false],
-    '/': [new values_1.PredefinedFunction('/', function (val) {
-            if (val instanceof values_1.RecordValue) {
-                var val1 = val.getValue('1');
-                var val2 = val.getValue('2');
-                if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                    if (val2.value === 0) {
-                        return [new values_1.ExceptionConstructor('Div').construct(), true];
-                    }
-                    return [val1.divide(val2), false];
-                }
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called "/" on value of the wrong type (' + val.constructor.name + ').');
-        }), false],
-    '+': [new values_1.PredefinedFunction('+', function (val) {
-            if (val instanceof values_1.RecordValue) {
-                var val1 = val.getValue('1');
-                var val2 = val.getValue('2');
-                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                    var result = val1.add(val2);
-                    if (result.hasOverflow()) {
-                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
-                    }
-                    return [result, false];
-                }
-                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                    var result = val1.add(val2);
-                    if (result.hasOverflow()) {
-                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
-                    }
-                    return [result, false];
-                }
-                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                    var result = val1.add(val2);
-                    if (result.hasOverflow()) {
-                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
-                    }
-                    return [result, false];
-                }
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called "+" on value of the wrong type (' + val.constructor.name + ').');
-        }), false],
-    '-': [new values_1.PredefinedFunction('-', function (val) {
-            if (val instanceof values_1.RecordValue) {
-                var val1 = val.getValue('1');
-                var val2 = val.getValue('2');
-                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                    var result = val1.add(val2.negate());
-                    if (result.hasOverflow()) {
-                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
-                    }
-                    return [result, false];
-                }
-                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                    var result = val1.add(val2.negate());
-                    if (result.hasOverflow()) {
-                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
-                    }
-                    return [result, false];
-                }
-                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                    var result = val1.add(val2.negate());
-                    if (result.hasOverflow()) {
-                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
-                    }
-                    return [result, false];
-                }
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called "-" on value of the wrong type (' + val.constructor.name + ').');
-        }), false],
-    '<': [new values_1.PredefinedFunction('<', function (val) {
-            if (val instanceof values_1.RecordValue) {
-                var val1 = val.getValue('1');
-                var val2 = val.getValue('2');
-                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) < 0), false];
-                }
-                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) < 0), false];
-                }
-                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) < 0), false];
-                }
-                else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) < 0), false];
-                }
-                else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) < 0), false];
-                }
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called "<" on value of the wrong type (' + val.constructor.name + ').');
-        }), false],
-    '>': [new values_1.PredefinedFunction('<', function (val) {
-            if (val instanceof values_1.RecordValue) {
-                var val1 = val.getValue('1');
-                var val2 = val.getValue('2');
-                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) > 0), false];
-                }
-                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) > 0), false];
-                }
-                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) > 0), false];
-                }
-                else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) > 0), false];
-                }
-                else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) > 0), false];
-                }
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called ">" on value of the wrong type (' + val.constructor.name + ').');
-        }), false],
-    '<=': [new values_1.PredefinedFunction('<', function (val) {
-            if (val instanceof values_1.RecordValue) {
-                var val1 = val.getValue('1');
-                var val2 = val.getValue('2');
-                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) <= 0), false];
-                }
-                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) <= 0), false];
-                }
-                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) <= 0), false];
-                }
-                else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) <= 0), false];
-                }
-                else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) <= 0), false];
-                }
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called "<=" on value of the wrong type (' + val.constructor.name + ').');
-        }), false],
-    '>=': [new values_1.PredefinedFunction('<', function (val) {
-            if (val instanceof values_1.RecordValue) {
-                var val1 = val.getValue('1');
-                var val2 = val.getValue('2');
-                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) >= 0), false];
-                }
-                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) >= 0), false];
-                }
-                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) >= 0), false];
-                }
-                else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) >= 0), false];
-                }
-                else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
-                    return [new values_1.BoolValue(val1.compareTo(val2) >= 0), false];
-                }
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called ">=" on value of the wrong type (' + val.constructor.name + ').');
-        }), false],
-    '=': [new values_1.PredefinedFunction('=', function (val) {
-            if (val instanceof values_1.RecordValue) {
-                var val1 = val.getValue('1');
-                var val2 = val.getValue('2');
-                return [new values_1.BoolValue(val1.equals(val2)), false];
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called "=" on value of the wrong type (' + val.constructor.name + ').');
-        }), false],
-    '<>': [new values_1.PredefinedFunction('=', function (val) {
-            if (val instanceof values_1.RecordValue) {
-                var val1 = val.getValue('1');
-                var val2 = val.getValue('2');
-                return [new values_1.BoolValue(!val1.equals(val2)), false];
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called "<>" on value of the wrong type (' + val.constructor.name + ').');
-        }), false],
-    // ':='
-    // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
-    'true': [new values_1.BoolValue(true), false],
-    'false': [new values_1.BoolValue(false), false],
-    'nil': [new values_1.ValueConstructor('nil').construct(), false],
-    '::': [new values_1.ValueConstructor('::', 1), false],
-    'Match': [new values_1.ExceptionConstructor('Match').construct(), false],
-    'Bind': [new values_1.ExceptionConstructor('Bind').construct(), false],
-    'Div': [new values_1.ExceptionConstructor('Div').construct(), false],
-    'Overflow': [new values_1.ExceptionConstructor('Overflow').construct(), false],
-    '^': [new values_1.PredefinedFunction('^', function (val) {
-            if (val instanceof values_1.RecordValue) {
-                var val1 = val.getValue('1');
-                var val2 = val.getValue('2');
-                if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
-                    return [val1.concat(val2), false];
-                }
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called "^" on value of the wrong type (' + val.constructor.name + ').');
-        }), false],
-    'explode': [new values_1.PredefinedFunction('explode', function (val) {
-            if (val instanceof values_1.StringValue) {
-                return [val.explode(), false];
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
-        }), false],
-    '~': [new values_1.PredefinedFunction('~', function (val) {
-            if (val instanceof values_1.Integer) {
-                var result = val.negate();
-                if (result.hasOverflow()) {
-                    return [new values_1.ExceptionConstructor('Overflow').construct(), true];
-                }
-                return [result, false];
-            }
-            else if (val instanceof values_1.Real) {
-                var result = val.negate();
-                if (result.hasOverflow()) {
-                    return [new values_1.ExceptionConstructor('Overflow').construct(), true];
-                }
-                return [result, false];
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called "~" on something weird.');
-        }), false],
-    'abs': [new values_1.PredefinedFunction('~', function (val) {
-            if (val instanceof values_1.Integer) {
-                if (val.value >= 0) {
-                    return [val, false];
-                }
-                var result = val.negate();
-                if (result.hasOverflow()) {
-                    return [new values_1.ExceptionConstructor('Overflow').construct(), true];
-                }
-                return [result, false];
-            }
-            else if (val instanceof values_1.Real) {
-                if (val.value >= 0) {
-                    return [val, false];
-                }
-                var result = val.negate();
-                if (result.hasOverflow()) {
-                    return [new values_1.ExceptionConstructor('Overflow').construct(), true];
-                }
-                return [result, false];
-            }
-            throw new errors_1.InternalInterpreterError(-1, 'Called "~" on something weird.');
-        }), false],
-}), {
-    'bool': new state_1.TypeNameInformation(0, true),
-    'int': new state_1.TypeNameInformation(0, true),
-    'real': new state_1.TypeNameInformation(0, false),
-    'string': new state_1.TypeNameInformation(0, true),
-    'char': new state_1.TypeNameInformation(0, true),
-    'word': new state_1.TypeNameInformation(0, true),
-    'list': new state_1.TypeNameInformation(1, true),
-    'ref': new state_1.TypeNameInformation(1, true),
-    'exn': new state_1.TypeNameInformation(0, false, false),
-}, {
-    'div': new state_1.InfixStatus(true, 7, false),
-    'mod': new state_1.InfixStatus(true, 7, false),
-    '*': new state_1.InfixStatus(true, 7, false),
-    '/': new state_1.InfixStatus(true, 7, false),
-    '+': new state_1.InfixStatus(true, 6, false),
-    '-': new state_1.InfixStatus(true, 6, false),
-    '<': new state_1.InfixStatus(true, 4, false),
-    '>': new state_1.InfixStatus(true, 4, false),
-    '<=': new state_1.InfixStatus(true, 4, false),
-    '>=': new state_1.InfixStatus(true, 4, false),
-    '::': new state_1.InfixStatus(true, 5, true),
-    '=': new state_1.InfixStatus(true, 4, false),
-    '<>': new state_1.InfixStatus(true, 4, false),
-    ':=': new state_1.InfixStatus(true, 3, false),
-    '^': new state_1.InfixStatus(true, 6, false),
-}, {
-    'bool': false,
-    'int': false,
-    'real': false,
-    'string': false,
-    'char': false,
-    'word': false,
-    'list': false,
-    'ref': false,
-    'exn': false,
-    '=': false,
-    'true': false,
-    'false': false,
-    'nil': false,
-    '::': false
-});
-function getInitialState() {
-    return initialState.getNestedState();
-}
-exports.getInitialState = getInitialState;
-
-
-/***/ }),
-/* 5 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -2226,11 +1977,11 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var expressions_1 = __webpack_require__(7);
+var expressions_1 = __webpack_require__(6);
 var types_1 = __webpack_require__(2);
 var errors_1 = __webpack_require__(0);
 var lexer_1 = __webpack_require__(1);
-var declarations_1 = __webpack_require__(6);
+var declarations_1 = __webpack_require__(5);
 var ParserError = (function (_super) {
     __extends(ParserError, _super);
     function ParserError(message, position) {
@@ -2255,7 +2006,8 @@ var Parser = (function () {
     Parser.prototype.assertKeywordToken = function (tok, text) {
         if (text === void 0) { text = undefined; }
         if (!(tok instanceof lexer_1.KeywordToken)) {
-            throw new ParserError('Expected a reserved word.', tok.position);
+            throw new ParserError('Expected a reserved word, got "' + tok.getText()
+                + '" (' + tok.constructor.name + ').', tok.position);
         }
         if (text !== undefined && tok.text !== text) {
             throw new ParserError('Expected "' + text + '" but got "' + tok.text + '".', tok.position);
@@ -3173,24 +2925,22 @@ var Parser = (function () {
             var ty = undefined;
             var nm = void 0;
             if (this.checkKeywordToken(this.currentToken(), '(')) {
-                ++this.position;
-                var left = this.parseAtomicPattern();
-                this.assertIdentifierOrLongToken(this.currentToken());
-                nm = new expressions_1.ValueIdentifier(this.currentToken().position, this.currentToken());
-                if (this.state.getInfixStatus(this.currentToken()) === undefined
-                    || !this.state.getInfixStatus(this.currentToken()).infix) {
-                    throw new ParserError('"' + this.currentToken().getText()
-                        + '" does not have infix status.', this.currentToken().position);
+                var pat = this.parsePattern();
+                if ((!(pat instanceof expressions_1.FunctionApplication))
+                    || (!(pat.argument.simplify() instanceof expressions_1.Record))
+                    || ((pat.argument.simplify()).entries.length !== 2)
+                    || (!(pat.func instanceof expressions_1.ValueIdentifier))) {
+                    throw new ParserError('If you start a function declaration with a "(",'
+                        + ' some infix expression should follow. But you gave me "'
+                        + pat.prettyPrint() + '" (' + pat.constructor.name + ').', pat.position);
                 }
-                ++this.position;
-                var right = this.parseAtomicPattern();
-                args.push(new expressions_1.Tuple(-1, [left, right]));
-                this.assertKeywordToken(this.currentToken(), ')');
-                ++this.position;
+                nm = pat.func;
+                args.push(pat.argument);
             }
             else {
                 var oldPos = this.position;
                 var throwError = false;
+                var throwIfError = false;
                 try {
                     var tok = this.parseOpIdentifierToken();
                     nm = new expressions_1.ValueIdentifier(tok.position, tok);
@@ -3209,8 +2959,9 @@ var Parser = (function () {
                         if (pat instanceof expressions_1.ValueIdentifier
                             && this.state.getInfixStatus(pat.name) !== undefined
                             && this.state.getInfixStatus(pat.name).infix) {
-                            throw new ParserError('Cute little infix identifiers as "' +
-                                pat.prettyPrint() + '" sure should play somewher else.', pat.position);
+                            throwIfError = true;
+                            throw new ParserError('Cute little infix identifiers such as "' +
+                                pat.prettyPrint() + '" sure should play somewhere else.', pat.position);
                         }
                         args.push(pat);
                     }
@@ -3228,7 +2979,10 @@ var Parser = (function () {
                         nm = new expressions_1.ValueIdentifier(this.currentToken().position, this.currentToken());
                         if (this.state.getInfixStatus(this.currentToken()) === undefined
                             || !this.state.getInfixStatus(this.currentToken()).infix) {
-                            throwError = true;
+                            if (throwIfError) {
+                                throwError = true;
+                                throw e;
+                            }
                             throw new ParserError('"' + this.currentToken().getText()
                                 + '" does not have infix status.', this.currentToken().position);
                         }
@@ -3237,9 +2991,6 @@ var Parser = (function () {
                         args.push(new expressions_1.Tuple(-1, [left, right]));
                     }
                     catch (f) {
-                        if (throwError) {
-                            throw f;
-                        }
                         // It wasn't infix at all, but simply wrong.
                         throw e;
                     }
@@ -3668,7 +3419,7 @@ exports.parse = parse;
 
 
 /***/ }),
-/* 6 */
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3684,7 +3435,7 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var expressions_1 = __webpack_require__(7);
+var expressions_1 = __webpack_require__(6);
 var lexer_1 = __webpack_require__(1);
 var types_1 = __webpack_require__(2);
 var errors_1 = __webpack_require__(0);
@@ -3730,7 +3481,7 @@ var ValueDeclaration = (function (_super) {
     };
     ValueDeclaration.prototype.elaborate = function (state) {
         // TODO
-        throw new errors_1.InternalInterpreterError(-1, 'Not yet implemented.');
+        return state;
     };
     ValueDeclaration.prototype.evaluate = function (state) {
         var result = [];
@@ -3812,9 +3563,7 @@ var TypeDeclaration = (function (_super) {
     };
     TypeDeclaration.prototype.evaluate = function (state) {
         for (var i = 0; i < this.typeBinding.length; ++i) {
-            var id = 0;
-            // TODO id
-            state.setDynamicType(this.typeBinding[i].name.getText(), [], id);
+            state.setDynamicType(this.typeBinding[i].name.getText(), []);
         }
         return [state, false, undefined];
     };
@@ -3875,7 +3624,7 @@ var DatatypeDeclaration = (function (_super) {
     };
     DatatypeDeclaration.prototype.elaborate = function (state) {
         // TODO
-        throw new errors_1.InternalInterpreterError(-1, 'Not yet implemented.');
+        return state;
     };
     DatatypeDeclaration.prototype.evaluate = function (state) {
         // I'm assuming the withtype is empty
@@ -3884,9 +3633,8 @@ var DatatypeDeclaration = (function (_super) {
             for (var j = 0; j < res[0].length; ++j) {
                 state.setDynamicValue(res[0][j][0], res[0][j][1]);
             }
-            var id = 0;
             // TODO id
-            state.setDynamicType(res[1][0], res[1][1], id);
+            state.setDynamicType(res[1][0], res[1][1]);
         }
         return [state, false, undefined];
     };
@@ -3933,9 +3681,7 @@ var DatatypeReplication = (function (_super) {
         if (res === undefined) {
             throw new errors_1.ElaborationError(this.position, 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
         }
-        var id = 0;
-        // TODO id
-        state.setStaticType(this.name.getText(), res.type, res.constructors, id);
+        state.setStaticType(this.name.getText(), res.type, res.constructors);
         return state;
     };
     DatatypeReplication.prototype.evaluate = function (state) {
@@ -3943,9 +3689,7 @@ var DatatypeReplication = (function (_super) {
         if (res === undefined) {
             throw new errors_1.EvaluationError(this.position, 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
         }
-        var id = 0;
-        // TODO id
-        state.setDynamicType(this.name.getText(), res[0], id);
+        state.setDynamicType(this.name.getText(), res);
         return [state, false, undefined];
     };
     DatatypeReplication.prototype.prettyPrint = function (indentation, oneLine) {
@@ -3997,7 +3741,7 @@ var AbstypeDeclaration = (function (_super) {
     };
     AbstypeDeclaration.prototype.elaborate = function (state) {
         // TODO
-        throw new errors_1.InternalInterpreterError(-1, 'Not yet implemented.');
+        return state;
     };
     AbstypeDeclaration.prototype.evaluate = function (state) {
         // I'm assuming the withtype is empty
@@ -4475,8 +4219,8 @@ var DatatypeBinding = (function () {
             if (this.type[i][1] !== undefined) {
                 numArg = 1;
             }
-            var id = 0;
-            // TODO id
+            var id = state.getValueIdentifierId(this.type[i][0].getText());
+            state.incrementValueIdentifierId(this.type[i][0].getText());
             ve.push([this.type[i][0].getText(), new values_1.ValueConstructor(this.type[i][0].getText(), numArg, id)]);
             connames.push(this.type[i][0].getText());
         }
@@ -4494,29 +4238,19 @@ var DirectExceptionBinding = (function () {
     }
     DirectExceptionBinding.prototype.elaborate = function (state) {
         if (this.type !== undefined) {
-            var tyvars = this.type.getTypeVariables(true);
-            if (tyvars.size > 0) {
-                var res_1 = '';
-                if (tyvars.size > 1) {
-                    res_1 += 's';
+            var tyvars_1 = [];
+            this.type.getTypeVariables(true).forEach(function (val) {
+                if (val.kill() instanceof types_1.TypeVariable) {
+                    tyvars_1.push(val);
                 }
-                res_1 += ' ';
-                var first_1 = true;
-                tyvars.forEach(function (val) {
-                    if (first_1) {
-                        first_1 = false;
-                    }
-                    else {
-                        res_1 += ', ';
-                    }
-                    res_1 += '"' + val.name + '"';
-                });
-                throw new errors_1.ElaborationError(this.position, 'Unguarded type variable' + res_1 + '.');
+            });
+            if (tyvars_1.length > 0) {
+                throw errors_1.ElaborationError.getUnguarded(this.position, tyvars_1);
             }
-            state.setStaticValue(this.name.getText(), [new types_1.FunctionType(this.type.simplify(), new types_1.PrimitiveType('exn'))]);
+            state.setStaticValue(this.name.getText(), new types_1.FunctionType(this.type.simplify(), new types_1.PrimitiveType('exn')));
         }
         else {
-            state.setStaticValue(this.name.getText(), [new types_1.PrimitiveType('exn')]);
+            state.setStaticValue(this.name.getText(), new types_1.PrimitiveType('exn'));
         }
         return state;
     };
@@ -4525,8 +4259,8 @@ var DirectExceptionBinding = (function () {
         if (this.type !== undefined) {
             numArg = 1;
         }
-        var id = 0;
-        // TODO id stuff
+        var id = state.getValueIdentifierId(this.name.getText());
+        state.incrementValueIdentifierId(this.name.getText());
         state.setDynamicValue(this.name.getText(), new values_1.ExceptionConstructor(this.name.getText(), numArg, id));
         return [state, false, undefined];
     };
@@ -4555,7 +4289,6 @@ var ExceptionAlias = (function () {
             throw new errors_1.EvaluationError(this.position, 'Unbound value identifier "'
                 + this.oldname.getText() + '".');
         }
-        // TODO id stuff
         state.setDynamicValue(this.name.getText(), res);
         return [state, false, undefined];
     };
@@ -4565,7 +4298,7 @@ exports.ExceptionAlias = ExceptionAlias;
 
 
 /***/ }),
-/* 7 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4582,12 +4315,11 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var types_1 = __webpack_require__(2);
-var declarations_1 = __webpack_require__(6);
+var declarations_1 = __webpack_require__(5);
 var lexer_1 = __webpack_require__(1);
 var errors_1 = __webpack_require__(0);
 var values_1 = __webpack_require__(3);
-var parser_1 = __webpack_require__(5);
-var initialState_1 = __webpack_require__(4);
+var parser_1 = __webpack_require__(4);
 var Expression = (function () {
     function Expression() {
     }
@@ -5069,19 +4801,9 @@ var Lambda = (function (_super) {
         throw new errors_1.InternalInterpreterError(this.position, 'nyi\'an :3');
     };
     Lambda.prototype.compute = function (state) {
-        // We need to ensure that the function value receives a capture
-        // of the current state, and that that capture stays that way
-        var nstate = initialState_1.getInitialState().getNestedState(true, state.id);
-        state.getDefinedIdentifiers().forEach(function (val) {
-            if (state.getDynamicValue(val) !== undefined) {
-                nstate.setDynamicValue(val, state.getDynamicValue(val), true);
-            }
-            if (state.getDynamicType(val) !== undefined) {
-                var tp = state.getDynamicType(val);
-                nstate.setDynamicType(val, tp[0], tp[1], true);
-            }
-        });
-        return [new values_1.FunctionValue(nstate, [], this.match), false];
+        // TODO thoroughly test that not nesting here suffices
+        // let nstate = state.getNestedState(true, state.id);
+        return [new values_1.FunctionValue(state, [], this.match), false];
     };
     return Lambda;
 }(Expression));
@@ -5107,10 +4829,6 @@ var Match = (function () {
         return res;
     };
     Match.prototype.compute = function (state, value) {
-        var dg = '';
-        state.getDefinedIdentifiers().forEach(function (val) {
-            dg += val + ' ';
-        });
         for (var i = 0; i < this.matches.length; ++i) {
             var nstate = state.getNestedState(false, state.id);
             var res = this.matches[i][0].matches(nstate, value);
@@ -5118,10 +4836,6 @@ var Match = (function () {
                 for (var j = 0; j < res.length; ++j) {
                     nstate.setDynamicValue(res[j][0], res[j][1], true);
                 }
-                dg = 'Successful ';
-                nstate.getDefinedIdentifiers().forEach(function (val) {
-                    dg += val + ' ';
-                });
                 return this.matches[i][1].compute(nstate);
             }
         }
@@ -5274,7 +4988,8 @@ var InfixExpression = (function (_super) {
                 var info2 = state.getInfixStatus(ops[i - 1][0]);
                 if (info1.precedence === info2.precedence
                     && info1.rightAssociative !== info2.rightAssociative
-                    && poses[ops[i - 1][1]] === poses[ops[i][1]]) {
+                    && (poses[ops[i - 1][1] + 1] === poses[ops[i][1]]
+                        || poses[ops[i - 1][1]] === poses[ops[i][1] + 1])) {
                     throw new parser_1.ParserError('Could you ever imagine left associatives '
                         + 'and right associatives living together in peace?', ops[i][0].position);
                 }
@@ -5552,7 +5267,7 @@ exports.While = While;
 
 
 /***/ }),
-/* 8 */
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5572,9 +5287,10 @@ let AST = instance.lexParse(..code..);
 
 */
 Object.defineProperty(exports, "__esModule", { value: true });
-var initialState_1 = __webpack_require__(4);
+var initialState_1 = __webpack_require__(8);
+var stdlib_1 = __webpack_require__(9);
 var Lexer = __webpack_require__(1);
-var Parser = __webpack_require__(5);
+var Parser = __webpack_require__(4);
 var Interpreter = (function () {
     function Interpreter(settings) {
         this.settings = settings;
@@ -5604,35 +5320,28 @@ var Interpreter = (function () {
         var ast = Parser.parse(tkn, state);
         state = oldState.getNestedState();
         ast = ast.simplify();
-        // state = ast.elaborate(state);
+        state = ast.elaborate(state);
         // Use a fresh state to be able to piece types and values together
         var res = ast.evaluate(oldState.getNestedState());
-        // if (res[1]) {
-        return res;
-        // }
-        /*
-        let curState = res[0];
-
+        if (res[1]) {
+            return res;
+        }
+        var curState = res[0];
         while (curState.id > oldState.id) {
             if (curState.dynamicBasis !== undefined) {
                 // For every new bound value, try to find its type
-                for (let i in curState.dynamicBasis.valueEnvironment) {
-                    if (Object.prototype.hasOwnProperty.call(
-                        curState.dynamicBasis.valueEnvironment, i)) {
-
-                        let tp = state.getStaticValue(i, curState.id);
+                for (var i in curState.dynamicBasis.valueEnvironment) {
+                    if (Object.prototype.hasOwnProperty.call(curState.dynamicBasis.valueEnvironment, i)) {
+                        var tp = state.getStaticValue(i, undefined, curState.id);
                         if (tp !== undefined) {
                             curState.setStaticValue(i, tp);
                         }
                     }
                 }
-
                 // For every new bound type, try to find its type
-                for (let i in curState.dynamicBasis.typeEnvironment) {
-                    if (Object.prototype.hasOwnProperty.call(
-                        curState.dynamicBasis.typeEnvironment, i)) {
-
-                        let tp = state.getStaticType(i, curState.id);
+                for (var i in curState.dynamicBasis.typeEnvironment) {
+                    if (Object.prototype.hasOwnProperty.call(curState.dynamicBasis.typeEnvironment, i)) {
+                        var tp = state.getStaticType(i, undefined, curState.id);
                         if (tp !== undefined) {
                             curState.setStaticType(i, tp.type, tp.constructors);
                         }
@@ -5642,14 +5351,18 @@ var Interpreter = (function () {
             if (state.parent === undefined) {
                 break;
             }
-            curState = <State> curState.parent;
+            curState = curState.parent;
             while (state.id > curState.id && state.parent !== undefined) {
-                state = <State> state.parent;
+                state = state.parent;
             }
         }
-
         return res;
-         */
+    };
+    Interpreter.getFirstState = function (withStdLib) {
+        if (withStdLib) {
+            return stdlib_1.addStdLib(initialState_1.getInitialState());
+        }
+        return initialState_1.getInitialState();
     };
     return Interpreter;
 }());
@@ -5657,7 +5370,673 @@ exports.Interpreter = Interpreter;
 
 
 /***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var state_1 = __webpack_require__(10);
+var types_1 = __webpack_require__(2);
+var values_1 = __webpack_require__(3);
+var errors_1 = __webpack_require__(0);
+// Initial static basis (see SML Definition, appendix C through E)
+// let intType = new PrimitiveType('int');
+var realType = new types_1.PrimitiveType('real');
+// let wordType = new PrimitiveType('word');
+var boolType = new types_1.PrimitiveType('bool');
+var stringType = new types_1.PrimitiveType('string');
+var charType = new types_1.PrimitiveType('char');
+function functionType(type) {
+    return new types_1.FunctionType(new types_1.TupleType([type, type]), type).simplify();
+}
+function bfunctionType(type) {
+    return new types_1.FunctionType(new types_1.TupleType([type, type]), boolType).simplify();
+}
+var typeVar = new types_1.TypeVariable('\'a');
+var eqTypeVar = new types_1.TypeVariable('\'\'b');
+var intWordType = new types_1.TypeVariable('*iw', true, 0, [new types_1.PrimitiveType('int'), new types_1.PrimitiveType('word')]);
+var intRealType = new types_1.TypeVariable('*ir', true, 0, [new types_1.PrimitiveType('int'), new types_1.PrimitiveType('real')]);
+var intWordRealType = new types_1.TypeVariable('*iwr', true, 0, [new types_1.PrimitiveType('int'), new types_1.PrimitiveType('word'),
+    new types_1.PrimitiveType('real')]);
+var anyType = new types_1.TypeVariable('*any', true, 0, [new types_1.PrimitiveType('int'), new types_1.PrimitiveType('word'),
+    new types_1.PrimitiveType('real'), new types_1.PrimitiveType('string'), new types_1.PrimitiveType('char')]);
+var initialState = new state_1.State(0, undefined, new state_1.StaticBasis({
+    'unit': [new state_1.TypeInformation(new types_1.FunctionType(new types_1.TupleType([]), new types_1.TupleType([])).simplify(), []), false],
+    'bool': [new state_1.TypeInformation(new types_1.PrimitiveType('bool'), ['true', 'false']), false],
+    'int': [new state_1.TypeInformation(new types_1.PrimitiveType('int'), []), false],
+    'word': [new state_1.TypeInformation(new types_1.PrimitiveType('word'), []), false],
+    'real': [new state_1.TypeInformation(new types_1.PrimitiveType('real'), []), false],
+    'string': [new state_1.TypeInformation(new types_1.PrimitiveType('string'), []), false],
+    'char': [new state_1.TypeInformation(new types_1.PrimitiveType('char'), []), false],
+    'list': [new state_1.TypeInformation(new types_1.PrimitiveType('list', [typeVar]), ['nil', '::']), false],
+    'ref': [new state_1.TypeInformation(new types_1.PrimitiveType('ref', [typeVar]), ['ref']), false],
+    'exn': [new state_1.TypeInformation(new types_1.PrimitiveType('exn'), []), false]
+}, {
+    'div': [functionType(intWordType), false],
+    'mod': [functionType(intWordType), false],
+    '*': [functionType(intWordRealType), false],
+    '/': [functionType(realType), false],
+    '+': [functionType(intWordRealType), false],
+    '-': [functionType(intWordRealType), false],
+    '<': [bfunctionType(anyType), false],
+    '<=': [bfunctionType(anyType), false],
+    '>': [bfunctionType(anyType), false],
+    '>=': [bfunctionType(anyType), false],
+    '=': [new types_1.FunctionType(new types_1.TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(), false],
+    '<>': [new types_1.FunctionType(new types_1.TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(), false],
+    // ':='
+    // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
+    'true': [new types_1.PrimitiveType('bool'), false],
+    'false': [new types_1.PrimitiveType('bool'), false],
+    'nil': [new types_1.PrimitiveType('list', [typeVar]), false],
+    '::': [new types_1.FunctionType(new types_1.TupleType([typeVar, new types_1.PrimitiveType('list', [typeVar])]), new types_1.PrimitiveType('list', [typeVar])).simplify(), false],
+    'Match': [new types_1.PrimitiveType('exn'), false],
+    'Bind': [new types_1.PrimitiveType('exn'), false],
+    'Div': [new types_1.PrimitiveType('exn'), false],
+    'Overflow': [new types_1.PrimitiveType('exn'), false],
+    '^': [functionType(stringType), false],
+    'explode': [new types_1.FunctionType(stringType, new types_1.PrimitiveType('list', [charType])).simplify(), false],
+    'implode': [new types_1.FunctionType(new types_1.PrimitiveType('list', [charType]), stringType).simplify(), false],
+    '~': [new types_1.FunctionType(intRealType, intRealType), false],
+    'abs': [new types_1.FunctionType(intRealType, intRealType), false],
+}), new state_1.DynamicBasis({
+    'unit': [[], false],
+    'bool': [['true', 'false'], false],
+    'int': [[], false],
+    'word': [[], false],
+    'real': [[], false],
+    'string': [[], false],
+    'char': [[], false],
+    'list': [['nil', '::'], false],
+    'ref': [['ref'], false],
+    'exn': [[], false],
+}, {
+    'div': [new values_1.PredefinedFunction('div', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    if (val2.value === 0) {
+                        return [new values_1.ExceptionConstructor('Div').construct(), true];
+                    }
+                    return [val1.divide(val2), false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    if (val2.value === 0) {
+                        return [new values_1.ExceptionConstructor('Div').construct(), true];
+                    }
+                    return [val1.divide(val2), false];
+                }
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "div" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    'mod': [new values_1.PredefinedFunction('mod', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    if (val2.value === 0) {
+                        return [new values_1.ExceptionConstructor('Div').construct(), true];
+                    }
+                    return [val1.modulo(val2), false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    if (val2.value === 0) {
+                        return [new values_1.ExceptionConstructor('Div').construct(), true];
+                    }
+                    return [val1.modulo(val2), false];
+                }
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "mod" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '*': [new values_1.PredefinedFunction('*', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    var result = val1.multiply(val2);
+                    if (result.hasOverflow()) {
+                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+                    }
+                    return [result, false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    var result = val1.multiply(val2);
+                    if (result.hasOverflow()) {
+                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+                    }
+                    return [result, false];
+                }
+                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    var result = val1.multiply(val2);
+                    if (result.hasOverflow()) {
+                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+                    }
+                    return [result, false];
+                }
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "*" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '/': [new values_1.PredefinedFunction('/', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    if (val2.value === 0) {
+                        return [new values_1.ExceptionConstructor('Div').construct(), true];
+                    }
+                    return [val1.divide(val2), false];
+                }
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "/" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '+': [new values_1.PredefinedFunction('+', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    var result = val1.add(val2);
+                    if (result.hasOverflow()) {
+                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+                    }
+                    return [result, false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    var result = val1.add(val2);
+                    if (result.hasOverflow()) {
+                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+                    }
+                    return [result, false];
+                }
+                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    var result = val1.add(val2);
+                    if (result.hasOverflow()) {
+                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+                    }
+                    return [result, false];
+                }
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "+" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '-': [new values_1.PredefinedFunction('-', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    var result = val1.add(val2.negate());
+                    if (result.hasOverflow()) {
+                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+                    }
+                    return [result, false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    var result = val1.add(val2.negate());
+                    if (result.hasOverflow()) {
+                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+                    }
+                    return [result, false];
+                }
+                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    var result = val1.add(val2.negate());
+                    if (result.hasOverflow()) {
+                        return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+                    }
+                    return [result, false];
+                }
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "-" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '<': [new values_1.PredefinedFunction('<', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) < 0), false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) < 0), false];
+                }
+                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) < 0), false];
+                }
+                else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) < 0), false];
+                }
+                else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) < 0), false];
+                }
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "<" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '>': [new values_1.PredefinedFunction('<', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) > 0), false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) > 0), false];
+                }
+                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) > 0), false];
+                }
+                else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) > 0), false];
+                }
+                else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) > 0), false];
+                }
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called ">" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '<=': [new values_1.PredefinedFunction('<', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) <= 0), false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) <= 0), false];
+                }
+                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) <= 0), false];
+                }
+                else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) <= 0), false];
+                }
+                else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) <= 0), false];
+                }
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "<=" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '>=': [new values_1.PredefinedFunction('<', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.Integer && val2 instanceof values_1.Integer) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) >= 0), false];
+                }
+                else if (val1 instanceof values_1.Word && val2 instanceof values_1.Word) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) >= 0), false];
+                }
+                else if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) >= 0), false];
+                }
+                else if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) >= 0), false];
+                }
+                else if (val1 instanceof values_1.CharValue && val2 instanceof values_1.CharValue) {
+                    return [new values_1.BoolValue(val1.compareTo(val2) >= 0), false];
+                }
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called ">=" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '=': [new values_1.PredefinedFunction('=', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                return [new values_1.BoolValue(val1.equals(val2)), false];
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "=" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '<>': [new values_1.PredefinedFunction('=', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                return [new values_1.BoolValue(!val1.equals(val2)), false];
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "<>" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    // ':='
+    // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
+    'true': [new values_1.BoolValue(true), false],
+    'false': [new values_1.BoolValue(false), false],
+    'nil': [new values_1.ValueConstructor('nil').construct(), false],
+    '::': [new values_1.ValueConstructor('::', 1), false],
+    'Match': [new values_1.ExceptionConstructor('Match').construct(), false],
+    'Bind': [new values_1.ExceptionConstructor('Bind').construct(), false],
+    'Div': [new values_1.ExceptionConstructor('Div').construct(), false],
+    'Overflow': [new values_1.ExceptionConstructor('Overflow').construct(), false],
+    '^': [new values_1.PredefinedFunction('^', function (val) {
+            if (val instanceof values_1.RecordValue) {
+                var val1 = val.getValue('1');
+                var val2 = val.getValue('2');
+                if (val1 instanceof values_1.StringValue && val2 instanceof values_1.StringValue) {
+                    return [val1.concat(val2), false];
+                }
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "^" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    'explode': [new values_1.PredefinedFunction('explode', function (val) {
+            if (val instanceof values_1.StringValue) {
+                return [val.explode(), false];
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    'implode': [new values_1.PredefinedFunction('implode', function (val) {
+            if (val instanceof values_1.ConstructedValue) {
+                return [values_1.StringValue.implode(val), false];
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
+        }), false],
+    '~': [new values_1.PredefinedFunction('~', function (val) {
+            if (val instanceof values_1.Integer) {
+                var result = val.negate();
+                if (result.hasOverflow()) {
+                    return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+                }
+                return [result, false];
+            }
+            else if (val instanceof values_1.Real) {
+                var result = val.negate();
+                if (result.hasOverflow()) {
+                    return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+                }
+                return [result, false];
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "~" on something weird.');
+        }), false],
+    'abs': [new values_1.PredefinedFunction('~', function (val) {
+            if (val instanceof values_1.Integer) {
+                if (val.value >= 0) {
+                    return [val, false];
+                }
+                var result = val.negate();
+                if (result.hasOverflow()) {
+                    return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+                }
+                return [result, false];
+            }
+            else if (val instanceof values_1.Real) {
+                if (val.value >= 0) {
+                    return [val, false];
+                }
+                var result = val.negate();
+                if (result.hasOverflow()) {
+                    return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+                }
+                return [result, false];
+            }
+            throw new errors_1.InternalInterpreterError(-1, 'Called "~" on something weird.');
+        }), false],
+}), {
+    'bool': new state_1.TypeNameInformation(0, true),
+    'int': new state_1.TypeNameInformation(0, true),
+    'real': new state_1.TypeNameInformation(0, false),
+    'string': new state_1.TypeNameInformation(0, true),
+    'char': new state_1.TypeNameInformation(0, true),
+    'word': new state_1.TypeNameInformation(0, true),
+    'list': new state_1.TypeNameInformation(1, true),
+    'ref': new state_1.TypeNameInformation(1, true),
+    'exn': new state_1.TypeNameInformation(0, false, false),
+}, {
+    'div': new state_1.InfixStatus(true, 7, false),
+    'mod': new state_1.InfixStatus(true, 7, false),
+    '*': new state_1.InfixStatus(true, 7, false),
+    '/': new state_1.InfixStatus(true, 7, false),
+    '+': new state_1.InfixStatus(true, 6, false),
+    '-': new state_1.InfixStatus(true, 6, false),
+    '<': new state_1.InfixStatus(true, 4, false),
+    '>': new state_1.InfixStatus(true, 4, false),
+    '<=': new state_1.InfixStatus(true, 4, false),
+    '>=': new state_1.InfixStatus(true, 4, false),
+    '::': new state_1.InfixStatus(true, 5, true),
+    '=': new state_1.InfixStatus(true, 4, false),
+    '<>': new state_1.InfixStatus(true, 4, false),
+    ':=': new state_1.InfixStatus(true, 3, false),
+    '^': new state_1.InfixStatus(true, 6, false),
+}, {
+    'bool': false,
+    'int': false,
+    'real': false,
+    'string': false,
+    'char': false,
+    'word': false,
+    'list': false,
+    'ref': false,
+    'exn': false,
+    '=': false,
+    'true': false,
+    'false': false,
+    'nil': false,
+    '::': false
+}, {
+    'nil': 1,
+    '::': 1,
+    'Match': 1,
+    'Bind': 1,
+    'Div': 1,
+    'Overflow': 1
+});
+function getInitialState() {
+    return initialState.getNestedState();
+}
+exports.getInitialState = getInitialState;
+
+
+/***/ }),
 /* 9 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var types_1 = __webpack_require__(2);
+var values_1 = __webpack_require__(3);
+var errors_1 = __webpack_require__(0);
+var main_1 = __webpack_require__(7);
+var intType = new types_1.PrimitiveType('int');
+var realType = new types_1.PrimitiveType('real');
+// let wordType = new PrimitiveType('word');
+// let boolType = new PrimitiveType('bool');
+// let stringType = new PrimitiveType('string');
+var charType = new types_1.PrimitiveType('char');
+function addMathLib(state) {
+    state.setDynamicValue('Math.sqrt', new values_1.PredefinedFunction('Math.sqrt', function (val) {
+        if (val instanceof values_1.Real) {
+            var value = val.value;
+            if (value < 0) {
+                return [new values_1.ExceptionConstructor('Domain').construct(), true];
+            }
+            return [new values_1.Real(Math.sqrt(value)), false];
+        }
+        else {
+            throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }));
+    state.setStaticValue('Math.sqrt', new types_1.FunctionType(realType, realType));
+    state.setDynamicValue('Math.sin', new values_1.PredefinedFunction('Math.sin', function (val) {
+        if (val instanceof values_1.Real) {
+            var value = val.value;
+            return [new values_1.Real(Math.sin(value)), false];
+        }
+        else {
+            throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }));
+    state.setStaticValue('Math.sin', new types_1.FunctionType(realType, realType));
+    state.setDynamicValue('Math.cos', new values_1.PredefinedFunction('Math.cos', function (val) {
+        if (val instanceof values_1.Real) {
+            var value = val.value;
+            return [new values_1.Real(Math.cos(value)), false];
+        }
+        else {
+            throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }));
+    state.setStaticValue('Math.cos', new types_1.FunctionType(realType, realType));
+    state.setDynamicValue('Math.asin', new values_1.PredefinedFunction('Math.asin', function (val) {
+        if (val instanceof values_1.Real) {
+            var value = val.value;
+            return [new values_1.Real(Math.asin(value)), false];
+        }
+        else {
+            throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }));
+    state.setStaticValue('Math.asin', new types_1.FunctionType(realType, realType));
+    state.setDynamicValue('Math.acos', new values_1.PredefinedFunction('Math.acos', function (val) {
+        if (val instanceof values_1.Real) {
+            var value = val.value;
+            return [new values_1.Real(Math.acos(value)), false];
+        }
+        else {
+            throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }));
+    state.setStaticValue('Math.acos', new types_1.FunctionType(realType, realType));
+    state.setDynamicValue('Math.exp', new values_1.PredefinedFunction('Math.exp', function (val) {
+        if (val instanceof values_1.Real) {
+            var value = val.value;
+            return [new values_1.Real(Math.exp(value)), false];
+        }
+        else {
+            throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }));
+    state.setStaticValue('Math.exp', new types_1.FunctionType(realType, realType));
+    state.setDynamicValue('Math.pow', new values_1.PredefinedFunction('Math.sin', function (val) {
+        if (val instanceof values_1.RecordValue) {
+            var val1 = val.getValue('1');
+            var val2 = val.getValue('2');
+            if (val1 instanceof values_1.Real && val2 instanceof values_1.Real) {
+                var value1 = val1.value;
+                var value2 = val1.value;
+                return [new values_1.Real(Math.pow(value1, value2)), false];
+            }
+            else {
+                throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+            }
+        }
+        else {
+            throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }));
+    state.setStaticValue('Math.pow', new types_1.FunctionType(new types_1.TupleType([realType, realType]), realType).simplify());
+    state.setDynamicValue('Math.ln', new values_1.PredefinedFunction('Math.ln', function (val) {
+        if (val instanceof values_1.Real) {
+            var value = val.value;
+            return [new values_1.Real(Math.log(value)), false];
+        }
+        else {
+            throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }));
+    state.setStaticValue('Math.ln', new types_1.FunctionType(realType, realType));
+    state.setDynamicValue('Math.log10', new values_1.PredefinedFunction('Math.log10', function (val) {
+        if (val instanceof values_1.Real) {
+            var value = val.value;
+            return [new values_1.Real(Math.log10(value)), false];
+        }
+        else {
+            throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }));
+    state.setStaticValue('Math.log10', new types_1.FunctionType(realType, realType));
+    state.setDynamicValue('Math.pi', new values_1.Real(3.14159265359));
+    state.setStaticValue('Math.pi', realType);
+    state.setDynamicValue('Math.e', new values_1.Real(2.71828182846));
+    state.setStaticValue('Math.e', realType);
+    return state;
+}
+function addCharLib(state) {
+    state.setDynamicValue('ord', new values_1.PredefinedFunction('ord', function (val) {
+        if (val instanceof values_1.CharValue) {
+            var value = val.value;
+            return [new values_1.Integer(value.charCodeAt(0)), false];
+        }
+        else {
+            throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }));
+    state.setStaticValue('ord', new types_1.FunctionType(charType, intType));
+    state.setDynamicValue('chr', new values_1.PredefinedFunction('chr', function (val) {
+        if (val instanceof values_1.Integer) {
+            var value = val.value;
+            if (value < 0 || value > 255) {
+                return [new values_1.ExceptionConstructor('Chr').construct(), true];
+            }
+            return [new values_1.CharValue(String.fromCharCode(value)), false];
+        }
+        else {
+            throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }));
+    state.setStaticValue('chr', new types_1.FunctionType(intType, charType));
+    return state;
+}
+function addRealLib(state) {
+    state.setDynamicValue('Real.fromInt', new values_1.PredefinedFunction('Real.fromInt', function (val) {
+        if (val instanceof values_1.Integer) {
+            var value = val.value;
+            return [new values_1.Real(value), false];
+        }
+        else {
+            throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }));
+    state.setStaticValue('Real.fromInt', new types_1.FunctionType(intType, realType));
+    state.setDynamicValue('Real.round', new values_1.PredefinedFunction('Real.round', function (val) {
+        if (val instanceof values_1.Real) {
+            var value = val.value;
+            var integer = new values_1.Integer(Math.round(value));
+            if (integer.hasOverflow()) {
+                return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+            }
+            return [integer, false];
+        }
+        else {
+            throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }));
+    state.setStaticValue('Real.round', new types_1.FunctionType(realType, intType));
+    state.setDynamicValue('Real.floor', new values_1.PredefinedFunction('Real.floor', function (val) {
+        if (val instanceof values_1.Real) {
+            var value = val.value;
+            var integer = new values_1.Integer(Math.floor(value));
+            if (integer.hasOverflow()) {
+                return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+            }
+            return [integer, false];
+        }
+        else {
+            throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }));
+    state.setStaticValue('Real.floor', new types_1.FunctionType(realType, intType));
+    state.setDynamicValue('Real.ceil', new values_1.PredefinedFunction('Real.ceil', function (val) {
+        if (val instanceof values_1.Real) {
+            var value = val.value;
+            var integer = new values_1.Integer(Math.round(value));
+            if (integer.hasOverflow()) {
+                return [new values_1.ExceptionConstructor('Overflow').construct(), true];
+            }
+            return [integer, false];
+        }
+        else {
+            throw new errors_1.InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }));
+    state.setStaticValue('Real.ceil', new types_1.FunctionType(realType, intType));
+    return state;
+}
+var code = "\nexception Domain;\nexception Empty;\nexception Subscript;\nexception Size;\nexception Chr;\n\nfun o (f,g) x = f (g x);\ninfix 3 o;\n\ndatatype order = LESS | EQUAL | GREATER;\n\nfun Int.compare (x, y: int) = if x<y then LESS else if x>y then GREATER else EQUAL;\nfun Real.compare (x, y: real) = if x<y then LESS else if x>y then GREATER else EQUAL;\n\nexception Option.Option;\ndatatype 'a option = NONE | SOME of 'a;\nfun valOf (SOME x) = x\n  | valOf NONE = raise Option.Option;\nfun isSome NONE = false\n  | isSome (SOME _) = true;\n\nval Int.minInt = SOME ~1073741824;\nval Int.maxInt = SOME 1073741823;\nfun Int.max (x, y) = if x < y then y else x : int;\n\nfun not true = false | not false = true;\n\nfun hd nil = raise Empty\n| hd (x::xr) = x;\nfun tl nil = raise Empty\n| tl (x::xr) = xr;\nfun null nil = true\n| null (x::xr) = false;\n\nfun map f nil = nil\n  | map f (x::xr) = (f x) :: (map f xr);\n\nfun @ (nil,ys) = ys\n| @((x::xr),ys) = x:: @(xr,ys);\ninfixr 5 @;\n\nfun length nil = 0\n  | length (x::xr) = 1 + length xr;\n\nfun rev nil = nil\n  | rev (x::xr) = rev xr @ [x];\n\nfun List.concat nil = nil\n  | List.concat (x::xr) = x @ List.concat xr;\n\nfun foldr f e []      = e\n  | foldr f e (x::xr) = f(x, foldr f e xr);\n\nfun foldl f e []      = e\n  | foldl f e (x::xr) = foldl f (f(x, e)) xr;\n\nfun List.tabulate (n, f) =\n  let fun h i = if i<n then f i :: h (i+1) else []\n  in if n<0 then raise Size else h 0 end;\n\nfun List.exists p []      = false\n  | List.exists p (x::xr) = p x orelse List.exists p xr;\n\nfun List.all p []      = true\n  | List.all p (x::xr) = p x andalso List.all p xr;\n\nfun List.filter p []      = []\n  | List.filter p (x::xr) = if p x then x :: List.filter p xr else List.filter p xr;\n\nfun List.collate (compare : 'a * 'a -> order) p = case p of\n    (nil, _::_) => LESS\n  | (nil, nil) => EQUAL\n  | (_::_, nil) => GREATER\n  | (x::xr, y::yr) => case compare(x,y) of\n         EQUAL => List.collate compare (xr,yr)\n       | s => s;\n\nfun List.nth (xs, n) =\n    let fun h []      _ = raise Subscript\n      | h (x::xr) n = if n=0 then x else h xr (n-1)\n    in if n<0 then raise Subscript else h xs n end;\n\nfun Char.isLower c  = #\"a\" <= c andalso c <= #\"z\";\nfun Char.isUpper c  = #\"A\" <= c andalso c <= #\"Z\";\nfun Char.isDigit c  = #\"0\" <= c andalso c <= #\"9\";\nfun Char.isAlpha c  = Char.isLower c orelse Char.isUpper c;\n";
+function addStdLib(state) {
+    state = main_1.Interpreter.interpret(code, state, true)[0];
+    state = addMathLib(state);
+    state = addCharLib(state);
+    state = addRealLib(state);
+    return state;
+}
+exports.addStdLib = addStdLib;
+
+
+/***/ }),
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5670,9 +6049,7 @@ var errors_1 = __webpack_require__(0);
 var TypeInformation = (function () {
     // Every constructor also appears in the value environment,
     // thus it suffices to record their names here.
-    // To distinguish between redefined names, each type has its own id.
-    function TypeInformation(type, constructors, id) {
-        if (id === void 0) { id = 0; }
+    function TypeInformation(type, constructors) {
         this.type = type;
         this.constructors = constructors;
     }
@@ -5714,10 +6091,9 @@ var DynamicBasis = (function () {
     DynamicBasis.prototype.setValue = function (name, value, intermediate) {
         this.valueEnvironment[name] = [value, intermediate];
     };
-    DynamicBasis.prototype.setType = function (name, type, id, intermediate) {
-        if (id === void 0) { id = 0; }
+    DynamicBasis.prototype.setType = function (name, type, intermediate) {
         if (intermediate === void 0) { intermediate = false; }
-        this.typeEnvironment[name] = [type, id, intermediate];
+        this.typeEnvironment[name] = [type, intermediate];
     };
     return DynamicBasis;
 }());
@@ -5736,10 +6112,9 @@ var StaticBasis = (function () {
     StaticBasis.prototype.setValue = function (name, value, intermediate) {
         this.valueEnvironment[name] = [value, intermediate];
     };
-    StaticBasis.prototype.setType = function (name, type, constructors, id, intermediate) {
-        if (id === void 0) { id = 0; }
+    StaticBasis.prototype.setType = function (name, type, constructors, intermediate) {
         if (intermediate === void 0) { intermediate = false; }
-        this.typeEnvironment[name] = [new TypeInformation(type, constructors, id),
+        this.typeEnvironment[name] = [new TypeInformation(type, constructors),
             intermediate];
     };
     return StaticBasis;
@@ -5747,7 +6122,8 @@ var StaticBasis = (function () {
 exports.StaticBasis = StaticBasis;
 var State = (function () {
     // The states' ids are non-decreasing; a single declaration uses the same ids
-    function State(id, parent, staticBasis, dynamicBasis, typeNames, infixEnvironment, rebindEnvironment, declaredIdentifiers, stdfiles) {
+    function State(id, parent, staticBasis, dynamicBasis, typeNames, infixEnvironment, rebindEnvironment, valueIdentifierId, declaredIdentifiers, stdfiles) {
+        if (valueIdentifierId === void 0) { valueIdentifierId = {}; }
         if (declaredIdentifiers === void 0) { declaredIdentifiers = new Set(); }
         if (stdfiles === void 0) { stdfiles = {
             '__stdout': [new values_1.StringValue(''), true],
@@ -5761,6 +6137,7 @@ var State = (function () {
         this.typeNames = typeNames;
         this.infixEnvironment = infixEnvironment;
         this.rebindEnvironment = rebindEnvironment;
+        this.valueIdentifierId = valueIdentifierId;
         this.declaredIdentifiers = declaredIdentifiers;
         this.stdfiles = stdfiles;
     }
@@ -5788,11 +6165,12 @@ var State = (function () {
                     res.setDynamicValue('__stdout', val);
                 }
                 else {
-                    res.setDynamicValue('__stdout', new values_1.StringValue(val.prettyPrint()));
+                    throw new errors_1.InternalInterpreterError(-1, 'You shall not print "'
+                        + val.constructor.name + '".');
                 }
                 return [new values_1.RecordValue(), false];
             }), true);
-            res.setStaticValue('print', [new types_1.FunctionType(new types_1.TypeVariable('\'a'), new types_1.RecordType(new Map()))], true);
+            res.setStaticValue('print', new types_1.FunctionType(new types_1.PrimitiveType('string'), new types_1.RecordType(new Map())), true);
         }
         return res;
     };
@@ -5811,7 +6189,7 @@ var State = (function () {
         if (intermediate === void 0) { intermediate = undefined; }
         if (idLimit === void 0) { idLimit = 0; }
         if (this.stdfiles[name] !== undefined) {
-            return [new types_1.PrimitiveType('string')];
+            return new types_1.PrimitiveType('string');
         }
         var result = this.staticBasis.getValue(name);
         if ((result !== undefined && (intermediate === undefined || intermediate === result[1]))
@@ -5868,8 +6246,7 @@ var State = (function () {
             if (result === undefined) {
                 return undefined;
             }
-            return [result[0],
-                result[1]];
+            return result[0];
         }
         else {
             return this.parent.getDynamicType(name, intermediate, idLimit);
@@ -5900,6 +6277,22 @@ var State = (function () {
             return this.parent.getPrimitiveType(name, idLimit);
         }
     };
+    State.prototype.getValueIdentifierId = function (name, idLimit) {
+        if (idLimit === void 0) { idLimit = 0; }
+        if (this.valueIdentifierId.hasOwnProperty(name)) {
+            return this.valueIdentifierId[name];
+        }
+        else if (!this.parent || this.parent.id < idLimit) {
+            return 0;
+        }
+        else {
+            return this.parent.getValueIdentifierId(name, idLimit);
+        }
+    };
+    State.prototype.incrementValueIdentifierId = function (name, idLimit) {
+        if (idLimit === void 0) { idLimit = 0; }
+        this.valueIdentifierId[name] = this.getValueIdentifierId(name, idLimit) + 1;
+    };
     State.prototype.setStaticValue = function (name, type, intermediate, atId) {
         if (intermediate === void 0) { intermediate = false; }
         if (atId === void 0) { atId = undefined; }
@@ -5916,18 +6309,17 @@ var State = (function () {
             this.parent.setStaticValue(name, type, intermediate, atId);
         }
     };
-    State.prototype.setStaticType = function (name, type, constructors, id, intermediate, atId) {
-        if (id === void 0) { id = 0; }
+    State.prototype.setStaticType = function (name, type, constructors, intermediate, atId) {
         if (intermediate === void 0) { intermediate = false; }
         if (atId === void 0) { atId = undefined; }
         if (atId === undefined || atId === this.id) {
-            this.staticBasis.setType(name, type, constructors, id, intermediate);
+            this.staticBasis.setType(name, type, constructors, intermediate);
         }
         else if (atId > this.id || this.parent === undefined) {
             throw new errors_1.InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         }
         else {
-            this.parent.setStaticType(name, type, constructors, id, intermediate, atId);
+            this.parent.setStaticType(name, type, constructors, intermediate, atId);
         }
     };
     State.prototype.setDynamicValue = function (name, value, intermediate, atId) {
@@ -5959,19 +6351,18 @@ var State = (function () {
             this.parent.setDynamicValue(name, value, intermediate, atId);
         }
     };
-    State.prototype.setDynamicType = function (name, constructors, id, intermediate, atId) {
-        if (id === void 0) { id = 0; }
+    State.prototype.setDynamicType = function (name, constructors, intermediate, atId) {
         if (intermediate === void 0) { intermediate = false; }
         if (atId === void 0) { atId = undefined; }
         if (atId === undefined || atId === this.id) {
-            this.dynamicBasis.setType(name, constructors, id, intermediate);
+            this.dynamicBasis.setType(name, constructors, intermediate);
             this.declaredIdentifiers.add(name);
         }
         else if (atId > this.id || this.parent === undefined) {
             throw new errors_1.InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         }
         else {
-            this.parent.setDynamicType(name, constructors, id, intermediate, atId);
+            this.parent.setDynamicType(name, constructors, intermediate, atId);
         }
     };
     State.prototype.setInfixStatus = function (id, precedence, rightAssociative, infix, atId) {
