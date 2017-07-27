@@ -108,7 +108,7 @@ it("exception shadowing", () => {
         }],
         ['f 42 handle Blob => false;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Blob', undefined, 1));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Blob', undefined));
         }]
     ]);
 });
