@@ -377,6 +377,8 @@ export class ConstructedValue extends Value {
         let result: string =  this.constructorName;
         if (this.id > 1) {
             result += '/' + (this.id - 1);
+        } else if (this.id === 0) {
+            result += ' (predefined)';
         }
         if (this.argument) {
             result += ' ' + this.argument.prettyPrint();
@@ -426,6 +428,8 @@ export class ExceptionValue extends Value {
         let result: string = this.constructorName;
         if (this.id > 1) {
             result += '/' + (this.id - 1);
+        } else if (this.id === 0) {
+            result += ' (predefined)';
         }
         if (this.argument) {
             result += ' ' + this.argument.prettyPrint();
@@ -502,8 +506,10 @@ export class ValueConstructor extends Value {
 
     prettyPrint() {
         let result = this.constructorName;
-        if (this.id !== 0) {
-            result += '/' + this.id;
+        if (this.id > 1) {
+            result += '/' + (this.id - 1);
+        } else if (this.id === 0) {
+            result += ' (predefined)';
         }
         return result;
     }
@@ -533,8 +539,10 @@ export class ExceptionConstructor extends Value {
 
     prettyPrint() {
         let result = this.exceptionName;
-        if (this.id !== 0) {
-            result += '/' + this.id;
+        if (this.id > 1) {
+            result += '/' + (this.id - 1);
+        } else if (this.id === 0) {
+            result += ' (predefined)';
         }
         return result;
     }
