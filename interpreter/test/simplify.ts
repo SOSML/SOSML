@@ -222,7 +222,25 @@ it("patrow", () => {
             ]),
             12
         )
-    )
+    );
+    expect(parse("val {x  as y} = 42;").simplify()).toEqualWithType(
+        parse("val {x = x  as y} = 42;")
+    );
+    expect(parse("val {x:int} = 42;")).toEqualWithType(
+        pattern_tester(
+            new Expr.Record(5, true, [
+                [
+                    "x",
+                    new Expr.TypedExpression(
+                        5,
+                        new Expr.ValueIdentifier(5, new Lexer.AlphanumericIdentifierToken("x", 5)),
+                        new Type.PrimitiveType('int', [], 7)
+                    )
+                ]
+            ]),
+            14
+        )
+    );
     //TODO
 });
 
