@@ -51,7 +51,7 @@ val f = update (update empty "x" Int) "y" Bool;
 val e = Abs("y", Int, Opr(Leq, Id"x", Id"y"));
 elab f e;
 
-datatype elab = T of ty | SE of string
+datatype elab = T of ty | SE of string;
 fun elab' f e = T(elab f e) handle
     Unbound s => SE("Unbound "^s)
   | Error s => SE("Error "^s);

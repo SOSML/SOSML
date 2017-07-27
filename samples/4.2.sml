@@ -15,6 +15,6 @@ fun iterdn n m s f = if n<m then s else iterdn (n-1) m (f(n,s)) f;
 fun tabulate (n,f) = iterdn (n-1) 0 nil (fn (i,xs) => f i::xs);
 
 tabulate(5, fn x => x);
-tabulate(5, fn x => x*x)
+tabulate(5, fn x => x*x);
 
 (* length, rev, List.concat, List.tabulate have to be predefined *)

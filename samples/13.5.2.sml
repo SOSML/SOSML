@@ -1,3 +1,4 @@
+exception Error of string
 datatype token = ADD | MUL | LPAR | RPAR | ICON of int | ID of string
 fun lex nil = nil
   | lex (#" ":: cr) = lex cr
@@ -19,6 +20,7 @@ and lexId cs cs' = if null cs' orelse not(Char.isAlpha (hd cs'))
                     then ID(implode(rev cs)) :: lex cs'
                     else lexId (hd cs' ::cs) (tl cs')
 ;
+
 fun match (a,ts) t = if null ts orelse hd ts <> t
                       then raise Error "match"
                       else (a, tl ts)

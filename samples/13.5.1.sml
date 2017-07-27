@@ -1,3 +1,4 @@
+exception Error of string
 datatype token = ADD | MUL | LPAR | RPAR | ICON of int | ID of string
 fun lex nil = nil
   | lex (#" ":: cr) = lex cr

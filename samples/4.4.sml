@@ -14,6 +14,6 @@ fun map f = foldr (fn (x,yr) => (f x)::yr) nil;
 fun filter f = foldr (fn (x,ys) => if f x then x::ys else ys) nil;
 
 fun foldl f s nil = s
-  | foldl f s (x::xr) = foldl f (f(x,s)) xr
+  | foldl f s (x::xr) = foldl f (f(x,s)) xr;
 fun foldr f s nil = s
-  | foldr f s (x::xr) = f(x, foldr f s xr)
+  | foldr f s (x::xr) = f(x, foldr f s xr);

@@ -1,15 +1,15 @@
-exception Error of string
+exception Error of string;
 
 fun test (0::tr) = tr
 | test (1::tr) = test tr
 | test (2::tr) = test (test tr)
-| test _ = raise Error "test"
+| test _ = raise Error "test";
 
 test [2,0,1,0];
 test [2,0,1,0,7];
 test [2,0,1];
 
-datatype tree = A | B of tree | C of tree * tree
+datatype tree = A | B of tree | C of tree * tree;
 
 fun rep A = [0]
   | rep (B t) = 1 :: rep t

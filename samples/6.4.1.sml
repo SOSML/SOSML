@@ -1,3 +1,6 @@
+type var = string;
+datatype exp = C of int | V of var | A of exp * exp | M of exp * exp;
+
 fun components (A(e,e')) = [e, e']
   | components (M(e,e')) = [e, e']
   | components _ = nil;

@@ -12,4 +12,4 @@ implode [#"H", #"a", #"l", #"l", #"o"];
 "Aller " ^ "Anfang " ^ "ist schwer.";
 op^;
 
-fn (s,s') => implode(explode s @ explode s')
+fn (s,s') => implode(explode s @ explode s');

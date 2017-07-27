@@ -14,7 +14,11 @@ datatype exp = (* expressions *)
   | App of exp * exp (* procedure application *)
 ;
 
-val e1 = Opr(Leq, Id"n", Con(IC 0));
+type 'a env = id -> 'a (* environments *)
+exception Unbound of id
+fun empty x = raise Unbound x
+fun update env x a y = if y=x then a else env y
+;
 
 datatype value =
     IV of int
@@ -31,13 +35,13 @@ fun eval f (Con c) = evalCon c
   | eval f (Id x) = f x
   | eval f (Opr(opr,e1,e2)) = evalOpr opr (eval f e1) (eval f e2)
   | eval f (If(e1,e2,e3)) = (case eval f e1 of
-IV 1 => eval f e2
-  | IV 0 => eval f e3
-  | _ => raise Error "R If")
+                              IV 1 => eval f e2
+                            | IV 0 => eval f e3
+                            | _ => raise Error "R If")
   | eval f (Abs(x,t,e)) = Proc(x, e, f)
   | eval f (App(e1,e2)) = (case (eval f e1, eval f e2) of
                           (Proc(x,e,f'), v) => eval (update f' x v) e
-  | _ => raise Error "R App")
+                            | _ => raise Error "R App")
 ;
 
 val f = update empty "x" (IV 5);

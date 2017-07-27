@@ -1,3 +1,5 @@
+exception New;
+
 (raise Overflow, raise Subscript);
 
 (5 ; 7);

@@ -38,6 +38,17 @@ ty [INT, ARROW, BOOL, RPAR];
 ty [INT, ARROW, BOOL, ARROW];
 ty [LPAR, BOOL];
 
+fun ty ts = (case pty ts of
+            (t, ARROW::tr) => let val (t',tr') = ty tr
+                              in (Arrow(t,t'), tr') end
+            | s => s)
+and pty (BOOL::tr) = (Bool,tr)
+  | pty (INT::tr) = (Int,tr)
+  | pty (LPAR::tr) = (case ty tr of
+                    (t,RPAR::tr') => (t,tr')
+                    | _ => raise Error "pty")
+  | pty _ = raise Error "pty";
+
 fun match (a,ts) t = if null ts orelse hd ts <> t
                       then raise Error "match"
                       else (a, tl ts)

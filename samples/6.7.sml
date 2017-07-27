@@ -2,7 +2,7 @@
 datatype 'a option = NONE | SOME of 'a;
 
 fun nth n xs = if n<0 orelse null xs then NONE
-                else if n=0 then SOME (hd xs) else nth (n-1) (tl xs)
+                else if n=0 then SOME (hd xs) else nth (n-1) (tl xs);
 nth 2 [3,4,5];
 nth 3 [3,4,5];
 

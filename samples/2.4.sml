@@ -1,3 +1,5 @@
+fun q (x:int) = 3+(p x);
+
 fun p (x:int) = x;
 fun q (x:int) = 3+(p x);
 
