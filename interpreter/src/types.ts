@@ -332,8 +332,8 @@ export class FunctionType extends Type {
 
 
     prettyPrint(): string {
-        return '( ' + this.parameterType.prettyPrint()
-            + ' -> ' + this.returnType.prettyPrint() + ' )';
+        return '(' + this.parameterType.prettyPrint()
+            + ' -> ' + this.returnType.prettyPrint() + ')';
     }
 
     simplify(): FunctionType {
@@ -393,7 +393,7 @@ export class CustomType extends Type {
     prettyPrint(): string {
         let result: string = '';
         if (this.typeArguments.length > 1) {
-            result += '( ';
+            result += '(';
         }
         for (let i = 0; i < this.typeArguments.length; ++i) {
             if (i > 0) {
@@ -402,7 +402,7 @@ export class CustomType extends Type {
             result += this.typeArguments[i].prettyPrint();
         }
         if (this.typeArguments.length > 1) {
-            result += ' )';
+            result += ')';
         }
         if (this.typeArguments.length > 0) {
             result += ' ';
@@ -438,14 +438,14 @@ export class TupleType extends Type {
     }
 
     prettyPrint(): string {
-        let result: string = '( ';
+        let result: string = '(';
         for (let i: number = 0; i < this.elements.length; ++i) {
             if (i > 0) {
                 result += ' * ';
             }
             result += this.elements[i].prettyPrint();
         }
-        return result + ' )';
+        return result + ')';
     }
 
     simplify(): RecordType {
