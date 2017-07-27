@@ -1,5 +1,5 @@
 import { State, StaticBasis, DynamicBasis, InfixStatus, TypeInformation,
-         TypeNameInformation } from './state';
+         TypeNameInformation, RebindStatus } from './state';
 import { FunctionType, PrimitiveType, TupleType, Type, TypeVariable } from './types';
 import { CharValue, Real, Integer, StringValue, PredefinedFunction, Word, ConstructedValue,
          ValueConstructor, ExceptionConstructor, BoolValue, Value, RecordValue } from './values';
@@ -446,22 +446,17 @@ let initialState: State = new State(
         '^': new InfixStatus(true, 6, false),
     },
     {
-        'bool':     false,
-        'int':      false,
-        'real':     false,
-        'string':   false,
-        'char':     false,
-        'word':     false,
-        'list':     false,
-        'ref':      false,
-        'exn':      false,
+        '=':        RebindStatus.Never,
 
-        '=':        false,
+        'true':     RebindStatus.Never,
+        'false':    RebindStatus.Never,
+        'nil':      RebindStatus.Never,
+        '::':       RebindStatus.Never,
 
-        'true':     false,
-        'false':    false,
-        'nil':      false,
-        '::':       false
+        'Match':    RebindStatus.Half,
+        'Bind':     RebindStatus.Half,
+        'Div':      RebindStatus.Half,
+        'Overflow': RebindStatus.Half,
     },
     {
         'nil':      1,

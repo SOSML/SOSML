@@ -1,10 +1,8 @@
-import {
-    Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
-    Pattern, TypedExpression, Tuple, PatternExpression
-} from './expressions';
+import { Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
+         Pattern, TypedExpression, Tuple, PatternExpression } from './expressions';
 import { IdentifierToken, Token } from './lexer';
 import { Type, TypeVariable, FunctionType, PrimitiveType } from './types';
-import { State } from './state';
+import { State, RebindStatus } from './state';
 import { InternalInterpreterError, Position, ElaborationError,
          EvaluationError, FeatureDisabledError } from './errors';
 import { Value, ValueConstructor, ExceptionConstructor, ExceptionValue,
@@ -211,6 +209,10 @@ export class DatatypeDeclaration extends Declaration {
             let res = this.datatypeBinding[i].compute(state);
 
             for (let j = 0; j < res[0].length; ++j) {
+                if (state.getRebindStatus(res[0][j][0]) === RebindStatus.Never) {
+                    throw new EvaluationError(this.position, 'You simply cannot rebind "'
+                        + res[0][j][0] + '".');
+                }
                 state.setDynamicValue(res[0][j][0], res[0][j][1]);
             }
             // TODO id
@@ -826,6 +828,12 @@ export class DirectExceptionBinding implements ExceptionBinding {
         }
         let id = state.getValueIdentifierId(this.name.getText());
         state.incrementValueIdentifierId(this.name.getText());
+
+        if (state.getRebindStatus(this.name.getText()) === RebindStatus.Never) {
+            throw new EvaluationError(this.position, 'You simply cannot rebind "'
+                + this.name.getText() + '".');
+        }
+
         state.setDynamicValue(this.name.getText(),
             new ExceptionConstructor(this.name.getText(), numArg, id));
         return [state, false, undefined];

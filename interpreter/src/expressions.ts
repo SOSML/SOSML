@@ -3,7 +3,7 @@ import { Declaration, ValueBinding, ValueDeclaration } from './declarations';
 import { Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConstantToken,
          NumericToken, WordConstantToken, CharacterConstantToken,
          StringConstantToken } from './lexer';
-import { State } from './state';
+import { State, RebindStatus } from './state';
 import { InternalInterpreterError, Position, ElaborationError, EvaluationError } from './errors';
 import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
@@ -98,7 +98,7 @@ export class ValueIdentifier extends Expression implements Pattern {
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         let res = state.getDynamicValue(this.name.getText());
-        if (res === undefined || state.getRebindStatus(this.name.getText())) {
+        if (res === undefined || state.getRebindStatus(this.name.getText()) === RebindStatus.Allowed) {
             return [[this.name.getText(), v]];
         }
         if (v.equals(res)) {

@@ -2,7 +2,7 @@ import { Type, PrimitiveType, FunctionType, RecordType } from './types';
 import { Value, StringValue, PredefinedFunction, RecordValue, ValueConstructor,
          ExceptionConstructor } from './values';
 import { Token, LongIdentifierToken } from './lexer';
-import { InternalInterpreterError } from './errors';
+import { InternalInterpreterError, EvaluationError } from './errors';
 
 // maps id to [Value, rebindable, intermediate]
 type DynamicValueEnvironment = { [name: string]: [Value, boolean] };
@@ -39,7 +39,12 @@ export class InfixStatus {
 type InfixEnvironment = { [name: string]: InfixStatus };
 
 // Maps id to whether that id can be rebound
-type RebindEnvironment = { [name: string]: boolean };
+export enum RebindStatus {
+    Never,
+    Half,
+    Allowed
+}
+type RebindEnvironment = { [name: string]: RebindStatus };
 
 export class DynamicBasis {
     constructor(public typeEnvironment: DynamicTypeEnvironment,
@@ -143,14 +148,15 @@ export class State {
         return res;
     }
 
-    getRebindStatus(name: string): boolean {
-        if ((this.rebindEnvironment[name] === undefined && this.parent === undefined)
-            || this.rebindEnvironment[name]) {
-            return true;
+    getRebindStatus(name: string): RebindStatus {
+        if (this.rebindEnvironment[name] !== undefined) {
+            return this.rebindEnvironment[name];
+        } else if (this.parent === undefined) {
+            return RebindStatus.Allowed;
         } else if (this.rebindEnvironment[name] === undefined) {
             return (<State> this.parent).getRebindStatus(name);
         }
-        return false;
+        return RebindStatus.Half;
     }
 
     // Gets an identifier's type. The value  intermediate  determines whether to return intermediate results
@@ -291,12 +297,16 @@ export class State {
                     throw new InternalInterpreterError(-1, 'Wrong type.');
                 }
             }
+            if (this.rebindEnvironment[name] === RebindStatus.Never) {
+                throw new EvaluationError(-1, 'How could you ever want to redefine "' + name + '".');
+            }
+
             this.dynamicBasis.setValue(name, value, intermediate);
             this.declaredIdentifiers.add(name);
             if (value instanceof ValueConstructor || value instanceof ExceptionConstructor) {
-                this.rebindEnvironment[name] = false;
+                this.rebindEnvironment[name] = RebindStatus.Half;
             } else {
-                this.rebindEnvironment[name] = true;
+                this.rebindEnvironment[name] = RebindStatus.Allowed;
             }
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
