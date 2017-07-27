@@ -134,9 +134,7 @@ class Editor extends React.Component<any, State> {
         this.setState(prevState => {
             return {code: newCode};
         });
-        if (this.state.fileName === '') {
-            localStorage.setItem('tmpCode', newCode);
-        }
+        localStorage.setItem('tmpCode', newCode);
     }
 
     onFileNameBlur(evt: any) {
