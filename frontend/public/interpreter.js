@@ -195,437 +195,6 @@ exports.EvaluationError = EvaluationError;
 
 "use strict";
 
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var Type = (function () {
-    function Type() {
-    }
-    // Constructs types with type variables instantiated as much as possible
-    Type.prototype.instantiate = function (state) {
-        return this.simplify().instantiate(state);
-    };
-    // Return all (free) type variables
-    Type.prototype.getTypeVariables = function (free) {
-        return this.simplify().getTypeVariables(free);
-    };
-    // Checks if two types are unifyable; returns all required type variable bindings
-    Type.prototype.matches = function (state, type) {
-        return this.simplify().matches(state, type);
-    };
-    Type.prototype.simplify = function () {
-        return this;
-    };
-    Type.prototype.admitsEquality = function (state) {
-        return false;
-    };
-    return Type;
-}());
-exports.Type = Type;
-var PrimitiveType = (function (_super) {
-    __extends(PrimitiveType, _super);
-    function PrimitiveType(name, parameters, position) {
-        if (parameters === void 0) { parameters = []; }
-        if (position === void 0) { position = 0; }
-        var _this = _super.call(this) || this;
-        _this.name = name;
-        _this.parameters = parameters;
-        _this.position = position;
-        return _this;
-    }
-    PrimitiveType.prototype.instantiate = function (state) {
-        return this;
-    };
-    PrimitiveType.prototype.getTypeVariables = function (free) {
-        return new Set();
-    };
-    PrimitiveType.prototype.matches = function (state, type) {
-        if (type instanceof PrimitiveType) {
-            if (this.name !== type.name
-                || this.parameters.length !== type.parameters.length) {
-                return undefined;
-            }
-            for (var i = 0; i < this.parameters.length; ++i) {
-                if (this.parameters[i].matches(state, type.parameters[i]) === undefined) {
-                    return undefined;
-                }
-            }
-            return [];
-        }
-        // TODO
-        if (type instanceof TypeVariable) {
-            if (type.domain === []) {
-                return undefined;
-            }
-        }
-        // None of the possible types matched
-        return undefined;
-    };
-    PrimitiveType.prototype.admitsEquality = function (state) {
-        for (var i = 0; i < this.parameters.length; ++i) {
-            if (!this.parameters[i].admitsEquality(state)) {
-                return false;
-            }
-        }
-        return state.getPrimitiveType(this.name).allowsEquality;
-    };
-    PrimitiveType.prototype.prettyPrint = function () {
-        var res = '';
-        for (var i = 0; i < this.parameters.length; ++i) {
-            res += this.parameters[i].prettyPrint() + ' ';
-        }
-        return res += this.name;
-    };
-    PrimitiveType.prototype.equals = function (other) {
-        if (!(other instanceof PrimitiveType)) {
-            return false;
-        }
-        if (this.name !== other.name) {
-            return false;
-        }
-        if (this.parameters.length !== other.parameters.length) {
-            return false;
-        }
-        for (var i = 0; i < this.parameters.length; ++i) {
-            if (!this.parameters[i].equals(other.parameters[i])) {
-                return false;
-            }
-        }
-        return true;
-    };
-    PrimitiveType.prototype.simplify = function () {
-        var param = [];
-        for (var i = 0; i < this.parameters.length; ++i) {
-            param.push(this.parameters[i].simplify());
-        }
-        return new PrimitiveType(this.name, param, this.position);
-    };
-    return PrimitiveType;
-}(Type));
-exports.PrimitiveType = PrimitiveType;
-var TypeVariable = (function (_super) {
-    __extends(TypeVariable, _super);
-    function TypeVariable(name, isFree, position, domain) {
-        if (isFree === void 0) { isFree = true; }
-        if (position === void 0) { position = 0; }
-        if (domain === void 0) { domain = []; }
-        var _this = _super.call(this) || this;
-        _this.name = name;
-        _this.isFree = isFree;
-        _this.position = position;
-        _this.domain = domain;
-        return _this;
-    }
-    TypeVariable.prototype.kill = function () {
-        if (this.domain.length === 0) {
-            // Real type vars won't die so easily
-            return this;
-        }
-        return this.domain[0];
-    };
-    TypeVariable.prototype.prettyPrint = function () {
-        return this.name;
-    };
-    TypeVariable.prototype.instantiate = function (state) {
-        // let res = state.getStaticValue(this.name);
-        // if (!this.isFree || res === undefined) {
-        //     return this;
-        // }
-        throw new Error('ニャ－');
-    };
-    TypeVariable.prototype.getTypeVariables = function (free) {
-        var res = new Set();
-        if (free === this.isFree) {
-            res.add(this);
-        }
-        return res;
-    };
-    TypeVariable.prototype.matches = function (state, type) {
-        // TODO
-        throw new Error('ニャ－');
-    };
-    TypeVariable.prototype.admitsEquality = function (state) {
-        for (var i = 0; i < this.domain.length; ++i) {
-            if (!this.domain[i].admitsEquality(state)) {
-                return false;
-            }
-        }
-        if (this.domain.length === 0) {
-            return this.name[1] === '\'';
-        }
-        else {
-            return true;
-        }
-    };
-    TypeVariable.prototype.equals = function (other) {
-        if (!(other instanceof TypeVariable && this.name === other.name)) {
-            return false;
-        }
-        if (this.domain.length !== other.domain.length) {
-            return false;
-        }
-        for (var i = 0; i < this.domain.length; ++i) {
-            if (!this.domain[i].equals(other.domain[i])) {
-                return false;
-            }
-        }
-        return true;
-    };
-    return TypeVariable;
-}(Type));
-exports.TypeVariable = TypeVariable;
-var RecordType = (function (_super) {
-    __extends(RecordType, _super);
-    function RecordType(elements, complete, position) {
-        if (complete === void 0) { complete = true; }
-        if (position === void 0) { position = 0; }
-        var _this = _super.call(this) || this;
-        _this.elements = elements;
-        _this.complete = complete;
-        _this.position = position;
-        return _this;
-    }
-    RecordType.prototype.instantiate = function (state) {
-        // TODO
-        throw new Error('ニャ－');
-    };
-    RecordType.prototype.getTypeVariables = function (free) {
-        // TODO
-        throw new Error('ニャ－');
-    };
-    RecordType.prototype.matches = function (state, type) {
-        // TODO
-        throw new Error('ニャ－');
-    };
-    RecordType.prototype.admitsEquality = function (state) {
-        // TODO
-        throw new Error('ニャ－');
-    };
-    RecordType.prototype.prettyPrint = function () {
-        // TODO: print as Tuple if possible
-        var result = '{';
-        var first = true;
-        this.elements.forEach(function (type, key) {
-            if (!first) {
-                result += ', ';
-            }
-            else {
-                first = false;
-            }
-            result += key + ' : ' + type.prettyPrint();
-        });
-        if (!this.complete) {
-            if (!first) {
-                result += ', ';
-            }
-            result += '...';
-        }
-        return result + '}';
-    };
-    RecordType.prototype.simplify = function () {
-        var newElements = new Map();
-        this.elements.forEach(function (type, key) {
-            newElements.set(key, type.simplify());
-        });
-        return new RecordType(newElements, this.complete);
-    };
-    RecordType.prototype.equals = function (other) {
-        if (!(other instanceof RecordType) || this.complete !== other.complete) {
-            return false;
-        }
-        else {
-            if (other === this) {
-                return true;
-            }
-            for (var name_1 in this.elements) {
-                if (!this.elements.hasOwnProperty(name_1)) {
-                    if (!this.elements.get(name_1).equals(other.elements.get(name_1))) {
-                        return false;
-                    }
-                }
-            }
-            for (var name_2 in other.elements) {
-                if (!other.elements.hasOwnProperty(name_2)) {
-                    if (!other.elements.get(name_2).equals(this.elements.get(name_2))) {
-                        return false;
-                    }
-                }
-            }
-        }
-        return true;
-    };
-    return RecordType;
-}(Type));
-exports.RecordType = RecordType;
-var FunctionType = (function (_super) {
-    __extends(FunctionType, _super);
-    function FunctionType(parameterType, returnType, position) {
-        if (position === void 0) { position = 0; }
-        var _this = _super.call(this) || this;
-        _this.parameterType = parameterType;
-        _this.returnType = returnType;
-        _this.position = position;
-        return _this;
-    }
-    FunctionType.prototype.instantiate = function (state) {
-        // TODO
-        throw new Error('ニャ－');
-    };
-    FunctionType.prototype.getTypeVariables = function (free) {
-        // TODO
-        throw new Error('ニャ－');
-    };
-    FunctionType.prototype.matches = function (state, type) {
-        // TODO
-        throw new Error('ニャ－');
-    };
-    FunctionType.prototype.admitsEquality = function (state) {
-        return this.parameterType.admitsEquality(state) && this.returnType.admitsEquality(state);
-    };
-    FunctionType.prototype.prettyPrint = function () {
-        return '( ' + this.parameterType.prettyPrint()
-            + ' -> ' + this.returnType.prettyPrint() + ' )';
-    };
-    FunctionType.prototype.simplify = function () {
-        return new FunctionType(this.parameterType.simplify(), this.returnType.simplify(), this.position);
-    };
-    FunctionType.prototype.equals = function (other) {
-        return other instanceof FunctionType && this.parameterType.equals(other.parameterType)
-            && this.returnType.equals(other.returnType);
-    };
-    return FunctionType;
-}(Type));
-exports.FunctionType = FunctionType;
-// A custom defined type similar to "list" or "option".
-// May have a type argument.
-var CustomType = (function (_super) {
-    __extends(CustomType, _super);
-    function CustomType(name, typeArguments, position) {
-        if (typeArguments === void 0) { typeArguments = []; }
-        if (position === void 0) { position = 0; }
-        var _this = _super.call(this) || this;
-        _this.name = name;
-        _this.typeArguments = typeArguments;
-        _this.position = position;
-        return _this;
-    }
-    CustomType.prototype.instantiate = function (state) {
-        if (this.typeArguments.length > 0) {
-            // TODO
-            throw new Error('ニャ－');
-        }
-        else {
-            return this;
-        }
-    };
-    CustomType.prototype.getTypeVariables = function (free) {
-        if (this.typeArguments.length > 0) {
-            // TODO
-            throw new Error('ニャ－');
-        }
-        return new Set();
-    };
-    CustomType.prototype.matches = function (state, type) {
-        // TODO
-        throw new Error('ニャ－');
-    };
-    CustomType.prototype.admitsEquality = function (state) {
-        for (var i = 0; i < this.typeArguments.length; ++i) {
-            if (!this.typeArguments[i].admitsEquality(state)) {
-                return false;
-            }
-        }
-        return true;
-    };
-    CustomType.prototype.prettyPrint = function () {
-        var result = '';
-        if (this.typeArguments.length > 1) {
-            result += '( ';
-        }
-        for (var i = 0; i < this.typeArguments.length; ++i) {
-            if (i > 0) {
-                result += ', ';
-            }
-            result += this.typeArguments[i].prettyPrint();
-        }
-        if (this.typeArguments.length > 1) {
-            result += ' )';
-        }
-        if (this.typeArguments.length > 0) {
-            result += ' ';
-        }
-        result += this.name;
-        return result;
-    };
-    CustomType.prototype.simplify = function () {
-        var args = [];
-        for (var i = 0; i < this.typeArguments.length; ++i) {
-            args.push(this.typeArguments[i].simplify());
-        }
-        return new CustomType(this.name, args);
-    };
-    CustomType.prototype.equals = function (other) {
-        if (!(other instanceof CustomType) || this.name !== other.name) {
-            return false;
-        }
-        for (var i = 0; i < this.typeArguments.length; ++i) {
-            if (!this.typeArguments[i].equals(other.typeArguments[i])) {
-                return false;
-            }
-        }
-        return true;
-    };
-    return CustomType;
-}(Type));
-exports.CustomType = CustomType;
-var TupleType = (function (_super) {
-    __extends(TupleType, _super);
-    function TupleType(elements, position) {
-        if (position === void 0) { position = 0; }
-        var _this = _super.call(this) || this;
-        _this.elements = elements;
-        _this.position = position;
-        return _this;
-    }
-    TupleType.prototype.prettyPrint = function () {
-        var result = '( ';
-        for (var i = 0; i < this.elements.length; ++i) {
-            if (i > 0) {
-                result += ' * ';
-            }
-            result += this.elements[i].prettyPrint();
-        }
-        return result + ' )';
-    };
-    TupleType.prototype.simplify = function () {
-        var entries = new Map();
-        for (var i = 0; i < this.elements.length; ++i) {
-            entries.set(String(i + 1), this.elements[i].simplify());
-        }
-        return new RecordType(entries, true);
-    };
-    TupleType.prototype.equals = function (other) {
-        return this.simplify().equals(other);
-    };
-    return TupleType;
-}(Type));
-exports.TupleType = TupleType;
-
-
-/***/ }),
-/* 2 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
 /*
  * TODO: Documentation for the lexer
  */
@@ -1284,6 +853,437 @@ exports.lex = lex;
 
 
 /***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var Type = (function () {
+    function Type() {
+    }
+    // Constructs types with type variables instantiated as much as possible
+    Type.prototype.instantiate = function (state) {
+        return this.simplify().instantiate(state);
+    };
+    // Return all (free) type variables
+    Type.prototype.getTypeVariables = function (free) {
+        return this.simplify().getTypeVariables(free);
+    };
+    // Checks if two types are unifyable; returns all required type variable bindings
+    Type.prototype.matches = function (state, type) {
+        return this.simplify().matches(state, type);
+    };
+    Type.prototype.simplify = function () {
+        return this;
+    };
+    Type.prototype.admitsEquality = function (state) {
+        return false;
+    };
+    return Type;
+}());
+exports.Type = Type;
+var PrimitiveType = (function (_super) {
+    __extends(PrimitiveType, _super);
+    function PrimitiveType(name, parameters, position) {
+        if (parameters === void 0) { parameters = []; }
+        if (position === void 0) { position = 0; }
+        var _this = _super.call(this) || this;
+        _this.name = name;
+        _this.parameters = parameters;
+        _this.position = position;
+        return _this;
+    }
+    PrimitiveType.prototype.instantiate = function (state) {
+        return this;
+    };
+    PrimitiveType.prototype.getTypeVariables = function (free) {
+        return new Set();
+    };
+    PrimitiveType.prototype.matches = function (state, type) {
+        if (type instanceof PrimitiveType) {
+            if (this.name !== type.name
+                || this.parameters.length !== type.parameters.length) {
+                return undefined;
+            }
+            for (var i = 0; i < this.parameters.length; ++i) {
+                if (this.parameters[i].matches(state, type.parameters[i]) === undefined) {
+                    return undefined;
+                }
+            }
+            return [];
+        }
+        // TODO
+        if (type instanceof TypeVariable) {
+            if (type.domain === []) {
+                return undefined;
+            }
+        }
+        // None of the possible types matched
+        return undefined;
+    };
+    PrimitiveType.prototype.admitsEquality = function (state) {
+        for (var i = 0; i < this.parameters.length; ++i) {
+            if (!this.parameters[i].admitsEquality(state)) {
+                return false;
+            }
+        }
+        return state.getPrimitiveType(this.name).allowsEquality;
+    };
+    PrimitiveType.prototype.prettyPrint = function () {
+        var res = '';
+        for (var i = 0; i < this.parameters.length; ++i) {
+            res += this.parameters[i].prettyPrint() + ' ';
+        }
+        return res += this.name;
+    };
+    PrimitiveType.prototype.equals = function (other) {
+        if (!(other instanceof PrimitiveType)) {
+            return false;
+        }
+        if (this.name !== other.name) {
+            return false;
+        }
+        if (this.parameters.length !== other.parameters.length) {
+            return false;
+        }
+        for (var i = 0; i < this.parameters.length; ++i) {
+            if (!this.parameters[i].equals(other.parameters[i])) {
+                return false;
+            }
+        }
+        return true;
+    };
+    PrimitiveType.prototype.simplify = function () {
+        var param = [];
+        for (var i = 0; i < this.parameters.length; ++i) {
+            param.push(this.parameters[i].simplify());
+        }
+        return new PrimitiveType(this.name, param, this.position);
+    };
+    return PrimitiveType;
+}(Type));
+exports.PrimitiveType = PrimitiveType;
+var TypeVariable = (function (_super) {
+    __extends(TypeVariable, _super);
+    function TypeVariable(name, isFree, position, domain) {
+        if (isFree === void 0) { isFree = true; }
+        if (position === void 0) { position = 0; }
+        if (domain === void 0) { domain = []; }
+        var _this = _super.call(this) || this;
+        _this.name = name;
+        _this.isFree = isFree;
+        _this.position = position;
+        _this.domain = domain;
+        return _this;
+    }
+    TypeVariable.prototype.kill = function () {
+        if (this.domain.length === 0) {
+            // Real type vars won't die so easily
+            return this;
+        }
+        return this.domain[0];
+    };
+    TypeVariable.prototype.prettyPrint = function () {
+        return this.name;
+    };
+    TypeVariable.prototype.instantiate = function (state) {
+        // let res = state.getStaticValue(this.name);
+        // if (!this.isFree || res === undefined) {
+        //     return this;
+        // }
+        throw new Error('ニャ－');
+    };
+    TypeVariable.prototype.getTypeVariables = function (free) {
+        var res = new Set();
+        if (free === this.isFree) {
+            res.add(this);
+        }
+        return res;
+    };
+    TypeVariable.prototype.matches = function (state, type) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    TypeVariable.prototype.admitsEquality = function (state) {
+        for (var i = 0; i < this.domain.length; ++i) {
+            if (!this.domain[i].admitsEquality(state)) {
+                return false;
+            }
+        }
+        if (this.domain.length === 0) {
+            return this.name[1] === '\'';
+        }
+        else {
+            return true;
+        }
+    };
+    TypeVariable.prototype.equals = function (other) {
+        if (!(other instanceof TypeVariable && this.name === other.name)) {
+            return false;
+        }
+        if (this.domain.length !== other.domain.length) {
+            return false;
+        }
+        for (var i = 0; i < this.domain.length; ++i) {
+            if (!this.domain[i].equals(other.domain[i])) {
+                return false;
+            }
+        }
+        return true;
+    };
+    return TypeVariable;
+}(Type));
+exports.TypeVariable = TypeVariable;
+var RecordType = (function (_super) {
+    __extends(RecordType, _super);
+    function RecordType(elements, complete, position) {
+        if (complete === void 0) { complete = true; }
+        if (position === void 0) { position = 0; }
+        var _this = _super.call(this) || this;
+        _this.elements = elements;
+        _this.complete = complete;
+        _this.position = position;
+        return _this;
+    }
+    RecordType.prototype.instantiate = function (state) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    RecordType.prototype.getTypeVariables = function (free) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    RecordType.prototype.matches = function (state, type) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    RecordType.prototype.admitsEquality = function (state) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    RecordType.prototype.prettyPrint = function () {
+        // TODO: print as Tuple if possible
+        var result = '{';
+        var first = true;
+        this.elements.forEach(function (type, key) {
+            if (!first) {
+                result += ', ';
+            }
+            else {
+                first = false;
+            }
+            result += key + ' : ' + type.prettyPrint();
+        });
+        if (!this.complete) {
+            if (!first) {
+                result += ', ';
+            }
+            result += '...';
+        }
+        return result + '}';
+    };
+    RecordType.prototype.simplify = function () {
+        var newElements = new Map();
+        this.elements.forEach(function (type, key) {
+            newElements.set(key, type.simplify());
+        });
+        return new RecordType(newElements, this.complete);
+    };
+    RecordType.prototype.equals = function (other) {
+        if (!(other instanceof RecordType) || this.complete !== other.complete) {
+            return false;
+        }
+        else {
+            if (other === this) {
+                return true;
+            }
+            for (var name_1 in this.elements) {
+                if (!this.elements.hasOwnProperty(name_1)) {
+                    if (!this.elements.get(name_1).equals(other.elements.get(name_1))) {
+                        return false;
+                    }
+                }
+            }
+            for (var name_2 in other.elements) {
+                if (!other.elements.hasOwnProperty(name_2)) {
+                    if (!other.elements.get(name_2).equals(this.elements.get(name_2))) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    };
+    return RecordType;
+}(Type));
+exports.RecordType = RecordType;
+var FunctionType = (function (_super) {
+    __extends(FunctionType, _super);
+    function FunctionType(parameterType, returnType, position) {
+        if (position === void 0) { position = 0; }
+        var _this = _super.call(this) || this;
+        _this.parameterType = parameterType;
+        _this.returnType = returnType;
+        _this.position = position;
+        return _this;
+    }
+    FunctionType.prototype.instantiate = function (state) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    FunctionType.prototype.getTypeVariables = function (free) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    FunctionType.prototype.matches = function (state, type) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    FunctionType.prototype.admitsEquality = function (state) {
+        return this.parameterType.admitsEquality(state) && this.returnType.admitsEquality(state);
+    };
+    FunctionType.prototype.prettyPrint = function () {
+        return '( ' + this.parameterType.prettyPrint()
+            + ' -> ' + this.returnType.prettyPrint() + ' )';
+    };
+    FunctionType.prototype.simplify = function () {
+        return new FunctionType(this.parameterType.simplify(), this.returnType.simplify(), this.position);
+    };
+    FunctionType.prototype.equals = function (other) {
+        return other instanceof FunctionType && this.parameterType.equals(other.parameterType)
+            && this.returnType.equals(other.returnType);
+    };
+    return FunctionType;
+}(Type));
+exports.FunctionType = FunctionType;
+// A custom defined type similar to "list" or "option".
+// May have a type argument.
+var CustomType = (function (_super) {
+    __extends(CustomType, _super);
+    function CustomType(name, typeArguments, position) {
+        if (typeArguments === void 0) { typeArguments = []; }
+        if (position === void 0) { position = 0; }
+        var _this = _super.call(this) || this;
+        _this.name = name;
+        _this.typeArguments = typeArguments;
+        _this.position = position;
+        return _this;
+    }
+    CustomType.prototype.instantiate = function (state) {
+        if (this.typeArguments.length > 0) {
+            // TODO
+            throw new Error('ニャ－');
+        }
+        else {
+            return this;
+        }
+    };
+    CustomType.prototype.getTypeVariables = function (free) {
+        if (this.typeArguments.length > 0) {
+            // TODO
+            throw new Error('ニャ－');
+        }
+        return new Set();
+    };
+    CustomType.prototype.matches = function (state, type) {
+        // TODO
+        throw new Error('ニャ－');
+    };
+    CustomType.prototype.admitsEquality = function (state) {
+        for (var i = 0; i < this.typeArguments.length; ++i) {
+            if (!this.typeArguments[i].admitsEquality(state)) {
+                return false;
+            }
+        }
+        return true;
+    };
+    CustomType.prototype.prettyPrint = function () {
+        var result = '';
+        if (this.typeArguments.length > 1) {
+            result += '( ';
+        }
+        for (var i = 0; i < this.typeArguments.length; ++i) {
+            if (i > 0) {
+                result += ', ';
+            }
+            result += this.typeArguments[i].prettyPrint();
+        }
+        if (this.typeArguments.length > 1) {
+            result += ' )';
+        }
+        if (this.typeArguments.length > 0) {
+            result += ' ';
+        }
+        result += this.name;
+        return result;
+    };
+    CustomType.prototype.simplify = function () {
+        var args = [];
+        for (var i = 0; i < this.typeArguments.length; ++i) {
+            args.push(this.typeArguments[i].simplify());
+        }
+        return new CustomType(this.name, args);
+    };
+    CustomType.prototype.equals = function (other) {
+        if (!(other instanceof CustomType) || this.name !== other.name) {
+            return false;
+        }
+        for (var i = 0; i < this.typeArguments.length; ++i) {
+            if (!this.typeArguments[i].equals(other.typeArguments[i])) {
+                return false;
+            }
+        }
+        return true;
+    };
+    return CustomType;
+}(Type));
+exports.CustomType = CustomType;
+var TupleType = (function (_super) {
+    __extends(TupleType, _super);
+    function TupleType(elements, position) {
+        if (position === void 0) { position = 0; }
+        var _this = _super.call(this) || this;
+        _this.elements = elements;
+        _this.position = position;
+        return _this;
+    }
+    TupleType.prototype.prettyPrint = function () {
+        var result = '( ';
+        for (var i = 0; i < this.elements.length; ++i) {
+            if (i > 0) {
+                result += ' * ';
+            }
+            result += this.elements[i].prettyPrint();
+        }
+        return result + ' )';
+    };
+    TupleType.prototype.simplify = function () {
+        var entries = new Map();
+        for (var i = 0; i < this.elements.length; ++i) {
+            entries.set(String(i + 1), this.elements[i].simplify());
+        }
+        return new RecordType(entries, true);
+    };
+    TupleType.prototype.equals = function (other) {
+        return this.simplify().equals(other);
+    };
+    return TupleType;
+}(Type));
+exports.TupleType = TupleType;
+
+
+/***/ }),
 /* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1304,6 +1304,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var errors_1 = __webpack_require__(0);
+var lexer_1 = __webpack_require__(1);
 var Value = (function () {
     function Value() {
     }
@@ -1762,6 +1763,24 @@ var ConstructedValue = (function (_super) {
         else if (this.constructorName === 'nil') {
             return '[ ]';
         }
+        if (state !== undefined) {
+            var infix = state.getInfixStatus(new lexer_1.IdentifierToken(this.constructorName, -1));
+            if (infix !== undefined
+                && infix.infix
+                && this.argument instanceof RecordValue && this.argument.entries.size === 2) {
+                var left = this.argument.getValue('1');
+                var right = this.argument.getValue('1');
+                if (left instanceof Value && right instanceof Value) {
+                    var result_1 = '(' + left.prettyPrint(state);
+                    result_1 += ' ' + this.constructorName;
+                    if (this.id > 0) {
+                        result_1 += '/' + this.id;
+                    }
+                    result_1 += ' ' + right.prettyPrint(state);
+                    return result_1 + ')';
+                }
+            }
+        }
         var result = this.constructorName;
         if (this.id > 0) {
             result += '/' + this.id;
@@ -1948,9 +1967,9 @@ exports.ExceptionConstructor = ExceptionConstructor;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var types_1 = __webpack_require__(1);
+var types_1 = __webpack_require__(2);
 var values_1 = __webpack_require__(3);
-var lexer_1 = __webpack_require__(2);
+var lexer_1 = __webpack_require__(1);
 var errors_1 = __webpack_require__(0);
 var TypeInformation = (function () {
     // Every constructor also appears in the value environment,
@@ -2321,9 +2340,9 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var expressions_1 = __webpack_require__(7);
-var types_1 = __webpack_require__(1);
+var types_1 = __webpack_require__(2);
 var errors_1 = __webpack_require__(0);
-var lexer_1 = __webpack_require__(2);
+var lexer_1 = __webpack_require__(1);
 var declarations_1 = __webpack_require__(6);
 var ParserError = (function (_super) {
     __extends(ParserError, _super);
@@ -2854,30 +2873,15 @@ var Parser = (function () {
                 }
                 var tp = undefined;
                 var pat = new expressions_1.ValueIdentifier(newTok.position, newTok);
-                var hasPat = false;
-                var hasType = false;
-                for (var i = 0; i < 2; ++i) {
-                    if (nextTok.text === 'as') {
-                        if (hasPat) {
-                            throw new ParserError('More than one "as" encountered.', nextTok.position);
-                        }
-                        ++this.position;
-                        pat = this.parsePattern();
-                        nextTok = this.currentToken();
-                        hasPat = true;
-                    }
-                    else if (nextTok.text === ':') {
-                        if (hasType) {
-                            throw new ParserError('More than one type encountered.', nextTok.position);
-                        }
-                        ++this.position;
-                        tp = this.parseType();
-                        nextTok = this.currentToken();
-                        hasType = true;
-                    }
+                if (nextTok.text === ':') {
+                    ++this.position;
+                    tp = this.parseType();
+                    nextTok = this.currentToken();
                 }
-                if (tp !== undefined) {
-                    pat = new expressions_1.TypedExpression(newTok.position, pat, tp);
+                if (nextTok.text === 'as') {
+                    ++this.position;
+                    pat = new expressions_1.LayeredPattern(pat.position, pat.name, tp, this.parsePattern());
+                    nextTok = this.currentToken();
                 }
                 res.push([newTok.getText(), pat]);
                 continue;
@@ -3779,8 +3783,8 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var expressions_1 = __webpack_require__(7);
-var lexer_1 = __webpack_require__(2);
-var types_1 = __webpack_require__(1);
+var lexer_1 = __webpack_require__(1);
+var types_1 = __webpack_require__(2);
 var state_1 = __webpack_require__(4);
 var errors_1 = __webpack_require__(0);
 var values_1 = __webpack_require__(3);
@@ -4666,9 +4670,9 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var types_1 = __webpack_require__(1);
+var types_1 = __webpack_require__(2);
 var declarations_1 = __webpack_require__(6);
-var lexer_1 = __webpack_require__(2);
+var lexer_1 = __webpack_require__(1);
 var state_1 = __webpack_require__(4);
 var errors_1 = __webpack_require__(0);
 var values_1 = __webpack_require__(3);
@@ -5642,7 +5646,7 @@ let AST = instance.lexParse(..code..);
 Object.defineProperty(exports, "__esModule", { value: true });
 var initialState_1 = __webpack_require__(9);
 var stdlib_1 = __webpack_require__(10);
-var Lexer = __webpack_require__(2);
+var Lexer = __webpack_require__(1);
 var Parser = __webpack_require__(5);
 var Interpreter = (function () {
     function Interpreter(settings) {
@@ -5730,7 +5734,7 @@ exports.Interpreter = Interpreter;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var state_1 = __webpack_require__(4);
-var types_1 = __webpack_require__(1);
+var types_1 = __webpack_require__(2);
 var values_1 = __webpack_require__(3);
 var errors_1 = __webpack_require__(0);
 // Initial static basis (see SML Definition, appendix C through E)
@@ -6173,7 +6177,7 @@ exports.getInitialState = getInitialState;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var types_1 = __webpack_require__(1);
+var types_1 = __webpack_require__(2);
 var values_1 = __webpack_require__(3);
 var errors_1 = __webpack_require__(0);
 var main_1 = __webpack_require__(8);
