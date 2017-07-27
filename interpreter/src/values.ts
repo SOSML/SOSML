@@ -444,7 +444,9 @@ export class ConstructedValue extends Value {
 
         if (state !== undefined) {
             let infix = state.getInfixStatus(new IdentifierToken(this.constructorName, -1));
-            if (infix.infix && this.argument instanceof RecordValue && this.argument.entries.size === 2) {
+            if (infix !== undefined
+                && infix.infix
+                && this.argument instanceof RecordValue && this.argument.entries.size === 2) {
                 let left = this.argument.getValue('1');
                 let right = this.argument.getValue('1');
                 if (left instanceof Value && right instanceof Value) {
