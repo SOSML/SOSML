@@ -69,7 +69,7 @@ export class StringValue extends Value {
         while (list.constructorName !== 'nil') {
             if (list.constructorName !== '::') {
                 throw new InternalInterpreterError(-1,
-                    'Is this a char list? I can\t implode this (' + list.constructorName + ')');
+                    'Is this a char list? I can\'t implode "' + list.constructorName + '".');
             }
             let arg = list.argument;
             if (arg instanceof RecordValue) {
@@ -80,11 +80,11 @@ export class StringValue extends Value {
                     list = a2;
                 } else {
                     throw new InternalInterpreterError(-1,
-                        'Is this a char list? I can\t implode this (' + list.constructorName + ')');
+                        'Is this a char list? I can\'t implode "' + list.constructorName + '".');
                 }
             } else {
                 throw new InternalInterpreterError(-1,
-                    'Is this a char list? I can\t implode this (' + list.constructorName + ')');
+                    'Is this a char list? I can\'t implode "' + list.constructorName + '".');
             }
         }
 
@@ -293,20 +293,20 @@ export class RecordValue extends Value {
         }
 
         if (isTuple) {
-            let result: string = '(';
+            let res: string = '(';
             for (let i = 1; i <= this.entries.size; ++i) {
                 if (i > 1) {
-                    result += ', ';
+                    res += ', ';
                 }
                 let sub = this.entries.get('' + i);
                 if (sub !== undefined) {
-                    result += sub.prettyPrint(state);
+                    res += sub.prettyPrint(state);
                 } else {
                     throw new InternalInterpreterError(-1,
-                        'How did we loose this value? It was there before. I swear…');
+                        'How did we loose this value? It was there before. I promise…');
                 }
             }
-            return result + ')';
+            return res + ')';
         }
 
         let result: string = '{ ';
@@ -409,13 +409,13 @@ export class ConstructedValue extends Value {
 
     prettyPrint(state: State|undefined): string {
         if (this.constructorName === '::') {
-            let result = '[';
+            let res = '[ ';
 
             let list: ConstructedValue = this;
             while (list.constructorName !== 'nil') {
                 if (list.constructorName !== '::') {
                     throw new InternalInterpreterError(-1,
-                        'Is this even a list? 1 (' + list.constructorName + ')');
+                        'Is this even a list? 1 "' + list.constructorName + '".');
                 }
                 let arg = list.argument;
                 if (arg instanceof RecordValue && arg.entries.size === 2) {
@@ -423,30 +423,28 @@ export class ConstructedValue extends Value {
                     let a2 = arg.getValue('2');
                     if (a1 instanceof Value && a2 instanceof ConstructedValue) {
                         if (list !== this) {
-                            result += ', ';
+                            res += ', ';
                         }
-                        result += a1.prettyPrint(state);
+                        res += a1.prettyPrint(state);
                         list = a2;
                     } else {
                         throw new InternalInterpreterError(-1,
-                            'Is this even a list? 2 (' + list.constructorName + ')');
+                            'Is this even a list? 2 "' + list.constructorName + '".');
                     }
                 } else {
                     throw new InternalInterpreterError(-1,
-                        'Is this even a list? 3 (' + list.constructorName + ')');
+                        'Is this even a list? 3 "' + list.constructorName + '".');
                 }
             }
 
-            return result + ']';
+            return res + ' ]';
         } else if (this.constructorName === 'nil') {
-            return '[]';
+            return '[ ]';
         }
 
         let result: string =  this.constructorName;
-        if (this.id > 1) {
-            result += '/' + (this.id - 1);
-        } else if (this.id === 0) {
-            result += ' (predefined)';
+        if (this.id > 0) {
+            result += '/' + this.id;
         }
         if (this.argument) {
             result += ' ' + this.argument.prettyPrint(state);
@@ -489,10 +487,8 @@ export class ExceptionValue extends Value {
 
     prettyPrint(state: State|undefined): string {
         let result: string = this.constructorName;
-        if (this.id > 1) {
-            result += '/' + (this.id - 1);
-        } else if (this.id === 0) {
-            result += ' (predefined)';
+        if (this.id > 0) {
+            result += '/' + this.id;
         }
         if (this.argument) {
             result += ' ' + this.argument.prettyPrint(state);
@@ -569,10 +565,8 @@ export class ValueConstructor extends Value {
 
     prettyPrint(state: State|undefined) {
         let result = this.constructorName;
-        if (this.id > 1) {
-            result += '/' + (this.id - 1);
-        } else if (this.id === 0) {
-            result += ' (predefined)';
+        if (this.id > 0) {
+            result += '/' + this.id;
         }
         return result;
     }
@@ -602,10 +596,8 @@ export class ExceptionConstructor extends Value {
 
     prettyPrint(state: State|undefined) {
         let result = this.exceptionName;
-        if (this.id > 1) {
-            result += '/' + (this.id - 1);
-        } else if (this.id === 0) {
-            result += ' (predefined)';
+        if (this.id > 0) {
+            result += '/' + this.id;
         }
         return result;
     }

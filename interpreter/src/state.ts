@@ -97,8 +97,8 @@ export class State {
                 private typeNames: TypeNames,
                 private infixEnvironment: InfixEnvironment,
                 private rebindEnvironment: RebindEnvironment,
-                private declaredIdentifiers: Set<string> = new Set<string>(),
                 private valueIdentifierId: { [name: string]: number } = {},
+                private declaredIdentifiers: Set<string> = new Set<string>(),
                 private stdfiles: DynamicValueEnvironment = {
                     '__stdout': [new StringValue(''), true],
                     '__stdin':  [new StringValue(''), true],
@@ -244,7 +244,7 @@ export class State {
         if (this.valueIdentifierId.hasOwnProperty(name)) {
             return this.valueIdentifierId[name];
         } else if (!this.parent || this.parent.id < idLimit) {
-            return 1;
+            return 0;
         } else {
             return this.parent.getValueIdentifierId(name, idLimit);
         }

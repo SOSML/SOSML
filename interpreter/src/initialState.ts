@@ -462,6 +462,14 @@ let initialState: State = new State(
         'false':    false,
         'nil':      false,
         '::':       false
+    },
+    {
+        'nil':      0,
+        '::':       0,
+        'Match':    0,
+        'Bind':     0,
+        'Div':      0,
+        'Overflow': 0
     }
 );
 
