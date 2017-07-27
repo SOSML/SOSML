@@ -117,6 +117,60 @@ export class API {
             };
         }
     }
+
+    static getCodeExamplesList(): Promise<string[]> {
+        if (API.EMULATE) {
+            return new Promise(
+                (resolve: (val: any) => void, reject: (err: any) => void) => {
+                    resolve(['example_example.sml']);
+                }
+            );
+        }
+        return fetch('/api/list/',
+            {
+                headers: {
+                  'Accept': 'text/json',
+                  'Content-Type': 'application/json'
+                },
+                method: 'GET'
+            }
+        ).then(function(response: any){
+            if (!response.ok) {
+                return Promise.reject(response.status);
+            } else {
+                return response.json();
+            }
+        }).then(function(data: any) {
+            return data.codes.map((name: any) => {
+                return name.replace('.sml', '');
+            });
+        });
+    }
+
+    static getCodeExample(name: string): Promise<String> {
+        if (API.EMULATE) {
+            return new Promise(
+                (resolve: (val: any) => void, reject: (err: any) => void) => {
+                    resolve('(* This function adds 1 to the supplied parameter *)\nfun f x = x + 1;');
+                }
+            );
+        }
+        return fetch('/code/' + name,
+            {
+                headers: {
+                  'Accept': 'text/plain',
+                  'Content-Type': 'application/json'
+                },
+                method: 'GET'
+            }
+        ).then(function(response: any){
+            if (!response.ok) {
+                return Promise.reject(response.status);
+            } else {
+                return response.text();
+            }
+        });
+    }
 }
 
 export class Database {

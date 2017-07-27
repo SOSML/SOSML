@@ -134,21 +134,23 @@ class IncrementalInterpretationHelper {
         for (let i = 0; i < this.data.length; i++) {
             out += this.data[i].output;
         }
-        out += this.getPrintOutput();
+        // out += this.getPrintOutput();
         this.outputCallback(out);
     }
 
+    /*
     private getPrintOutput(): string {
         for (let i = this.data.length - 1; i >= 0; i--) {
             if (this.data[i].state !== null) {
                 if (this.data[i].state.getDynamicValue('__stdout') !== undefined) {
-                    return '\n' + this.data[i].state.getDynamicValue('__stdout').prettyPrint();
+                    return '\n' + this.data[i].state.getDynamicValue('__stdout').value;
                 }
                 return '';
             }
         }
         return '';
     }
+    */
 
     private copyPos(pos: any): any {
         return {line: pos.line, ch: pos.ch};
@@ -340,12 +342,20 @@ class IncrementalInterpretationHelper {
     }
 
     private computeNewStateOutput(state: any, id: number) {
+        let res = this.computeNewStateOutputInternal(state, id);
+        if (state.getDynamicValue('__stdout', false, id) !== undefined) {
+            res += '\n' + state.getDynamicValue('__stdout', false, id).value + '\n';
+        }
+        return res;
+    }
+
+    private computeNewStateOutputInternal(state: any, id: number) {
         if ( state.id < id ) {
             return '';
         }
         let output = '';
         if ( state.parent !== undefined ) {
-            output += this.computeNewStateOutput(state.parent, id);
+            output += this.computeNewStateOutputInternal(state.parent, id);
         }
         if (state.dynamicBasis.valueEnvironment !== undefined) {
             let valEnv = state.dynamicBasis.valueEnvironment;

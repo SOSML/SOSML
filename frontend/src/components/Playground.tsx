@@ -61,7 +61,10 @@ class Playground extends React.Component<Props, State> {
         let executeOnServer: JSX.Element | undefined;
         if (this.state.useServer) {
             executeOnServer = (
-                <Button bsSize="small" bsStyle="primary" onClick={this.handleRun}>Ausführen</Button>
+                <div className="inlineBlock">
+                    <div className="miniSpacer" />
+                    <Button bsSize="small" bsStyle="primary" onClick={this.handleRun}>Ausführen</Button>
+                </div>
             );
         }
         let modal = (
@@ -126,7 +129,6 @@ class Playground extends React.Component<Props, State> {
                                 <Button bsSize="small" bsStyle="primary" onClick={this.handleSwitchMode}>
                                     Umschalten
                                 </Button>
-                                <div className="miniSpacer" />
                                 {executeOnServer}
                             </div>
                         ) } />
