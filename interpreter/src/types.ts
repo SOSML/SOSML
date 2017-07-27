@@ -1,4 +1,4 @@
-import { Position } from './errors';
+import { Position, InternalInterpreterError } from './errors';
 import { State } from './state';
 
 export abstract class Type {
@@ -141,11 +141,36 @@ export class TypeVariable extends Type {
     }
 
     instantiate(state: State): Type {
-        // let res = state.getStaticValue(this.name);
-        // if (!this.isFree || res === undefined) {
-        //     return this;
-        // }
-        throw new Error('ニャ－');
+        let res = state.getStaticValue(this.name);
+        if (!this.isFree || res === undefined || res.equals(this)) {
+            return this;
+        }
+        if (this.domain.length === 0) {
+            return res;
+        }
+        if (res instanceof TypeVariable && (<TypeVariable> res).domain.length !== 0) {
+            let resty: Type[] = [];
+
+            for (let i = 0; i < this.domain.length; ++i) {
+                for (let j = 0; j < (<TypeVariable> res).domain.length; ++j) {
+                    if (this.domain[i].equals((<TypeVariable> res).domain[j])) {
+                        resty.push(this.domain[i]);
+                    }
+                }
+            }
+            if (resty.length > 0) {
+                return new TypeVariable((<TypeVariable> res).name, (<TypeVariable> res).isFree,
+                    (<TypeVariable> res).position, resty);
+            }
+        } else {
+            for (let i = 0; i < this.domain.length; ++i) {
+                if (this.domain[i].equals(res)) {
+                    return res;
+                }
+            }
+        }
+        throw new ElaborationError(this.position, 'Cannot instanciate "'
+            + this.prettyPrint() + '" with "' + res.prettyPrint() + '".');
     }
 
     getTypeVariables(free: boolean): Set<TypeVariable> {
@@ -196,8 +221,11 @@ export class RecordType extends Type {
     }
 
     instantiate(state: State): Type {
-        // TODO
-        throw new Error('ニャ－');
+        let newElements: Map<string, Type> = new Map<string, Type>();
+        this.elements.forEach((type: Type, key: string) => {
+            newElements.set(key, type.instantiate(state));
+        });
+        return new RecordType(newElements, this.complete);
     }
 
     getTypeVariables(free: boolean): Set<TypeVariable> {
@@ -216,12 +244,41 @@ export class RecordType extends Type {
     }
 
     admitsEquality(state: State): boolean {
-        // TODO
-        throw new Error('ニャ－');
+        let res = true;
+        this.elements.forEach((type: Type, key: string) => {
+            if (!type.admitsEquality(state)) {
+                ren = false;
+            }
+        });
+        return res;
     }
 
 
     prettyPrint(): string {
+        let isTuple = true;
+        for (let i = 1; i <= this.elements.size; ++i) {
+            if (!this.elements.has('' + i)) {
+                isTuple = false;
+            }
+        }
+
+        if (isTuple) {
+            let res: string = '(';
+            for (let i = 1; i <= this.elements.size; ++i) {
+                if (i > 1) {
+                    res += ' * ';
+                }
+                let sub = this.elements.get('' + i);
+                if (sub !== undefined) {
+                    res += sub.prettyPrint();
+                } else {
+                    throw new InternalInterpreterError(-1,
+                        'How did we loose this value? It was there before. I promise…');
+                }
+            }
+            return res + ')';
+        }
+
         // TODO: print as Tuple if possible
         let result: string = '{';
         let first: boolean = true;
@@ -282,8 +339,8 @@ export class FunctionType extends Type {
     }
 
     instantiate(state: State): Type {
-        // TODO
-        throw new Error('ニャ－');
+        return new FunctionType(this.parameterType.instantiate(state), this.returnType.instantiate(state),
+            this.position);
     }
 
     getTypeVariables(free: boolean): Set<TypeVariable> {
@@ -308,8 +365,8 @@ export class FunctionType extends Type {
 
 
     prettyPrint(): string {
-        return '( ' + this.parameterType.prettyPrint()
-            + ' -> ' + this.returnType.prettyPrint() + ' )';
+        return '(' + this.parameterType.prettyPrint()
+            + ' -> ' + this.returnType.prettyPrint() + ')';
     }
 
     simplify(): FunctionType {
@@ -332,12 +389,11 @@ export class CustomType extends Type {
     }
 
     instantiate(state: State): Type {
-        if (this.typeArguments.length > 0) {
-            // TODO
-            throw new Error('ニャ－');
-        } else {
-            return this;
+        let res: Type[] = [];
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            res.push(this.typeArguments[i].instantiate(state));
         }
+        return new CustomType(this.name, res, this.position);
     }
 
     getTypeVariables(free: boolean): Set<TypeVariable> {
@@ -369,7 +425,7 @@ export class CustomType extends Type {
     prettyPrint(): string {
         let result: string = '';
         if (this.typeArguments.length > 1) {
-            result += '( ';
+            result += '(';
         }
         for (let i = 0; i < this.typeArguments.length; ++i) {
             if (i > 0) {
@@ -378,7 +434,7 @@ export class CustomType extends Type {
             result += this.typeArguments[i].prettyPrint();
         }
         if (this.typeArguments.length > 1) {
-            result += ' )';
+            result += ')';
         }
         if (this.typeArguments.length > 0) {
             result += ' ';
@@ -408,20 +464,22 @@ export class CustomType extends Type {
     }
 }
 
+// Derived Types
+
 export class TupleType extends Type {
     constructor(public elements: Type[], public position: Position = 0) {
         super();
     }
 
     prettyPrint(): string {
-        let result: string = '( ';
+        let result: string = '(';
         for (let i: number = 0; i < this.elements.length; ++i) {
             if (i > 0) {
                 result += ' * ';
             }
             result += this.elements[i].prettyPrint();
         }
-        return result + ' )';
+        return result + ')';
     }
 
     simplify(): RecordType {
