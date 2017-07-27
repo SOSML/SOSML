@@ -20,3 +20,7 @@
 .eval-fail {
     background-color: rgba(230, 190, 190, 200);
 }
+
+span.CodeMirror-matchingbracket {
+    color: #F4F !important;
+}
