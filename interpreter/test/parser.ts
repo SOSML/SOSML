@@ -2519,8 +2519,9 @@ it("pattern row - label as variable", () => {
         new Expr.Record(
             5,
             true,
-            [["x", new Expr.TypedExpression(5, new Expr.Wildcard(14),
-                new Type.PrimitiveType("int", [], 7)) ]]
+            [["x", new Expr.LayeredPattern(5, new Lexer.AlphanumericIdentifierToken("x", 5),
+                new Type.PrimitiveType("int", [], 7),
+                new Expr.Wildcard(14)) ]]
         ),
         19
     ));

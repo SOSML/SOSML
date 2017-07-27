@@ -548,30 +548,15 @@ export class Parser {
 
                 let tp: Type|undefined = undefined;
                 let pat: PatternExpression = new ValueIdentifier(newTok.position, newTok);
-                let hasPat = false;
-                let hasType = false;
-
-                for (let i = 0; i < 2; ++i) {
-                    if (nextTok.text === 'as') {
-                        if (hasPat) {
-                            throw new ParserError('More than one "as" encountered.', nextTok.position);
-                        }
-                        ++this.position;
-                        pat = this.parsePattern();
-                        nextTok = this.currentToken();
-                        hasPat = true;
-                    } else if (nextTok.text === ':') {
-                        if (hasType) {
-                            throw new ParserError('More than one type encountered.', nextTok.position);
-                        }
-                        ++this.position;
-                        tp = this.parseType();
-                        nextTok = this.currentToken();
-                        hasType = true;
-                    }
+                if (nextTok.text === ':') {
+                    ++this.position;
+                    tp = this.parseType();
+                    nextTok = this.currentToken();
                 }
-                if (tp !== undefined) {
-                    pat = new TypedExpression(newTok.position, pat, tp);
+                if (nextTok.text === 'as') {
+                    ++this.position;
+                    pat = new LayeredPattern(pat.position, pat.name, tp, this.parsePattern());
+                    nextTok = this.currentToken();
                 }
                 res.push([newTok.getText(), pat]);
                 continue;
