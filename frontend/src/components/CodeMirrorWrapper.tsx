@@ -233,9 +233,9 @@ class IncrementalInterpretationHelper {
         let ret: any;
         try {
             if (oldState === null) {
-                ret = this.interpreter.interpret(partial + ';');
+                ret = this.interpreter.interpret(partial + ';', this.interpreter.getFirstState(true), true);
             } else {
-                ret = this.interpreter.interpret(partial + ';', oldState);
+                ret = this.interpreter.interpret(partial + ';', oldState, true);
             }
         } catch (e) {
             // TODO: switch over e's type
@@ -352,7 +352,7 @@ class IncrementalInterpretationHelper {
                     if (state.getDynamicValue(i, false) === undefined) {
                         continue;
                     }
-                    output += this.printBinding([i, state.getDynamicValue(i, false),
+                    output += this.printBinding(state, [i, state.getDynamicValue(i, false),
                         state.getStaticValue( i, false )]);
                     output += '\n';
                 }
@@ -362,7 +362,7 @@ class IncrementalInterpretationHelper {
         return output;
     }
 
-    private printBinding(bnd: [any, any, any]) {
+    private printBinding(state: any,bnd: [any, any, any]) {
         let res = '> ';
 
         let protoName = this.getPrototypeName(bnd[1]);
@@ -375,7 +375,7 @@ class IncrementalInterpretationHelper {
         }
 
         if (bnd[1]) {
-            res += ' ' + bnd[0] + ' = ' + bnd[1].prettyPrint();
+            res += ' ' + bnd[0] + ' = ' + bnd[1].prettyPrint(state);
         } else {
             return res + ' ' + bnd[0] + ' = undefined;';
         }
