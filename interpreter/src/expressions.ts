@@ -1,4 +1,4 @@
-import { PrimitiveType, /* RecordType, */ Type, TypeVariable } from './types';
+import { CustomType, /* RecordType, */ Type, TypeVariable } from './types';
 import { Declaration, ValueBinding, ValueDeclaration } from './declarations';
 import { Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConstantToken,
          NumericToken, WordConstantToken, CharacterConstantToken,
@@ -55,15 +55,15 @@ export class Constant extends Expression implements Pattern {
 
     getType(state: State): Type[] {
         if (this.token instanceof IntegerConstantToken || this.token instanceof NumericToken) {
-            return [new PrimitiveType('int')];
+            return [new CustomType('int')];
         } else if (this.token instanceof RealConstantToken) {
-            return [new PrimitiveType('real')];
+            return [new CustomType('real')];
         } else if (this.token instanceof WordConstantToken) {
-            return [new PrimitiveType('word')];
+            return [new CustomType('word')];
         } else if (this.token instanceof CharacterConstantToken) {
-            return [new PrimitiveType('char')];
+            return [new CustomType('char')];
         } else if (this.token instanceof StringConstantToken) {
-            return [new PrimitiveType('string')];
+            return [new CustomType('string')];
         } else {
             throw new InternalInterpreterError(this.token.position,
                 '"' + this.prettyPrint() + '" does not seem to be a valid constant.');

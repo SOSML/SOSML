@@ -2394,7 +2394,7 @@ it("atomic pattern - record", () => {
     let atomic_pattern_record_non_atomic: string = "val { x = _:int } = 42;";
     expect(parse(atomic_pattern_record_non_atomic)).toEqualWithType(pattern_tester(
         new Expr.Record(6, true, [["x", new Expr.TypedExpression(10, new Expr.Wildcard(10),
-            new Type.PrimitiveType('int', [], 12))]])
+            new Type.CustomType('int', [], 12))]])
     , 20));
 });
 
@@ -2427,7 +2427,7 @@ it("atomic pattern - n-tuple", () => {
     let atomic_pattern_tuple_pat:string = "val (_:int,_) = 42;";
     expect(parse(atomic_pattern_tuple_pat)).toEqualWithType(pattern_tester(
         new Expr.Tuple(4, [new Expr.TypedExpression(5, new Expr.Wildcard(5),
-            new Type.PrimitiveType('int', [], 7)),
+            new Type.CustomType('int', [], 7)),
             new Expr.Wildcard(11)
         ])
     , 16));
@@ -2449,7 +2449,7 @@ it("atomic pattern - list", () => {
     let atomic_pattern_list_pat:string = "val [_:int] = 42;";
     expect(parse(atomic_pattern_list_pat)).toEqualWithType(pattern_tester(
         new Expr.List(4, [new Expr.TypedExpression(5, new Expr.Wildcard(5),
-            new Type.PrimitiveType('int', [], 7))])
+            new Type.CustomType('int', [], 7))])
     , 14));
 });
 
@@ -2521,7 +2521,7 @@ it("pattern row - label as variable", () => {
             5,
             true,
             [["x", new Expr.LayeredPattern(5, new Lexer.AlphanumericIdentifierToken("x", 5),
-                new Type.PrimitiveType("int", [], 7),
+                new Type.CustomType("int", [], 7),
                 new Expr.Wildcard(14)) ]]
         ),
         19
@@ -2579,7 +2579,7 @@ it("pattern - typed", () => {
     expect(parse(pattern_type)).toEqualWithType(pattern_tester(
         new Expr.TypedExpression(4,
         new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
-        new Type.PrimitiveType('int', [], 8)
+        new Type.CustomType('int', [], 8)
     ), 14));
 
     let pattern_func_type:string = "val x : int -> int = 42;";
@@ -2587,8 +2587,8 @@ it("pattern - typed", () => {
         new Expr.TypedExpression(4,
         new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
         new Type.FunctionType(
-            new Type.PrimitiveType('int', [], 8),
-        new Type.PrimitiveType('int', [], 15), 12))
+            new Type.CustomType('int', [], 8),
+        new Type.CustomType('int', [], 15), 12))
     , 21));
 
     let double_typed: string = "val x:int:int = 42;";
@@ -2598,9 +2598,9 @@ it("pattern - typed", () => {
             new Expr.TypedExpression(
                 4,
                 new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
-                new Type.PrimitiveType('int', [], 6)
+                new Type.CustomType('int', [], 6)
             ),
-            new Type.PrimitiveType('int', [], 10)
+            new Type.CustomType('int', [], 10)
         )
     , 16))
 
@@ -2609,7 +2609,7 @@ it("pattern - typed", () => {
         new Expr.TypedExpression(
             4,
             new Expr.List(4, []),
-            new Type.PrimitiveType('int', [], 7)
+            new Type.CustomType('int', [], 7)
         )
     , 13));
 });
@@ -2642,7 +2642,7 @@ it("pattern - layered", () => {
         new Expr.LayeredPattern(
             4,
             new Lexer.AlphanumericIdentifierToken("x", 4),
-            new Type.PrimitiveType("int", [], 7),
+            new Type.CustomType("int", [], 7),
             new Expr.Wildcard(14)
         ),
         18
@@ -2652,7 +2652,7 @@ it("pattern - layered", () => {
         new Expr.LayeredPattern(
             4,
             x,
-            new Type.PrimitiveType("int", [], 9),
+            new Type.CustomType("int", [], 9),
             new Expr.Wildcard(16)
         ),
         20
@@ -2731,19 +2731,19 @@ it("type - type construction", () => {
     expect(parse(testcase_small)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
-            new Type.PrimitiveType('list', [], 4)
+            new Type.CustomType('list', [], 4)
         )
     ));
     expect(parse(testcase_single)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
-            new Type.PrimitiveType('list', [new Type.TypeVariable('\'a', true, 4)], 4)
+            new Type.CustomType('list', [new Type.TypeVariable('\'a', true, 4)], 4)
         )
     ));
     expect(parse(testcase_multiple)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
-            new Type.PrimitiveType('list', [
+            new Type.CustomType('list', [
                     new Type.TupleType([
                             new Type.TypeVariable('\'a', true, 5),
                             new Type.TypeVariable('\'b', true, 10)

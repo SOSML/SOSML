@@ -3,8 +3,7 @@ import { Expression, Tuple, Constant, ValueIdentifier, Wildcard,
          Sequence, RecordSelector, Lambda, Conjunction, LocalDeclarationExpression,
          Disjunction, Conditional, CaseAnalysis, RaiseException,
          HandleException, Match, InfixExpression, PatternExpression, While } from './expressions';
-import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType,
-         PrimitiveType } from './types';
+import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } from './types';
 import { InterpreterError, InternalInterpreterError, IncompleteError, Position } from './errors';
 import { Token, KeywordToken, IdentifierToken, ConstantToken,
          TypeVariableToken, LongIdentifierToken, IntegerConstantToken,
@@ -831,10 +830,6 @@ export class Parser {
 
         if (this.checkIdentifierOrLongToken(curTok)) {
             ++this.position;
-            if (this.state.getPrimitiveType(curTok.getText()) !== undefined
-                && this.state.getPrimitiveType(curTok.getText()).isPrimitiveType) {
-                return new PrimitiveType(curTok.getText(), [], curTok.position);
-            }
             return new CustomType(curTok.getText(), [], curTok.position);
         }
 
@@ -864,10 +859,6 @@ export class Parser {
                     this.assertIdentifierOrLongToken(this.currentToken());
                     let name = this.currentToken();
                     ++this.position;
-                    if (this.state.getPrimitiveType(name.getText()) !== undefined
-                        && this.state.getPrimitiveType(name.getText()).isPrimitiveType) {
-                        return new PrimitiveType(name.getText(), res, curTok.position);
-                    }
                     return new CustomType(name.getText(), res, curTok.position);
                 }
                 throw new ParserError('Expected "," or ")", got "' +
@@ -921,14 +912,9 @@ export class Parser {
             if (!this.checkIdentifierOrLongToken(nextTok)) {
                 return ty;
             }
-            if (this.state.getPrimitiveType(nextTok.getText()) !== undefined) {
-                if (this.state.getPrimitiveType(nextTok.getText()).arity === 0) {
+            if (this.state.getCustomType(nextTok.getText()) !== undefined) {
+                if (this.state.getCustomType(nextTok.getText()).arity === 0) {
                     return ty;
-                }
-                if (this.state.getPrimitiveType(nextTok.getText()).isPrimitiveType) {
-                    ++this.position;
-                    ty = new PrimitiveType(nextTok.getText(), [ty], curTok.position);
-                    continue;
                 }
             }
             ++this.position;

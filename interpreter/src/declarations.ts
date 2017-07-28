@@ -1,7 +1,7 @@
 import { Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
          Pattern, TypedExpression, Tuple, PatternExpression } from './expressions';
 import { IdentifierToken, Token } from './lexer';
-import { Type, TypeVariable, FunctionType, PrimitiveType } from './types';
+import { Type, TypeVariable, FunctionType, CustomType } from './types';
 import { State, RebindStatus } from './state';
 import { InternalInterpreterError, Position, ElaborationError,
          EvaluationError, FeatureDisabledError } from './errors';
@@ -814,9 +814,9 @@ export class DirectExceptionBinding implements ExceptionBinding {
             }
 
             state.setStaticValue(this.name.getText(),
-                new FunctionType(this.type.simplify(), new PrimitiveType('exn')));
+                new FunctionType(this.type.simplify(), new CustomType('exn')));
         } else {
-            state.setStaticValue(this.name.getText(), new PrimitiveType('exn'));
+            state.setStaticValue(this.name.getText(), new CustomType('exn'));
         }
         return state;
     }

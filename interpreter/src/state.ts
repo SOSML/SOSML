@@ -1,4 +1,4 @@
-import { Type, PrimitiveType, FunctionType, RecordType, TypeVariable } from './types';
+import { Type, CustomType, FunctionType, RecordType, TypeVariable } from './types';
 import { Value, StringValue, PredefinedFunction, RecordValue, ValueConstructor,
          ExceptionConstructor } from './values';
 import { Token, LongIdentifierToken } from './lexer';
@@ -22,8 +22,7 @@ type StaticTypeEnvironment = { [name: string]: [TypeInformation, boolean] };
 
 export class TypeNameInformation {
     constructor(public arity: number,
-                public allowsEquality: boolean,
-                public isPrimitiveType: boolean = true) {
+                public allowsEquality: boolean) {
     }
 }
 
@@ -162,7 +161,7 @@ export class State {
     getStaticValue(name: string, intermediate: boolean|undefined = undefined,
                    idLimit: number = 0): Type | undefined {
         if (this.stdfiles[name] !== undefined) {
-            return new PrimitiveType('string');
+            return new CustomType('string');
         }
         let result = this.staticBasis.getValue(name);
         if ((result !== undefined && (intermediate === undefined || intermediate === result[1]))
@@ -237,11 +236,11 @@ export class State {
         }
     }
 
-    getPrimitiveType(name: string, idLimit: number = 0): TypeNameInformation {
+    getCustomType(name: string, idLimit: number = 0): TypeNameInformation {
         if (this.typeNames.hasOwnProperty(name) || !this.parent || this.parent.id < idLimit) {
             return this.typeNames[name];
         } else {
-            return this.parent.getPrimitiveType(name, idLimit);
+            return this.parent.getCustomType(name, idLimit);
         }
     }
 
