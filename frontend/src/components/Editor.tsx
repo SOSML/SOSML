@@ -87,6 +87,7 @@ class Editor extends React.Component<any, State> {
             topBar = (
                 <Alert bsStyle="info">
                     Du betrachtest eine geteilte Datei. Um deine eigene Version dieser zu erstellen
+                    <div className="miniSpacer" />
                     <Button bsStyle="success" onClick={this.handleRedirectToEdit}>klicke hier</Button>
                 </Alert>
             );
@@ -136,7 +137,7 @@ class Editor extends React.Component<any, State> {
         let timer = setTimeout(() => {
             this.setState({savedFeedback: FEEDBACK_NONE, savedFeedbackTimer: null});
         }, 1300);
-        this.setState({savedFeedback: FEEDBACK_FAIL, savedFeedbackTimer: timer});
+        this.setState({savedFeedback: feedback, savedFeedbackTimer: timer});
     }
 
     handleSave() {
