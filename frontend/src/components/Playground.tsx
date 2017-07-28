@@ -69,8 +69,7 @@ class Playground extends React.Component<Props, State> {
                             <div>{lineItems}</div>}
                         title="Output" className="flexy" updateAnchor={this.state.sizeAnchor}
                         header={ (
-                            <div className="headerButtons">
-                            </div>
+                            <div className="headerButtons"/>
                         ) } />
                     </div>
                 </SplitterLayout>

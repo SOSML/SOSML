@@ -92,12 +92,12 @@ class Editor extends React.Component<any, State> {
         }
         fileForm = (
             <Form inline={true} className="inlineBlock" onSubmit={this.handleFormSubmit}>
-            Dateiname: <input className="form-control" type="text" onBlur={this.onFileNameBlur}
+            File name: <input className="form-control" type="text" onBlur={this.onFileNameBlur}
             value={this.state.fileName} onChange={this.handleFileNameChange}
             style={style} />
             <div className="miniSpacer" />
             <Button bsSize="small" bsStyle="primary" onClick={this.handleSave}>
-            Speichern
+            Save
             </Button>
             </Form>
         );
