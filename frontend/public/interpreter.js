@@ -869,6 +869,7 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+var errors_1 = __webpack_require__(0);
 var Type = (function () {
     function Type() {
     }
@@ -1008,11 +1009,35 @@ var TypeVariable = (function (_super) {
         return this.name;
     };
     TypeVariable.prototype.instantiate = function (state) {
-        // let res = state.getStaticValue(this.name);
-        // if (!this.isFree || res === undefined) {
-        //     return this;
-        // }
-        throw new Error('ニャ－');
+        var res = state.getStaticValue(this.name);
+        if (!this.isFree || res === undefined || res.equals(this)) {
+            return this;
+        }
+        if (this.domain.length === 0) {
+            return res;
+        }
+        if (res instanceof TypeVariable && res.domain.length !== 0) {
+            var resty = [];
+            for (var i = 0; i < this.domain.length; ++i) {
+                for (var j = 0; j < res.domain.length; ++j) {
+                    if (this.domain[i].equals(res.domain[j])) {
+                        resty.push(this.domain[i]);
+                    }
+                }
+            }
+            if (resty.length > 0) {
+                return new TypeVariable(res.name, res.isFree, res.position, resty);
+            }
+        }
+        else {
+            for (var i = 0; i < this.domain.length; ++i) {
+                if (this.domain[i].equals(res)) {
+                    return res;
+                }
+            }
+        }
+        throw new errors_1.ElaborationError(this.position, 'Cannot instanciate "'
+            + this.prettyPrint() + '" with "' + res.prettyPrint() + '".');
     };
     TypeVariable.prototype.getTypeVariables = function (free) {
         var res = new Set();
@@ -1067,8 +1092,11 @@ var RecordType = (function (_super) {
         return _this;
     }
     RecordType.prototype.instantiate = function (state) {
-        // TODO
-        throw new Error('ニャ－');
+        var newElements = new Map();
+        this.elements.forEach(function (type, key) {
+            newElements.set(key, type.instantiate(state));
+        });
+        return new RecordType(newElements, this.complete);
     };
     RecordType.prototype.getTypeVariables = function (free) {
         var res = new Set();
@@ -1084,10 +1112,37 @@ var RecordType = (function (_super) {
         throw new Error('ニャ－');
     };
     RecordType.prototype.admitsEquality = function (state) {
-        // TODO
-        throw new Error('ニャ－');
+        var res = true;
+        this.elements.forEach(function (type, key) {
+            if (!type.admitsEquality(state)) {
+                res = false;
+            }
+        });
+        return res;
     };
     RecordType.prototype.prettyPrint = function () {
+        var isTuple = true;
+        for (var i = 1; i <= this.elements.size; ++i) {
+            if (!this.elements.has('' + i)) {
+                isTuple = false;
+            }
+        }
+        if (isTuple) {
+            var res = '(';
+            for (var i = 1; i <= this.elements.size; ++i) {
+                if (i > 1) {
+                    res += ' * ';
+                }
+                var sub = this.elements.get('' + i);
+                if (sub !== undefined) {
+                    res += sub.prettyPrint();
+                }
+                else {
+                    throw new errors_1.InternalInterpreterError(-1, 'How did we loose this value? It was there before. I promise…');
+                }
+            }
+            return res + ')';
+        }
         // TODO: print as Tuple if possible
         var result = '{';
         var first = true;
@@ -1154,8 +1209,7 @@ var FunctionType = (function (_super) {
         return _this;
     }
     FunctionType.prototype.instantiate = function (state) {
-        // TODO
-        throw new Error('ニャ－');
+        return new FunctionType(this.parameterType.instantiate(state), this.returnType.instantiate(state), this.position);
     };
     FunctionType.prototype.getTypeVariables = function (free) {
         var res = new Set();
@@ -1175,8 +1229,8 @@ var FunctionType = (function (_super) {
         return this.parameterType.admitsEquality(state) && this.returnType.admitsEquality(state);
     };
     FunctionType.prototype.prettyPrint = function () {
-        return '( ' + this.parameterType.prettyPrint()
-            + ' -> ' + this.returnType.prettyPrint() + ' )';
+        return '(' + this.parameterType.prettyPrint()
+            + ' -> ' + this.returnType.prettyPrint() + ')';
     };
     FunctionType.prototype.simplify = function () {
         return new FunctionType(this.parameterType.simplify(), this.returnType.simplify(), this.position);
@@ -1202,13 +1256,11 @@ var CustomType = (function (_super) {
         return _this;
     }
     CustomType.prototype.instantiate = function (state) {
-        if (this.typeArguments.length > 0) {
-            // TODO
-            throw new Error('ニャ－');
+        var res = [];
+        for (var i = 0; i < this.typeArguments.length; ++i) {
+            res.push(this.typeArguments[i].instantiate(state));
         }
-        else {
-            return this;
-        }
+        return new CustomType(this.name, res, this.position);
     };
     CustomType.prototype.getTypeVariables = function (free) {
         var res = new Set();
@@ -1236,7 +1288,7 @@ var CustomType = (function (_super) {
     CustomType.prototype.prettyPrint = function () {
         var result = '';
         if (this.typeArguments.length > 1) {
-            result += '( ';
+            result += '(';
         }
         for (var i = 0; i < this.typeArguments.length; ++i) {
             if (i > 0) {
@@ -1245,7 +1297,7 @@ var CustomType = (function (_super) {
             result += this.typeArguments[i].prettyPrint();
         }
         if (this.typeArguments.length > 1) {
-            result += ' )';
+            result += ')';
         }
         if (this.typeArguments.length > 0) {
             result += ' ';
@@ -1274,6 +1326,7 @@ var CustomType = (function (_super) {
     return CustomType;
 }(Type));
 exports.CustomType = CustomType;
+// Derived Types
 var TupleType = (function (_super) {
     __extends(TupleType, _super);
     function TupleType(elements, position) {
@@ -1284,14 +1337,14 @@ var TupleType = (function (_super) {
         return _this;
     }
     TupleType.prototype.prettyPrint = function () {
-        var result = '( ';
+        var result = '(';
         for (var i = 0; i < this.elements.length; ++i) {
             if (i > 0) {
                 result += ' * ';
             }
             result += this.elements[i].prettyPrint();
         }
-        return result + ' )';
+        return result + ')';
     };
     TupleType.prototype.simplify = function () {
         var entries = new Map();

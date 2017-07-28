@@ -9,12 +9,13 @@ const compression = require('compression');
 const fs = require('fs');
 const crypto = require('crypto');
 const RateLimit = require('express-rate-limit');
+const bodyParser = require('body-parser')
 
 
 const server = express();
 server.use(helmet())
 server.use(compression())
-server.use(bodyparser.json());
+server.use(bodyParser.json({ limit: '5mb' }));
 server.use('/static/', express.static('../frontend/build/static'));
 // server.use('/share/', express.static('shares'));
 // server.use('/code/', express.static('code'));
@@ -42,8 +43,9 @@ function evalSMLCode(payload, response) {
                 if (error_code == 124) {
                     error_text = 'SML hit the time limit of 3 seconds.';
                 } else {
-                    data = data.replace(last_line, 'SML exited with ' + error_code);
+                    error_text = 'SML exited with ' + error_code;
                 }
+                data = data.replace(last_line, error_text);
             }
             data = data.split(/\r?\n/).reverse().splice(2).reverse().join("\n");
             response.set('Content-Type', 'text/plain');
@@ -77,7 +79,7 @@ function listDir(name, response) {
     });
 }
 
-server.post('/api/fallback/', callDockerLimiter,
+server.post('/api/fallback2/', callDockerLimiter,
     function (request, response) {
         const payload = request.body.code;
         evalSMLCode(payload, response);
@@ -101,11 +103,11 @@ server.get('/api/queue/',
 
 server.post('/api/queue/',
     function (request, response) {
-        console.log(request.body);
+        // console.log(request.body);
         const result = request.body.result;
         const hash = request.body.hash;
-        console.log("hash: "+hash);
-        console.log("result: "+result);
+        console.log("result hash: "+hash);
+        // console.log("result: "+result);
         if(hash in pendingRequests){
             var element = pendingRequests[hash];
             element.response.set('Content-Type', 'text/plain');
@@ -120,7 +122,7 @@ server.post('/api/queue/',
     }
 );
 
-server.post('/api/fallback2/', callDockerLimiter,
+server.post('/api/fallback/', callDockerLimiter,
     function (request, response) {
         var payload = request.body.code;
         requestList.push({
@@ -141,7 +143,7 @@ server.post('/api/validate/', callDockerLimiter,
 );
 
 
-server.put('/api/share/',
+server.put('/api/share/', callDockerLimiter,
     function (request, response) {
         const payload = request.body.code;
         const hash = crypto.createHash('md5').update(payload).digest("hex");
@@ -202,10 +204,6 @@ server.get('/favicon.png', function (request, response) {
 });
 
 server.get('/', function (request, response) {
-    response.sendFile(path.resolve('../frontend/build/index.html'));
-});
-
-server.get('/share/:code', function (request, response) {
     response.sendFile(path.resolve('../frontend/build/index.html'));
 });
 
