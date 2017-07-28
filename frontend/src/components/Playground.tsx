@@ -2,9 +2,7 @@ import * as React from 'react';
 
 import MiniWindow from './MiniWindow';
 import CodeMirrorWrapper from './CodeMirrorWrapper';
-import { Button, Modal } from 'react-bootstrap';
 import './Playground.css';
-import {API as WebserverAPI} from '../API';
 var SplitterLayout = require('react-splitter-layout').default; // MEGA-HAX because of typescript
 SplitterLayout.prototype.componentDidUpdate = function(prevProps: any, prevState: any) {
     if (this.props.onUpdate && this.state.secondaryPaneSize !== prevState.secondaryPaneSize) {
@@ -27,8 +25,6 @@ interface Props {
     fileControls: any;
 }
 
-const SHARE_LINK_ERROR = ':ERROR';
-
 class Playground extends React.Component<Props, State> {
     constructor(props: any) {
         super(props);
@@ -40,14 +36,10 @@ class Playground extends React.Component<Props, State> {
 
         this.handleLeftResize = this.handleLeftResize.bind(this);
         this.handleRightResize = this.handleRightResize.bind(this);
-        this.handleRun = this.handleRun.bind(this);
         this.handleCodeChange = this.handleCodeChange.bind(this);
         this.handleSplitterUpdate = this.handleSplitterUpdate.bind(this);
         this.handleBrowserResize = this.handleBrowserResize.bind(this);
         this.handleOutputChange = this.handleOutputChange.bind(this);
-        this.handleSwitchMode = this.handleSwitchMode.bind(this);
-        this.handleShare = this.handleShare.bind(this);
-        this.closeShareModal = this.closeShareModal.bind(this);
     }
 
     render() {
@@ -57,59 +49,6 @@ class Playground extends React.Component<Props, State> {
             <div key={line + (key++)}>{line}</div>
         );
         let code: string = this.props.initialCode;
-        let evaluateIn: string = (this.state.useServer) ? 'Ausführen auf dem Server' : 'Ausführen im Browser';
-        let executeOnServer: JSX.Element | undefined;
-        if (this.state.useServer) {
-            executeOnServer = (
-                <div className="inlineBlock">
-                    <div className="miniSpacer" />
-                    <Button bsSize="small" bsStyle="primary" onClick={this.handleRun}>Ausführen</Button>
-                </div>
-            );
-        }
-        let modal = (
-            <Modal show={this.state.shareLink !== '' && this.state.shareLink !== SHARE_LINK_ERROR}
-            onHide={this.closeShareModal}>
-                <Modal.Header closeButton={true}>
-                    <Modal.Title>Teilen link</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <pre>{this.state.shareLink}</pre>
-                    <p className="text-justify">
-                        Diesen Link können Sie anderen Personen geben, die dann den
-                        Code sehen können, den Sie gerade geschrieben haben. <br />
-                        Der Link beinhaltet den Code der sich beim Teilen im Editor
-                        befunden hat. Wenn sie Änderungen vornehmen wollen, „Teilen“
-                        Sie erneuert.
-                    </p>
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button onClick={this.closeShareModal}>Schließen</Button>
-                </Modal.Footer>
-            </Modal>
-        );
-        let errorModal = (
-            <Modal show={this.state.shareLink === SHARE_LINK_ERROR} onHide={this.closeShareModal}>
-                <Modal.Header closeButton={true}>
-                    <Modal.Title>Fehler beim Teilen</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    Es gab einen Fehler beim erstellen eines Links zum Teilen.
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button onClick={this.closeShareModal}>Schließen</Button>
-                </Modal.Footer>
-            </Modal>
-        );
-        let shareElements: JSX.Element | undefined;
-        if (!this.props.readOnly) {
-            shareElements = (
-                <div className="inlineBlock">
-                    <div className="miniSpacer" />
-                    <Button bsSize="small" bsStyle="primary" onClick={this.handleShare}>Teilen</Button>
-                </div>
-            );
-        }
         return (
             <div className="playground">
                 <SplitterLayout onUpdate={this.handleSplitterUpdate}>
@@ -122,34 +61,21 @@ class Playground extends React.Component<Props, State> {
                             header={(
                             <div className="headerButtons">
                                 {this.props.fileControls}
-                                {shareElements}
                             </div>
                         )} title="SML" className="flexy" updateAnchor={this.state.sizeAnchor} />
                     </div>
                     <div className="flexcomponent flexy">
                         <MiniWindow content={
                             <div>{lineItems}</div>}
-                        title="Ausgabe" className="flexy" updateAnchor={this.state.sizeAnchor}
+                        title="Output" className="flexy" updateAnchor={this.state.sizeAnchor}
                         header={ (
                             <div className="headerButtons">
-                                {evaluateIn}
-                                <div className="miniSpacer" />
-                                <Button bsSize="small" bsStyle="primary" onClick={this.handleSwitchMode}>
-                                    Umschalten
-                                </Button>
-                                {executeOnServer}
                             </div>
                         ) } />
                     </div>
                 </SplitterLayout>
-                {modal}
-                {errorModal}
             </div>
         );
-    }
-
-    closeShareModal() {
-        this.setState({shareLink: ''});
     }
 
     componentDidMount() {
@@ -180,14 +106,6 @@ class Playground extends React.Component<Props, State> {
         }
     }
 
-    handleRun() {
-        WebserverAPI.fallbackInterpreter(this.state.code).then((val) => {
-            this.setState({output: val});
-        }).catch(() => {
-            this.setState({output: 'Fehler: konnte keine Verbindung zum Server herstellen'});
-        });
-    }
-
     handleCodeChange(newCode: string) {
         this.setState(prevState => {
             return {code: newCode};
@@ -201,22 +119,6 @@ class Playground extends React.Component<Props, State> {
         this.setState(prevState => {
             let ret: any = {output: newOutput};
             return ret;
-        });
-    }
-
-    handleShare() {
-        WebserverAPI.shareCode(this.state.code).then((hash) => {
-            this.setState(prevState => {
-                return {shareLink: window.location.host + '/share/' + hash};
-            });
-        }).catch(() => {
-            this.setState({shareLink: SHARE_LINK_ERROR});
-        });
-    }
-
-    handleSwitchMode() {
-        this.setState(prevState => {
-            return {useServer: !prevState.useServer, output: ''};
         });
     }
 }

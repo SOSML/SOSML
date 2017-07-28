@@ -55,40 +55,6 @@ class Files extends React.Component<any, State> {
                 </tr>
             );
         });
-        let examplesView: any;
-        if (this.state.examplesStatus === EXAMPLES_LOADED) {
-            let examples = this.state.examples.map((example) => {
-                return (
-                    <tr key={example}>
-                        <td>
-                            <Link to={'/examplefile/' + example}>{example}</Link>
-                        </td>
-                    </tr>
-                );
-            });
-
-            examplesView = (
-                <Table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {examples}
-                    </tbody>
-                </Table>
-            );
-        } else if (this.state.examplesStatus === EXAMPLES_FAILED) {
-            examplesView = (
-                <p>Beispieldateien konnten nicht geladen werden</p>
-            );
-        } else {
-            examplesView = (
-                <p>Beispieldateien werden geladen...</p>
-            );
-        }
-
         return (
             <Grid>
                 <Table>
@@ -103,8 +69,6 @@ class Files extends React.Component<any, State> {
                         {filesView}
                     </tbody>
                 </Table>
-                <h4>Beispieldateien</h4>
-                {examplesView}
             </Grid>
         );
     }

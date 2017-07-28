@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import Playground from './Playground';
-import { Form , Alert, Button } from 'react-bootstrap';
+import { Form , Button } from 'react-bootstrap';
 import { Database, API } from '../API';
 import './Editor.css';
 
@@ -84,38 +84,28 @@ class Editor extends React.Component<any, State> {
     render() {
         let topBar: any;
         let fileForm: any;
-        if (this.state.shareReadMode) {
-            topBar = (
-                <Alert bsStyle="info">
-                    Du betrachtest eine geteilte Datei. Um deine eigene Version dieser zu erstellen
-                    <div className="miniSpacer" />
-                    <Button bsStyle="success" onClick={this.handleRedirectToEdit}>klicke hier</Button>
-                </Alert>
-            );
-        } else {
-            let style: any = {};
-            if (this.state.savedFeedback === FEEDBACK_SUCCESS) {
-                style['background-color'] = '#AAFFAA';
-            } else if (this.state.savedFeedback === FEEDBACK_FAIL) {
-                style['background-color'] = '#FFAAAA';
-            }
-            fileForm = (
-                <Form inline={true} className="inlineBlock" onSubmit={this.handleFormSubmit}>
-                    Dateiname: <input className="form-control" type="text" onBlur={this.onFileNameBlur}
-                        value={this.state.fileName} onChange={this.handleFileNameChange}
-                        style={style} />
-                    <div className="miniSpacer" />
-                    <Button bsSize="small" bsStyle="primary" onClick={this.handleSave}>
-                        Speichern
-                    </Button>
-                </Form>
-            );
+        let style: any = {};
+        if (this.state.savedFeedback === FEEDBACK_SUCCESS) {
+            style['background-color'] = '#AAFFAA';
+        } else if (this.state.savedFeedback === FEEDBACK_FAIL) {
+            style['background-color'] = '#FFAAAA';
         }
+        fileForm = (
+            <Form inline={true} className="inlineBlock" onSubmit={this.handleFormSubmit}>
+            Dateiname: <input className="form-control" type="text" onBlur={this.onFileNameBlur}
+            value={this.state.fileName} onChange={this.handleFileNameChange}
+            style={style} />
+            <div className="miniSpacer" />
+            <Button bsSize="small" bsStyle="primary" onClick={this.handleSave}>
+            Speichern
+            </Button>
+            </Form>
+        );
         return (
             <div className="flexy flexcomponent">
-                {topBar}
-                <Playground readOnly={this.state.shareReadMode} onCodeChange={this.handleCodeChange}
-                    initialCode={this.state.initialCode} fileControls={fileForm}  />
+            {topBar}
+            <Playground readOnly={this.state.shareReadMode} onCodeChange={this.handleCodeChange}
+            initialCode={this.state.initialCode} fileControls={fileForm}  />
             </div>
         );
     }

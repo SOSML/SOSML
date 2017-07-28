@@ -2,6 +2,7 @@
   "name": "sosml-web",
   "version": "0.1.0",
   "private": true,
+  "homepage": "http://sosml.github.io",
   "dependencies": {
     "@types/jest": "^19.2.3",
     "@types/node": "^7.0.21",
