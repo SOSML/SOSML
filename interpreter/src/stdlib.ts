@@ -1,16 +1,16 @@
 import { State } from './state';
-import { FunctionType, PrimitiveType, TupleType } from './types';
+import { FunctionType, CustomType, TupleType } from './types';
 import { CharValue, Real, Integer, PredefinedFunction, Value, RecordValue,
          ExceptionConstructor } from './values';
 import { InternalInterpreterError } from './errors';
 import { Interpreter } from './main';
 
-let intType = new PrimitiveType('int');
-let realType = new PrimitiveType('real');
-// let wordType = new PrimitiveType('word');
-// let boolType = new PrimitiveType('bool');
-// let stringType = new PrimitiveType('string');
-let charType = new PrimitiveType('char');
+let intType = new CustomType('int');
+let realType = new CustomType('real');
+// let wordType = new CustomType('word');
+// let boolType = new CustomType('bool');
+// let stringType = new CustomType('string');
+let charType = new CustomType('char');
 
 
 function addMathLib(state: State): State {

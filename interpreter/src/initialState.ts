@@ -1,18 +1,18 @@
 import { State, StaticBasis, DynamicBasis, InfixStatus, TypeInformation,
          TypeNameInformation, RebindStatus } from './state';
-import { FunctionType, PrimitiveType, TupleType, Type, TypeVariable } from './types';
+import { FunctionType, CustomType, TupleType, Type, TypeVariable } from './types';
 import { CharValue, Real, Integer, StringValue, PredefinedFunction, Word, ConstructedValue,
          ValueConstructor, ExceptionConstructor, BoolValue, Value, RecordValue } from './values';
 import { InternalInterpreterError } from './errors';
 
 // Initial static basis (see SML Definition, appendix C through E)
 
-// let intType = new PrimitiveType('int');
-let realType = new PrimitiveType('real');
-// let wordType = new PrimitiveType('word');
-let boolType = new PrimitiveType('bool');
-let stringType = new PrimitiveType('string');
-let charType = new PrimitiveType('char');
+// let intType = new CustomType('int');
+let realType = new CustomType('real');
+// let wordType = new CustomType('word');
+let boolType = new CustomType('bool');
+let stringType = new CustomType('string');
+let charType = new CustomType('char');
 
 function functionType(type: Type): Type {
     return new FunctionType(new TupleType([type, type]), type).simplify();
@@ -24,12 +24,12 @@ function bfunctionType(type: Type): Type {
 let typeVar = new TypeVariable('\'a');
 let eqTypeVar = new TypeVariable('\'\'b');
 
-let intWordType = new TypeVariable('*iw', true, 0, [new PrimitiveType('int'), new PrimitiveType('word')]);
-let intRealType = new TypeVariable('*ir', true, 0, [new PrimitiveType('int'), new PrimitiveType('real')]);
-let intWordRealType = new TypeVariable('*iwr', true, 0, [new PrimitiveType('int'), new PrimitiveType('word'),
-    new PrimitiveType('real')]);
-let anyType = new TypeVariable('*any', true, 0, [new PrimitiveType('int'), new PrimitiveType('word'),
-    new PrimitiveType('real'), new PrimitiveType('string'), new PrimitiveType('char')]);
+let intWordType = new TypeVariable('*iw', true, 0, [new CustomType('int'), new CustomType('word')]);
+let intRealType = new TypeVariable('*ir', true, 0, [new CustomType('int'), new CustomType('real')]);
+let intWordRealType = new TypeVariable('*iwr', true, 0, [new CustomType('int'), new CustomType('word'),
+    new CustomType('real')]);
+let anyType = new TypeVariable('*any', true, 0, [new CustomType('int'), new CustomType('word'),
+    new CustomType('real'), new CustomType('string'), new CustomType('char')]);
 
 let initialState: State = new State(
     0,
@@ -38,15 +38,15 @@ let initialState: State = new State(
         {
             'unit':     [new TypeInformation(
                 new FunctionType(new TupleType([]), new TupleType([])).simplify(), []), false],
-            'bool':     [new TypeInformation(new PrimitiveType('bool'),  ['true', 'false']), false],
-            'int':      [new TypeInformation(new PrimitiveType('int'),   []), false],
-            'word':     [new TypeInformation(new PrimitiveType('word'),  []), false],
-            'real':     [new TypeInformation(new PrimitiveType('real'),  []), false],
-            'string':   [new TypeInformation(new PrimitiveType('string'), []), false],
-            'char':     [new TypeInformation(new PrimitiveType('char'),  []), false],
-            'list':     [new TypeInformation(new PrimitiveType('list', [typeVar]), ['nil', '::']), false],
-            'ref':      [new TypeInformation(new PrimitiveType('ref', [typeVar]), ['ref']), false],
-            'exn':      [new TypeInformation(new PrimitiveType('exn'), []), false]
+            'bool':     [new TypeInformation(new CustomType('bool'),  ['true', 'false']), false],
+            'int':      [new TypeInformation(new CustomType('int'),   []), false],
+            'word':     [new TypeInformation(new CustomType('word'),  []), false],
+            'real':     [new TypeInformation(new CustomType('real'),  []), false],
+            'string':   [new TypeInformation(new CustomType('string'), []), false],
+            'char':     [new TypeInformation(new CustomType('char'),  []), false],
+            'list':     [new TypeInformation(new CustomType('list', [typeVar]), ['nil', '::']), false],
+            'ref':      [new TypeInformation(new CustomType('ref', [typeVar]), ['ref']), false],
+            'exn':      [new TypeInformation(new CustomType('exn'), []), false]
         },
         {
             'div':      [functionType(intWordType), false],
@@ -62,20 +62,20 @@ let initialState: State = new State(
             '=':        [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(), false],
             '<>':       [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(), false],
             // ':='
-            // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
-            'true':     [new PrimitiveType('bool'), false],
-            'false':    [new PrimitiveType('bool'), false],
-            'nil':      [new PrimitiveType('list', [typeVar]), false],
+            // 'ref': new ValueIdentifier(new FunctionType(typeVar, new CustomType('ref', typeVar)),
+            'true':     [new CustomType('bool'), false],
+            'false':    [new CustomType('bool'), false],
+            'nil':      [new CustomType('list', [typeVar]), false],
             '::':       [new FunctionType(
-                            new TupleType([typeVar, new PrimitiveType('list', [typeVar])]),
-                            new PrimitiveType('list', [typeVar])).simplify(), false],
-            'Match':    [new PrimitiveType('exn'), false],
-            'Bind':     [new PrimitiveType('exn'), false],
-            'Div':      [new PrimitiveType('exn'), false],
-            'Overflow': [new PrimitiveType('exn'), false],
+                            new TupleType([typeVar, new CustomType('list', [typeVar])]),
+                            new CustomType('list', [typeVar])).simplify(), false],
+            'Match':    [new CustomType('exn'), false],
+            'Bind':     [new CustomType('exn'), false],
+            'Div':      [new CustomType('exn'), false],
+            'Overflow': [new CustomType('exn'), false],
             '^':        [functionType(stringType), false],
-            'explode':  [new FunctionType(stringType, new PrimitiveType('list', [charType])).simplify(), false],
-            'implode':  [new FunctionType(new PrimitiveType('list', [charType]), stringType).simplify(), false],
+            'explode':  [new FunctionType(stringType, new CustomType('list', [charType])).simplify(), false],
+            'implode':  [new FunctionType(new CustomType('list', [charType]), stringType).simplify(), false],
             '~':        [new FunctionType(intRealType, intRealType), false],
             'abs':      [new FunctionType(intRealType, intRealType), false],
         }
@@ -336,7 +336,7 @@ let initialState: State = new State(
             }), false],
 
             // ':='
-            // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
+            // 'ref': new ValueIdentifier(new FunctionType(typeVar, new CustomType('ref', typeVar)),
             'true':     [new BoolValue(true), false],
             'false':    [new BoolValue(false), false],
             'nil':      [new ValueConstructor('nil').construct(), false],
@@ -422,7 +422,7 @@ let initialState: State = new State(
         'word':     new TypeNameInformation(0, true),
         'list':     new TypeNameInformation(1, true),
         'ref':      new TypeNameInformation(1, true),
-        'exn':      new TypeNameInformation(0, false, false),
+        'exn':      new TypeNameInformation(0, false),
     },
     {
         'div': new InfixStatus(true, 7, false),
