@@ -223,10 +223,30 @@ it("patrow", () => {
             12
         )
     );
-    expect(parse("val {x  as y} = 42;").simplify()).toEqualWithType(
-        parse("val {x = x  as y} = 42;")
+    expect(parse("val {x as y} = 42;").simplify()).toEqualWithType(
+        pattern_tester(
+            new Expr.Record(
+                5,
+                true,
+                [
+                    [
+                        "x",
+                        new Expr.LayeredPattern(
+                            5,
+                            new Lexer.AlphanumericIdentifierToken("x", 5),
+                            undefined,
+                            new Expr.ValueIdentifier(
+                                10,
+                                new Lexer.AlphanumericIdentifierToken("y", 10)
+                            )
+                        )
+                    ]
+                ]
+            ),
+            15
+        )
     );
-    expect(parse("val {x:int} = 42;")).toEqualWithType(
+    expect(parse("val {x:int} = 42;").simplify()).toEqualWithType(
         pattern_tester(
             new Expr.Record(5, true, [
                 [
@@ -301,7 +321,7 @@ function fvalbind_helper(expr: Expr.Expression) {
 
 it("fvalbind", () => {
     expect(parse("fun f x = 1;").simplify()).toEqualWithType(
-        parse("fun f = fn fish => case (fish) of (x) => 1;").simplify()
+        parse("val rec f = fn fish => case (fish) of (x) => 1;").simplify()
     )
     //TODO
 });

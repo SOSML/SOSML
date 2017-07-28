@@ -1,4 +1,4 @@
-import { Position, InternalInterpreterError } from './errors';
+import { Position, InternalInterpreterError, ElaborationError } from './errors';
 import { State } from './state';
 
 export abstract class Type {
@@ -154,7 +154,7 @@ export class RecordType extends Type {
         let res = true;
         this.elements.forEach((type: Type, key: string) => {
             if (!type.admitsEquality(state)) {
-                ren = false;
+                res = false;
             }
         });
         return res;
