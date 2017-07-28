@@ -46,7 +46,7 @@ class Editor extends React.Component<any, State> {
             if (state.fileName) {
                 let promis: Promise<string>;
                 if (state.example) {
-                    promis = API.getCodeExample(state);
+                    promis = API.getCodeExample(state.fileName);
                 } else {
                     promis = Database.getInstance().then((db: Database) => {
                         return db.getFile(state.fileName);

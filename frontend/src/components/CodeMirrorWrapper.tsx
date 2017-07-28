@@ -509,7 +509,7 @@ class CodeMirrorWrapper extends React.Component<Props, any> {
         const options = {
             lineNumbers: true,
             mode: 'text/sml',
-            indentUnit: 4,
+            indentUnit: 2,
             matchBrackets: true,
             lineWrapping: true,
             readOnly: this.props.readOnly ? true : false

@@ -60,7 +60,7 @@ export class API {
                   'Accept': 'text/plain',
                   'Content-Type': 'application/json'
                 },
-                method: 'POST',
+                method: 'PUT',
                 body: JSON.stringify({'code': code})
             }
         ).then(function(response: any){

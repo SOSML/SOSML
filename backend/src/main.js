@@ -18,13 +18,6 @@ server.use(bodyparser.json());
 server.use('/static/', express.static('../frontend/build/static'));
 // server.use('/share/', express.static('shares'));
 // server.use('/code/', express.static('code'));
-server.get('/', function (request, response) {
-    response.sendFile(path.resolve('../frontend/build/index.html'));
-});
-
-server.get('/share/:code', function (request, response) {
-    response.sendFile(path.resolve('../frontend/build/index.html'));
-});
 
 
 var callDockerLimiter = new RateLimit({
@@ -140,7 +133,7 @@ server.post('/api/fallback2/', callDockerLimiter,
 server.post('/api/validate/', callDockerLimiter,
     function (request, response) {
         const payload = request.body.code;
-        const name = request.body.name
+        const name = request.body.name;
         readFile("./code/validate/" + name, function (data) {
             evalSMLCode(payload + data, response);
         });
@@ -151,7 +144,7 @@ server.post('/api/validate/', callDockerLimiter,
 server.put('/api/share/',
     function (request, response) {
         const payload = request.body.code;
-        const hash = crypto.createHash('md5').update(payload).digest("base64");
+        const hash = crypto.createHash('md5').update(payload).digest("hex");
         fs.writeFile("./code/shares/" + hash + ".sml", payload, function (err) {
             if (err) {
                 return console.log(err);
@@ -195,6 +188,30 @@ server.get('/code/:code',
         outputFile("./code/examples/" + code + ".sml", response);
     }
 );
+
+server.get('/interpreter.js', function (request, response) {
+    response.sendFile(path.resolve('../frontend/build/interpreter.js'));
+});
+
+server.get('/logo.png', function (request, response) {
+    response.sendFile(path.resolve('../frontend/build/logo.png'));
+});
+
+server.get('/favicon.png', function (request, response) {
+    response.sendFile(path.resolve('../frontend/build/favicon.png'));
+});
+
+server.get('/', function (request, response) {
+    response.sendFile(path.resolve('../frontend/build/index.html'));
+});
+
+server.get('/share/:code', function (request, response) {
+    response.sendFile(path.resolve('../frontend/build/index.html'));
+});
+
+server.use(function (request, response) {
+    response.sendFile(path.resolve('../frontend/build/index.html'));
+});
 
 server.listen(8000, function () {
     console.log('yay');
