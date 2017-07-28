@@ -894,97 +894,6 @@ var Type = (function () {
     return Type;
 }());
 exports.Type = Type;
-var PrimitiveType = (function (_super) {
-    __extends(PrimitiveType, _super);
-    function PrimitiveType(name, parameters, position) {
-        if (parameters === void 0) { parameters = []; }
-        if (position === void 0) { position = 0; }
-        var _this = _super.call(this) || this;
-        _this.name = name;
-        _this.parameters = parameters;
-        _this.position = position;
-        return _this;
-    }
-    PrimitiveType.prototype.instantiate = function (state) {
-        var res = [];
-        for (var i = 0; i < this.parameters.length; ++i) {
-            res.push(this.parameters[i].instantiate(state));
-        }
-        return new PrimitiveType(this.name, res, this.position);
-    };
-    PrimitiveType.prototype.getTypeVariables = function (free) {
-        var res = new Set();
-        for (var i = 0; i < this.parameters.length; ++i) {
-            this.parameters[i].getTypeVariables(free).forEach(function (value) {
-                res.add(value);
-            });
-        }
-        return res;
-    };
-    PrimitiveType.prototype.matches = function (state, type) {
-        if (type instanceof PrimitiveType) {
-            if (this.name !== type.name
-                || this.parameters.length !== type.parameters.length) {
-                return undefined;
-            }
-            for (var i = 0; i < this.parameters.length; ++i) {
-                if (this.parameters[i].matches(state, type.parameters[i]) === undefined) {
-                    return undefined;
-                }
-            }
-            return [];
-        }
-        // TODO
-        if (type instanceof TypeVariable) {
-            if (type.domain === []) {
-                return undefined;
-            }
-        }
-        // None of the possible types matched
-        return undefined;
-    };
-    PrimitiveType.prototype.admitsEquality = function (state) {
-        for (var i = 0; i < this.parameters.length; ++i) {
-            if (!this.parameters[i].admitsEquality(state)) {
-                return false;
-            }
-        }
-        return state.getPrimitiveType(this.name).allowsEquality;
-    };
-    PrimitiveType.prototype.prettyPrint = function () {
-        var res = '';
-        for (var i = 0; i < this.parameters.length; ++i) {
-            res += this.parameters[i].prettyPrint() + ' ';
-        }
-        return res += this.name;
-    };
-    PrimitiveType.prototype.equals = function (other) {
-        if (!(other instanceof PrimitiveType)) {
-            return false;
-        }
-        if (this.name !== other.name) {
-            return false;
-        }
-        if (this.parameters.length !== other.parameters.length) {
-            return false;
-        }
-        for (var i = 0; i < this.parameters.length; ++i) {
-            if (!this.parameters[i].equals(other.parameters[i])) {
-                return false;
-            }
-        }
-        return true;
-    };
-    PrimitiveType.prototype.simplify = function () {
-        var param = [];
-        for (var i = 0; i < this.parameters.length; ++i) {
-            param.push(this.parameters[i].simplify());
-        }
-        return new PrimitiveType(this.name, param, this.position);
-    };
-    return PrimitiveType;
-}(Type));
-exports.PrimitiveType = PrimitiveType;
 var TypeVariable = (function (_super) {
     __extends(TypeVariable, _super);
     function TypeVariable(name, isFree, position, domain) {
@@ -2060,11 +1969,9 @@ var TypeInformation = (function () {
 }());
 exports.TypeInformation = TypeInformation;
 var TypeNameInformation = (function () {
-    function TypeNameInformation(arity, allowsEquality, isPrimitiveType) {
-        if (isPrimitiveType === void 0) { isPrimitiveType = true; }
+    function TypeNameInformation(arity, allowsEquality) {
         this.arity = arity;
         this.allowsEquality = allowsEquality;
-        this.isPrimitiveType = isPrimitiveType;
     }
     return TypeNameInformation;
 }());
@@ -2200,7 +2107,7 @@ var State = (function () {
         if (intermediate === void 0) { intermediate = undefined; }
         if (idLimit === void 0) { idLimit = 0; }
         if (this.stdfiles[name] !== undefined) {
-            return new types_1.PrimitiveType('string');
+            return new types_1.CustomType('string');
         }
         var result = this.staticBasis.getValue(name);
         if ((result !== undefined && (intermediate === undefined || intermediate === result[1]))
@@ -2279,13 +2186,13 @@ var State = (function () {
                 + ') but I only want (Long)IdentifierToken.');
         }
     };
-    State.prototype.getPrimitiveType = function (name, idLimit) {
+    State.prototype.getCustomType = function (name, idLimit) {
         if (idLimit === void 0) { idLimit = 0; }
         if (this.typeNames.hasOwnProperty(name) || !this.parent || this.parent.id < idLimit) {
             return this.typeNames[name];
         }
         else {
-            return this.parent.getPrimitiveType(name, idLimit);
+            return this.parent.getCustomType(name, idLimit);
         }
     };
     State.prototype.getValueIdentifierId = function (name, idLimit) {
@@ -3221,10 +3128,6 @@ var Parser = (function () {
         }
         if (this.checkIdentifierOrLongToken(curTok)) {
             ++this.position;
-            if (this.state.getPrimitiveType(curTok.getText()) !== undefined
-                && this.state.getPrimitiveType(curTok.getText()).isPrimitiveType) {
-                return new types_1.PrimitiveType(curTok.getText(), [], curTok.position);
-            }
             return new types_1.CustomType(curTok.getText(), [], curTok.position);
         }
         if (this.checkKeywordToken(curTok, '{')) {
@@ -3252,10 +3155,6 @@ var Parser = (function () {
                     this.assertIdentifierOrLongToken(this.currentToken());
                     var name_1 = this.currentToken();
                     ++this.position;
-                    if (this.state.getPrimitiveType(name_1.getText()) !== undefined
-                        && this.state.getPrimitiveType(name_1.getText()).isPrimitiveType) {
-                        return new types_1.PrimitiveType(name_1.getText(), res, curTok.position);
-                    }
                     return new types_1.CustomType(name_1.getText(), res, curTok.position);
                 }
                 throw new ParserError('Expected "," or ")", got "' +
@@ -3305,14 +3204,9 @@ var Parser = (function () {
             if (!this.checkIdentifierOrLongToken(nextTok)) {
                 return ty;
             }
-            if (this.state.getPrimitiveType(nextTok.getText()) !== undefined) {
-                if (this.state.getPrimitiveType(nextTok.getText()).arity === 0) {
+            if (this.state.getCustomType(nextTok.getText()) !== undefined) {
+                if (this.state.getCustomType(nextTok.getText()).arity === 0) {
                     return ty;
-                }
-                if (this.state.getPrimitiveType(nextTok.getText()).isPrimitiveType) {
-                    ++this.position;
-                    ty = new types_1.PrimitiveType(nextTok.getText(), [ty], curTok.position);
-                    continue;
                 }
             }
             ++this.position;
@@ -4676,10 +4570,10 @@ var DirectExceptionBinding = (function () {
             if (tyvars_1.length > 0) {
                 throw errors_1.ElaborationError.getUnguarded(this.position, tyvars_1);
             }
-            state.setStaticValue(this.name.getText(), new types_1.FunctionType(this.type.simplify(), new types_1.PrimitiveType('exn')));
+            state.setStaticValue(this.name.getText(), new types_1.FunctionType(this.type.simplify(), new types_1.CustomType('exn')));
         }
         else {
-            state.setStaticValue(this.name.getText(), new types_1.PrimitiveType('exn'));
+            state.setStaticValue(this.name.getText(), new types_1.CustomType('exn'));
         }
         return state;
     };
@@ -4790,19 +4684,19 @@ var Constant = (function (_super) {
     };
     Constant.prototype.getType = function (state) {
         if (this.token instanceof lexer_1.IntegerConstantToken || this.token instanceof lexer_1.NumericToken) {
-            return [new types_1.PrimitiveType('int')];
+            return [new types_1.CustomType('int')];
         }
         else if (this.token instanceof lexer_1.RealConstantToken) {
-            return [new types_1.PrimitiveType('real')];
+            return [new types_1.CustomType('real')];
         }
         else if (this.token instanceof lexer_1.WordConstantToken) {
-            return [new types_1.PrimitiveType('word')];
+            return [new types_1.CustomType('word')];
         }
         else if (this.token instanceof lexer_1.CharacterConstantToken) {
-            return [new types_1.PrimitiveType('char')];
+            return [new types_1.CustomType('char')];
         }
         else if (this.token instanceof lexer_1.StringConstantToken) {
-            return [new types_1.PrimitiveType('string')];
+            return [new types_1.CustomType('string')];
         }
         else {
             throw new errors_1.InternalInterpreterError(this.token.position, '"' + this.prettyPrint() + '" does not seem to be a valid constant.');
@@ -5815,12 +5709,12 @@ var types_1 = __webpack_require__(2);
 var values_1 = __webpack_require__(3);
 var errors_1 = __webpack_require__(0);
 // Initial static basis (see SML Definition, appendix C through E)
-// let intType = new PrimitiveType('int');
-var realType = new types_1.PrimitiveType('real');
-// let wordType = new PrimitiveType('word');
-var boolType = new types_1.PrimitiveType('bool');
-var stringType = new types_1.PrimitiveType('string');
-var charType = new types_1.PrimitiveType('char');
+// let intType = new CustomType('int');
+var realType = new types_1.CustomType('real');
+// let wordType = new CustomType('word');
+var boolType = new types_1.CustomType('bool');
+var stringType = new types_1.CustomType('string');
+var charType = new types_1.CustomType('char');
 function functionType(type) {
     return new types_1.FunctionType(new types_1.TupleType([type, type]), type).simplify();
 }
@@ -5829,23 +5723,23 @@ function bfunctionType(type) {
 }
 var typeVar = new types_1.TypeVariable('\'a');
 var eqTypeVar = new types_1.TypeVariable('\'\'b');
-var intWordType = new types_1.TypeVariable('*iw', true, 0, [new types_1.PrimitiveType('int'), new types_1.PrimitiveType('word')]);
-var intRealType = new types_1.TypeVariable('*ir', true, 0, [new types_1.PrimitiveType('int'), new types_1.PrimitiveType('real')]);
-var intWordRealType = new types_1.TypeVariable('*iwr', true, 0, [new types_1.PrimitiveType('int'), new types_1.PrimitiveType('word'),
-    new types_1.PrimitiveType('real')]);
-var anyType = new types_1.TypeVariable('*any', true, 0, [new types_1.PrimitiveType('int'), new types_1.PrimitiveType('word'),
-    new types_1.PrimitiveType('real'), new types_1.PrimitiveType('string'), new types_1.PrimitiveType('char')]);
+var intWordType = new types_1.TypeVariable('*iw', true, 0, [new types_1.CustomType('int'), new types_1.CustomType('word')]);
+var intRealType = new types_1.TypeVariable('*ir', true, 0, [new types_1.CustomType('int'), new types_1.CustomType('real')]);
+var intWordRealType = new types_1.TypeVariable('*iwr', true, 0, [new types_1.CustomType('int'), new types_1.CustomType('word'),
+    new types_1.CustomType('real')]);
+var anyType = new types_1.TypeVariable('*any', true, 0, [new types_1.CustomType('int'), new types_1.CustomType('word'),
+    new types_1.CustomType('real'), new types_1.CustomType('string'), new types_1.CustomType('char')]);
 var initialState = new state_1.State(0, undefined, new state_1.StaticBasis({
     'unit': [new state_1.TypeInformation(new types_1.FunctionType(new types_1.TupleType([]), new types_1.TupleType([])).simplify(), []), false],
-    'bool': [new state_1.TypeInformation(new types_1.PrimitiveType('bool'), ['true', 'false']), false],
-    'int': [new state_1.TypeInformation(new types_1.PrimitiveType('int'), []), false],
-    'word': [new state_1.TypeInformation(new types_1.PrimitiveType('word'), []), false],
-    'real': [new state_1.TypeInformation(new types_1.PrimitiveType('real'), []), false],
-    'string': [new state_1.TypeInformation(new types_1.PrimitiveType('string'), []), false],
-    'char': [new state_1.TypeInformation(new types_1.PrimitiveType('char'), []), false],
-    'list': [new state_1.TypeInformation(new types_1.PrimitiveType('list', [typeVar]), ['nil', '::']), false],
-    'ref': [new state_1.TypeInformation(new types_1.PrimitiveType('ref', [typeVar]), ['ref']), false],
-    'exn': [new state_1.TypeInformation(new types_1.PrimitiveType('exn'), []), false]
+    'bool': [new state_1.TypeInformation(new types_1.CustomType('bool'), ['true', 'false']), false],
+    'int': [new state_1.TypeInformation(new types_1.CustomType('int'), []), false],
+    'word': [new state_1.TypeInformation(new types_1.CustomType('word'), []), false],
+    'real': [new state_1.TypeInformation(new types_1.CustomType('real'), []), false],
+    'string': [new state_1.TypeInformation(new types_1.CustomType('string'), []), false],
+    'char': [new state_1.TypeInformation(new types_1.CustomType('char'), []), false],
+    'list': [new state_1.TypeInformation(new types_1.CustomType('list', [typeVar]), ['nil', '::']), false],
+    'ref': [new state_1.TypeInformation(new types_1.CustomType('ref', [typeVar]), ['ref']), false],
+    'exn': [new state_1.TypeInformation(new types_1.CustomType('exn'), []), false]
 }, {
     'div': [functionType(intWordType), false],
     'mod': [functionType(intWordType), false],
@@ -5860,18 +5754,18 @@ var initialState = new state_1.State(0, undefined, new state_1.StaticBasis({
     '=': [new types_1.FunctionType(new types_1.TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(), false],
     '<>': [new types_1.FunctionType(new types_1.TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(), false],
     // ':='
-    // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
-    'true': [new types_1.PrimitiveType('bool'), false],
-    'false': [new types_1.PrimitiveType('bool'), false],
-    'nil': [new types_1.PrimitiveType('list', [typeVar]), false],
-    '::': [new types_1.FunctionType(new types_1.TupleType([typeVar, new types_1.PrimitiveType('list', [typeVar])]), new types_1.PrimitiveType('list', [typeVar])).simplify(), false],
-    'Match': [new types_1.PrimitiveType('exn'), false],
-    'Bind': [new types_1.PrimitiveType('exn'), false],
-    'Div': [new types_1.PrimitiveType('exn'), false],
-    'Overflow': [new types_1.PrimitiveType('exn'), false],
+    // 'ref': new ValueIdentifier(new FunctionType(typeVar, new CustomType('ref', typeVar)),
+    'true': [new types_1.CustomType('bool'), false],
+    'false': [new types_1.CustomType('bool'), false],
+    'nil': [new types_1.CustomType('list', [typeVar]), false],
+    '::': [new types_1.FunctionType(new types_1.TupleType([typeVar, new types_1.CustomType('list', [typeVar])]), new types_1.CustomType('list', [typeVar])).simplify(), false],
+    'Match': [new types_1.CustomType('exn'), false],
+    'Bind': [new types_1.CustomType('exn'), false],
+    'Div': [new types_1.CustomType('exn'), false],
+    'Overflow': [new types_1.CustomType('exn'), false],
     '^': [functionType(stringType), false],
-    'explode': [new types_1.FunctionType(stringType, new types_1.PrimitiveType('list', [charType])).simplify(), false],
-    'implode': [new types_1.FunctionType(new types_1.PrimitiveType('list', [charType]), stringType).simplify(), false],
+    'explode': [new types_1.FunctionType(stringType, new types_1.CustomType('list', [charType])).simplify(), false],
+    'implode': [new types_1.FunctionType(new types_1.CustomType('list', [charType]), stringType).simplify(), false],
     '~': [new types_1.FunctionType(intRealType, intRealType), false],
     'abs': [new types_1.FunctionType(intRealType, intRealType), false],
 }), new state_1.DynamicBasis({
@@ -6126,7 +6020,7 @@ var initialState = new state_1.State(0, undefined, new state_1.StaticBasis({
             throw new errors_1.InternalInterpreterError(-1, 'Called "<>" on value of the wrong type (' + val.constructor.name + ').');
         }), false],
     // ':='
-    // 'ref': new ValueIdentifier(new FunctionType(typeVar, new PrimitiveType('ref', typeVar)),
+    // 'ref': new ValueIdentifier(new FunctionType(typeVar, new CustomType('ref', typeVar)),
     'true': [new values_1.BoolValue(true), false],
     'false': [new values_1.BoolValue(false), false],
     'nil': [new values_1.ValueConstructor('nil').construct(), false],
@@ -6206,7 +6100,7 @@ var initialState = new state_1.State(0, undefined, new state_1.StaticBasis({
     'word': new state_1.TypeNameInformation(0, true),
     'list': new state_1.TypeNameInformation(1, true),
     'ref': new state_1.TypeNameInformation(1, true),
-    'exn': new state_1.TypeNameInformation(0, false, false),
+    'exn': new state_1.TypeNameInformation(0, false),
 }, {
     'div': new state_1.InfixStatus(true, 7, false),
     'mod': new state_1.InfixStatus(true, 7, false),
@@ -6259,12 +6153,12 @@ var types_1 = __webpack_require__(2);
 var values_1 = __webpack_require__(3);
 var errors_1 = __webpack_require__(0);
 var main_1 = __webpack_require__(8);
-var intType = new types_1.PrimitiveType('int');
-var realType = new types_1.PrimitiveType('real');
-// let wordType = new PrimitiveType('word');
-// let boolType = new PrimitiveType('bool');
-// let stringType = new PrimitiveType('string');
-var charType = new types_1.PrimitiveType('char');
+var intType = new types_1.CustomType('int');
+var realType = new types_1.CustomType('real');
+// let wordType = new CustomType('word');
+// let boolType = new CustomType('bool');
+// let stringType = new CustomType('string');
+var charType = new types_1.CustomType('char');
 function addMathLib(state) {
     state.setDynamicValue('Math.sqrt', new values_1.PredefinedFunction('Math.sqrt', function (val) {
         if (val instanceof values_1.Real) {
