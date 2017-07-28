@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { Alert } from 'react-bootstrap';
 
 class Help extends React.Component<any, any> {
     render() {
