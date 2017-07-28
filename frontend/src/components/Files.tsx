@@ -48,7 +48,7 @@ class Files extends React.Component<any, State> {
                     <td>
                         <Link to={'/file/' + file.name}>{file.name}</Link>
                     </td>
-                    <td>Lokal</td>
+                    <td>Local</td>
                     <td>
                         <Button bsStyle="danger" onClick={handlerFor(file.name)} ><Glyphicon glyph={'trash'} /></Button>
                     </td>
@@ -61,8 +61,8 @@ class Files extends React.Component<any, State> {
                     <thead>
                         <tr>
                             <th>Name</th>
-                            <th>Typ</th>
-                            <th>Aktionen</th>
+                            <th>Type</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
