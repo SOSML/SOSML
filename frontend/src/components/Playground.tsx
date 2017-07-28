@@ -101,6 +101,15 @@ class Playground extends React.Component<Props, State> {
                 </Modal.Footer>
             </Modal>
         );
+        let shareElements: JSX.Element | undefined;
+        if (!this.props.readOnly) {
+            shareElements = (
+                <div className="inlineBlock">
+                    <div className="miniSpacer" />
+                    <Button bsSize="small" bsStyle="primary" onClick={this.handleShare}>Teilen</Button>
+                </div>
+            );
+        }
         return (
             <div className="playground">
                 <SplitterLayout onUpdate={this.handleSplitterUpdate}>
@@ -113,8 +122,7 @@ class Playground extends React.Component<Props, State> {
                             header={(
                             <div className="headerButtons">
                                 {this.props.fileControls}
-                                <div className="miniSpacer" />
-                                <Button bsSize="small" bsStyle="primary" onClick={this.handleShare}>Teilen</Button>
+                                {shareElements}
                             </div>
                         )} title="SML" className="flexy" updateAnchor={this.state.sizeAnchor} />
                     </div>

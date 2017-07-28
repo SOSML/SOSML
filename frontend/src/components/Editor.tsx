@@ -38,6 +38,7 @@ class Editor extends React.Component<any, State> {
         this.handleFileNameChange = this.handleFileNameChange.bind(this);
         this.handleRedirectToEdit = this.handleRedirectToEdit.bind(this);
         this.handleSave = this.handleSave.bind(this);
+        this.handleFormSubmit = this.handleFormSubmit.bind(this);
     }
 
     componentDidMount() {
@@ -99,7 +100,7 @@ class Editor extends React.Component<any, State> {
                 style['background-color'] = '#FFAAAA';
             }
             fileForm = (
-                <Form inline={true} className="inlineBlock">
+                <Form inline={true} className="inlineBlock" onSubmit={this.handleFormSubmit}>
                     Dateiname: <input className="form-control" type="text" onBlur={this.onFileNameBlur}
                         value={this.state.fileName} onChange={this.handleFileNameChange}
                         style={style} />
@@ -117,6 +118,11 @@ class Editor extends React.Component<any, State> {
                     initialCode={this.state.initialCode} fileControls={fileForm}  />
             </div>
         );
+    }
+
+    handleFormSubmit(e: any) {
+        e.preventDefault();
+        this.handleSave();
     }
 
     handleRedirectToEdit() {
@@ -141,9 +147,10 @@ class Editor extends React.Component<any, State> {
     }
 
     handleSave() {
-        if (this.state.fileName !== '') {
+        let fileName = this.state.fileName.trim();
+        if (fileName !== '') {
             Database.getInstance().then((db: Database) => {
-                return db.saveFile(this.state.fileName, this.state.code);
+                return db.saveFile(fileName, this.state.code);
             }).then(() => {
                 this.restartFeedbackClear(FEEDBACK_SUCCESS);
             }).catch(() => {
