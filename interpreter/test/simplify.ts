@@ -254,7 +254,7 @@ it("patrow", () => {
                     new Expr.TypedExpression(
                         5,
                         new Expr.ValueIdentifier(5, new Lexer.AlphanumericIdentifierToken("x", 5)),
-                        new Type.PrimitiveType('int', [], 7)
+                        new Type.CustomType('int', [], 7)
                     )
                 ]
             ]),
@@ -283,8 +283,8 @@ it("ty", () => {
     expect(parse("val x = 42:int * int;").simplify()).toEqualWithType(
         type_tester(new Type.RecordType(
             new Map([
-                ["1", new Type.PrimitiveType("int", [], 11)],
-                ["2", new Type.PrimitiveType("int", [], 17)]
+                ["1", new Type.CustomType("int", [], 11)],
+                ["2", new Type.CustomType("int", [], 17)]
             ]),
             true,
         ))
@@ -293,9 +293,9 @@ it("ty", () => {
     expect(parse("val x = 42:int * int * int;").simplify()).toEqualWithType(
         type_tester(new Type.RecordType(
             new Map([
-                ["1", new Type.PrimitiveType("int", [], 11)],
-                ["2", new Type.PrimitiveType("int", [], 17)],
-                ["3", new Type.PrimitiveType("int", [], 23)]
+                ["1", new Type.CustomType("int", [], 11)],
+                ["2", new Type.CustomType("int", [], 17)],
+                ["3", new Type.CustomType("int", [], 23)]
             ]),
             true,
         ))

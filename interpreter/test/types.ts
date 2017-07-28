@@ -2,7 +2,7 @@ it();
 
 /*
 import {
-    FunctionType, PrimitiveType, PrimitiveTypes, RecordType, TupleType, Type, TypeUnificationError,
+    FunctionType, CustomType, CustomTypes, RecordType, TupleType, Type, TypeUnificationError,
     TypeVariable
 } from '../src/types';
 import { State } from '../src/state';
@@ -66,8 +66,8 @@ function checkThrow(a: Type, b: Type): void {
 
 it("very basic test", () => {
 
-    let int = new PrimitiveType(PrimitiveTypes.int);
-    let bool = new PrimitiveType(PrimitiveTypes.bool);
+    let int = new CustomType(CustomTypes.int);
+    let bool = new CustomType(CustomTypes.bool);
     let a = new TypeVariable("'a", false);
     let b = new TypeVariable("'b", false);
     let int_int = new FunctionType(int, int);
