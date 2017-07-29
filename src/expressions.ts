@@ -1,17 +1,15 @@
 import { CustomType, /* RecordType, */ Type, TypeVariable } from './types';
 import { Declaration, ValueBinding, ValueDeclaration } from './declarations';
 import { Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConstantToken,
-         NumericToken, WordConstantToken, CharacterConstantToken,
-         StringConstantToken } from './lexer';
-import { State, RebindStatus } from './state';
-import { InternalInterpreterError, Position, ElaborationError, EvaluationError } from './errors';
+         NumericToken, WordConstantToken, CharacterConstantToken, StringConstantToken } from './tokens';
+import { State, IdentifierStatus } from './state';
+import { InternalInterpreterError, ElaborationError, EvaluationError, ParserError } from './errors';
 import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
          ExceptionValue, ConstructedValue } from './values';
-import { ParserError } from './parser';
 
 export abstract class Expression {
-    position: Position;
+    position: number;
 
     getType(state: State): Type[] {
         throw new InternalInterpreterError(this.position, 'Called "getType" on a derived form.');
@@ -33,7 +31,7 @@ export abstract class Expression {
 export interface Pattern {
     // Returns which bindings would be created by matching v to this Pattern,
     // or undefined, if v does not match this Pattern.
-    position: Position;
+    position: number;
     getType(state: State): Type[];
     matches(state: State, v: Value): [string, Value][] | undefined;
     simplify(): PatternExpression;
@@ -43,7 +41,7 @@ export interface Pattern {
 export type PatternExpression = Pattern & Expression;
 
 export class Constant extends Expression implements Pattern {
-    constructor(public position: Position, public token: ConstantToken) { super(); }
+    constructor(public position: number, public token: ConstantToken) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         if (this.compute(state)[0].equals(v)) {
@@ -94,14 +92,14 @@ export class Constant extends Expression implements Pattern {
 
 export class ValueIdentifier extends Expression implements Pattern {
 // op longvid or longvid
-    constructor(public position: Position, public name: Token) { super(); }
+    constructor(public position: number, public name: Token) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         let res = state.getDynamicValue(this.name.getText());
-        if (res === undefined || state.getRebindStatus(this.name.getText()) === RebindStatus.Allowed) {
+        if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
             return [[this.name.getText(), v]];
         }
-        if (v.equals(res)) {
+        if (v.equals(res[0])) {
             return [];
         }
         return undefined;
@@ -126,23 +124,23 @@ export class ValueIdentifier extends Expression implements Pattern {
                 + this.name.getText() + '".');
         }
 
-        if (res instanceof ValueConstructor
-            && (<ValueConstructor> res).numArgs === 0) {
-            res = (<ValueConstructor> res).construct();
+        if (res[1] === IdentifierStatus.VALUE_CONSTRUCTOR
+            && (<ValueConstructor> res[0]).numArgs === 0) {
+            return [(<ValueConstructor> res[0]).construct(), false];
         }
-        if (res instanceof ExceptionConstructor
-            && (<ExceptionConstructor> res).numArgs === 0) {
-            res = (<ExceptionConstructor> res).construct();
+        if (res[1] === IdentifierStatus.EXCEPTION_CONSTRUCTOR
+            && (<ExceptionConstructor> res[0]).numArgs === 0) {
+            return [(<ExceptionConstructor> res[0]).construct(), false];
         }
 
-        return [res, false];
+        return [res[0], false];
     }
 }
 
 export class Record extends Expression implements Pattern {
 // { lab = exp, ... } or { }
 // a record(pattern) is incomplete if it ends with '...'
-    constructor(public position: Position, public complete: boolean,
+    constructor(public position: number, public complete: boolean,
                 public entries: [string, Expression|PatternExpression][]) {
         super();
         this.entries.sort();
@@ -242,7 +240,7 @@ export class LocalDeclarationExpression extends Expression {
 // let dec in exp1; ...; expn end
 // A sequential expression exp1; ... ; expn is represented as such,
 // despite the potentially missing parentheses
-    constructor(public position: Position, public declaration: Declaration, public expression: Expression) { super(); }
+    constructor(public position: number, public declaration: Declaration, public expression: Expression) { super(); }
 
     simplify(): LocalDeclarationExpression {
         return new LocalDeclarationExpression(this.position, this.declaration.simplify(), this.expression.simplify());
@@ -260,7 +258,7 @@ export class LocalDeclarationExpression extends Expression {
     }
 
     compute(state: State): [Value, boolean] {
-        let nstate = state.getNestedState(false, state.id);
+        let nstate = state.getNestedState(state.id);
         let res = this.declaration.evaluate(nstate);
         if (res[1]) {
             return [<Value> res[2], true];
@@ -271,7 +269,7 @@ export class LocalDeclarationExpression extends Expression {
 
 export class TypedExpression extends Expression implements Pattern {
 // expression: type (L)
-    constructor(public position: Position, public expression: Expression,
+    constructor(public position: number, public expression: Expression,
                 public typeAnnotation: Type) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -302,7 +300,7 @@ export class TypedExpression extends Expression implements Pattern {
 // May represent either a function application or a constructor with an argument
 export class FunctionApplication extends Expression implements Pattern {
 // function argument
-    constructor(public position: Position,
+    constructor(public position: number,
                 public func: Expression,
                 public argument: Expression|PatternExpression) { super(); }
 
@@ -387,7 +385,7 @@ export class FunctionApplication extends Expression implements Pattern {
 
 export class HandleException extends Expression {
 // expression handle match
-    constructor(public position: Position, public expression: Expression, public match: Match) {
+    constructor(public position: number, public expression: Expression, public match: Match) {
         super();
     }
 
@@ -421,7 +419,7 @@ export class HandleException extends Expression {
 
 export class RaiseException extends Expression {
 // raise expression
-    constructor(public position: Position, public expression: Expression) { super(); }
+    constructor(public position: number, public expression: Expression) { super(); }
 
     simplify(): RaiseException {
         return new RaiseException(this.position, this.expression.simplify());
@@ -449,7 +447,7 @@ export class RaiseException extends Expression {
 
 export class Lambda extends Expression {
 // fn match
-    constructor(public position: Position, public match: Match) { super(); }
+    constructor(public position: number, public match: Match) { super(); }
 
     simplify(): Lambda {
         return new Lambda(this.position, this.match.simplify());
@@ -466,8 +464,6 @@ export class Lambda extends Expression {
     }
 
     compute(state: State): [Value, boolean] {
-        // TODO thoroughly test that not nesting here suffices
-        // let nstate = state.getNestedState(true, state.id);
         return [new FunctionValue(state, [], this.match), false];
     }
 }
@@ -476,7 +472,7 @@ export class Lambda extends Expression {
 
 export class Match {
 // pat => exp or pat => exp | match
-    constructor(public position: Position, public matches: [PatternExpression, Expression][]) { }
+    constructor(public position: number, public matches: [PatternExpression, Expression][]) { }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         let res = '';
@@ -492,12 +488,12 @@ export class Match {
 
     compute(state: State, value: Value): [Value, boolean] {
         for (let i = 0; i < this.matches.length; ++i) {
-            let nstate = state.getNestedState(false, state.id);
+            let nstate = state.getNestedState(state.id);
 
             let res = this.matches[i][0].matches(nstate, value);
             if (res !== undefined) {
                 for (let j = 0; j < res.length; ++j) {
-                    nstate.setDynamicValue(res[j][0], res[j][1], true);
+                    nstate.setDynamicValue(res[j][0], res[j][1], IdentifierStatus.VALUE_VARIABLE);
                 }
                 return this.matches[i][1].compute(nstate);
             }
@@ -523,7 +519,7 @@ export class Match {
 // Pure Patterns
 
 export class Wildcard extends Expression implements Pattern {
-    constructor(public position: Position) { super(); }
+    constructor(public position: number) { super(); }
 
     getType(state: State): Type[] {
         return [new TypeVariable('\'\'__wc'), new TypeVariable('\'__wc')];
@@ -549,7 +545,7 @@ export class Wildcard extends Expression implements Pattern {
 
 export class LayeredPattern extends Expression implements Pattern {
 // <op> identifier <:type> as pattern
-    constructor(public position: Position, public identifier: IdentifierToken,
+    constructor(public position: number, public identifier: IdentifierToken,
                 public typeAnnotation: Type | undefined,
                 public pattern: Expression|PatternExpression) { super(); }
 
@@ -680,7 +676,7 @@ let consConstant = new ValueIdentifier(0, new IdentifierToken('::', 0));
 
 export class Conjunction extends Expression {
 // leftOperand andalso rightOperand
-    constructor(public position: Position, public leftOperand: Expression, public rightOperand: Expression) { super(); }
+    constructor(public position: number, public leftOperand: Expression, public rightOperand: Expression) { super(); }
 
     simplify(): FunctionApplication {
         return new Conditional(this.position, this.leftOperand, this.rightOperand,
@@ -695,7 +691,7 @@ export class Conjunction extends Expression {
 
 export class Disjunction extends Expression {
 // leftOperand orelse rightOperand
-    constructor(public position: Position, public leftOperand: Expression, public rightOperand: Expression) { super(); }
+    constructor(public position: number, public leftOperand: Expression, public rightOperand: Expression) { super(); }
 
     simplify(): FunctionApplication {
         return new Conditional(this.position, this.leftOperand, trueConstant, this.rightOperand).simplify();
@@ -709,7 +705,7 @@ export class Disjunction extends Expression {
 
 export class Tuple extends Expression implements Pattern {
 // (exp1, ..., expn), n > 1
-    constructor(public position: Position, public expressions: Expression[]) { super(); }
+    constructor(public position: number, public expressions: Expression[]) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         return this.simplify().matches(state, v);
@@ -737,7 +733,7 @@ export class Tuple extends Expression implements Pattern {
 
 export class List extends Expression implements Pattern {
 // [exp1, ..., expn]
-    constructor(public position: Position, public expressions: Expression[]) { super(); }
+    constructor(public position: number, public expressions: Expression[]) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         return this.simplify().matches(state, v);
@@ -766,7 +762,7 @@ export class List extends Expression implements Pattern {
 
 export class Sequence extends Expression {
 // (exp1; ...; expn), n >= 2
-    constructor(public position: Position, public expressions: Expression[]) { super(); }
+    constructor(public position: number, public expressions: Expression[]) { super(); }
 
     simplify(): FunctionApplication {
         let pos = this.expressions.length - 1;
@@ -793,7 +789,7 @@ export class Sequence extends Expression {
 
 export class RecordSelector extends Expression {
 // #label record
-    constructor(public position: Position, public label: IdentifierToken | NumericToken) { super(); }
+    constructor(public position: number, public label: IdentifierToken | NumericToken) { super(); }
 
     simplify(): Lambda {
         return new Lambda(this.position, new Match(-1, [[
@@ -808,7 +804,7 @@ export class RecordSelector extends Expression {
 
 export class CaseAnalysis extends Expression {
 // case expression of match
-    constructor(public position: Position, public expression: Expression, public match: Match) { super(); }
+    constructor(public position: number, public expression: Expression, public match: Match) { super(); }
 
     simplify(): FunctionApplication {
         return new FunctionApplication(this.position, new Lambda(this.position,
@@ -825,7 +821,7 @@ export class CaseAnalysis extends Expression {
 
 export class Conditional extends Expression {
 // if condition then consequence else alternative
-    constructor(public position: Position, public condition: Expression, public consequence: Expression,
+    constructor(public position: number, public condition: Expression, public consequence: Expression,
                 public alternative: Expression) { super(); }
 
     simplify(): FunctionApplication {
@@ -844,7 +840,7 @@ export class Conditional extends Expression {
 
 export class While extends Expression {
 // while exp do exp
-    constructor(public position: Position, public condition: Expression,
+    constructor(public position: number, public condition: Expression,
                 public body: Expression) {
         super();
     }

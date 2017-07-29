@@ -1,5 +1,5 @@
 import { State, StaticBasis, DynamicBasis, InfixStatus, TypeInformation,
-         TypeNameInformation, RebindStatus } from './state';
+         TypeNameInformation, RebindStatus, IdentifierStatus } from './state';
 import { FunctionType, CustomType, TupleType, Type, TypeVariable } from './types';
 import { CharValue, Real, Integer, StringValue, PredefinedFunction, Word, ConstructedValue,
          ValueConstructor, ExceptionConstructor, BoolValue, Value, RecordValue } from './values';
@@ -36,62 +36,62 @@ let initialState: State = new State(
     undefined,
     new StaticBasis(
         {
-            'unit':     [new TypeInformation(
-                new FunctionType(new TupleType([]), new TupleType([])).simplify(), []), false],
-            'bool':     [new TypeInformation(new CustomType('bool'),  ['true', 'false']), false],
-            'int':      [new TypeInformation(new CustomType('int'),   []), false],
-            'word':     [new TypeInformation(new CustomType('word'),  []), false],
-            'real':     [new TypeInformation(new CustomType('real'),  []), false],
-            'string':   [new TypeInformation(new CustomType('string'), []), false],
-            'char':     [new TypeInformation(new CustomType('char'),  []), false],
-            'list':     [new TypeInformation(new CustomType('list', [typeVar]), ['nil', '::']), false],
-            'ref':      [new TypeInformation(new CustomType('ref', [typeVar]), ['ref']), false],
-            'exn':      [new TypeInformation(new CustomType('exn'), []), false]
+            'unit':     new TypeInformation(
+                new FunctionType(new TupleType([]), new TupleType([])).simplify(), []),
+            'bool':     new TypeInformation(new CustomType('bool'),  ['true', 'false']),
+            'int':      new TypeInformation(new CustomType('int'),   []),
+            'word':     new TypeInformation(new CustomType('word'),  []),
+            'real':     new TypeInformation(new CustomType('real'),  []),
+            'string':   new TypeInformation(new CustomType('string'), []),
+            'char':     new TypeInformation(new CustomType('char'),  []),
+            'list':     new TypeInformation(new CustomType('list', [typeVar]), ['nil', '::']),
+            'ref':      new TypeInformation(new CustomType('ref', [typeVar]), ['ref']),
+            'exn':      new TypeInformation(new CustomType('exn'), [])
         },
         {
-            'div':      [functionType(intWordType), false],
-            'mod':      [functionType(intWordType), false],
-            '*':        [functionType(intWordRealType), false],
-            '/':        [functionType(realType), false],
-            '+':        [functionType(intWordRealType), false],
-            '-':        [functionType(intWordRealType), false],
-            '<':        [bfunctionType(anyType), false],
-            '<=':       [bfunctionType(anyType), false],
-            '>':        [bfunctionType(anyType), false],
-            '>=':       [bfunctionType(anyType), false],
-            '=':        [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(), false],
-            '<>':       [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(), false],
+            'div':      [functionType(intWordType), IdentifierStatus.VALUE_VARIABLE],
+            'mod':      [functionType(intWordType), IdentifierStatus.VALUE_VARIABLE],
+            '*':        [functionType(intWordRealType), IdentifierStatus.VALUE_VARIABLE],
+            '/':        [functionType(realType), IdentifierStatus.VALUE_VARIABLE],
+            '+':        [functionType(intWordRealType), IdentifierStatus.VALUE_VARIABLE],
+            '-':        [functionType(intWordRealType), IdentifierStatus.VALUE_VARIABLE],
+            '<':        [bfunctionType(anyType), IdentifierStatus.VALUE_VARIABLE],
+            '<=':       [bfunctionType(anyType), IdentifierStatus.VALUE_VARIABLE],
+            '>':        [bfunctionType(anyType), IdentifierStatus.VALUE_VARIABLE],
+            '>=':       [bfunctionType(anyType), IdentifierStatus.VALUE_VARIABLE],
+            '=':        [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(), IdentifierStatus.VALUE_VARIABLE],
+            '<>':       [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(), IdentifierStatus.VALUE_VARIABLE],
             // ':='
             // 'ref': new ValueIdentifier(new FunctionType(typeVar, new CustomType('ref', typeVar)),
-            'true':     [new CustomType('bool'), false],
-            'false':    [new CustomType('bool'), false],
-            'nil':      [new CustomType('list', [typeVar]), false],
+            'true':     [new CustomType('bool'), IdentifierStatus.VALUE_CONSTRUCTOR],
+            'false':    [new CustomType('bool'), IdentifierStatus.VALUE_CONSTRUCTOR],
+            'nil':      [new CustomType('list', [typeVar]), IdentifierStatus.VALUE_CONSTRUCTOR],
             '::':       [new FunctionType(
                             new TupleType([typeVar, new CustomType('list', [typeVar])]),
-                            new CustomType('list', [typeVar])).simplify(), false],
-            'Match':    [new CustomType('exn'), false],
-            'Bind':     [new CustomType('exn'), false],
-            'Div':      [new CustomType('exn'), false],
-            'Overflow': [new CustomType('exn'), false],
-            '^':        [functionType(stringType), false],
-            'explode':  [new FunctionType(stringType, new CustomType('list', [charType])).simplify(), false],
-            'implode':  [new FunctionType(new CustomType('list', [charType]), stringType).simplify(), false],
-            '~':        [new FunctionType(intRealType, intRealType), false],
-            'abs':      [new FunctionType(intRealType, intRealType), false],
+                            new CustomType('list', [typeVar])).simplify(), IdentifierStatus.VALUE_CONSTRUCTOR],
+            'Match':    [new CustomType('exn'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
+            'Bind':     [new CustomType('exn'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
+            'Div':      [new CustomType('exn'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
+            'Overflow': [new CustomType('exn'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
+            '^':        [functionType(stringType), IdentifierStatus.VALUE_VARIABLE],
+            'explode':  [new FunctionType(stringType, new CustomType('list', [charType])).simplify(), IdentifierStatus.VALUE_VARIABLE],
+            'implode':  [new FunctionType(new CustomType('list', [charType]), stringType).simplify(), IdentifierStatus.VALUE_VARIABLE],
+            '~':        [new FunctionType(intRealType, intRealType), IdentifierStatus.VALUE_VARIABLE],
+            'abs':      [new FunctionType(intRealType, intRealType), IdentifierStatus.VALUE_VARIABLE],
         }
     ),
     new DynamicBasis(
         {
-            'unit':     [[], false],
-            'bool':     [['true', 'false'], false],
-            'int':      [[], false],
-            'word':     [[], false],
-            'real':     [[], false],
-            'string':   [[], false],
-            'char':     [[], false],
-            'list':     [['nil', '::'], false],
-            'ref':      [['ref'], false],
-            'exn':      [[], false],
+            'unit':     [],
+            'bool':     ['true', 'false'],
+            'int':      [],
+            'word':     [],
+            'real':     [],
+            'string':   [],
+            'char':     [],
+            'list':     ['nil', '::'],
+            'ref':      ['ref'],
+            'exn':      [],
         },
         {
             'div':      [new PredefinedFunction('div', (val: Value) => {
@@ -113,7 +113,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "div" on value of the wrong type (' + val.constructor.name + ').');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
             'mod':      [new PredefinedFunction('mod', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
@@ -133,7 +133,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "mod" on value of the wrong type (' + val.constructor.name + ').');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
             '*':        [new PredefinedFunction('*', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
@@ -161,7 +161,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "*" on value of the wrong type (' + val.constructor.name + ').');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
             '/':        [new PredefinedFunction('/', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
@@ -176,7 +176,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "/" on value of the wrong type (' + val.constructor.name + ').');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
             '+':        [new PredefinedFunction('+', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
@@ -204,7 +204,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "+" on value of the wrong type (' + val.constructor.name + ').');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
             '-':        [new PredefinedFunction('-', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
@@ -232,7 +232,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "-" on value of the wrong type (' + val.constructor.name + ').');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
 
             '<':        [new PredefinedFunction('<', (val: Value) => {
                 if (val instanceof RecordValue) {
@@ -253,7 +253,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "<" on value of the wrong type (' + val.constructor.name + ').');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
             '>':        [new PredefinedFunction('<', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
@@ -273,7 +273,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called ">" on value of the wrong type (' + val.constructor.name + ').');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
             '<=':       [new PredefinedFunction('<', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
@@ -293,7 +293,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "<=" on value of the wrong type (' + val.constructor.name + ').');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
             '>=':       [new PredefinedFunction('<', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
@@ -313,7 +313,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called ">=" on value of the wrong type (' + val.constructor.name + ').');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
             '=':        [new PredefinedFunction('=', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
@@ -323,7 +323,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "=" on value of the wrong type (' + val.constructor.name + ').');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
             '<>':       [new PredefinedFunction('=', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
@@ -333,18 +333,18 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "<>" on value of the wrong type (' + val.constructor.name + ').');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
 
             // ':='
             // 'ref': new ValueIdentifier(new FunctionType(typeVar, new CustomType('ref', typeVar)),
-            'true':     [new BoolValue(true), false],
-            'false':    [new BoolValue(false), false],
-            'nil':      [new ValueConstructor('nil').construct(), false],
-            '::':       [new ValueConstructor('::', 1), false],
-            'Match':    [new ExceptionConstructor('Match').construct(), false],
-            'Bind':     [new ExceptionConstructor('Bind').construct(), false],
-            'Div':      [new ExceptionConstructor('Div').construct(), false],
-            'Overflow': [new ExceptionConstructor('Overflow').construct(), false],
+            'true':     [new BoolValue(true), IdentifierStatus.VALUE_CONSTRUCTOR],
+            'false':    [new BoolValue(false), IdentifierStatus.VALUE_CONSTRUCTOR],
+            'nil':      [new ValueConstructor('nil').construct(), IdentifierStatus.VALUE_CONSTRUCTOR],
+            '::':       [new ValueConstructor('::', 1), IdentifierStatus.VALUE_CONSTRUCTOR],
+            'Match':    [new ExceptionConstructor('Match').construct(), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
+            'Bind':     [new ExceptionConstructor('Bind').construct(), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
+            'Div':      [new ExceptionConstructor('Div').construct(), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
+            'Overflow': [new ExceptionConstructor('Overflow').construct(), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
             '^':        [new PredefinedFunction('^', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
@@ -356,21 +356,21 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "^" on value of the wrong type (' + val.constructor.name + ').');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
             'explode':  [new PredefinedFunction('explode', (val: Value) => {
                 if (val instanceof StringValue) {
                     return [(<StringValue> val).explode(), false];
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
             'implode':  [new PredefinedFunction('implode', (val: Value) => {
                 if (val instanceof ConstructedValue) {
                     return [StringValue.implode(val), false];
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
             '~':        [new PredefinedFunction('~', (val: Value) => {
                 if (val instanceof Integer) {
                     let result = (<Integer> val).negate();
@@ -387,7 +387,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "~" on something weird.');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
             'abs':        [new PredefinedFunction('~', (val: Value) => {
                 if (val instanceof Integer) {
                     if ((<Integer> val).value >= 0) {
@@ -410,7 +410,7 @@ let initialState: State = new State(
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "~" on something weird.');
-            }), false],
+            }), IdentifierStatus.VALUE_VARIABLE],
         }
     ),
     {

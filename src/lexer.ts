@@ -2,188 +2,11 @@
  * TODO: Documentation for the lexer
  */
 
-import { Position, LexerError, InternalInterpreterError, IncompleteError } from './errors';
-
-// SML uses these types and we may have to emulate them more closely, in particular int
-export type char = string;
-export type int = number;
-
-export interface Token {
-    text: string;
-    position: Position;
-
-    getText(): string;
-    isValidRecordLabel(): boolean;
-    isVid(): boolean;
-}
-
-export class KeywordToken implements Token {
-    constructor(public text: string, public position: Position) {}
-
-    getText(): string {
-        return this.text;
-    }
-    isValidRecordLabel(): boolean { return false; }
-    isVid() { return false; }
-}
-
-export abstract class ConstantToken implements Token {
-    text: string;
-    position: Position;
-
-    abstract getText(): string;
-    abstract isValidRecordLabel(): boolean;
-    isVid() { return false; }
-}
-export class IntegerConstantToken extends ConstantToken {
-    constructor(public text: string, public position: Position, public value: int) {
-        super();
-    }
-
-    getText(): string {
-        return '' + this.value;
-    }
-    isValidRecordLabel(): boolean { return false; }
-}
-export class RealConstantToken extends ConstantToken {
-    constructor(public text: string, public position: Position, public value: number) {
-        super();
-    }
-
-    getText(): string {
-        return '' + this.value;
-    }
-    isValidRecordLabel(): boolean { return false; }
-}
-export class WordConstantToken extends ConstantToken {
-    constructor(public text: string, public position: Position, public value: int) {
-        super();
-    }
-    getText(): string {
-        return '' + this.value;
-    }
-    isValidRecordLabel(): boolean { return false; }
-}
-export class CharacterConstantToken extends ConstantToken {
-    constructor(public text: string, public position: Position, public value: char) {
-        super();
-    }
-    getText(): string {
-        return '' + this.text;
-    }
-    isValidRecordLabel(): boolean { return false; }
-}
-export class StringConstantToken extends ConstantToken {
-    constructor(public text: string, public position: Position, public value: string) {
-        super();
-    }
-    getText(): string {
-        return '' + this.text;
-    }
-    isValidRecordLabel(): boolean { return false; }
-}
-
-// Any identifier not starting with a prime (')
-// May represent value identifiers, type constructors and record labels
-export class IdentifierToken implements Token {
-    opPrefixed: boolean = false;
-    constructor(public text: string, public position: Position) {}
-    getText(): string {
-        return this.text;
-    }
-    isValidRecordLabel(): boolean { return true; }
-    isVid() { return true; }
-}
-
-// Alphanumeric identifiers not starting with a prime may represent structure identifiers, signature identifiers
-// and functor identifiers
-export class AlphanumericIdentifierToken extends IdentifierToken {
-    constructor(text: string, position: Position) { super(text, position); }
-    getText(): string {
-        return this.text;
-    }
-    isValidRecordLabel(): boolean { return true; }
-}
-
-// An alphanumeric identifier that starts with a prime
-export class TypeVariableToken implements Token {
-    constructor(public text: string, public position: Position) {}
-    getText(): string {
-        return this.text;
-    }
-    isValidRecordLabel(): boolean { return false; }
-    isVid() { return false; }
-}
-
-// An alphanumeric identifier that starts with two primes
-export class EqualityTypeVariableToken extends TypeVariableToken {
-    constructor(text: string, position: Position) { super(text, position); }
-    getText(): string {
-        return this.text;
-    }
-    isValidRecordLabel(): boolean { return false; }
-    isVid() { return false; }
-}
-
-// A star (*) can be used as value identifier or record label, but not as a type constructor and thus must be separated.
-// See SML definition, chapter 2.4 Identifiers
-export class StarToken extends KeywordToken {
-    opPrefixed: boolean = false;
-    constructor(public position: Position) {
-        super('*', position);
-    }
-    getText(): string {
-        return this.text;
-    }
-    isValidRecordLabel(): boolean { return true; }
-    isVid() { return true; }
-}
-
-// Reserved words are generally not allowed as identifiers. "The only exception to this rule is that the symbol = ,
-// which is a reserved word, is also allowed as an identifier to stand for the equality predicate.
-// The identifier = may not be re-bound; this precludes any syntactic ambiguity." (Definition of SML, page 5)
-export class EqualsToken extends KeywordToken {
-    constructor(public position: Position) {
-        super('=', position);
-    }
-    getText(): string {
-        return this.text;
-    }
-    isValidRecordLabel(): boolean { return false; }
-    isVid() { return true; }
-}
-
-// A numeric token (a positive, decimal integer not starting with '0') can be used either as an integer constant or as
-// a record label.
-export class NumericToken extends IntegerConstantToken {
-    constructor(text: string, position: Position, value: int) { super(text, position, value); }
-    getText(): string {
-        return this.text;
-    }
-    isValidRecordLabel(): boolean { return true; }
-    isVid() { return false; }
-}
-
-// A long identifier is a sequence str_1.str_2. … .str_n.id of n > 0 structure identifiers and one Identifier
-// separated by '.'s. The identifier may a value identifier, type constructor or structure identifier
-export class LongIdentifierToken implements Token {
-    opPrefixed: boolean = false;
-    constructor(public text: string, public position: Position, public qualifiers: AlphanumericIdentifierToken[],
-                public id: IdentifierToken) {}
-    getText(): string {
-        let res: string = '';
-        for (let i = 0; i < this.qualifiers.length; ++i) {
-            if (i > 0) {
-                res += '.';
-            }
-            res += this.qualifiers[i].getText();
-        }
-        return res + '.' + this.id.getText();
-    }
-    isValidRecordLabel(): boolean { return false; }
-    isVid() { return false; }
-}
-
+import { LexerError, InternalInterpreterError, IncompleteError } from './errors';
+import { int, char, Token, KeywordToken, WordConstantToken, CharacterConstantToken,
+         StringConstantToken, IdentifierToken, AlphanumericIdentifierToken, TypeVariableToken,
+         EqualityTypeVariableToken, StarToken, EqualsToken, NumericToken, LongIdentifierToken,
+         RealConstantToken, IntegerConstantToken } from './tokens';
 
 // TODO: maybe these should be static class members
 let reservedWords: Set<string> = new Set<string>([
@@ -200,8 +23,8 @@ let symbolicCharacters: Set<string> = new Set<string>([
 class Lexer {
     position: number = 0;
     tokenStart: number;
-    input: string;
 
+    // TODO proper support for >= 256 chars
     static isAlphanumeric(c: char): boolean {
         return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c === '\'' || c === '_';
     }
@@ -218,17 +41,16 @@ class Lexer {
         return (c >= '0' && c <= '9') || (hexadecimal && ((c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')));
     }
 
-    constructor(input: string) {
-        this.input = input;
+    constructor(private input: string, private options: { [name: string]: any }) {
         this.skipWhitespaceAndComments();
     }
 
-    consumeChar(errorMessageOnEOF: string = '', errorPositionOnEOF: number = this.input.length - 1): char {
+    consumeChar(errorMessageOnEOF: string = '', errornumberOnEOF: number = this.input.length - 1): char {
         if (this.position >= this.input.length) {
             if (errorMessageOnEOF === '') {
-                throw new IncompleteError(errorPositionOnEOF);
+                throw new IncompleteError(errornumberOnEOF);
             } else {
-                throw new IncompleteError(errorPositionOnEOF, errorMessageOnEOF);
+                throw new IncompleteError(errornumberOnEOF, errorMessageOnEOF);
             }
         }
         ++this.position;
@@ -251,9 +73,9 @@ class Lexer {
     }
 
     skipWhitespaceAndComments(): void {
-        let oldPosition: number;
+        let oldnumber: number;
         do {
-            oldPosition = this.position;
+            oldnumber = this.position;
 
             this.skipWhitespace();
 
@@ -279,7 +101,7 @@ class Lexer {
                     ++this.position;
                 }
             }
-        } while (this.position !== oldPosition);
+        } while (this.position !== oldnumber);
         this.tokenStart = this.position;
     }
 
@@ -379,7 +201,7 @@ class Lexer {
     }
 
     lexString(): StringConstantToken {
-        let startPosition: number = this.position;
+        let startnumber: number = this.position;
         if (this.consumeChar() !== '"') {
             throw new InternalInterpreterError(this.position);
         }
@@ -422,10 +244,10 @@ class Lexer {
                                     'unicode escape sequence must have four digits');
                             }
                             let v: number = parseInt(s, 16);
-                            if (v >= 256) {
+                            if (v >= 256 && !this.options['allowUnicodeInStrings']) {
                                 throw new LexerError(this.position - s.length - 1,
                                     'character code ' + s + ' is too large, only 00 to ff is allowed');
-                            } // TODO: remove?
+                            }
                             value += String.fromCharCode(v);
                             break;
                         }
@@ -440,10 +262,10 @@ class Lexer {
                                     'numeric escape sequence must have three digits');
                             }
                             let v: number = parseInt(s, 10);
-                            if (v >= 256) {
+                            if (v >= 256 && !this.options['allowUnicodeInStrings']) {
                                 throw new LexerError(this.position - s.length - 1,
                                     'character code ' + s + ' is too large, only 000 to 255 is allowed');
-                            } // TODO: remove?
+                            }
                             value += String.fromCharCode(v);
                             break;
                         }
@@ -465,7 +287,7 @@ class Lexer {
         if (this.consumeChar() !== '"') {
             throw new InternalInterpreterError(this.position);
         }
-        return new StringConstantToken(this.input.substring(startPosition, this.position), this.tokenStart, value);
+        return new StringConstantToken(this.input.substring(startnumber, this.position), this.tokenStart, value);
     }
 
     lexCharacter(): CharacterConstantToken {
@@ -579,8 +401,8 @@ class Lexer {
     }
 }
 
-export function lex(s: string): Token[] {
-    let l: Lexer = new Lexer(s);
+export function lex(s: string, options: { [name: string]: any }): Token[] {
+    let l: Lexer = new Lexer(s, options);
     let result: Token[] = [];
     while (!l.finished()) {
         result.push(l.nextToken());

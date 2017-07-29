@@ -1,9 +1,9 @@
-import { State } from './state';
+import { State, IdentifierStatus } from './state';
 import { FunctionType, CustomType, TupleType } from './types';
 import { CharValue, Real, Integer, PredefinedFunction, Value, RecordValue,
          ExceptionConstructor } from './values';
 import { InternalInterpreterError } from './errors';
-import { Interpreter } from './main';
+import * as Interpreter from './main';
 
 let intType = new CustomType('int');
 let realType = new CustomType('real');
@@ -24,8 +24,8 @@ function addMathLib(state: State): State {
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
-    }));
-    state.setStaticValue('Math.sqrt', new FunctionType(realType, realType));
+    }), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Math.sqrt', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
     state.setDynamicValue('Math.sin', new PredefinedFunction('Math.sin', (val: Value) => {
         if (val instanceof Real) {
@@ -34,8 +34,8 @@ function addMathLib(state: State): State {
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
-    }));
-    state.setStaticValue('Math.sin', new FunctionType(realType, realType));
+    }), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Math.sin', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
     state.setDynamicValue('Math.cos', new PredefinedFunction('Math.cos', (val: Value) => {
         if (val instanceof Real) {
@@ -44,8 +44,8 @@ function addMathLib(state: State): State {
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
-    }));
-    state.setStaticValue('Math.cos', new FunctionType(realType, realType));
+    }), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Math.cos', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
     state.setDynamicValue('Math.asin', new PredefinedFunction('Math.asin', (val: Value) => {
         if (val instanceof Real) {
@@ -54,8 +54,8 @@ function addMathLib(state: State): State {
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
-    }));
-    state.setStaticValue('Math.asin', new FunctionType(realType, realType));
+    }), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Math.asin', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
     state.setDynamicValue('Math.acos', new PredefinedFunction('Math.acos', (val: Value) => {
         if (val instanceof Real) {
@@ -64,8 +64,8 @@ function addMathLib(state: State): State {
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
-    }));
-    state.setStaticValue('Math.acos', new FunctionType(realType, realType));
+    }), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Math.acos', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
     state.setDynamicValue('Math.exp', new PredefinedFunction('Math.exp', (val: Value) => {
         if (val instanceof Real) {
@@ -74,8 +74,8 @@ function addMathLib(state: State): State {
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
-    }));
-    state.setStaticValue('Math.exp', new FunctionType(realType, realType));
+    }), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Math.exp', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
     state.setDynamicValue('Math.pow', new PredefinedFunction('Math.sin', (val: Value) => {
         if (val instanceof RecordValue) {
@@ -91,8 +91,8 @@ function addMathLib(state: State): State {
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
-    }));
-    state.setStaticValue('Math.pow', new FunctionType(new TupleType([realType, realType]), realType).simplify());
+    }), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Math.pow', new FunctionType(new TupleType([realType, realType]), realType).simplify(), IdentifierStatus.VALUE_VARIABLE);
 
     state.setDynamicValue('Math.ln', new PredefinedFunction('Math.ln', (val: Value) => {
         if (val instanceof Real) {
@@ -101,8 +101,8 @@ function addMathLib(state: State): State {
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
-    }));
-    state.setStaticValue('Math.ln', new FunctionType(realType, realType));
+    }), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Math.ln', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
     state.setDynamicValue('Math.log10', new PredefinedFunction('Math.log10', (val: Value) => {
         if (val instanceof Real) {
@@ -111,14 +111,14 @@ function addMathLib(state: State): State {
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
-    }));
-    state.setStaticValue('Math.log10', new FunctionType(realType, realType));
+    }), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Math.log10', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('Math.pi', new Real(3.14159265359));
-    state.setStaticValue('Math.pi', realType);
+    state.setDynamicValue('Math.pi', new Real(3.14159265359), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Math.pi', realType, IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('Math.e', new Real(2.71828182846));
-    state.setStaticValue('Math.e', realType);
+    state.setDynamicValue('Math.e', new Real(2.71828182846), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Math.e', realType, IdentifierStatus.VALUE_VARIABLE);
 
     return state;
 }
@@ -131,8 +131,8 @@ function addCharLib(state: State): State {
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
-    }));
-    state.setStaticValue('ord', new FunctionType(charType, intType));
+    }), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('ord', new FunctionType(charType, intType), IdentifierStatus.VALUE_VARIABLE);
 
     state.setDynamicValue('chr', new PredefinedFunction('chr', (val: Value) => {
         if (val instanceof Integer) {
@@ -144,8 +144,8 @@ function addCharLib(state: State): State {
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
-    }));
-    state.setStaticValue('chr', new FunctionType(intType, charType));
+    }), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('chr', new FunctionType(intType, charType), IdentifierStatus.VALUE_VARIABLE);
 
     return state;
 }
@@ -158,8 +158,8 @@ function addRealLib(state: State): State {
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
-    }));
-    state.setStaticValue('Real.fromInt', new FunctionType(intType, realType));
+    }), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Real.fromInt', new FunctionType(intType, realType), IdentifierStatus.VALUE_VARIABLE);
 
     state.setDynamicValue('Real.round', new PredefinedFunction('Real.round', (val: Value) => {
         if (val instanceof Real) {
@@ -172,8 +172,8 @@ function addRealLib(state: State): State {
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
-    }));
-    state.setStaticValue('Real.round', new FunctionType(realType, intType));
+    }), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Real.round', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
 
     state.setDynamicValue('Real.floor', new PredefinedFunction('Real.floor', (val: Value) => {
         if (val instanceof Real) {
@@ -186,8 +186,8 @@ function addRealLib(state: State): State {
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
-    }));
-    state.setStaticValue('Real.floor', new FunctionType(realType, intType));
+    }), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Real.floor', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
 
     state.setDynamicValue('Real.ceil', new PredefinedFunction('Real.ceil', (val: Value) => {
         if (val instanceof Real) {
@@ -200,8 +200,8 @@ function addRealLib(state: State): State {
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
-    }));
-    state.setStaticValue('Real.ceil', new FunctionType(realType, intType));
+    }), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Real.ceil', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
 
     return state;
 }
@@ -295,8 +295,8 @@ fun Char.isDigit c  = #"0" <= c andalso c <= #"9";
 fun Char.isAlpha c  = Char.isLower c orelse Char.isUpper c;
 `;
 
-export function addStdLib(state: State): State {
-    state = Interpreter.interpret(code, state, true)[0];
+export function addStdLib(state: State, options: { [name: string]: any }): State {
+    state = Interpreter.interpret(code, state, options)[0];
     state = addMathLib(state);
     state = addCharLib(state);
     state = addRealLib(state);

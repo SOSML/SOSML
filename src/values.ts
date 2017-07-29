@@ -2,9 +2,9 @@
  * Contains classes to represent SML values, e.g. int, string, functions, …
  */
 
-import { State } from './state';
+import { State, IdentifierStatus } from './state';
 import { InternalInterpreterError, EvaluationError } from './errors';
-import { int, char, IdentifierToken } from './lexer';
+import { int, char, IdentifierToken } from './tokens';
 import { Match } from './expressions';
 
 export abstract class Value {
@@ -379,14 +379,15 @@ export class FunctionValue extends Value {
     // returns [result, is thrown]
     compute(argument: Value): [Value, boolean] {
         // adjoin the bindings in this.state into the state
-        let nstate = this.state.getNestedState(false, this.state.id);
+        let nstate = this.state.getNestedState(this.state.id);
         for (let i = 0; i < this.recursives.length; ++i) {
             if (this.recursives[i][1] instanceof FunctionValue) {
                 nstate.setDynamicValue(this.recursives[i][0],
                     new FunctionValue(this.state, this.recursives,
-                        (<FunctionValue> this.recursives[i][1]).body), true);
+                        (<FunctionValue> this.recursives[i][1]).body), IdentifierStatus.VALUE_VARIABLE);
             } else {
-                nstate.setDynamicValue(this.recursives[i][0], this.recursives[i][1], true);
+                nstate.setDynamicValue(this.recursives[i][0], this.recursives[i][1],
+                    IdentifierStatus.VALUE_VARIABLE);
             }
         }
 

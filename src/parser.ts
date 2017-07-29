@@ -4,10 +4,10 @@ import { Expression, Tuple, Constant, ValueIdentifier, Wildcard,
          Disjunction, Conditional, CaseAnalysis, RaiseException,
          HandleException, Match, InfixExpression, PatternExpression, While } from './expressions';
 import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } from './types';
-import { InterpreterError, InternalInterpreterError, IncompleteError, Position } from './errors';
+import { InternalInterpreterError, IncompleteError, ParserError } from './errors';
 import { Token, KeywordToken, IdentifierToken, ConstantToken,
          TypeVariableToken, LongIdentifierToken, IntegerConstantToken,
-         AlphanumericIdentifierToken, NumericToken } from './lexer';
+         AlphanumericIdentifierToken, NumericToken } from './tokens';
 import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
          FunctionValueBinding, FunctionDeclaration, TypeDeclaration,
          DatatypeReplication, DatatypeDeclaration, SequentialDeclaration,
@@ -16,17 +16,11 @@ import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
          ExceptionDeclaration, OpenDeclaration, InfixDeclaration, InfixRDeclaration } from './declarations';
 import { State } from './state';
 
-export class ParserError extends InterpreterError {
-    constructor(message: string, position: Position) {
-        super(position, message);
-        Object.setPrototypeOf(this, ParserError.prototype);
-    }
-}
-
 export class Parser {
     private position: number = 0; // position of the next not yet parsed token
 
-    constructor(private tokens: Token[], private state: State, private currentId: number) {
+    constructor(private tokens: Token[], private state: State, private currentId: number,
+                /* private */ options: { [name: string]: any }) {
         if (this.state === undefined) {
             throw new InternalInterpreterError(-1, 'What are you, stupid? Hurry up and give me ' +
                 'a state already!');
@@ -217,7 +211,7 @@ export class Parser {
             ++this.position;
 
             let nstate = this.state;
-            this.state = this.state.getNestedState();
+            this.state = this.state.getNestedState(this.state.id);
 
             let dec = this.parseDeclaration();
             this.assertKeywordToken(this.currentToken(), 'in');
@@ -1316,7 +1310,7 @@ export class Parser {
             ++this.position;
 
             let nstate = this.state;
-            this.state = this.state.getNestedState();
+            this.state = this.state.getNestedState(this.state.id);
 
             let datbind = this.parseDatatypeBindingSeq();
             let tybind: TypeBinding[]|undefined = undefined;
@@ -1349,7 +1343,7 @@ export class Parser {
             ++this.position;
 
             let nstate = this.state;
-            this.state = this.state.getNestedState();
+            this.state = this.state.getNestedState(this.state.id);
 
             let dec: Declaration = this.parseDeclaration();
             this.assertKeywordToken(this.currentToken(), 'in');
@@ -1465,7 +1459,7 @@ export class Parser {
     }
 }
 
-export function parse(tokens: Token[], state: State): Declaration {
-    let p: Parser = new Parser(tokens, state, state.id);
+export function parse(tokens: Token[], state: State, options: {[name:string]: any}): Declaration {
+    let p: Parser = new Parser(tokens, state, state.id, options);
     return p.parseDeclaration(true);
 }

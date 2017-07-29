@@ -1,21 +1,21 @@
 import { Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
          Pattern, TypedExpression, Tuple, PatternExpression } from './expressions';
-import { IdentifierToken, Token } from './lexer';
+import { IdentifierToken, Token } from './tokens';
 import { Type, TypeVariable, FunctionType, CustomType } from './types';
-import { State, RebindStatus } from './state';
-import { InternalInterpreterError, Position, ElaborationError,
-         EvaluationError, FeatureDisabledError } from './errors';
+import { State, RebindStatus, IdentifierStatus } from './state';
+import { InternalInterpreterError, ElaborationError,
+         EvaluationError, FeatureDisabledError, Warning } from './errors';
 import { Value, ValueConstructor, ExceptionConstructor, ExceptionValue,
          FunctionValue } from './values';
 
 export abstract class Declaration {
     id: number;
-    elaborate(state: State): State {
+    elaborate(state: State): [State, Warning[]] {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
     // Returns [computed state, has Error occured, Exception]
-    evaluate(state: State): [State, boolean, Value|undefined] {
+    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
@@ -31,7 +31,7 @@ export abstract class Declaration {
 // Declaration subclasses
 export class ValueDeclaration extends Declaration {
 // val typeVariableSequence valueBinding
-    constructor(public position: Position, public typeVariableSequence: TypeVariable[],
+    constructor(public position: number, public typeVariableSequence: TypeVariable[],
                 public valueBinding: ValueBinding[], public id: number = 0) {
         super();
     }
@@ -47,12 +47,12 @@ export class ValueDeclaration extends Declaration {
         return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd, this.id);
     }
 
-    elaborate(state: State): State {
+    elaborate(state: State): [State, Warning[]] {
         // TODO
         return state;
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined] {
+    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
         let result: [string, Value][] = [];
         let recursives: [string, Value][] = [];
 
@@ -79,16 +79,16 @@ export class ValueDeclaration extends Declaration {
         }
 
         for (let j = 0; j < result.length; ++j) {
-            state.setDynamicValue(result[j][0], result[j][1]);
+            state.setDynamicValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
         }
 
         for (let j = 0; j < recursives.length; ++j) {
             if (recursives[j][1] instanceof FunctionValue) {
                 state.setDynamicValue(recursives[j][0], new FunctionValue(
                     (<FunctionValue> recursives[j][1]).state, recursives,
-                    (<FunctionValue> recursives[j][1]).body));
+                    (<FunctionValue> recursives[j][1]).body), IdentifierStatus.VALUE_VARIABLE);
             } else {
-                state.setDynamicValue(recursives[j][0], recursives[j][1]);
+                state.setDynamicValue(recursives[j][0], recursives[j][1], IdentifierStatus.VALUE_VARIABLE);
             }
         }
 
@@ -110,7 +110,7 @@ export class ValueDeclaration extends Declaration {
 
 export class TypeDeclaration extends Declaration {
 // type typeBinding
-    constructor(public position: Position, public typeBinding: TypeBinding[], public id: number = 0) {
+    constructor(public position: number, public typeBinding: TypeBinding[], public id: number = 0) {
         super();
     }
 
@@ -125,7 +125,7 @@ export class TypeDeclaration extends Declaration {
         return new TypeDeclaration(this.position, bnds, this.id);
     }
 
-    elaborate(state: State): State {
+    elaborate(state: State): [State, Warning[]] {
         for (let i = 0; i < this.typeBinding.length; ++i) {
             // TODO
             // Make tyvars from seq as unfree
@@ -133,14 +133,14 @@ export class TypeDeclaration extends Declaration {
             // return all resulting types without free type vars
         }
 
-        return state;
+        return [state, []];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined] {
+    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
         for (let i = 0; i < this.typeBinding.length; ++i) {
             state.setDynamicType(this.typeBinding[i].name.getText(), []);
         }
-        return [state, false, undefined];
+        return [state, false, undefined, []];
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -159,7 +159,7 @@ export class TypeDeclaration extends Declaration {
 
 export class DatatypeDeclaration extends Declaration {
 // datatype datatypeBinding <withtype typeBinding>
-    constructor(public position: Position, public datatypeBinding: DatatypeBinding[],
+    constructor(public position: number, public datatypeBinding: DatatypeBinding[],
                 public typeBinding: (TypeBinding[]) | undefined, public id: number = 0) {
         super();
 
@@ -198,12 +198,12 @@ export class DatatypeDeclaration extends Declaration {
         /* } */
     }
 
-    elaborate(state: State): State {
+    elaborate(state: State): [State, Warning[]] {
         // TODO
-        return state;
+        return [state, []];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined] {
+    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
         // I'm assuming the withtype is empty
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
             let res = this.datatypeBinding[i].compute(state);
@@ -213,12 +213,12 @@ export class DatatypeDeclaration extends Declaration {
                     throw new EvaluationError(this.position, 'You simply cannot rebind "'
                         + res[0][j][0] + '".');
                 }
-                state.setDynamicValue(res[0][j][0], res[0][j][1]);
+                state.setDynamicValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
             }
             // TODO id
             state.setDynamicType(res[1][0], res[1][1]);
         }
-        return [state, false, undefined];
+        return [state, false, undefined, []];
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -245,7 +245,7 @@ export class DatatypeDeclaration extends Declaration {
 
 export class DatatypeReplication extends Declaration {
 // datatype name = datatype oldname
-    constructor(public position: Position, public name: IdentifierToken,
+    constructor(public position: number, public name: IdentifierToken,
                 public oldname: Token, public id: number = 0) {
         super();
     }
@@ -254,24 +254,24 @@ export class DatatypeReplication extends Declaration {
         return this;
     }
 
-    elaborate(state: State): State {
+    elaborate(state: State): [State, Warning[]] {
         let res = state.getStaticType(this.oldname.getText());
         if (res === undefined) {
             throw new ElaborationError(this.position,
                 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
         }
         state.setStaticType(this.name.getText(), res.type, res.constructors);
-        return state;
+        return [state, []];
    }
 
-    evaluate(state: State): [State, boolean, Value|undefined] {
+    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
         let res = state.getDynamicType(this.oldname.getText());
         if (res === undefined) {
             throw new EvaluationError(this.position,
                 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
         }
         state.setDynamicType(this.name.getText(), res);
-        return [state, false, undefined];
+        return [state, false, undefined, []];
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -281,7 +281,7 @@ export class DatatypeReplication extends Declaration {
 
 export class AbstypeDeclaration extends Declaration {
 // abstype datatypeBinding <withtype typeBinding> with declaration end
-    constructor(public position: Position, public datatypeBinding: DatatypeBinding[],
+    constructor(public position: number, public datatypeBinding: DatatypeBinding[],
                 public typeBinding: (TypeBinding[]) | undefined, public declaration: Declaration,
                 public id: number = 0) {
         super();
@@ -323,21 +323,26 @@ export class AbstypeDeclaration extends Declaration {
 
     }
 
-    elaborate(state: State): State {
+    elaborate(state: State): [State, Warning[]] {
         // TODO
-        return state;
+        return [state, []];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined] {
+    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
         // I'm assuming the withtype is empty
+        let nstate = state.getNestedState(state.id);
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
             let res = this.datatypeBinding[i].compute(state);
 
             for (let j = 0; j < res[0].length; ++j) {
-                state.setDynamicValue(res[0][j][0], res[0][j][1]);
+                nstate.setDynamicValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
             }
         }
-        return this.declaration.evaluate(state);
+        let input = nstate.getNestedState(nstate.id);
+        let res = this.declaration.evaluate(input);
+        // Forget about the datatype
+        input.parent = state;
+        return res;
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -347,7 +352,7 @@ export class AbstypeDeclaration extends Declaration {
 }
 
 export class ExceptionDeclaration extends Declaration {
-    constructor(public position: Position, public bindings: ExceptionBinding[],
+    constructor(public position: number, public bindings: ExceptionBinding[],
                 public id: number = 0) {
         super();
     }
@@ -361,14 +366,14 @@ export class ExceptionDeclaration extends Declaration {
         throw new InternalInterpreterError(-1, 'Not yet implemented.');
     }
 
-    elaborate(state: State): State {
+    elaborate(state: State): [State, Warning[]] {
         for (let i = 0; i < this.bindings.length; ++i) {
             state = this.bindings[i].elaborate(state);
         }
-        return state;
+        return [state, []];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined] {
+    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
         for (let i = 0; i < this.bindings.length; ++i) {
             let res = this.bindings[i].evaluate(state);
             if (res[1]) {
@@ -376,13 +381,13 @@ export class ExceptionDeclaration extends Declaration {
             }
             state = res[0];
         }
-        return [state, false, undefined];
+        return [state, false, undefined, []];
     }
 }
 
 export class LocalDeclaration extends Declaration {
 // local declaration in body end
-    constructor(public position: Position, public declaration: Declaration,
+    constructor(public position: number, public declaration: Declaration,
                 public body: Declaration, public id: number = 0) {
         super();
     }
@@ -391,28 +396,29 @@ export class LocalDeclaration extends Declaration {
         return new LocalDeclaration(this.position, this.declaration.simplify(), this.body.simplify(), this.id);
     }
 
-    elaborate(state: State): State {
-        let nstate = state.getNestedState(false, state.id);
-        nstate = this.declaration.elaborate(nstate).getNestedState(false, state.id);
-        nstate = this.body.elaborate(nstate);
+    elaborate(state: State): [State, Warning[]] {
+        let nstate = state.getNestedState(state.id);
+        // TODO Warnings
+        let input = this.declaration.elaborate(nstate)[0].getNestedState(state.id);
+        nstate = this.body.elaborate(input);
         // Forget all local definitions
-        nstate.parent = state;
-        return nstate;
+        input.parent = state;
+        return [nstate, []];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined] {
-        let nstate = state.getNestedState(false, state.id);
+    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
+        let nstate = state.getNestedState(state.id);
         let res = this.declaration.evaluate(nstate);
         if (res[1]) {
             // Something came flying in our direction. So hide we were here and let it flow.
-            return [state, true, res[2]];
+            return [state, true, res[2], res[3]];
         }
-        nstate = res[0].getNestedState(false, state.id);
-        res = this.body.evaluate(nstate);
+        nstate = res[0].getNestedState(state.id);
+        let nres = this.body.evaluate(nstate);
 
         // Forget all local definitions
         res[0].parent = state;
-        return res;
+        return nres;
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -425,7 +431,7 @@ export class LocalDeclaration extends Declaration {
 
 export class OpenDeclaration extends Declaration {
 // open name_1 ... name_n
-    constructor(public position: Position, public names: Token[], public id: number = 0) {
+    constructor(public position: number, public names: Token[], public id: number = 0) {
         super();
     }
 
@@ -433,13 +439,13 @@ export class OpenDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State): State {
+    elaborate(state: State): [State, Warning[]] {
         // TODO Yeah, if we had structs, we could actually implement this
         throw new InternalInterpreterError(-1,
             'Yeah, you better wait a little before trying this again.');
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined] {
+    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
         // TODO Yeah, if we had structs, we could actually implement this
         throw new InternalInterpreterError(-1,
             'Yeah, you better wait a little before trying this again.');
@@ -464,12 +470,12 @@ export class EmptyDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State): State {
-        return state;
+    elaborate(state: State): [State, Warning[]] {
+        return [state, []];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined]  {
-        return [state, false, undefined];
+    evaluate(state: State): [State, boolean, Value|undefined, Warning[]]  {
+        return [state, false, undefined, []];
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -479,7 +485,7 @@ export class EmptyDeclaration extends Declaration {
 
 export class SequentialDeclaration extends Declaration {
 // declaration1 <;> declaration2
-    constructor(public position: Position, public declarations: Declaration[], public id: number = 0) {
+    constructor(public position: number, public declarations: Declaration[], public id: number = 0) {
         super();
     }
 
@@ -491,16 +497,17 @@ export class SequentialDeclaration extends Declaration {
         return new SequentialDeclaration(this.position, decls, this.id);
     }
 
-    elaborate(state: State): State {
+    elaborate(state: State): [State, Warning[]] {
+        // TODO Warnings
         for (let i = 0; i < this.declarations.length; ++i) {
-            state = this.declarations[i].elaborate(state.getNestedState(false, this.declarations[i].id));
+            state = this.declarations[i].elaborate(state.getNestedState(this.declarations[i].id))[0];
         }
-        return state;
+        return [state, []];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined] {
+    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
         for (let i = 0; i < this.declarations.length; ++i) {
-            let nstate = state.getNestedState(true, this.declarations[i].id);
+            let nstate = state.getNestedState(this.declarations[i].id);
             let res = this.declarations[i].evaluate(nstate);
             if (res[1]) {
                 // Something blew up, so let someone else handle the mess
@@ -508,7 +515,8 @@ export class SequentialDeclaration extends Declaration {
             }
             state = res[0];
         }
-        return [state, false, undefined];
+        // TODO Warning
+        return [state, false, undefined, []];
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -527,7 +535,7 @@ export class SequentialDeclaration extends Declaration {
 
 export class FunctionDeclaration extends Declaration {
 // fun typeVariableSequence functionValueBinding
-    constructor(public position: Position, public typeVariableSequence: TypeVariable[],
+    constructor(public position: number, public typeVariableSequence: TypeVariable[],
                 public functionValueBinding: FunctionValueBinding[], public id: number = 0) {
         super();
     }
@@ -555,7 +563,7 @@ export class FunctionDeclaration extends Declaration {
 
 export class InfixDeclaration extends Declaration {
 // infix <d> vid1 .. vidn
-    constructor(public position: Position, public operators: IdentifierToken[],
+    constructor(public position: number, public operators: IdentifierToken[],
                 public precedence: number = 0, public id: number = 0) {
         super();
     }
@@ -564,15 +572,15 @@ export class InfixDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State): State {
-        return state;
+    elaborate(state: State): [State, Warning[]] {
+        return [state, []];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined]  {
+    evaluate(state: State): [State, boolean, Value|undefined, Warning[]]  {
         for (let i = 0; i < this.operators.length; ++i) {
             state.setInfixStatus(this.operators[i], this.precedence, false, true);
         }
-        return [state, false, undefined];
+        return [state, false, undefined, []];
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -587,7 +595,7 @@ export class InfixDeclaration extends Declaration {
 
 export class InfixRDeclaration extends Declaration {
 // infixr <d> vid1 .. vidn
-    constructor(public position: Position, public operators: IdentifierToken[],
+    constructor(public position: number, public operators: IdentifierToken[],
                 public precedence: number = 0, public id: number = 0) {
         super();
     }
@@ -596,15 +604,15 @@ export class InfixRDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State): State {
-        return state;
+    elaborate(state: State): [State, Warning[]] {
+        return [state, []];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined]  {
+    evaluate(state: State): [State, boolean, Value|undefined, Warning[]]  {
         for (let i = 0; i < this.operators.length; ++i) {
             state.setInfixStatus(this.operators[i], this.precedence, true, true);
         }
-        return [state, false, undefined];
+        return [state, false, undefined, []];
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -619,7 +627,7 @@ export class InfixRDeclaration extends Declaration {
 
 export class NonfixDeclaration extends Declaration {
 // nonfix <d> vid1 .. vidn
-    constructor(public position: Position, public operators: IdentifierToken[],
+    constructor(public position: number, public operators: IdentifierToken[],
                 public id: number = 0) {
         super();
     }
@@ -628,15 +636,15 @@ export class NonfixDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State): State {
-        return state;
+    elaborate(state: State): [State, Warning[]] {
+        return [state, []];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined]  {
+    evaluate(state: State): [State, boolean, Value|undefined, Warning[]]  {
         for (let i = 0; i < this.operators.length; ++i) {
             state.setInfixStatus(this.operators[i], 0, false, false);
         }
-        return [state, false, undefined];
+        return [state, false, undefined, []];
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -652,7 +660,7 @@ export class NonfixDeclaration extends Declaration {
 
 export class ValueBinding {
 // <rec> pattern = expression
-    constructor(public position: Position, public isRecursive: boolean,
+    constructor(public position: number, public isRecursive: boolean,
                 public pattern: Pattern, public expression: Expression) {
     }
 
@@ -677,7 +685,7 @@ export class ValueBinding {
 }
 
 export class FunctionValueBinding {
-    constructor(public position: Position,
+    constructor(public position: number,
                 public parameters: [PatternExpression[], Type|undefined, Expression][],
                 public name: ValueIdentifier) {
     }
@@ -756,7 +764,7 @@ export class FunctionValueBinding {
 
 export class TypeBinding {
 // typeVariableSequence name = type
-    constructor(public position: Position, public typeVariableSequence: TypeVariable[],
+    constructor(public position: number, public typeVariableSequence: TypeVariable[],
                 public name: IdentifierToken, public type: Type) {
     }
 }
@@ -766,7 +774,7 @@ export class TypeBinding {
 export class DatatypeBinding {
 // typeVariableSequence name = <op> constructor <of type>
     // type: [constructorName, <type>]
-    constructor(public position: Position, public typeVariableSequence: TypeVariable[],
+    constructor(public position: number, public typeVariableSequence: TypeVariable[],
                 public name: IdentifierToken, public type: [IdentifierToken, Type | undefined][]) {
     }
 
@@ -796,7 +804,7 @@ export interface ExceptionBinding {
 
 export class DirectExceptionBinding implements ExceptionBinding {
 // <op> name <of type>
-    constructor(public position: Position,
+    constructor(public position: number,
                 public name: IdentifierToken,
                 public type: Type | undefined) {
     }
@@ -814,9 +822,11 @@ export class DirectExceptionBinding implements ExceptionBinding {
             }
 
             state.setStaticValue(this.name.getText(),
-                new FunctionType(this.type.simplify(), new CustomType('exn')));
+                new FunctionType(this.type.simplify(), new CustomType('exn')),
+                IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         } else {
-            state.setStaticValue(this.name.getText(), new CustomType('exn'));
+            state.setStaticValue(this.name.getText(), new CustomType('exn'),
+                IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         }
         return state;
     }
@@ -835,14 +845,14 @@ export class DirectExceptionBinding implements ExceptionBinding {
         }
 
         state.setDynamicValue(this.name.getText(),
-            new ExceptionConstructor(this.name.getText(), numArg, id));
+            new ExceptionConstructor(this.name.getText(), numArg, id), IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         return [state, false, undefined];
     }
 }
 
 export class ExceptionAlias implements ExceptionBinding {
 // <op> name = <op> oldname
-    constructor(public position: Position, public name: IdentifierToken, public oldname: Token) {
+    constructor(public position: number, public name: IdentifierToken, public oldname: Token) {
     }
 
     elaborate(state: State): State {
@@ -850,8 +860,11 @@ export class ExceptionAlias implements ExceptionBinding {
         if (res === undefined) {
             throw new ElaborationError(this.position, 'Unbound value identifier "'
                 + this.oldname.getText() + '".');
+        } else if (res[1] !== IdentifierStatus.EXCEPTION_CONSTRUCTOR) {
+            throw new ElaborationError(this.position, 'You cannot transform "'
+                + res[0].prettyPrint() + '" into an exception.');
         }
-        state.setStaticValue(this.name.getText(), <Type> res);
+        state.setStaticValue(this.name.getText(), res[0], IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         return state;
 
     }
@@ -861,8 +874,11 @@ export class ExceptionAlias implements ExceptionBinding {
         if (res === undefined) {
             throw new EvaluationError(this.position, 'Unbound value identifier "'
                 + this.oldname.getText() + '".');
+        } else if (res[1] !== IdentifierStatus.EXCEPTION_CONSTRUCTOR) {
+            throw new EvaluationError(this.position, 'You cannot transform "'
+                + res[0].prettyPrint(state) + '" into an exception.');
         }
-        state.setDynamicValue(this.name.getText(), <Value> res);
+        state.setDynamicValue(this.name.getText(), res[0], IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         return [state, false, undefined];
     }
 }

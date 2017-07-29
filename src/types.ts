@@ -1,4 +1,4 @@
-import { Position, InternalInterpreterError, ElaborationError } from './errors';
+import { InternalInterpreterError, ElaborationError } from './errors';
 import { State } from './state';
 
 export abstract class Type {
@@ -30,7 +30,7 @@ export abstract class Type {
 }
 
 export class TypeVariable extends Type {
-    constructor(public name: string, public isFree: boolean = true, public position: Position = 0,
+    constructor(public name: string, public isFree: boolean = true, public position: number = 0,
                 public domain: Type[] = []) {
         super();
     }
@@ -49,35 +49,35 @@ export class TypeVariable extends Type {
 
     instantiate(state: State): Type {
         let res = state.getStaticValue(this.name);
-        if (!this.isFree || res === undefined || res.equals(this)) {
+        if (!this.isFree || res === undefined || res[0].equals(this)) {
             return this;
         }
         if (this.domain.length === 0) {
-            return res;
+            return res[0];
         }
-        if (res instanceof TypeVariable && (<TypeVariable> res).domain.length !== 0) {
+        if (res[0] instanceof TypeVariable && (<TypeVariable> res[0]).domain.length !== 0) {
             let resty: Type[] = [];
 
             for (let i = 0; i < this.domain.length; ++i) {
-                for (let j = 0; j < (<TypeVariable> res).domain.length; ++j) {
-                    if (this.domain[i].equals((<TypeVariable> res).domain[j])) {
+                for (let j = 0; j < (<TypeVariable> res[0]).domain.length; ++j) {
+                    if (this.domain[i].equals((<TypeVariable> res[0]).domain[j])) {
                         resty.push(this.domain[i]);
                     }
                 }
             }
             if (resty.length > 0) {
-                return new TypeVariable((<TypeVariable> res).name, (<TypeVariable> res).isFree,
-                    (<TypeVariable> res).position, resty);
+                return new TypeVariable((<TypeVariable> res[0]).name, (<TypeVariable> res[0]).isFree,
+                    (<TypeVariable> res[0]).position, resty);
             }
         } else {
             for (let i = 0; i < this.domain.length; ++i) {
-                if (this.domain[i].equals(res)) {
-                    return res;
+                if (this.domain[i].equals(res[0])) {
+                    return res[0];
                 }
             }
         }
         throw new ElaborationError(this.position, 'Cannot instanciate "'
-            + this.prettyPrint() + '" with "' + res.prettyPrint() + '".');
+            + this.prettyPrint() + '" with "' + res[0].prettyPrint() + '".');
     }
 
     getTypeVariables(free: boolean): Set<TypeVariable> {
@@ -123,7 +123,7 @@ export class TypeVariable extends Type {
 }
 
 export class RecordType extends Type {
-    constructor(public elements: Map<string, Type>, public complete: boolean = true, public position: Position = 0) {
+    constructor(public elements: Map<string, Type>, public complete: boolean = true, public position: number = 0) {
         super();
     }
 
@@ -241,7 +241,7 @@ export class RecordType extends Type {
 }
 
 export class FunctionType extends Type {
-    constructor(public parameterType: Type, public returnType: Type, public position: Position = 0) {
+    constructor(public parameterType: Type, public returnType: Type, public position: number = 0) {
         super();
     }
 
@@ -291,7 +291,7 @@ export class FunctionType extends Type {
 export class CustomType extends Type {
     constructor(public name: string,
                 public typeArguments: Type[] = [],
-                public position: Position = 0) {
+                public position: number = 0) {
         super();
     }
 
@@ -374,7 +374,7 @@ export class CustomType extends Type {
 // Derived Types
 
 export class TupleType extends Type {
-    constructor(public elements: Type[], public position: Position = 0) {
+    constructor(public elements: Type[], public position: number = 0) {
         super();
     }
 
