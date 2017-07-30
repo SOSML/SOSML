@@ -406,7 +406,7 @@ export class LocalDeclaration extends Declaration {
         nstate = this.body.elaborate(input);
         // Forget all local definitions
         input.parent = state;
-        return [nstate[0], res[1].noncat(nstate[1])];
+        return [nstate[0], res[1].concat(nstate[1])];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
