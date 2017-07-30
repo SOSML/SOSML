@@ -18,9 +18,9 @@ function addMathLib(state: State): State {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             if (value < 0) {
-                return [new ExceptionConstructor('Domain').construct(), true];
+                return [new ExceptionConstructor('Domain').construct(), true, []];
             }
-            return [new Real(Math.sqrt(value)), false];
+            return [new Real(Math.sqrt(value)), false, []];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
@@ -30,7 +30,7 @@ function addMathLib(state: State): State {
     state.setDynamicValue('Math.sin', new PredefinedFunction('Math.sin', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
-            return [new Real(Math.sin(value)), false];
+            return [new Real(Math.sin(value)), false, []];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
@@ -40,7 +40,7 @@ function addMathLib(state: State): State {
     state.setDynamicValue('Math.cos', new PredefinedFunction('Math.cos', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
-            return [new Real(Math.cos(value)), false];
+            return [new Real(Math.cos(value)), false, []];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
@@ -50,7 +50,7 @@ function addMathLib(state: State): State {
     state.setDynamicValue('Math.asin', new PredefinedFunction('Math.asin', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
-            return [new Real(Math.asin(value)), false];
+            return [new Real(Math.asin(value)), false, []];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
@@ -60,7 +60,7 @@ function addMathLib(state: State): State {
     state.setDynamicValue('Math.acos', new PredefinedFunction('Math.acos', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
-            return [new Real(Math.acos(value)), false];
+            return [new Real(Math.acos(value)), false, []];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
@@ -70,7 +70,7 @@ function addMathLib(state: State): State {
     state.setDynamicValue('Math.exp', new PredefinedFunction('Math.exp', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
-            return [new Real(Math.exp(value)), false];
+            return [new Real(Math.exp(value)), false, []];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
@@ -84,7 +84,7 @@ function addMathLib(state: State): State {
             if (val1 instanceof Real && val2 instanceof Real) {
                 let value1 = (<Real> val1).value;
                 let value2 = (<Real> val1).value;
-                return [new Real(Math.pow(value1, value2)), false];
+                return [new Real(Math.pow(value1, value2)), false, []];
             } else {
                 throw new InternalInterpreterError(-1, 'std type mismatch');
             }
@@ -97,7 +97,7 @@ function addMathLib(state: State): State {
     state.setDynamicValue('Math.ln', new PredefinedFunction('Math.ln', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
-            return [new Real(Math.log(value)), false];
+            return [new Real(Math.log(value)), false, []];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
@@ -107,7 +107,7 @@ function addMathLib(state: State): State {
     state.setDynamicValue('Math.log10', new PredefinedFunction('Math.log10', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
-            return [new Real(Math.log10(value)), false];
+            return [new Real(Math.log10(value)), false, []];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
@@ -127,7 +127,7 @@ function addCharLib(state: State): State {
     state.setDynamicValue('ord', new PredefinedFunction('ord', (val: Value) => {
         if (val instanceof CharValue) {
             let value = (<CharValue> val).value;
-            return [new Integer(value.charCodeAt(0)), false];
+            return [new Integer(value.charCodeAt(0)), false, []];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
@@ -138,9 +138,9 @@ function addCharLib(state: State): State {
         if (val instanceof Integer) {
             let value = (<Integer> val).value;
             if (value < 0 || value > 255) {
-                return [new ExceptionConstructor('Chr').construct(), true];
+                return [new ExceptionConstructor('Chr').construct(), true, []];
             }
-            return [new CharValue(String.fromCharCode(value)), false];
+            return [new CharValue(String.fromCharCode(value)), false, []];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
@@ -154,7 +154,7 @@ function addRealLib(state: State): State {
     state.setDynamicValue('Real.fromInt', new PredefinedFunction('Real.fromInt', (val: Value) => {
         if (val instanceof Integer) {
             let value = (<Integer> val).value;
-            return [new Real(value), false];
+            return [new Real(value), false, []];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
@@ -166,9 +166,9 @@ function addRealLib(state: State): State {
             let value = (<Real> val).value;
             let integer = new Integer(Math.round(value));
             if (integer.hasOverflow()) {
-                return [new ExceptionConstructor('Overflow').construct(), true];
+                return [new ExceptionConstructor('Overflow').construct(), true, []];
             }
-            return [integer, false];
+            return [integer, false, []];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
@@ -180,9 +180,9 @@ function addRealLib(state: State): State {
             let value = (<Real> val).value;
             let integer = new Integer(Math.floor(value));
             if (integer.hasOverflow()) {
-                return [new ExceptionConstructor('Overflow').construct(), true];
+                return [new ExceptionConstructor('Overflow').construct(), true, []];
             }
-            return [integer, false];
+            return [integer, false, []];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
@@ -194,9 +194,9 @@ function addRealLib(state: State): State {
             let value = (<Real> val).value;
             let integer = new Integer(Math.round(value));
             if (integer.hasOverflow()) {
-                return [new ExceptionConstructor('Overflow').construct(), true];
+                return [new ExceptionConstructor('Overflow').construct(), true, []];
             }
-            return [integer, false];
+            return [integer, false, []];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }

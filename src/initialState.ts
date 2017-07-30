@@ -3,7 +3,7 @@ import { State, StaticBasis, DynamicBasis, InfixStatus, TypeInformation,
 import { FunctionType, CustomType, TupleType, Type, TypeVariable } from './types';
 import { CharValue, Real, Integer, StringValue, PredefinedFunction, Word, ConstructedValue,
          ValueConstructor, ExceptionConstructor, BoolValue, Value, RecordValue } from './values';
-import { InternalInterpreterError } from './errors';
+import { InternalInterpreterError, Warning } from './errors';
 
 // Initial static basis (see SML Definition, appendix C through E)
 
@@ -78,6 +78,7 @@ let initialState: State = new State(
             'implode':  [new FunctionType(new CustomType('list', [charType]), stringType).simplify(), IdentifierStatus.VALUE_VARIABLE],
             '~':        [new FunctionType(intRealType, intRealType), IdentifierStatus.VALUE_VARIABLE],
             'abs':      [new FunctionType(intRealType, intRealType), IdentifierStatus.VALUE_VARIABLE],
+            'print':    [new FunctionType(typeVar, new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE],
         }
     ),
     new DynamicBasis(
@@ -101,14 +102,14 @@ let initialState: State = new State(
 
                     if (val1 instanceof Integer && val2 instanceof Integer) {
                         if ((<Integer> val2).value === 0) {
-                            return [new ExceptionConstructor('Div').construct(), true];
+                            return [new ExceptionConstructor('Div').construct(), true, []];
                         }
-                        return [(<Integer> val1).divide(<Integer> val2), false];
+                        return [(<Integer> val1).divide(<Integer> val2), false, []];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
                         if ((<Word> val2).value === 0) {
-                            return [new ExceptionConstructor('Div').construct(), true];
+                            return [new ExceptionConstructor('Div').construct(), true, []];
                         }
-                        return [(<Word> val1).divide(<Word> val2), false];
+                        return [(<Word> val1).divide(<Word> val2), false, []];
                     }
                 }
                 throw new InternalInterpreterError(-1,
@@ -121,14 +122,14 @@ let initialState: State = new State(
 
                     if (val1 instanceof Integer && val2 instanceof Integer) {
                         if ((<Integer> val2).value === 0) {
-                            return [new ExceptionConstructor('Div').construct(), true];
+                            return [new ExceptionConstructor('Div').construct(), true, []];
                         }
-                        return [(<Integer> val1).modulo(<Integer> val2), false];
+                        return [(<Integer> val1).modulo(<Integer> val2), false, []];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
                         if ((<Word> val2).value === 0) {
-                            return [new ExceptionConstructor('Div').construct(), true];
+                            return [new ExceptionConstructor('Div').construct(), true, []];
                         }
-                        return [(<Word> val1).modulo(<Word> val2), false];
+                        return [(<Word> val1).modulo(<Word> val2), false, []];
                     }
                 }
                 throw new InternalInterpreterError(-1,
@@ -142,21 +143,21 @@ let initialState: State = new State(
                     if (val1 instanceof Integer && val2 instanceof Integer) {
                         let result = (<Integer> val1).multiply(<Integer> val2);
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true];
+                            return [new ExceptionConstructor('Overflow').construct(), true, []];
                         }
-                        return [result, false];
+                        return [result, false, []];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
                         let result = (<Word> val1).multiply(<Word> val2);
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true];
+                            return [new ExceptionConstructor('Overflow').construct(), true, []];
                         }
-                        return [result, false];
+                        return [result, false, []];
                     } else if (val1 instanceof Real && val2 instanceof Real) {
                         let result = (<Real> val1).multiply(<Real> val2);
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true];
+                            return [new ExceptionConstructor('Overflow').construct(), true, []];
                         }
-                        return [result, false];
+                        return [result, false, []];
                     }
                 }
                 throw new InternalInterpreterError(-1,
@@ -169,9 +170,9 @@ let initialState: State = new State(
 
                     if (val1 instanceof Real && val2 instanceof Real) {
                         if ((<Real> val2).value === 0) {
-                            return [new ExceptionConstructor('Div').construct(), true];
+                            return [new ExceptionConstructor('Div').construct(), true, []];
                         }
-                        return [(<Real> val1).divide(<Real> val2), false];
+                        return [(<Real> val1).divide(<Real> val2), false, []];
                     }
                 }
                 throw new InternalInterpreterError(-1,
@@ -185,21 +186,21 @@ let initialState: State = new State(
                     if (val1 instanceof Integer && val2 instanceof Integer) {
                         let result = (<Integer> val1).add(<Integer> val2);
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true];
+                            return [new ExceptionConstructor('Overflow').construct(), true, []];
                         }
-                        return [result, false];
+                        return [result, false, []];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
                         let result = (<Word> val1).add(<Word> val2);
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true];
+                            return [new ExceptionConstructor('Overflow').construct(), true, []];
                         }
-                        return [result, false];
+                        return [result, false, []];
                     } else if (val1 instanceof Real && val2 instanceof Real) {
                         let result = (<Real> val1).add(<Real> val2);
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true];
+                            return [new ExceptionConstructor('Overflow').construct(), true, []];
                         }
-                        return [result, false];
+                        return [result, false, []];
                     }
                 }
                 throw new InternalInterpreterError(-1,
@@ -213,21 +214,21 @@ let initialState: State = new State(
                     if (val1 instanceof Integer && val2 instanceof Integer) {
                         let result = (<Integer> val1).add((<Integer> val2).negate());
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true];
+                            return [new ExceptionConstructor('Overflow').construct(), true, []];
                         }
-                        return [result, false];
+                        return [result, false, []];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
                         let result = (<Word> val1).add((<Word> val2).negate());
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true];
+                            return [new ExceptionConstructor('Overflow').construct(), true, []];
                         }
-                        return [result, false];
+                        return [result, false, []];
                     } else if (val1 instanceof Real && val2 instanceof Real) {
                         let result = (<Real> val1).add((<Real> val2).negate());
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true];
+                            return [new ExceptionConstructor('Overflow').construct(), true, []];
                         }
-                        return [result, false];
+                        return [result, false, []];
                     }
                 }
                 throw new InternalInterpreterError(-1,
@@ -240,15 +241,17 @@ let initialState: State = new State(
                     let val2 = (<RecordValue> val).getValue('2');
 
                     if (val1 instanceof Integer && val2 instanceof Integer) {
-                        return [new BoolValue((<Integer> val1).compareTo(<Integer> val2) < 0), false];
+                        return [new BoolValue((<Integer> val1).compareTo(<Integer> val2) < 0), false, []];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
-                        return [new BoolValue((<Word> val1).compareTo(<Word> val2) < 0), false];
+                        return [new BoolValue((<Word> val1).compareTo(<Word> val2) < 0), false, []];
                     } else if (val1 instanceof Real && val2 instanceof Real) {
-                        return [new BoolValue((<Real> val1).compareTo(<Real> val2) < 0), false];
+                        return [new BoolValue((<Real> val1).compareTo(<Real> val2) < 0), false, []];
                     } else if (val1 instanceof StringValue && val2 instanceof StringValue) {
-                        return [new BoolValue((<StringValue> val1).compareTo(<StringValue> val2) < 0), false];
+                        return [new BoolValue((<StringValue> val1).compareTo(<StringValue> val2) < 0),
+                            false, []];
                     } else if (val1 instanceof CharValue && val2 instanceof CharValue) {
-                        return [new BoolValue((<CharValue> val1).compareTo(<CharValue> val2) < 0), false];
+                        return [new BoolValue((<CharValue> val1).compareTo(<CharValue> val2) < 0),
+                            false, []];
                     }
                 }
                 throw new InternalInterpreterError(-1,
@@ -260,15 +263,17 @@ let initialState: State = new State(
                     let val2 = (<RecordValue> val).getValue('2');
 
                     if (val1 instanceof Integer && val2 instanceof Integer) {
-                        return [new BoolValue((<Integer> val1).compareTo(<Integer> val2) > 0), false];
+                        return [new BoolValue((<Integer> val1).compareTo(<Integer> val2) > 0), false, []];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
-                        return [new BoolValue((<Word> val1).compareTo(<Word> val2) > 0), false];
+                        return [new BoolValue((<Word> val1).compareTo(<Word> val2) > 0), false, []];
                     } else if (val1 instanceof Real && val2 instanceof Real) {
-                        return [new BoolValue((<Real> val1).compareTo(<Real> val2) > 0), false];
+                        return [new BoolValue((<Real> val1).compareTo(<Real> val2) > 0), false, []];
                     } else if (val1 instanceof StringValue && val2 instanceof StringValue) {
-                        return [new BoolValue((<StringValue> val1).compareTo(<StringValue> val2) > 0), false];
+                        return [new BoolValue((<StringValue> val1).compareTo(<StringValue> val2) > 0),
+                            false, []];
                     } else if (val1 instanceof CharValue && val2 instanceof CharValue) {
-                        return [new BoolValue((<CharValue> val1).compareTo(<CharValue> val2) > 0), false];
+                        return [new BoolValue((<CharValue> val1).compareTo(<CharValue> val2) > 0),
+                            false, []];
                     }
                 }
                 throw new InternalInterpreterError(-1,
@@ -280,15 +285,18 @@ let initialState: State = new State(
                     let val2 = (<RecordValue> val).getValue('2');
 
                     if (val1 instanceof Integer && val2 instanceof Integer) {
-                        return [new BoolValue((<Integer> val1).compareTo(<Integer> val2) <= 0), false];
+                        return [new BoolValue((<Integer> val1).compareTo(<Integer> val2) <= 0),
+                            false, []];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
-                        return [new BoolValue((<Word> val1).compareTo(<Word> val2) <= 0), false];
+                        return [new BoolValue((<Word> val1).compareTo(<Word> val2) <= 0), false, []];
                     } else if (val1 instanceof Real && val2 instanceof Real) {
-                        return [new BoolValue((<Real> val1).compareTo(<Real> val2) <= 0), false];
+                        return [new BoolValue((<Real> val1).compareTo(<Real> val2) <= 0), false, []];
                     } else if (val1 instanceof StringValue && val2 instanceof StringValue) {
-                        return [new BoolValue((<StringValue> val1).compareTo(<StringValue> val2) <= 0), false];
+                        return [new BoolValue((<StringValue> val1).compareTo(<StringValue> val2) <= 0),
+                            false, []];
                     } else if (val1 instanceof CharValue && val2 instanceof CharValue) {
-                        return [new BoolValue((<CharValue> val1).compareTo(<CharValue> val2) <= 0), false];
+                        return [new BoolValue((<CharValue> val1).compareTo(<CharValue> val2) <= 0),
+                            false, []];
                     }
                 }
                 throw new InternalInterpreterError(-1,
@@ -300,15 +308,16 @@ let initialState: State = new State(
                     let val2 = (<RecordValue> val).getValue('2');
 
                     if (val1 instanceof Integer && val2 instanceof Integer) {
-                        return [new BoolValue((<Integer> val1).compareTo(<Integer> val2) >= 0), false];
+                        return [new BoolValue((<Integer> val1).compareTo(<Integer> val2) >= 0), false, []];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
-                        return [new BoolValue((<Word> val1).compareTo(<Word> val2) >= 0), false];
+                        return [new BoolValue((<Word> val1).compareTo(<Word> val2) >= 0), false, []];
                     } else if (val1 instanceof Real && val2 instanceof Real) {
-                        return [new BoolValue((<Real> val1).compareTo(<Real> val2) >= 0), false];
+                        return [new BoolValue((<Real> val1).compareTo(<Real> val2) >= 0), false, []];
                     } else if (val1 instanceof StringValue && val2 instanceof StringValue) {
-                        return [new BoolValue((<StringValue> val1).compareTo(<StringValue> val2) >= 0), false];
+                        return [new BoolValue((<StringValue> val1).compareTo(<StringValue> val2) >= 0),
+                            false, []];
                     } else if (val1 instanceof CharValue && val2 instanceof CharValue) {
-                        return [new BoolValue((<CharValue> val1).compareTo(<CharValue> val2) >= 0), false];
+                        return [new BoolValue((<CharValue> val1).compareTo(<CharValue> val2) >= 0), false, []];
                     }
                 }
                 throw new InternalInterpreterError(-1,
@@ -319,7 +328,7 @@ let initialState: State = new State(
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
 
-                    return [new BoolValue(val1.equals(val2)), false];
+                    return [new BoolValue(val1.equals(val2)), false, []];
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "=" on value of the wrong type (' + val.constructor.name + ').');
@@ -329,7 +338,7 @@ let initialState: State = new State(
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
 
-                    return [new BoolValue(!val1.equals(val2)), false];
+                    return [new BoolValue(!val1.equals(val2)), false, []];
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "<>" on value of the wrong type (' + val.constructor.name + ').');
@@ -351,7 +360,7 @@ let initialState: State = new State(
                     let val2 = (<RecordValue> val).getValue('2');
 
                     if (val1 instanceof StringValue && val2 instanceof StringValue) {
-                        return [(<StringValue> val1).concat(val2), false];
+                        return [(<StringValue> val1).concat(val2), false, []];
                     }
                 }
                 throw new InternalInterpreterError(-1,
@@ -359,14 +368,14 @@ let initialState: State = new State(
             }), IdentifierStatus.VALUE_VARIABLE],
             'explode':  [new PredefinedFunction('explode', (val: Value) => {
                 if (val instanceof StringValue) {
-                    return [(<StringValue> val).explode(), false];
+                    return [(<StringValue> val).explode(), false, []];
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
             'implode':  [new PredefinedFunction('implode', (val: Value) => {
                 if (val instanceof ConstructedValue) {
-                    return [StringValue.implode(val), false];
+                    return [StringValue.implode(val), false, []];
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
@@ -375,15 +384,15 @@ let initialState: State = new State(
                 if (val instanceof Integer) {
                     let result = (<Integer> val).negate();
                     if (result.hasOverflow()) {
-                        return [new ExceptionConstructor('Overflow').construct(), true];
+                        return [new ExceptionConstructor('Overflow').construct(), true, []];
                     }
-                    return [result, false];
+                    return [result, false, []];
                 } else if (val instanceof Real) {
                     let result = (<Real> val).negate();
                     if (result.hasOverflow()) {
-                        return [new ExceptionConstructor('Overflow').construct(), true];
+                        return [new ExceptionConstructor('Overflow').construct(), true, []];
                     }
-                    return [result, false];
+                    return [result, false, []];
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "~" on something weird.');
@@ -391,26 +400,35 @@ let initialState: State = new State(
             'abs':        [new PredefinedFunction('~', (val: Value) => {
                 if (val instanceof Integer) {
                     if ((<Integer> val).value >= 0) {
-                        return [val, false];
+                        return [val, false, []];
                     }
                     let result = (<Integer> val).negate();
                     if (result.hasOverflow()) {
-                        return [new ExceptionConstructor('Overflow').construct(), true];
+                        return [new ExceptionConstructor('Overflow').construct(), true, []];
                     }
-                    return [result, false];
+                    return [result, false, []];
                 } else if (val instanceof Real) {
                     if ((<Real> val).value >= 0) {
-                        return [val, false];
+                        return [val, false, []];
                     }
                     let result = (<Real> val).negate();
                     if (result.hasOverflow()) {
-                        return [new ExceptionConstructor('Overflow').construct(), true];
+                        return [new ExceptionConstructor('Overflow').construct(), true, []];
                     }
-                    return [result, false];
+                    return [result, false, []];
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "~" on something weird.');
             }), IdentifierStatus.VALUE_VARIABLE],
+            'print':        [new PredefinedFunction('print', (val: Value) => {
+                let warns: Warning[] = [];
+                if (val instanceof StringValue) {
+                    warns.push(new Warning(-1, (<StringValue> val).value));
+                } else {
+                    warns.push(new Warning(-1, val.prettyPrint(undefined)));
+                }
+                return [new RecordValue(), false, warns];
+            }), IdentifierStatus.VALUE_VARIABLE]
         }
     ),
     {
@@ -452,8 +470,6 @@ let initialState: State = new State(
         'false':    RebindStatus.Never,
         'nil':      RebindStatus.Never,
         '::':       RebindStatus.Never,
-
-        'print':    RebindStatus.Never,
 
         'Match':    RebindStatus.Half,
         'Bind':     RebindStatus.Half,

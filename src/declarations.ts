@@ -49,7 +49,7 @@ export class ValueDeclaration extends Declaration {
 
     elaborate(state: State): [State, Warning[]] {
         // TODO
-        return state;
+        return [state, []];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
@@ -57,16 +57,18 @@ export class ValueDeclaration extends Declaration {
         let recursives: [string, Value][] = [];
 
         let isRec = false;
+        let warns: Warning[] = [];
         for (let i = 0; i < this.valueBinding.length; ++i) {
             if (this.valueBinding[i].isRecursive) {
                 isRec = true;
             }
             let val = this.valueBinding[i].compute(state);
+            warns.concat(val[2]);
             if (val[1] !== undefined) {
-                return [state, true, val[1]];
+                return [state, true, val[1], warns];
             }
             if (val[0] === undefined) {
-                return [state, true, new ExceptionValue('Bind')];
+                return [state, true, new ExceptionValue('Bind'), warns];
             }
 
             for (let j = 0; j < (<[string, Value][]> val[0]).length; ++j) {
@@ -92,7 +94,7 @@ export class ValueDeclaration extends Declaration {
             }
         }
 
-        return [state, false, undefined];
+        return [state, false, undefined, warns];
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -227,8 +229,7 @@ export class DatatypeDeclaration extends Declaration {
             if (i > 0) {
                 res += ' and';
             }
-            // TODO Replace <stuff> with something proper
-            res += ' <stuff> ' + this.datatypeBinding[i].name.getText() + ' =';
+            res += ' ' + this.datatypeBinding[i].name.getText() + ' =';
             for (let j = 0; j < this.datatypeBinding[i].type.length; ++j) {
                 if (j > 0) {
                     res += ' | ';
@@ -377,7 +378,7 @@ export class ExceptionDeclaration extends Declaration {
         for (let i = 0; i < this.bindings.length; ++i) {
             let res = this.bindings[i].evaluate(state);
             if (res[1]) {
-                return res;
+                return [res[0], res[1], res[2], []];
             }
             state = res[0];
         }
@@ -397,13 +398,14 @@ export class LocalDeclaration extends Declaration {
     }
 
     elaborate(state: State): [State, Warning[]] {
-        let nstate = state.getNestedState(state.id);
+        let nstate: [State, Warning[]] = [state.getNestedState(state.id), []];
         // TODO Warnings
-        let input = this.declaration.elaborate(nstate)[0].getNestedState(state.id);
+        let res = this.declaration.elaborate(nstate[0]);
+        let input = res[0].getNestedState(state.id);
         nstate = this.body.elaborate(input);
         // Forget all local definitions
         input.parent = state;
-        return [nstate, []];
+        return [nstate[0], res[1].concat(nstate[1])];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
@@ -418,6 +420,7 @@ export class LocalDeclaration extends Declaration {
 
         // Forget all local definitions
         res[0].parent = state;
+        nres[3] = res[3].concat(nres[3]);
         return nres;
     }
 
@@ -498,25 +501,28 @@ export class SequentialDeclaration extends Declaration {
     }
 
     elaborate(state: State): [State, Warning[]] {
-        // TODO Warnings
+        let warns: Warning[] = [];
         for (let i = 0; i < this.declarations.length; ++i) {
-            state = this.declarations[i].elaborate(state.getNestedState(this.declarations[i].id))[0];
+            let res = this.declarations[i].elaborate(state.getNestedState(this.declarations[i].id));
+            state = res[0];
+            warns.concat(res[1]);
         }
-        return [state, []];
+        return [state, warns];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
+        let warns: Warning[] = [];
         for (let i = 0; i < this.declarations.length; ++i) {
             let nstate = state.getNestedState(this.declarations[i].id);
             let res = this.declarations[i].evaluate(nstate);
+            warns.concat(res[3]);
             if (res[1]) {
                 // Something blew up, so let someone else handle the mess
-                return res;
+                return [res[0], res[1], res[2], warns];
             }
             state = res[0];
         }
-        // TODO Warning
-        return [state, false, undefined, []];
+        return [state, false, undefined, warns];
     }
 
     prettyPrint(indentation: number, oneLine: boolean): string {
@@ -674,13 +680,13 @@ export class ValueBinding {
         return res + this.expression.prettyPrint(indentation, oneLine);
     }
 
-    // Returns [ VE | undef, Excep | undef]
-    compute(state: State): [[string, Value][] | undefined, Value | undefined] {
+    // Returns [ VE | undef, Excep | undef, Warning[]]
+    compute(state: State): [[string, Value][] | undefined, Value | undefined, Warning[]] {
         let v = this.expression.compute(state);
         if (v[1]) {
-            return [undefined, v[0]];
+            return [undefined, v[0], v[2]];
         }
-        return [this.pattern.matches(state, v[0]), undefined];
+        return [this.pattern.matches(state, v[0]), undefined, v[2]];
     }
 }
 

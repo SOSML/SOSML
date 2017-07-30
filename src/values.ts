@@ -3,7 +3,7 @@
  */
 
 import { State, IdentifierStatus } from './state';
-import { InternalInterpreterError, EvaluationError } from './errors';
+import { InternalInterpreterError, EvaluationError, Warning } from './errors';
 import { int, char, IdentifierToken } from './tokens';
 import { Match } from './expressions';
 
@@ -377,7 +377,7 @@ export class FunctionValue extends Value {
 
     // Computes the function on the given argument,
     // returns [result, is thrown]
-    compute(argument: Value): [Value, boolean] {
+    compute(argument: Value): [Value, boolean, Warning[]] {
         // adjoin the bindings in this.state into the state
         let nstate = this.state.getNestedState(this.state.id);
         for (let i = 0; i < this.recursives.length; ++i) {
@@ -545,7 +545,7 @@ export class ExceptionValue extends Value {
 
 export class PredefinedFunction extends Value {
     constructor(public name: string,
-                public apply: (arg: Value|undefined) => [Value, boolean]) {
+                public apply: (arg: Value|undefined) => [Value, boolean, Warning[]]) {
         super();
     }
 
