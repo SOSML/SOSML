@@ -63,7 +63,8 @@ export class ValueDeclaration extends Declaration {
                 isRec = true;
             }
             let val = this.valueBinding[i].compute(state);
-            warns.concat(val[2]);
+            warns = warns.concat(val[2]);
+
             if (val[1] !== undefined) {
                 return [state, true, val[1], warns];
             }
@@ -405,7 +406,7 @@ export class LocalDeclaration extends Declaration {
         nstate = this.body.elaborate(input);
         // Forget all local definitions
         input.parent = state;
-        return [nstate[0], res[1].concat(nstate[1])];
+        return [nstate[0], res[1].noncat(nstate[1])];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
@@ -505,7 +506,7 @@ export class SequentialDeclaration extends Declaration {
         for (let i = 0; i < this.declarations.length; ++i) {
             let res = this.declarations[i].elaborate(state.getNestedState(this.declarations[i].id));
             state = res[0];
-            warns.concat(res[1]);
+            warns = warns.concat(res[1]);
         }
         return [state, warns];
     }
@@ -515,7 +516,7 @@ export class SequentialDeclaration extends Declaration {
         for (let i = 0; i < this.declarations.length; ++i) {
             let nstate = state.getNestedState(this.declarations[i].id);
             let res = this.declarations[i].evaluate(nstate);
-            warns.concat(res[3]);
+            warns = warns.concat(res[3]);
             if (res[1]) {
                 // Something blew up, so let someone else handle the mess
                 return [res[0], res[1], res[2], warns];

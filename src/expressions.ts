@@ -227,7 +227,7 @@ export class Record extends Expression implements Pattern {
         let warns: Warning[] = [];
         for (let i = 0; i < this.entries.length; ++i) {
             let res = this.entries[i][1].compute(state);
-            warns.concat(res[2]);
+            warns = warns.concat(res[2]);
             if (res[1]) {
                 // Computing some expression failed
                 return [res[0], true, warns];
@@ -377,11 +377,12 @@ export class FunctionApplication extends Expression implements Pattern {
             let res = (<FunctionValue> funcVal[0]).compute(argVal[0]);
             return [res[0], res[1], warns.concat(res[2])];
         } else if (funcVal[0] instanceof ValueConstructor) {
-            return [(<ValueConstructor> funcVal[0]).construct(argVal[0]), false, []];
+            return [(<ValueConstructor> funcVal[0]).construct(argVal[0]), false, warns];
         } else if (funcVal[0] instanceof ExceptionConstructor) {
-            return [(<ExceptionConstructor> funcVal[0]).construct(argVal[0]), false, []];
+            return [(<ExceptionConstructor> funcVal[0]).construct(argVal[0]), false, warns];
         } else if (funcVal[0] instanceof PredefinedFunction) {
-            return (<PredefinedFunction> funcVal[0]).apply(argVal[0]);
+            let res = (<PredefinedFunction> funcVal[0]).apply(argVal[0]);
+            return [res[0], res[1], warns.concat(res[2])];
         }
         throw new EvaluationError(this.position, 'Cannot evaluate the function "'
             + this.func.prettyPrint() + '" (' + funcVal[0].constructor.name + ').');
