@@ -31,7 +31,7 @@ Correctly lexing, parsing and interpreting any functional SML core language prog
   * [x] case analyses (`case x of 0 => 0 | _ => 1`)
   * [x] abstractions (`fn 0 => 0 | _ => 1`)
   * [x] `while` loops
-  * [x] `print` (though you may not want to use it, as it is rather buggy)
+  * [x] `print`
   * [ ] `ref` and `:=`
   * [ ] anything structure related
   * [ ] anything signature related
