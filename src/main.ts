@@ -59,7 +59,7 @@ export function interpret(nextInstruction: string,
     if (res[1]) {
         return {
             'state':                res[0],
-            'evaluarionErrored':    true,
+            'evaluationErrored':    true,
             'error':                res[2],
             'warnings':             res[3]
         };
@@ -104,7 +104,7 @@ export function interpret(nextInstruction: string,
 
     return {
         'state':                res[0],
-        'evaluarionErrored':    false,
+        'evaluationErrored':    false,
         'error':                res[2],
         'warnings':             res[3]
     };

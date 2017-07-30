@@ -1,4 +1,5 @@
 const Lexer = require("../src/lexer");
+const Token = require("../src/tokens");
 const Parser = require("../src/parser");
 const Errors = require("../src/errors");
 
@@ -15,7 +16,7 @@ function createItExpression(exp: Expr.Expression): void {
     return new Decl.SequentialDeclaration(0, [
         new Decl.ValueDeclaration(0, [], [
             new Decl.ValueBinding(0, false,
-                new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
+                new Expr.ValueIdentifier(-1, new Token.AlphanumericIdentifierToken('it', -1)),
                 exp
             )
         ], 2)
@@ -34,7 +35,7 @@ function create_infix(position: Errors.Position, id: number) {
     return new Decl.InfixDeclaration(
         position,
         [
-            new Lexer.AlphanumericIdentifierToken("x", position+6)
+            new Token.AlphanumericIdentifierToken("x", position+6)
         ], 0, id
     )
 }
@@ -43,26 +44,26 @@ function create_infixr(position: Errors.Position) {
     return new Decl.InfixRDeclaration(
         position,
         [
-            new Lexer.AlphanumericIdentifierToken("x", position+7)
+            new Token.AlphanumericIdentifierToken("x", position+7)
         ]
     )
 }
 
-function prefixWithOp(tok: Lexer.IdentifierToken): Lexer.IdentifierToken {
+function prefixWithOp(tok: Token.IdentifierToken): Token.IdentifierToken {
     tok.opPrefixed = true;
     return tok;
 }
 
 function get42(pos: Errors.Position): Expr.Expresion {
-    return new Expr.Constant(pos, new Lexer.NumericToken('42', pos, 42));
+    return new Expr.Constant(pos, new Token.NumericToken('42', pos, 42));
 }
 
 const sampleExpression1: string = 'if 5 then 9 else 7';
 function createSampleExpression1(pos: Errors.Position): Expr.Expression {
     return new Expr.Conditional(pos,
-            new Expr.Constant(pos+3, new Lexer.NumericToken('5', pos+3, 5)),
-            new Expr.Constant(pos+10, new Lexer.NumericToken('9', pos+10, 9)),
-            new Expr.Constant(pos+17, new Lexer.NumericToken('7', pos+17, 7))
+            new Expr.Constant(pos+3, new Token.NumericToken('5', pos+3, 5)),
+            new Expr.Constant(pos+10, new Token.NumericToken('9', pos+10, 9)),
+            new Expr.Constant(pos+17, new Token.NumericToken('7', pos+17, 7))
         );
     );
 }
@@ -70,9 +71,9 @@ function createSampleExpression1(pos: Errors.Position): Expr.Expression {
 const sampleExpression2: string = 'if 1 then 2 else 3';
 function createSampleExpression2(pos: Errors.Position): Expr.Expression {
     return new Expr.Conditional(pos,
-            new Expr.Constant(pos+3, new Lexer.NumericToken('1', pos+3, 1)),
-            new Expr.Constant(pos+10, new Lexer.NumericToken('2', pos+10, 2)),
-            new Expr.Constant(pos+17, new Lexer.NumericToken('3', pos+17, 3))
+            new Expr.Constant(pos+3, new Token.NumericToken('1', pos+3, 1)),
+            new Expr.Constant(pos+10, new Token.NumericToken('2', pos+10, 2)),
+            new Expr.Constant(pos+17, new Token.NumericToken('3', pos+17, 3))
         );
     );
 }
@@ -94,7 +95,7 @@ it("basic", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.ValueDeclaration(0, [], [
                 new Decl.ValueBinding(4, false,
-                    new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('x', 4)),
+                    new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken('x', 4)),
                     get42(8)
                 )
             ], 2)
@@ -117,22 +118,22 @@ it("atomic expression - special constant", () => {
     let testcase_special_string: string = '"str";';
 
     expect(parse(testcase_special_zero)).toEqualWithType(createItExpression(
-        new Expr.Constant(0, new Lexer.IntegerConstantToken('0', 0, 0))
+        new Expr.Constant(0, new Token.IntegerConstantToken('0', 0, 0))
     ));
     expect(parse(testcase_special_int)).toEqualWithType(createItExpression(
         get42(0)
     ));
     expect(parse(testcase_special_real)).toEqualWithType(createItExpression(
-        new Expr.Constant(0, new Lexer.RealConstantToken('42.0', 0, 42.0))
+        new Expr.Constant(0, new Token.RealConstantToken('42.0', 0, 42.0))
     ));
     expect(parse(testcase_special_word)).toEqualWithType(createItExpression(
-        new Expr.Constant(0, new Lexer.WordConstantToken('0w42', 0, 42))
+        new Expr.Constant(0, new Token.WordConstantToken('0w42', 0, 42))
     ));
     expect(parse(testcase_special_char)).toEqualWithType(createItExpression(
-        new Expr.Constant(0, new Lexer.CharacterConstantToken('#"c"', 0, 'c'))
+        new Expr.Constant(0, new Token.CharacterConstantToken('#"c"', 0, 'c'))
     ));
     expect(parse(testcase_special_string)).toEqualWithType(createItExpression(
-        new Expr.Constant(0, new Lexer.StringConstantToken('"str"', 0, 'str'))
+        new Expr.Constant(0, new Token.StringConstantToken('"str"', 0, 'str'))
     ));
 });
 
@@ -146,39 +147,39 @@ it("atomic expression - value identifier", () => {
 
     expect(parse(testcase_vid_with_op)).toEqualWithType(createItExpression(
         new Expr.ValueIdentifier(0,
-            prefixWithOp(new Lexer.IdentifierToken('+', 3))
+            prefixWithOp(new Token.IdentifierToken('+', 3))
         )
     ));
     expect(parse(testcase_vid_with_op_long)).toEqualWithType(createItExpression(
         new Expr.ValueIdentifier(0,
-            prefixWithOp(new Lexer.LongIdentifierToken('Math.pow', 3, [
-                    new Lexer.AlphanumericIdentifierToken('Math', 3)
+            prefixWithOp(new Token.LongIdentifierToken('Math.pow', 3, [
+                    new Token.AlphanumericIdentifierToken('Math', 3)
                 ],
-                new Lexer.AlphanumericIdentifierToken('pow', 8)
+                new Token.AlphanumericIdentifierToken('pow', 8)
             ))
         )
     ));
     expect(parse(testcase_vid_without_op)).toEqualWithType(createItExpression(
         new Expr.ValueIdentifier(0,
-            new Lexer.AlphanumericIdentifierToken('blub', 0)
+            new Token.AlphanumericIdentifierToken('blub', 0)
         )
     ))
     expect(parse(testcase_vid_without_op_long)).toEqualWithType(createItExpression(
         new Expr.ValueIdentifier(0,
-            new Lexer.LongIdentifierToken('Reals.nan', 0, [
-                    new Lexer.AlphanumericIdentifierToken('Reals', 0)
+            new Token.LongIdentifierToken('Reals.nan', 0, [
+                    new Token.AlphanumericIdentifierToken('Reals', 0)
                 ],
-                new Lexer.AlphanumericIdentifierToken('nan', 6)
+                new Token.AlphanumericIdentifierToken('nan', 6)
             )
         )
     ));
 
     expect(parse(testcase_star)).toEqualWithType(createItExpression(
-        new Expr.ValueIdentifier(0, prefixWithOp(new Lexer.StarToken(2)))
+        new Expr.ValueIdentifier(0, prefixWithOp(new Token.StarToken(2)))
     ));
 
     expect(parse(testcase_equals)).toEqualWithType(createItExpression(
-        new Expr.ValueIdentifier(0, prefixWithOp(new Lexer.EqualsToken(2)))
+        new Expr.ValueIdentifier(0, prefixWithOp(new Token.EqualsToken(2)))
     ));
 });
 
@@ -196,16 +197,16 @@ it("atomic expression - records", () => {
     expect(parse(testcase_rec_single)).toEqualWithType(createItExpression(
         new Expr.Record(2,
             true,[
-                ['1', new Expr.ValueIdentifier(6, new Lexer.AlphanumericIdentifierToken('hello', 6)]
+                ['1', new Expr.ValueIdentifier(6, new Token.AlphanumericIdentifierToken('hello', 6)]
             ]
         )
     ));
     expect(parse(testcase_rec_multiple)).toEqualWithType(createItExpression(
         new Expr.Record(2,
             true,[
-                ['1', new Expr.ValueIdentifier(6, new Lexer.AlphanumericIdentifierToken('hello', 6)],
+                ['1', new Expr.ValueIdentifier(6, new Token.AlphanumericIdentifierToken('hello', 6)],
                 ['world', get42(21)],
-                ['what', new Expr.ValueIdentifier(32, new Lexer.AlphanumericIdentifierToken('ever', 32)]
+                ['what', new Expr.ValueIdentifier(32, new Token.AlphanumericIdentifierToken('ever', 32)]
             ]
         )
     ));
@@ -219,16 +220,16 @@ it("atomic expression - record selector", () => {
     let testcase_sel_star: string = '# *;';
 
     expect(parse(testcase_sel_alphanum)).toEqualWithType(createItExpression(
-        new Expr.RecordSelector(0, new Lexer.AlphanumericIdentifierToken('hi', 1))
+        new Expr.RecordSelector(0, new Token.AlphanumericIdentifierToken('hi', 1))
     ));
     expect(parse(testcase_sel_numeric)).toEqualWithType(createItExpression(
-        new Expr.RecordSelector(0, new Lexer.NumericToken('42', 1. 42))
+        new Expr.RecordSelector(0, new Token.NumericToken('42', 1. 42))
     ));
     expect(parse(testcase_sel_non_alphanum)).toEqualWithType(createItExpression(
-        new Expr.RecordSelector(0, new Lexer.IdentifierToken('###', 2))
+        new Expr.RecordSelector(0, new Token.IdentifierToken('###', 2))
     ));
     expect(parse(testcase_sel_star)).toEqualWithType(createItExpression(
-        new Expr.RecordSelector(0, new Lexer.StarToken(2))
+        new Expr.RecordSelector(0, new Token.StarToken(2))
     ));
 });
 
@@ -326,7 +327,7 @@ it("atomic expression - local declaration", () => {
             new Decl.SequentialDeclaration(4, [
                 new Decl.ValueDeclaration(4, [], [
                     new Decl.ValueBinding(8, false,
-                        new Expr.ValueIdentifier(8, new Lexer.AlphanumericIdentifierToken('it', 8)),
+                        new Expr.ValueIdentifier(8, new Token.AlphanumericIdentifierToken('it', 8)),
                         get42(13)
                     )
                 ], 4)
@@ -339,7 +340,7 @@ it("atomic expression - local declaration", () => {
             new Decl.SequentialDeclaration(4, [
                 new Decl.ValueDeclaration(4, [], [
                     new Decl.ValueBinding(8, false,
-                        new Expr.ValueIdentifier(8, new Lexer.AlphanumericIdentifierToken('it', 8)),
+                        new Expr.ValueIdentifier(8, new Token.AlphanumericIdentifierToken('it', 8)),
                         get42(13)
                     )
                 ], 4)
@@ -354,26 +355,26 @@ it("atomic expression - local declaration", () => {
     expect(parse(testcase_infix1)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('f', 6)
+                new Token.AlphanumericIdentifierToken('f', 6)
             ], 0, 2),
             new Decl.ValueDeclaration(9, [], [
                 new Decl.ValueBinding(9, false,
-                    new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
+                    new Expr.ValueIdentifier(-1, new Token.AlphanumericIdentifierToken('it', -1)),
                     new Expr.LocalDeclarationExpression(9,
                         new Decl.SequentialDeclaration(13, [
                             new Decl.InfixRDeclaration(13, [
-                                new Lexer.AlphanumericIdentifierToken('f', 20)
+                                new Token.AlphanumericIdentifierToken('f', 20)
                             ], 0, 5)
                         ], 4),
                         new Expr.FunctionApplication(27,
-                            new Expr.ValueIdentifier(27, new Lexer.AlphanumericIdentifierToken('f', 27)),
+                            new Expr.ValueIdentifier(27, new Token.AlphanumericIdentifierToken('f', 27)),
                             new Expr.Tuple(27, [
-                                new Expr.ValueIdentifier(25, new Lexer.AlphanumericIdentifierToken('a', 25)),
+                                new Expr.ValueIdentifier(25, new Token.AlphanumericIdentifierToken('a', 25)),
                                 new Expr.FunctionApplication(31,
-                                    new Expr.ValueIdentifier(31, new Lexer.AlphanumericIdentifierToken('f', 31)),
+                                    new Expr.ValueIdentifier(31, new Token.AlphanumericIdentifierToken('f', 31)),
                                     new Expr.Tuple(31, [
-                                        new Expr.ValueIdentifier(29, new Lexer.AlphanumericIdentifierToken('b', 29)),
-                                        new Expr.ValueIdentifier(33, new Lexer.AlphanumericIdentifierToken('c', 33))
+                                        new Expr.ValueIdentifier(29, new Token.AlphanumericIdentifierToken('b', 29)),
+                                        new Expr.ValueIdentifier(33, new Token.AlphanumericIdentifierToken('c', 33))
                                     ])
                                 )
                             ])
@@ -383,18 +384,18 @@ it("atomic expression - local declaration", () => {
             ], 3),
             new Decl.ValueDeclaration(40, [], [
                 new Decl.ValueBinding(40, false,
-                    new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
+                    new Expr.ValueIdentifier(-1, new Token.AlphanumericIdentifierToken('it', -1)),
                     new Expr.FunctionApplication(46,
-                        new Expr.ValueIdentifier(46, new Lexer.AlphanumericIdentifierToken('f', 46)),
+                        new Expr.ValueIdentifier(46, new Token.AlphanumericIdentifierToken('f', 46)),
                         new Expr.Tuple(46, [
                             new Expr.FunctionApplication(42,
-                                new Expr.ValueIdentifier(42, new Lexer.AlphanumericIdentifierToken('f', 42)),
+                                new Expr.ValueIdentifier(42, new Token.AlphanumericIdentifierToken('f', 42)),
                                 new Expr.Tuple(42, [
-                                    new Expr.ValueIdentifier(40, new Lexer.AlphanumericIdentifierToken('a', 40)),
-                                    new Expr.ValueIdentifier(44, new Lexer.AlphanumericIdentifierToken('b', 44)),
+                                    new Expr.ValueIdentifier(40, new Token.AlphanumericIdentifierToken('a', 40)),
+                                    new Expr.ValueIdentifier(44, new Token.AlphanumericIdentifierToken('b', 44)),
                                 ])
                             ),
-                            new Expr.ValueIdentifier(48, new Lexer.AlphanumericIdentifierToken('c', 48))
+                            new Expr.ValueIdentifier(48, new Token.AlphanumericIdentifierToken('c', 48))
                         ])
                     )
                 )
@@ -404,28 +405,28 @@ it("atomic expression - local declaration", () => {
     expect(parse(testcase_infix2)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixRDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('f', 7)
+                new Token.AlphanumericIdentifierToken('f', 7)
             ], 0, 2),
             new Decl.ValueDeclaration(10, [], [
                 new Decl.ValueBinding(10, false,
-                    new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
+                    new Expr.ValueIdentifier(-1, new Token.AlphanumericIdentifierToken('it', -1)),
                     new Expr.LocalDeclarationExpression(10
                         new Decl.SequentialDeclaration(14, [
                             new Decl.InfixDeclaration(14, [
-                                new Lexer.AlphanumericIdentifierToken('f', 20)
+                                new Token.AlphanumericIdentifierToken('f', 20)
                             ], 0, 5)
                         ], 4),
                         new Expr.FunctionApplication(31,
-                            new Expr.ValueIdentifier(31, new Lexer.AlphanumericIdentifierToken('f', 31)),
+                            new Expr.ValueIdentifier(31, new Token.AlphanumericIdentifierToken('f', 31)),
                             new Expr.Tuple(31, [
                                 new Expr.FunctionApplication(27,
-                                    new Expr.ValueIdentifier(27, new Lexer.AlphanumericIdentifierToken('f', 27)),
+                                    new Expr.ValueIdentifier(27, new Token.AlphanumericIdentifierToken('f', 27)),
                                     new Expr.Tuple(27, [
-                                        new Expr.ValueIdentifier(25, new Lexer.AlphanumericIdentifierToken('a', 25)),
-                                        new Expr.ValueIdentifier(29, new Lexer.AlphanumericIdentifierToken('b', 29))
+                                        new Expr.ValueIdentifier(25, new Token.AlphanumericIdentifierToken('a', 25)),
+                                        new Expr.ValueIdentifier(29, new Token.AlphanumericIdentifierToken('b', 29))
                                     ])
                                 ),
-                                new Expr.ValueIdentifier(33, new Lexer.AlphanumericIdentifierToken('c', 33))
+                                new Expr.ValueIdentifier(33, new Token.AlphanumericIdentifierToken('c', 33))
                             ])
                         )
                     )
@@ -433,16 +434,16 @@ it("atomic expression - local declaration", () => {
             ], 3),
             new Decl.ValueDeclaration(40, [], [
                 new Decl.ValueBinding(40, false,
-                    new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
+                    new Expr.ValueIdentifier(-1, new Token.AlphanumericIdentifierToken('it', -1)),
                     new Expr.FunctionApplication(42,
-                        new Expr.ValueIdentifier(42, new Lexer.AlphanumericIdentifierToken('f', 42)),
+                        new Expr.ValueIdentifier(42, new Token.AlphanumericIdentifierToken('f', 42)),
                         new Expr.Tuple(42, [
-                            new Expr.ValueIdentifier(40, new Lexer.AlphanumericIdentifierToken('a', 40)),
+                            new Expr.ValueIdentifier(40, new Token.AlphanumericIdentifierToken('a', 40)),
                             new Expr.FunctionApplication(46,
-                                new Expr.ValueIdentifier(46, new Lexer.AlphanumericIdentifierToken('f', 46)),
+                                new Expr.ValueIdentifier(46, new Token.AlphanumericIdentifierToken('f', 46)),
                                 new Expr.Tuple(46, [
-                                    new Expr.ValueIdentifier(44, new Lexer.AlphanumericIdentifierToken('b', 44)),
-                                    new Expr.ValueIdentifier(48, new Lexer.AlphanumericIdentifierToken('c', 48))
+                                    new Expr.ValueIdentifier(44, new Token.AlphanumericIdentifierToken('b', 44)),
+                                    new Expr.ValueIdentifier(48, new Token.AlphanumericIdentifierToken('c', 48))
                                 ])
                             )
                         ])
@@ -454,47 +455,47 @@ it("atomic expression - local declaration", () => {
     expect(parse(testcase_infix3)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('f', 6)
+                new Token.AlphanumericIdentifierToken('f', 6)
             ], 0, 2),
             new Decl.ValueDeclaration(9, [], [
                 new Decl.ValueBinding(9, false,
-                    new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
+                    new Expr.ValueIdentifier(-1, new Token.AlphanumericIdentifierToken('it', -1)),
                     new Expr.LocalDeclarationExpression(9,
                         new Decl.SequentialDeclaration(13, [
                             new Decl.NonfixDeclaration(13, [
-                                new Lexer.AlphanumericIdentifierToken('f', 20)
+                                new Token.AlphanumericIdentifierToken('f', 20)
                             ], 5)
                         ], 4),
                         new Expr.FunctionApplication(25,
                             new Expr.FunctionApplication(25,
                                 new Expr.FunctionApplication(25,
                                     new Expr.FunctionApplication(25,
-                                        new Expr.ValueIdentifier(25, new Lexer.AlphanumericIdentifierToken('a', 25)),
-                                        new Expr.ValueIdentifier(27, new Lexer.AlphanumericIdentifierToken('f', 27))
+                                        new Expr.ValueIdentifier(25, new Token.AlphanumericIdentifierToken('a', 25)),
+                                        new Expr.ValueIdentifier(27, new Token.AlphanumericIdentifierToken('f', 27))
                                     ),
-                                    new Expr.ValueIdentifier(29, new Lexer.AlphanumericIdentifierToken('b', 29))
+                                    new Expr.ValueIdentifier(29, new Token.AlphanumericIdentifierToken('b', 29))
                                 ),
-                                new Expr.ValueIdentifier(31, new Lexer.AlphanumericIdentifierToken('f', 31))
+                                new Expr.ValueIdentifier(31, new Token.AlphanumericIdentifierToken('f', 31))
                             ),
-                            new Expr.ValueIdentifier(33, new Lexer.AlphanumericIdentifierToken('c', 33))
+                            new Expr.ValueIdentifier(33, new Token.AlphanumericIdentifierToken('c', 33))
                         )
                     )
                 )
             ], 3),
             new Decl.ValueDeclaration(40, [], [
                 new Decl.ValueBinding(40, false,
-                    new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
+                    new Expr.ValueIdentifier(-1, new Token.AlphanumericIdentifierToken('it', -1)),
                     new Expr.FunctionApplication(46,
-                        new Expr.ValueIdentifier(46, new Lexer.AlphanumericIdentifierToken('f', 46)),
+                        new Expr.ValueIdentifier(46, new Token.AlphanumericIdentifierToken('f', 46)),
                         new Expr.Tuple(46, [
                             new Expr.FunctionApplication(42,
-                                new Expr.ValueIdentifier(42, new Lexer.AlphanumericIdentifierToken('f', 42)),
+                                new Expr.ValueIdentifier(42, new Token.AlphanumericIdentifierToken('f', 42)),
                                 new Expr.Tuple(42, [
-                                    new Expr.ValueIdentifier(40, new Lexer.AlphanumericIdentifierToken('a', 40)),
-                                    new Expr.ValueIdentifier(44, new Lexer.AlphanumericIdentifierToken('b', 44)),
+                                    new Expr.ValueIdentifier(40, new Token.AlphanumericIdentifierToken('a', 40)),
+                                    new Expr.ValueIdentifier(44, new Token.AlphanumericIdentifierToken('b', 44)),
                                 ])
                             ),
-                            new Expr.ValueIdentifier(48, new Lexer.AlphanumericIdentifierToken('c', 48))
+                            new Expr.ValueIdentifier(48, new Token.AlphanumericIdentifierToken('c', 48))
                         ])
                     )
                 )
@@ -505,24 +506,24 @@ it("atomic expression - local declaration", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.ValueDeclaration(0, [], [
                 new Decl.ValueBinding(0, false,
-                    new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
+                    new Expr.ValueIdentifier(-1, new Token.AlphanumericIdentifierToken('it', -1)),
                     new Expr.LocalDeclarationExpression(0,
                         new Decl.SequentialDeclaration(4, [
                             new Decl.InfixDeclaration(4, [
-                                new Lexer.AlphanumericIdentifierToken('f', 10)
+                                new Token.AlphanumericIdentifierToken('f', 10)
                             ], 0, 4)
                         ], 3),
                         new Expr.FunctionApplication(21,
-                            new Expr.ValueIdentifier(21, new Lexer.AlphanumericIdentifierToken('f', 21)),
+                            new Expr.ValueIdentifier(21, new Token.AlphanumericIdentifierToken('f', 21)),
                             new Expr.Tuple(21, [
                                 new Expr.FunctionApplication(17,
-                                    new Expr.ValueIdentifier(17, new Lexer.AlphanumericIdentifierToken('f', 17)),
+                                    new Expr.ValueIdentifier(17, new Token.AlphanumericIdentifierToken('f', 17)),
                                     new Expr.Tuple(17, [
-                                        new Expr.ValueIdentifier(15, new Lexer.AlphanumericIdentifierToken('a', 15)),
-                                        new Expr.ValueIdentifier(19, new Lexer.AlphanumericIdentifierToken('b', 19)),
+                                        new Expr.ValueIdentifier(15, new Token.AlphanumericIdentifierToken('a', 15)),
+                                        new Expr.ValueIdentifier(19, new Token.AlphanumericIdentifierToken('b', 19)),
                                     ])
                                 ),
-                                new Expr.ValueIdentifier(23, new Lexer.AlphanumericIdentifierToken('c', 23))
+                                new Expr.ValueIdentifier(23, new Token.AlphanumericIdentifierToken('c', 23))
                             ])
                         )
                     )
@@ -530,19 +531,19 @@ it("atomic expression - local declaration", () => {
             ], 2),
             new Decl.ValueDeclaration(30, [], [
                 new Decl.ValueBinding(30, false,
-                    new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
+                    new Expr.ValueIdentifier(-1, new Token.AlphanumericIdentifierToken('it', -1)),
                     new Expr.FunctionApplication(30,
                         new Expr.FunctionApplication(30,
                             new Expr.FunctionApplication(30,
                                 new Expr.FunctionApplication(30,
-                                    new Expr.ValueIdentifier(30, new Lexer.AlphanumericIdentifierToken('a', 30)),
-                                    new Expr.ValueIdentifier(32, new Lexer.AlphanumericIdentifierToken('f', 32))
+                                    new Expr.ValueIdentifier(30, new Token.AlphanumericIdentifierToken('a', 30)),
+                                    new Expr.ValueIdentifier(32, new Token.AlphanumericIdentifierToken('f', 32))
                                 ),
-                                new Expr.ValueIdentifier(34, new Lexer.AlphanumericIdentifierToken('b', 34))
+                                new Expr.ValueIdentifier(34, new Token.AlphanumericIdentifierToken('b', 34))
                             ),
-                            new Expr.ValueIdentifier(36, new Lexer.AlphanumericIdentifierToken('f', 36))
+                            new Expr.ValueIdentifier(36, new Token.AlphanumericIdentifierToken('f', 36))
                         ),
-                        new Expr.ValueIdentifier(38, new Lexer.AlphanumericIdentifierToken('c', 38))
+                        new Expr.ValueIdentifier(38, new Token.AlphanumericIdentifierToken('c', 38))
                     )
                 )
             ], 6)
@@ -614,18 +615,18 @@ it("application expression", () => {
                     new Expr.FunctionApplication(0,
                         new Expr.FunctionApplication(0,
                             new Expr.FunctionApplication(0,
-                                new Expr.ValueIdentifier(0, new Lexer.AlphanumericIdentifierToken('a', 0)),
-                                new Expr.ValueIdentifier(2, new Lexer.AlphanumericIdentifierToken('b', 2))
+                                new Expr.ValueIdentifier(0, new Token.AlphanumericIdentifierToken('a', 0)),
+                                new Expr.ValueIdentifier(2, new Token.AlphanumericIdentifierToken('b', 2))
                             ),
-                            new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('c', 4))
+                            new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken('c', 4))
                         ),
-                        new Expr.ValueIdentifier(6, new Lexer.AlphanumericIdentifierToken('d', 6))
+                        new Expr.ValueIdentifier(6, new Token.AlphanumericIdentifierToken('d', 6))
                     ),
-                    new Expr.ValueIdentifier(8, new Lexer.AlphanumericIdentifierToken('e', 8))
+                    new Expr.ValueIdentifier(8, new Token.AlphanumericIdentifierToken('e', 8))
                 ),
-                new Expr.ValueIdentifier(10, new Lexer.AlphanumericIdentifierToken('f', 10))
+                new Expr.ValueIdentifier(10, new Token.AlphanumericIdentifierToken('f', 10))
             ),
-            new Expr.ValueIdentifier(12, new Lexer.AlphanumericIdentifierToken('g', 12))
+            new Expr.ValueIdentifier(12, new Token.AlphanumericIdentifierToken('g', 12))
         )
     ));
     expect(parse(testcase_bracketed)).toEqualWithType(createItExpression(
@@ -633,19 +634,19 @@ it("application expression", () => {
             new Expr.FunctionApplication(0,
                 new Expr.FunctionApplication(0,
                     new Expr.FunctionApplication(0,
-                        new Expr.ValueIdentifier(0, new Lexer.AlphanumericIdentifierToken('a', 0)),
-                        new Expr.ValueIdentifier(2, new Lexer.AlphanumericIdentifierToken('b', 2))
+                        new Expr.ValueIdentifier(0, new Token.AlphanumericIdentifierToken('a', 0)),
+                        new Expr.ValueIdentifier(2, new Token.AlphanumericIdentifierToken('b', 2))
                     ),
-                    new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('c', 4))
+                    new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken('c', 4))
                 ),
-                new Expr.ValueIdentifier(6, new Lexer.AlphanumericIdentifierToken('d', 6))
+                new Expr.ValueIdentifier(6, new Token.AlphanumericIdentifierToken('d', 6))
             ),
             new Expr.FunctionApplication(9,
                 new Expr.FunctionApplication(9,
-                    new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken('e', 9)),
-                    new Expr.ValueIdentifier(11, new Lexer.AlphanumericIdentifierToken('f', 11))
+                    new Expr.ValueIdentifier(9, new Token.AlphanumericIdentifierToken('e', 9)),
+                    new Expr.ValueIdentifier(11, new Token.AlphanumericIdentifierToken('f', 11))
                 ),
-                new Expr.ValueIdentifier(13, new Lexer.AlphanumericIdentifierToken('g', 13))
+                new Expr.ValueIdentifier(13, new Token.AlphanumericIdentifierToken('g', 13))
             )
         )
     ));
@@ -662,38 +663,38 @@ it("infix expression", () => {
 
     expect(parse(testcase_predefined)).toEqualWithType(createItExpression(
         new Expr.FunctionApplication(2,
-            new Expr.ValueIdentifier(2, new Lexer.IdentifierToken('+', 2)),
+            new Expr.ValueIdentifier(2, new Token.IdentifierToken('+', 2)),
             new Expr.Tuple(2, [
-                new Expr.ValueIdentifier(0, new Lexer.AlphanumericIdentifierToken('a', 0)),
-                new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('b', 4))
+                new Expr.ValueIdentifier(0, new Token.AlphanumericIdentifierToken('a', 0)),
+                new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken('b', 4))
             ])
         )
     ));
     expect(parse(testcase_left)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('f', 6)
+                new Token.AlphanumericIdentifierToken('f', 6)
             ], 0, 2),
             new Decl.ValueDeclaration(9, [], [
                 new Decl.ValueBinding(9, false,
-                    new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
+                    new Expr.ValueIdentifier(-1, new Token.AlphanumericIdentifierToken('it', -1)),
                     new Expr.FunctionApplication(19,
-                        new Expr.ValueIdentifier(19, new Lexer.AlphanumericIdentifierToken('f', 19)),
+                        new Expr.ValueIdentifier(19, new Token.AlphanumericIdentifierToken('f', 19)),
                         new Expr.Tuple(19, [
                             new Expr.FunctionApplication(15,
-                                new Expr.ValueIdentifier(15, new Lexer.AlphanumericIdentifierToken('f', 15)),
+                                new Expr.ValueIdentifier(15, new Token.AlphanumericIdentifierToken('f', 15)),
                                 new Expr.Tuple(15, [
                                     new Expr.FunctionApplication(11,
-                                        new Expr.ValueIdentifier(11, new Lexer.AlphanumericIdentifierToken('f', 11)),
+                                        new Expr.ValueIdentifier(11, new Token.AlphanumericIdentifierToken('f', 11)),
                                         new Expr.Tuple(11, [
-                                            new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken('a', 9)),
-                                            new Expr.ValueIdentifier(13, new Lexer.AlphanumericIdentifierToken('b', 13)),
+                                            new Expr.ValueIdentifier(9, new Token.AlphanumericIdentifierToken('a', 9)),
+                                            new Expr.ValueIdentifier(13, new Token.AlphanumericIdentifierToken('b', 13)),
                                         ])
                                     ),
-                                    new Expr.ValueIdentifier(17, new Lexer.AlphanumericIdentifierToken('c', 17))
+                                    new Expr.ValueIdentifier(17, new Token.AlphanumericIdentifierToken('c', 17))
                                 ])
                             ),
-                            new Expr.ValueIdentifier(21, new Lexer.AlphanumericIdentifierToken('d', 21))
+                            new Expr.ValueIdentifier(21, new Token.AlphanumericIdentifierToken('d', 21))
                         ])
                     )
                 )
@@ -703,24 +704,24 @@ it("infix expression", () => {
     expect(parse(testcase_right)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixRDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('f', 7)
+                new Token.AlphanumericIdentifierToken('f', 7)
             ], 0, 2),
             new Decl.ValueDeclaration(10, [], [
                 new Decl.ValueBinding(10, false,
-                    new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
+                    new Expr.ValueIdentifier(-1, new Token.AlphanumericIdentifierToken('it', -1)),
                     new Expr.FunctionApplication(12,
-                        new Expr.ValueIdentifier(12, new Lexer.AlphanumericIdentifierToken('f', 12)),
+                        new Expr.ValueIdentifier(12, new Token.AlphanumericIdentifierToken('f', 12)),
                         new Expr.Tuple(12, [
-                            new Expr.ValueIdentifier(10, new Lexer.AlphanumericIdentifierToken('a', 10)),
+                            new Expr.ValueIdentifier(10, new Token.AlphanumericIdentifierToken('a', 10)),
                             new Expr.FunctionApplication(16,
-                                new Expr.ValueIdentifier(16, new Lexer.AlphanumericIdentifierToken('f', 16)),
+                                new Expr.ValueIdentifier(16, new Token.AlphanumericIdentifierToken('f', 16)),
                                 new Expr.Tuple(16, [
-                                    new Expr.ValueIdentifier(14, new Lexer.AlphanumericIdentifierToken('b', 14)),
+                                    new Expr.ValueIdentifier(14, new Token.AlphanumericIdentifierToken('b', 14)),
                                     new Expr.FunctionApplication(20,
-                                        new Expr.ValueIdentifier(20, new Lexer.AlphanumericIdentifierToken('f', 20)),
+                                        new Expr.ValueIdentifier(20, new Token.AlphanumericIdentifierToken('f', 20)),
                                         new Expr.Tuple(20, [
-                                            new Expr.ValueIdentifier(18, new Lexer.AlphanumericIdentifierToken('c', 18)),
-                                            new Expr.ValueIdentifier(22, new Lexer.AlphanumericIdentifierToken('d', 22)),
+                                            new Expr.ValueIdentifier(18, new Token.AlphanumericIdentifierToken('c', 18)),
+                                            new Expr.ValueIdentifier(22, new Token.AlphanumericIdentifierToken('d', 22)),
                                         ])
                                     )
                                 ])
@@ -734,31 +735,31 @@ it("infix expression", () => {
     expect(parse(testcase_prio_left)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('f', 8)
+                new Token.AlphanumericIdentifierToken('f', 8)
             ], 5, 2),
             new Decl.InfixDeclaration(11, [
-                new Lexer.AlphanumericIdentifierToken('g', 19)
+                new Token.AlphanumericIdentifierToken('g', 19)
             ], 4, 3),
             new Decl.ValueDeclaration(22, [], [
                 new Decl.ValueBinding(22, false,
-                    new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
+                    new Expr.ValueIdentifier(-1, new Token.AlphanumericIdentifierToken('it', -1)),
                     new Expr.FunctionApplication(32,
-                        new Expr.ValueIdentifier(32, new Lexer.AlphanumericIdentifierToken('g', 32)),
+                        new Expr.ValueIdentifier(32, new Token.AlphanumericIdentifierToken('g', 32)),
                         new Expr.Tuple(32, [
                             new Expr.FunctionApplication(24,
-                                new Expr.ValueIdentifier(24, new Lexer.AlphanumericIdentifierToken('g', 24)),
+                                new Expr.ValueIdentifier(24, new Token.AlphanumericIdentifierToken('g', 24)),
                                 new Expr.Tuple(24, [
-                                    new Expr.ValueIdentifier(22, new Lexer.AlphanumericIdentifierToken('a', 22)),
+                                    new Expr.ValueIdentifier(22, new Token.AlphanumericIdentifierToken('a', 22)),
                                     new Expr.FunctionApplication(28,
-                                        new Expr.ValueIdentifier(28, new Lexer.AlphanumericIdentifierToken('f', 28)),
+                                        new Expr.ValueIdentifier(28, new Token.AlphanumericIdentifierToken('f', 28)),
                                         new Expr.Tuple(28, [
-                                            new Expr.ValueIdentifier(26, new Lexer.AlphanumericIdentifierToken('b', 26)),
-                                            new Expr.ValueIdentifier(30, new Lexer.AlphanumericIdentifierToken('c', 30)),
+                                            new Expr.ValueIdentifier(26, new Token.AlphanumericIdentifierToken('b', 26)),
+                                            new Expr.ValueIdentifier(30, new Token.AlphanumericIdentifierToken('c', 30)),
                                         ])
                                     )
                                 ])
                             ),
-                            new Expr.ValueIdentifier(34, new Lexer.AlphanumericIdentifierToken('d', 34))
+                            new Expr.ValueIdentifier(34, new Token.AlphanumericIdentifierToken('d', 34))
                         ])
                     )
                 )
@@ -768,29 +769,29 @@ it("infix expression", () => {
     expect(parse(testcase_prio_right)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixRDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('f', 9)
+                new Token.AlphanumericIdentifierToken('f', 9)
             ], 5, 2),
             new Decl.InfixRDeclaration(12, [
-                new Lexer.AlphanumericIdentifierToken('g', 21)
+                new Token.AlphanumericIdentifierToken('g', 21)
             ], 4, 3),
             new Decl.ValueDeclaration(24, [], [
                 new Decl.ValueBinding(24, false,
-                    new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
+                    new Expr.ValueIdentifier(-1, new Token.AlphanumericIdentifierToken('it', -1)),
                     new Expr.FunctionApplication(26,
-                        new Expr.ValueIdentifier(26, new Lexer.AlphanumericIdentifierToken('g', 26)),
+                        new Expr.ValueIdentifier(26, new Token.AlphanumericIdentifierToken('g', 26)),
                         new Expr.Tuple(26, [
-                            new Expr.ValueIdentifier(24, new Lexer.AlphanumericIdentifierToken('a', 24)),
+                            new Expr.ValueIdentifier(24, new Token.AlphanumericIdentifierToken('a', 24)),
                             new Expr.FunctionApplication(34,
-                                new Expr.ValueIdentifier(34, new Lexer.AlphanumericIdentifierToken('g', 34)),
+                                new Expr.ValueIdentifier(34, new Token.AlphanumericIdentifierToken('g', 34)),
                                 new Expr.Tuple(34, [
                                     new Expr.FunctionApplication(30,
-                                        new Expr.ValueIdentifier(30, new Lexer.AlphanumericIdentifierToken('f', 30)),
+                                        new Expr.ValueIdentifier(30, new Token.AlphanumericIdentifierToken('f', 30)),
                                         new Expr.Tuple(30, [
-                                            new Expr.ValueIdentifier(28, new Lexer.AlphanumericIdentifierToken('b', 28)),
-                                            new Expr.ValueIdentifier(32, new Lexer.AlphanumericIdentifierToken('c', 32)),
+                                            new Expr.ValueIdentifier(28, new Token.AlphanumericIdentifierToken('b', 28)),
+                                            new Expr.ValueIdentifier(32, new Token.AlphanumericIdentifierToken('c', 32)),
                                         ])
                                     ),
-                                    new Expr.ValueIdentifier(36, new Lexer.AlphanumericIdentifierToken('d', 36))
+                                    new Expr.ValueIdentifier(36, new Token.AlphanumericIdentifierToken('d', 36))
                                 ])
                             )
                         ])
@@ -802,32 +803,32 @@ it("infix expression", () => {
     expect(parse(testcase_non_colliding)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('f', 8)
+                new Token.AlphanumericIdentifierToken('f', 8)
             ], 1, 2),
             new Decl.InfixRDeclaration(11, [
-                new Lexer.AlphanumericIdentifierToken('g', 20)
+                new Token.AlphanumericIdentifierToken('g', 20)
             ], 1, 3),
             new Decl.InfixDeclaration(23, [
-                new Lexer.AlphanumericIdentifierToken('h', 29)
+                new Token.AlphanumericIdentifierToken('h', 29)
             ], 0, 4),
             new Decl.ValueDeclaration(32, [], [
                 new Decl.ValueBinding(32, false,
-                    new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken('it', -1)),
+                    new Expr.ValueIdentifier(-1, new Token.AlphanumericIdentifierToken('it', -1)),
                     new Expr.FunctionApplication(38,
-                        new Expr.ValueIdentifier(38, new Lexer.AlphanumericIdentifierToken('h', 38)),
+                        new Expr.ValueIdentifier(38, new Token.AlphanumericIdentifierToken('h', 38)),
                         new Expr.Tuple(38, [
                             new Expr.FunctionApplication(34,
-                                new Expr.ValueIdentifier(34, new Lexer.AlphanumericIdentifierToken('f', 34)),
+                                new Expr.ValueIdentifier(34, new Token.AlphanumericIdentifierToken('f', 34)),
                                 new Expr.Tuple(34, [
-                                    new Expr.ValueIdentifier(32, new Lexer.AlphanumericIdentifierToken('a', 32)),
-                                    new Expr.ValueIdentifier(36, new Lexer.AlphanumericIdentifierToken('b', 36)),
+                                    new Expr.ValueIdentifier(32, new Token.AlphanumericIdentifierToken('a', 32)),
+                                    new Expr.ValueIdentifier(36, new Token.AlphanumericIdentifierToken('b', 36)),
                                 ])
                             )
                             new Expr.FunctionApplication(42,
-                                new Expr.ValueIdentifier(42, new Lexer.AlphanumericIdentifierToken('g', 42)),
+                                new Expr.ValueIdentifier(42, new Token.AlphanumericIdentifierToken('g', 42)),
                                 new Expr.Tuple(42, [
-                                    new Expr.ValueIdentifier(40, new Lexer.AlphanumericIdentifierToken('c', 40)),
-                                    new Expr.ValueIdentifier(44, new Lexer.AlphanumericIdentifierToken('d', 44))
+                                    new Expr.ValueIdentifier(40, new Token.AlphanumericIdentifierToken('c', 40)),
+                                    new Expr.ValueIdentifier(44, new Token.AlphanumericIdentifierToken('d', 44))
                                 ])
                             )
                         ])
@@ -1165,7 +1166,7 @@ it("expression - iteration", () => {
     expect(parse(testcase_simple)).toEqualWithType(createItExpression(
         new Expr.While(0,
             new Expr.ValueIdentifier(6,
-                new Lexer.AlphanumericIdentifierToken('true', 6)
+                new Token.AlphanumericIdentifierToken('true', 6)
             ),
             get42(14)
         )
@@ -1271,7 +1272,7 @@ it("declaration - value declaration", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.ValueDeclaration(0, [], [
                 new Decl.ValueBinding(4, false,
-                    new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('x', 4)),
+                    new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken('x', 4)),
                     get42(8)
                 )
             ], 2)
@@ -1283,7 +1284,7 @@ it("declaration - value declaration", () => {
                     new Type.TypeVariable('\'a', false, 4)
                 ], [
                     new Decl.ValueBinding(7, false,
-                        new Expr.ValueIdentifier(7, new Lexer.AlphanumericIdentifierToken('x', 7)),
+                        new Expr.ValueIdentifier(7, new Token.AlphanumericIdentifierToken('x', 7)),
                         get42(11)
                     )
                 ], 2
@@ -1296,7 +1297,7 @@ it("declaration - value declaration", () => {
                     new Type.TypeVariable('\'a', false, 5)
                 ], [
                     new Decl.ValueBinding(9, false,
-                        new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken('x', 9)),
+                        new Expr.ValueIdentifier(9, new Token.AlphanumericIdentifierToken('x', 9)),
                         get42(13)
                     )
                 ], 2
@@ -1310,7 +1311,7 @@ it("declaration - value declaration", () => {
                     new Type.TypeVariable('\'b', false, 9)
                 ], [
                     new Decl.ValueBinding(13, false,
-                        new Expr.ValueIdentifier(13, new Lexer.AlphanumericIdentifierToken('x', 13)),
+                        new Expr.ValueIdentifier(13, new Token.AlphanumericIdentifierToken('x', 13)),
                         get42(17)
                     )
                 ], 2
@@ -1325,7 +1326,7 @@ it("declaration - value declaration", () => {
                     new Type.TypeVariable('\'c', false, 13)
                 ], [
                     new Decl.ValueBinding(17, false,
-                        new Expr.ValueIdentifier(17, new Lexer.AlphanumericIdentifierToken('x', 17)),
+                        new Expr.ValueIdentifier(17, new Token.AlphanumericIdentifierToken('x', 17)),
                         get42(21)
                     )
                 ], 2
@@ -1346,12 +1347,12 @@ it("declaration - function declaration", () => {
             new Decl.FunctionDeclaration(0, [], [
                 new Decl.FunctionValueBinding(4,[
                         [
-                            [new Expr.ValueIdentifier(6, new Lexer.AlphanumericIdentifierToken('x', 6))],
+                            [new Expr.ValueIdentifier(6, new Token.AlphanumericIdentifierToken('x', 6))],
                             undefined,
                             get42(10),
                         ]
                     ],
-                    new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('f', 4)),
+                    new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken('f', 4)),
                 )
             ], 2)
         ], 1)
@@ -1363,12 +1364,12 @@ it("declaration - function declaration", () => {
                 ], [
                     new Decl.FunctionValueBinding(7,[
                             [
-                                [new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken('x', 9))],
+                                [new Expr.ValueIdentifier(9, new Token.AlphanumericIdentifierToken('x', 9))],
                                 undefined,
                                 get42(13),
                             ]
                         ],
-                        new Expr.ValueIdentifier(7, new Lexer.AlphanumericIdentifierToken('f', 7)),
+                        new Expr.ValueIdentifier(7, new Token.AlphanumericIdentifierToken('f', 7)),
                     )
                 ], 2
             )
@@ -1381,12 +1382,12 @@ it("declaration - function declaration", () => {
                 ], [
                     new Decl.FunctionValueBinding(9,[
                             [
-                                [new Expr.ValueIdentifier(11, new Lexer.AlphanumericIdentifierToken('x', 11))],
+                                [new Expr.ValueIdentifier(11, new Token.AlphanumericIdentifierToken('x', 11))],
                                 undefined,
                                 get42(15),
                             ]
                         ],
-                        new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken('f', 9)),
+                        new Expr.ValueIdentifier(9, new Token.AlphanumericIdentifierToken('f', 9)),
                     )
                 ], 2
             )
@@ -1400,12 +1401,12 @@ it("declaration - function declaration", () => {
                 ], [
                     new Decl.FunctionValueBinding(13,[
                             [
-                                [new Expr.ValueIdentifier(15, new Lexer.AlphanumericIdentifierToken('x', 15))],
+                                [new Expr.ValueIdentifier(15, new Token.AlphanumericIdentifierToken('x', 15))],
                                 undefined,
                                 get42(19),
                             ]
                         ],
-                        new Expr.ValueIdentifier(13, new Lexer.AlphanumericIdentifierToken('f', 13)),
+                        new Expr.ValueIdentifier(13, new Token.AlphanumericIdentifierToken('f', 13)),
                     )
                 ], 2
             )
@@ -1420,12 +1421,12 @@ it("declaration - function declaration", () => {
                 ], [
                     new Decl.FunctionValueBinding(17,[
                             [
-                                [new Expr.ValueIdentifier(19, new Lexer.AlphanumericIdentifierToken('x', 19))],
+                                [new Expr.ValueIdentifier(19, new Token.AlphanumericIdentifierToken('x', 19))],
                                 undefined,
                                 get42(23),
                             ]
                         ],
-                        new Expr.ValueIdentifier(17, new Lexer.AlphanumericIdentifierToken('f', 17)),
+                        new Expr.ValueIdentifier(17, new Token.AlphanumericIdentifierToken('f', 17)),
                     )
                 ], 2
             )
@@ -1444,7 +1445,7 @@ it("declaration - type declaration", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.TypeDeclaration(0, [
                 new Decl.TypeBinding(5, [] ,
-                    new Lexer.AlphanumericIdentifierToken('blub', 5),
+                    new Token.AlphanumericIdentifierToken('blub', 5),
                     new Type.TypeVariable('\'a', true, 12)
                 )
             ], 2)
@@ -1454,7 +1455,7 @@ it("declaration - type declaration", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.TypeDeclaration(0, [
                 new Decl.TypeBinding(5, [] ,
-                    new Lexer.IdentifierToken('####', 5),
+                    new Token.IdentifierToken('####', 5),
                     new Type.TypeVariable('\'a', true, 12)
                 )
             ], 2)
@@ -1475,9 +1476,9 @@ it("declaration - datatype declaration", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.DatatypeDeclaration(0, [
                 new Decl.DatatypeBinding(9, [] ,
-                    new Lexer.AlphanumericIdentifierToken('blub', 9),
+                    new Token.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [new Lexer.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', true, 21)]
+                        [new Token.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', true, 21)]
                     ]
                 )
             ], undefined, 2)
@@ -1487,9 +1488,9 @@ it("declaration - datatype declaration", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.DatatypeDeclaration(0, [
                 new Decl.DatatypeBinding(9, [] ,
-                    new Lexer.IdentifierToken('####', 9),
+                    new Token.IdentifierToken('####', 9),
                     [
-                        [new Lexer.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', true, 21)]
+                        [new Token.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', true, 21)]
                     ]
                 )
             ], undefined, 2)
@@ -1515,7 +1516,7 @@ it("declaration - exception declaration", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.ExceptionDeclaration(0, [
                 new Decl.DirectExceptionBinding(10,
-                    new Lexer.AlphanumericIdentifierToken('X', 10),
+                    new Token.AlphanumericIdentifierToken('X', 10),
                     undefined
                 )
             ], 2)
@@ -1525,7 +1526,7 @@ it("declaration - exception declaration", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.ExceptionDeclaration(0, [
                 new Decl.DirectExceptionBinding(10,
-                    new Lexer.AlphanumericIdentifierToken('X', 10),
+                    new Token.AlphanumericIdentifierToken('X', 10),
                     new Type.TypeVariable('\'a', true, 15)
                 )
             ], 2)
@@ -1546,7 +1547,7 @@ it("declaration - local declaration", () => {
                 new Decl.SequentialDeclaration(6, [
                     new Decl.ValueDeclaration(6, [], [
                         new Decl.ValueBinding(10, false,
-                            new Expr.ValueIdentifier(10, new Lexer.AlphanumericIdentifierToken('it', 10)),
+                            new Expr.ValueIdentifier(10, new Token.AlphanumericIdentifierToken('it', 10)),
                             get42(15)
                         )
                     ], 4)
@@ -1562,7 +1563,7 @@ it("declaration - local declaration", () => {
                 new Decl.SequentialDeclaration(6, [
                     new Decl.ValueDeclaration(6, [], [
                         new Decl.ValueBinding(10, false,
-                            new Expr.ValueIdentifier(10, new Lexer.AlphanumericIdentifierToken('it', 10)),
+                            new Expr.ValueIdentifier(10, new Token.AlphanumericIdentifierToken('it', 10)),
                             get42(15)
                         )
                     ], 4)
@@ -1578,13 +1579,13 @@ it("declaration - local declaration", () => {
                 new Decl.SequentialDeclaration(6, [
                     new Decl.ValueDeclaration(6, [], [
                         new Decl.ValueBinding(10, false,
-                            new Expr.ValueIdentifier(10, new Lexer.AlphanumericIdentifierToken('it', 10)),
+                            new Expr.ValueIdentifier(10, new Token.AlphanumericIdentifierToken('it', 10)),
                             get42(15)
                         )
                     ], 4),
                     new Decl.ValueDeclaration(19, [], [
                         new Decl.ValueBinding(23, false,
-                            new Expr.ValueIdentifier(23, new Lexer.AlphanumericIdentifierToken('it', 23)),
+                            new Expr.ValueIdentifier(23, new Token.AlphanumericIdentifierToken('it', 23)),
                             get42(28)
                         )
                     ], 5)
@@ -1602,13 +1603,13 @@ it("declaration - local declaration", () => {
                 new Decl.SequentialDeclaration(9, [
                     new Decl.ValueDeclaration(9, [], [
                         new Decl.ValueBinding(13, false,
-                            new Expr.ValueIdentifier(13, new Lexer.AlphanumericIdentifierToken('it', 13)),
+                            new Expr.ValueIdentifier(13, new Token.AlphanumericIdentifierToken('it', 13)),
                             get42(18)
                         )
                     ], 6),
                     new Decl.ValueDeclaration(22, [], [
                         new Decl.ValueBinding(26, false,
-                            new Expr.ValueIdentifier(26, new Lexer.AlphanumericIdentifierToken('it', 26)),
+                            new Expr.ValueIdentifier(26, new Token.AlphanumericIdentifierToken('it', 26)),
                             get42(31)
                         )
                     ], 7)
@@ -1626,17 +1627,17 @@ it("declaration - open declaration", () => {
     expect(parse(testcase_single)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.OpenDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('stru', 5)
+                new Token.AlphanumericIdentifierToken('stru', 5)
             ], 2)
         ], 1)
     );
     expect(parse(testcase_multiple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.OpenDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('stru', 5),
-                new Lexer.LongIdentifierToken('stra.stru', 10, [
-                    new Lexer.AlphanumericIdentifierToken('stra', 10)
-                ], new Lexer.AlphanumericIdentifierToken('stru', 15))
+                new Token.AlphanumericIdentifierToken('stru', 5),
+                new Token.LongIdentifierToken('stra.stru', 10, [
+                    new Token.AlphanumericIdentifierToken('stra', 10)
+                ], new Token.AlphanumericIdentifierToken('stru', 15))
             ], 2)
         ], 1)
     );
@@ -1658,19 +1659,19 @@ it("declaration - sequential declaration", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.ValueDeclaration(0, [], [
                 new Decl.ValueBinding(4, false,
-                    new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('it', 4)),
+                    new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken('it', 4)),
                     get42(9)
                 )
             ], 2),
             new Decl.ValueDeclaration(13, [], [
                 new Decl.ValueBinding(17, false,
-                    new Expr.ValueIdentifier(17, new Lexer.AlphanumericIdentifierToken('it', 17)),
+                    new Expr.ValueIdentifier(17, new Token.AlphanumericIdentifierToken('it', 17)),
                     get42(22)
                 )
             ], 3),
             new Decl.ValueDeclaration(26, [], [
                 new Decl.ValueBinding(30, false,
-                    new Expr.ValueIdentifier(30, new Lexer.AlphanumericIdentifierToken('it', 30)),
+                    new Expr.ValueIdentifier(30, new Token.AlphanumericIdentifierToken('it', 30)),
                     get42(35)
                 )
             ], 4)
@@ -1692,37 +1693,37 @@ it("declaration - infix (L) directive", () => {
     expect(parse(testcase_simple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('f', 6)
+                new Token.AlphanumericIdentifierToken('f', 6)
             ], 0, 2)
         ], 1)
     );
     expect(parse(testcase_0)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('f', 8)
+                new Token.AlphanumericIdentifierToken('f', 8)
             ], 0, 2)
         ], 1)
     );
     expect(parse(testcase_9)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('f', 8)
+                new Token.AlphanumericIdentifierToken('f', 8)
             ], 9, 2)
         ], 1)
     );
     expect(parse(testcase_star)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
-                new Lexer.StarToken(6)
+                new Token.StarToken(6)
             ], 0, 2)
         ], 1)
     );
     expect(parse(testcase_multiple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixDeclaration(0, [
-                new Lexer.StarToken(6),
-                new Lexer.AlphanumericIdentifierToken('f', 8),
-                new Lexer.AlphanumericIdentifierToken('g', 10)
+                new Token.StarToken(6),
+                new Token.AlphanumericIdentifierToken('f', 8),
+                new Token.AlphanumericIdentifierToken('g', 10)
             ], 0, 2)
         ], 1)
     );
@@ -1746,37 +1747,37 @@ it("declaration - infix (R) directive", () => {
     expect(parse(testcase_simple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixRDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('f', 7)
+                new Token.AlphanumericIdentifierToken('f', 7)
             ], 0, 2)
         ], 1)
     );
     expect(parse(testcase_0)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixRDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('f', 9)
+                new Token.AlphanumericIdentifierToken('f', 9)
             ], 0, 2)
         ], 1)
     );
     expect(parse(testcase_9)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixRDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('f', 9)
+                new Token.AlphanumericIdentifierToken('f', 9)
             ], 9, 2)
         ], 1)
     );
     expect(parse(testcase_star)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixRDeclaration(0, [
-                new Lexer.StarToken(7)
+                new Token.StarToken(7)
             ], 0, 2)
         ], 1)
     );
     expect(parse(testcase_multiple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.InfixRDeclaration(0, [
-                new Lexer.StarToken(7),
-                new Lexer.AlphanumericIdentifierToken('f', 9),
-                new Lexer.AlphanumericIdentifierToken('g', 11)
+                new Token.StarToken(7),
+                new Token.AlphanumericIdentifierToken('f', 9),
+                new Token.AlphanumericIdentifierToken('g', 11)
             ], 0, 2)
         ], 1)
     );
@@ -1796,23 +1797,23 @@ it("declaration - nonfix directive", () => {
     expect(parse(testcase_simple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.NonfixDeclaration(0, [
-                new Lexer.AlphanumericIdentifierToken('f', 7)
+                new Token.AlphanumericIdentifierToken('f', 7)
             ], 2)
         ], 1)
     );
     expect(parse(testcase_star)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.NonfixDeclaration(0, [
-                new Lexer.StarToken(7)
+                new Token.StarToken(7)
             ], 2)
         ], 1)
     );
     expect(parse(testcase_multiple)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.NonfixDeclaration(0, [
-                new Lexer.StarToken(7),
-                new Lexer.AlphanumericIdentifierToken('f', 9),
-                new Lexer.AlphanumericIdentifierToken('g', 11)
+                new Token.StarToken(7),
+                new Token.AlphanumericIdentifierToken('f', 9),
+                new Token.AlphanumericIdentifierToken('g', 11)
             ], 2)
         ], 1)
     );
@@ -1844,7 +1845,7 @@ it("value bindings - non recursive", () => {
                 ),
                 new Decl.ValueBinding(15, false,
                     new Expr.ValueIdentifier(15,
-                        new Lexer.AlphanumericIdentifierToken('x', 15)
+                        new Token.AlphanumericIdentifierToken('x', 15)
                     )
                     createSampleExpression1(19)
                 )
@@ -1900,7 +1901,7 @@ it("value bindings - recursive", () => {
                 )
                 new Decl.ValueBinding(23, true,
                     new Expr.ValueIdentifier(27,
-                        new Lexer.AlphanumericIdentifierToken('f', 27)
+                        new Token.AlphanumericIdentifierToken('f', 27)
                     )
                     new Expr.Lambda(31,
                         new Expr.Match(34, [
@@ -1910,7 +1911,7 @@ it("value bindings - recursive", () => {
                 )
                 new Decl.ValueBinding(62, true,
                     new Expr.ValueIdentifier(62,
-                        new Lexer.AlphanumericIdentifierToken('g', 62)
+                        new Token.AlphanumericIdentifierToken('g', 62)
                     )
                     new Expr.Lambda(66,
                         new Expr.Match(69, [
@@ -1939,12 +1940,12 @@ it("function value bindings", () => {
             new Decl.FunctionDeclaration(0, [], [
                 new Decl.FunctionValueBinding(4,[
                         [
-                            [new Expr.ValueIdentifier(6, new Lexer.AlphanumericIdentifierToken('x', 6))],
+                            [new Expr.ValueIdentifier(6, new Token.AlphanumericIdentifierToken('x', 6))],
                             undefined,
                             get42(10),
                         ]
                     ],
-                    new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('f', 4)),
+                    new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken('f', 4)),
                 )
             ], 2)
         ], 1)
@@ -1954,12 +1955,12 @@ it("function value bindings", () => {
             new Decl.FunctionDeclaration(0, [], [
                 new Decl.FunctionValueBinding(4,[
                         [
-                            [new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken('x', 9))],
+                            [new Expr.ValueIdentifier(9, new Token.AlphanumericIdentifierToken('x', 9))],
                             undefined,
                             get42(13),
                         ]
                     ],
-                    new Expr.ValueIdentifier(7, prefixWithOp(new Lexer.AlphanumericIdentifierToken('f', 7))),
+                    new Expr.ValueIdentifier(7, prefixWithOp(new Token.AlphanumericIdentifierToken('f', 7))),
                 )
             ], 2)
         ], 1)
@@ -1969,12 +1970,12 @@ it("function value bindings", () => {
             new Decl.FunctionDeclaration(0, [], [
                 new Decl.FunctionValueBinding(4,[
                         [
-                            [new Expr.ValueIdentifier(6, new Lexer.AlphanumericIdentifierToken('x', 6))],
+                            [new Expr.ValueIdentifier(6, new Token.AlphanumericIdentifierToken('x', 6))],
                             new Type.TypeVariable('\'a', true, 10),
                             get42(15),
                         ]
                     ],
-                    new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('f', 4)),
+                    new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken('f', 4)),
                 )
             ], 2)
         ], 1)
@@ -1984,12 +1985,12 @@ it("function value bindings", () => {
             new Decl.FunctionDeclaration(0, [], [
                 new Decl.FunctionValueBinding(4,[
                         [
-                            [new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken('x', 9))],
+                            [new Expr.ValueIdentifier(9, new Token.AlphanumericIdentifierToken('x', 9))],
                             new Type.TypeVariable('\'a', true, 13),
                             get42(18),
                         ]
                     ],
-                    new Expr.ValueIdentifier(7, prefixWithOp(new Lexer.AlphanumericIdentifierToken('f', 7))),
+                    new Expr.ValueIdentifier(7, prefixWithOp(new Token.AlphanumericIdentifierToken('f', 7))),
                 )
             ], 2)
         ], 1)
@@ -1999,7 +2000,7 @@ it("function value bindings", () => {
             new Decl.FunctionDeclaration(0, [], [
                 new Decl.FunctionValueBinding(4,[
                         [
-                            [new Expr.ValueIdentifier(6, new Lexer.AlphanumericIdentifierToken('x', 6))],
+                            [new Expr.ValueIdentifier(6, new Token.AlphanumericIdentifierToken('x', 6))],
                             undefined,
                             get42(10),
                         ], [
@@ -2008,7 +2009,7 @@ it("function value bindings", () => {
                             createSampleExpression1(21)
                         ]
                     ],
-                    new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('f', 4)),
+                    new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken('f', 4)),
                 )
             ], 2)
         ], 1)
@@ -2018,7 +2019,7 @@ it("function value bindings", () => {
             new Decl.FunctionDeclaration(0, [], [
                 new Decl.FunctionValueBinding(4,[
                         [
-                            [new Expr.ValueIdentifier(6, new Lexer.AlphanumericIdentifierToken('x', 6))],
+                            [new Expr.ValueIdentifier(6, new Token.AlphanumericIdentifierToken('x', 6))],
                             undefined,
                             get42(10),
                         ], [
@@ -2027,35 +2028,35 @@ it("function value bindings", () => {
                             createSampleExpression1(21)
                         ]
                     ],
-                    new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('f', 4)),
+                    new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken('f', 4)),
                 ),
                 new Decl.FunctionValueBinding(44,[
                         [
-                            [new Expr.ValueIdentifier(46, new Lexer.AlphanumericIdentifierToken('x', 46))],
+                            [new Expr.ValueIdentifier(46, new Token.AlphanumericIdentifierToken('x', 46))],
                             undefined,
                             createSampleExpression2(50)
                         ]
                     ],
-                    new Expr.ValueIdentifier(44, new Lexer.AlphanumericIdentifierToken('g', 44)),
+                    new Expr.ValueIdentifier(44, new Token.AlphanumericIdentifierToken('g', 44)),
                 )
             ], 2)
         ], 1)
     );
     expect(parse(testcase_infix)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
-            new Decl.InfixDeclaration(0, [new Lexer.AlphanumericIdentifierToken("f", 6)], 0, 2),
+            new Decl.InfixDeclaration(0, [new Token.AlphanumericIdentifierToken("f", 6)], 0, 2),
             new Decl.FunctionDeclaration(9, [], [
                 new Decl.FunctionValueBinding(13, [
                         [
                             [new Expr.Tuple(-1, [
-                                new Expr.ValueIdentifier(13, new Lexer.AlphanumericIdentifierToken('a', 13)),
-                                new Expr.ValueIdentifier(17, new Lexer.AlphanumericIdentifierToken('b', 17))
+                                new Expr.ValueIdentifier(13, new Token.AlphanumericIdentifierToken('a', 13)),
+                                new Expr.ValueIdentifier(17, new Token.AlphanumericIdentifierToken('b', 17))
                             ])],
                             undefined
                             get42(21)
                         ]
                     ],
-                    new Expr.ValueIdentifier(15, new Lexer.AlphanumericIdentifierToken('f', 15))
+                    new Expr.ValueIdentifier(15, new Token.AlphanumericIdentifierToken('f', 15))
                 )
             ], 3)
         ], 1)
@@ -2073,7 +2074,7 @@ it("type bindings", () => {
                 new Decl.TypeBinding(5, [
                         new Type.TypeVariable('\'a', false, 5)
                     ],
-                    new Lexer.AlphanumericIdentifierToken('blub', 8),
+                    new Token.AlphanumericIdentifierToken('blub', 8),
                     new Type.TypeVariable('\'a', true, 15)
                 )
             ], 2)
@@ -2086,7 +2087,7 @@ it("type bindings", () => {
                         new Type.TypeVariable('\'a', false, 6),
                         new Type.TypeVariable('\'b', false, 10)
                     ],
-                    new Lexer.AlphanumericIdentifierToken('blub', 14),
+                    new Token.AlphanumericIdentifierToken('blub', 14),
                     new Type.TypeVariable('\'a', true, 21)
                 )
             ], 2)
@@ -2098,13 +2099,13 @@ it("type bindings", () => {
                 new Decl.TypeBinding(5, [
                         new Type.TypeVariable('\'a', false, 5)
                     ],
-                    new Lexer.AlphanumericIdentifierToken('blub', 8),
+                    new Token.AlphanumericIdentifierToken('blub', 8),
                     new Type.TypeVariable('\'a', true, 15)
                 ),
                 new Decl.TypeBinding(22, [
                         new Type.TypeVariable('\'b', false, 22)
                     ],
-                    new Lexer.AlphanumericIdentifierToken('blob', 25),
+                    new Token.AlphanumericIdentifierToken('blob', 25),
                     new Type.TypeVariable('\'b', true, 32)
                 )
             ], 2)
@@ -2123,9 +2124,9 @@ it("datatype bindings", () => {
                 new Decl.DatatypeBinding(9, [
                         new Type.TypeVariable('\'a', false, 9)
                     ],
-                    new Lexer.AlphanumericIdentifierToken('blub', 12),
+                    new Token.AlphanumericIdentifierToken('blub', 12),
                     [
-                        [new Lexer.AlphanumericIdentifierToken('x', 19), new Type.TypeVariable('\'a', true, 24)]
+                        [new Token.AlphanumericIdentifierToken('x', 19), new Type.TypeVariable('\'a', true, 24)]
                     ]
                 )
             ], undefined, 2)
@@ -2138,9 +2139,9 @@ it("datatype bindings", () => {
                         new Type.TypeVariable('\'a', false, 10),
                         new Type.TypeVariable('\'b', false, 14)
                     ],
-                    new Lexer.AlphanumericIdentifierToken('blub', 18),
+                    new Token.AlphanumericIdentifierToken('blub', 18),
                     [
-                        [new Lexer.AlphanumericIdentifierToken('x', 25), undefined]
+                        [new Token.AlphanumericIdentifierToken('x', 25), undefined]
                     ]
                 )
             ], undefined, 2)
@@ -2152,17 +2153,17 @@ it("datatype bindings", () => {
                 new Decl.DatatypeBinding(9, [
                         new Type.TypeVariable('\'a', false, 9)
                     ],
-                    new Lexer.AlphanumericIdentifierToken('blub', 12),
+                    new Token.AlphanumericIdentifierToken('blub', 12),
                     [
-                        [new Lexer.AlphanumericIdentifierToken('x', 19), new Type.TypeVariable('\'a', true, 24)]
+                        [new Token.AlphanumericIdentifierToken('x', 19), new Type.TypeVariable('\'a', true, 24)]
                     ]
                 ),
                 new Decl.DatatypeBinding(31, [
                         new Type.TypeVariable('\'b', false, 31)
                     ],
-                    new Lexer.AlphanumericIdentifierToken('blob', 34),
+                    new Token.AlphanumericIdentifierToken('blob', 34),
                     [
-                        [new Lexer.AlphanumericIdentifierToken('y', 41), undefined]
+                        [new Token.AlphanumericIdentifierToken('y', 41), undefined]
                     ]
                 )
             ], undefined, 2)
@@ -2182,9 +2183,9 @@ it("constructor bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.DatatypeDeclaration(0, [
                 new Decl.DatatypeBinding(9, [] ,
-                    new Lexer.AlphanumericIdentifierToken('blub', 9),
+                    new Token.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [new Lexer.AlphanumericIdentifierToken('X', 16), undefined]
+                        [new Token.AlphanumericIdentifierToken('X', 16), undefined]
                     ]
                 )
             ], undefined, 2)
@@ -2194,9 +2195,9 @@ it("constructor bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.DatatypeDeclaration(0, [
                 new Decl.DatatypeBinding(9, [] ,
-                    new Lexer.AlphanumericIdentifierToken('blub', 9),
+                    new Token.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 19)), undefined]
+                        [prefixWithOp(new Token.AlphanumericIdentifierToken('X', 19)), undefined]
                     ]
                 )
             ], undefined, 2)
@@ -2206,9 +2207,9 @@ it("constructor bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.DatatypeDeclaration(0, [
                 new Decl.DatatypeBinding(9, [] ,
-                    new Lexer.AlphanumericIdentifierToken('blub', 9),
+                    new Token.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [new Lexer.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', true, 21)]
+                        [new Token.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', true, 21)]
                     ]
                 )
             ], undefined, 2)
@@ -2218,9 +2219,9 @@ it("constructor bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.DatatypeDeclaration(0, [
                 new Decl.DatatypeBinding(9, [] ,
-                    new Lexer.AlphanumericIdentifierToken('blub', 9),
+                    new Token.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', true, 24)]
+                        [prefixWithOp(new Token.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', true, 24)]
                     ]
                 )
             ], undefined, 2)
@@ -2230,10 +2231,10 @@ it("constructor bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.DatatypeDeclaration(0, [
                 new Decl.DatatypeBinding(9, [] ,
-                    new Lexer.AlphanumericIdentifierToken('blub', 9),
+                    new Token.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', true, 24)],
-                        [new Lexer.AlphanumericIdentifierToken('Y', 29), undefined]
+                        [prefixWithOp(new Token.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', true, 24)],
+                        [new Token.AlphanumericIdentifierToken('Y', 29), undefined]
                     ]
                 )
             ], undefined, 2)
@@ -2243,16 +2244,16 @@ it("constructor bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.DatatypeDeclaration(0, [
                 new Decl.DatatypeBinding(9, [] ,
-                    new Lexer.AlphanumericIdentifierToken('blub', 9),
+                    new Token.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', true, 24)],
-                        [new Lexer.AlphanumericIdentifierToken('Y', 29), undefined]
+                        [prefixWithOp(new Token.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', true, 24)],
+                        [new Token.AlphanumericIdentifierToken('Y', 29), undefined]
                     ]
                 )
                 new Decl.DatatypeBinding(35, [] ,
-                    new Lexer.AlphanumericIdentifierToken('blob', 35),
+                    new Token.AlphanumericIdentifierToken('blob', 35),
                     [
-                        [new Lexer.AlphanumericIdentifierToken('Z', 42), undefined]
+                        [new Token.AlphanumericIdentifierToken('Z', 42), undefined]
                     ]
                 )
             ], undefined, 2)
@@ -2274,7 +2275,7 @@ it("exception bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.ExceptionDeclaration(0, [
                 new Decl.DirectExceptionBinding(10,
-                    new Lexer.AlphanumericIdentifierToken('X', 10),
+                    new Token.AlphanumericIdentifierToken('X', 10),
                     undefined
                 )
             ], 2)
@@ -2284,7 +2285,7 @@ it("exception bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.ExceptionDeclaration(0, [
                 new Decl.DirectExceptionBinding(10,
-                    prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 13)),
+                    prefixWithOp(new Token.AlphanumericIdentifierToken('X', 13)),
                     undefined
                 )
             ], 2)
@@ -2294,7 +2295,7 @@ it("exception bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.ExceptionDeclaration(0, [
                 new Decl.DirectExceptionBinding(10,
-                    new Lexer.AlphanumericIdentifierToken('X', 10),
+                    new Token.AlphanumericIdentifierToken('X', 10),
                     new Type.TypeVariable('\'a', true, 15)
                 )
             ], 2)
@@ -2304,7 +2305,7 @@ it("exception bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.ExceptionDeclaration(0, [
                 new Decl.DirectExceptionBinding(10,
-                    prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 13)),
+                    prefixWithOp(new Token.AlphanumericIdentifierToken('X', 13)),
                     new Type.TypeVariable('\'a', true, 18)
                 )
             ], 2)
@@ -2314,8 +2315,8 @@ it("exception bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.ExceptionDeclaration(0, [
                 new Decl.ExceptionAlias(10,
-                    new Lexer.AlphanumericIdentifierToken('X', 10),
-                    new Lexer.AlphanumericIdentifierToken('Y', 14),
+                    new Token.AlphanumericIdentifierToken('X', 10),
+                    new Token.AlphanumericIdentifierToken('Y', 14),
                 )
             ], 2)
         ], 1)
@@ -2324,8 +2325,8 @@ it("exception bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.ExceptionDeclaration(0, [
                 new Decl.ExceptionAlias(10,
-                    prefixWithOp(new Lexer.AlphanumericIdentifierToken('X', 13)),
-                    prefixWithOp(new Lexer.AlphanumericIdentifierToken('Y', 20)),
+                    prefixWithOp(new Token.AlphanumericIdentifierToken('X', 13)),
+                    prefixWithOp(new Token.AlphanumericIdentifierToken('Y', 20)),
                 )
             ], 2)
         ], 1)
@@ -2334,16 +2335,16 @@ it("exception bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.ExceptionDeclaration(0, [
                 new Decl.ExceptionAlias(10,
-                    new Lexer.AlphanumericIdentifierToken('X', 10),
-                    new Lexer.AlphanumericIdentifierToken('Y', 14),
+                    new Token.AlphanumericIdentifierToken('X', 10),
+                    new Token.AlphanumericIdentifierToken('Y', 14),
                 ),
                 new Decl.DirectExceptionBinding(20,
-                    new Lexer.AlphanumericIdentifierToken('Z', 20),
+                    new Token.AlphanumericIdentifierToken('Z', 20),
                     new Type.TypeVariable('\'a', true, 25)
                 ),
                 new Decl.ExceptionAlias(32,
-                    new Lexer.AlphanumericIdentifierToken('W', 32),
-                    new Lexer.AlphanumericIdentifierToken('Y', 36),
+                    new Token.AlphanumericIdentifierToken('W', 32),
+                    new Token.AlphanumericIdentifierToken('Y', 36),
                 )
             ], 2)
         ], 1)
@@ -2368,11 +2369,11 @@ it("atomic pattern - value identifier", () => {
     let atomic_pattern_vid_with_op: string = "val op x = 42;";
     expect(parse(atomic_pattern_vid_no_op)).toEqualWithType(pattern_tester(
         new Expr.ValueIdentifier(4,
-        new Lexer.AlphanumericIdentifierToken("x", 4))
+        new Token.AlphanumericIdentifierToken("x", 4))
     , 8));
     expect(parse(atomic_pattern_vid_with_op)).toEqualWithType(pattern_tester(
         new Expr.ValueIdentifier(4,
-        prefixWithOp(new Lexer.AlphanumericIdentifierToken("x", 7)))
+        prefixWithOp(new Token.AlphanumericIdentifierToken("x", 7)))
     , 11));
 });
 
@@ -2384,12 +2385,12 @@ it("atomic pattern - record", () => {
     let atomic_pattern_record1: string = "val { x = _, y = 10 } = 42;";
     expect(parse(atomic_pattern_record1)).toEqualWithType(pattern_tester(
         new Expr.Record(6, true, [["x", new Expr.Wildcard(10)],
-    ["y", new Expr.Constant(17, new Lexer.NumericToken("10", 17, 10))]])
+    ["y", new Expr.Constant(17, new Token.NumericToken("10", 17, 10))]])
     , 24));
     let atomic_pattern_record2: string = "val { x = _, y = 10, ... } = 42;";
     expect(parse(atomic_pattern_record2)).toEqualWithType(pattern_tester(
         new Expr.Record(6, false, [["x", new Expr.Wildcard(10)],
-    ["y", new Expr.Constant(17, new Lexer.NumericToken("10", 17, 10))]])
+    ["y", new Expr.Constant(17, new Token.NumericToken("10", 17, 10))]])
     , 29));
     let atomic_pattern_record_non_atomic: string = "val { x = _:int } = 42;";
     expect(parse(atomic_pattern_record_non_atomic)).toEqualWithType(pattern_tester(
@@ -2420,7 +2421,7 @@ it("atomic pattern - n-tuple", () => {
         new Expr.Tuple(4, [
             new Expr.Wildcard(5),
             new Expr.Wildcard(7),
-            new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken("x", 9))
+            new Expr.ValueIdentifier(9, new Token.AlphanumericIdentifierToken("x", 9))
         ])
     , 14));
 
@@ -2496,7 +2497,7 @@ it("pattern row - pattern row", () => {
     expect(parse(patrow_label5)).toEqualWithType(pattern_tester(
         new Expr.Record(6, true, [[
             "##",
-            new Expr.ValueIdentifier(11, new Lexer.AlphanumericIdentifierToken("x", 11))
+            new Expr.ValueIdentifier(11, new Token.AlphanumericIdentifierToken("x", 11))
         ]])
     , 17));
 });
@@ -2520,7 +2521,7 @@ it("pattern row - label as variable", () => {
         new Expr.Record(
             5,
             true,
-            [["x", new Expr.LayeredPattern(5, new Lexer.AlphanumericIdentifierToken("x", 5),
+            [["x", new Expr.LayeredPattern(5, new Token.AlphanumericIdentifierToken("x", 5),
                 new Type.CustomType("int", [], 7),
                 new Expr.Wildcard(14)) ]]
         ),
@@ -2542,12 +2543,12 @@ it("pattern - constructed value", () => {
         new Expr.FunctionApplication(4,
             new Expr.ValueIdentifier(
                 4,
-                new Lexer.AlphanumericIdentifierToken("x", 4),
+                new Token.AlphanumericIdentifierToken("x", 4),
             ),
             new Expr.Wildcard(6))
     , 10))
 
-    let x: Lexer.AlphanumericIdentifierToken = new Lexer.AlphanumericIdentifierToken("x", 7);
+    let x: Token.AlphanumericIdentifierToken = new Token.AlphanumericIdentifierToken("x", 7);
     x.opPrefixed = true;
     let pattern_cons_val_with_op: string = "val op x _ = 42;";
     expect(parse(pattern_cons_val_with_op)).toEqualWithType(pattern_tester(
@@ -2562,7 +2563,7 @@ it("pattern - constructed value", () => {
 
 it("pattern - constructed value (infix)", () => {
     let pattern_infix:string = "infix x; val _ x _ = 42;";
-    let pattern: Expr.Expression = new Expr.FunctionApplication(15, new Expr.ValueIdentifier(15, new Lexer.AlphanumericIdentifierToken("x", 15)), new Expr.Tuple(15, [new Expr.Wildcard(13), new Expr.Wildcard(17)]));
+    let pattern: Expr.Expression = new Expr.FunctionApplication(15, new Expr.ValueIdentifier(15, new Token.AlphanumericIdentifierToken("x", 15)), new Expr.Tuple(15, [new Expr.Wildcard(13), new Expr.Wildcard(17)]));
     expect(parse(pattern_infix)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             create_infix(0, 2),
@@ -2578,14 +2579,14 @@ it("pattern - typed", () => {
     let pattern_type:string = "val x : int = 42;";
     expect(parse(pattern_type)).toEqualWithType(pattern_tester(
         new Expr.TypedExpression(4,
-        new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
+        new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken("x", 4)),
         new Type.CustomType('int', [], 8)
     ), 14));
 
     let pattern_func_type:string = "val x : int -> int = 42;";
     expect(parse(pattern_func_type)).toEqualWithType(pattern_tester(
         new Expr.TypedExpression(4,
-        new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
+        new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken("x", 4)),
         new Type.FunctionType(
             new Type.CustomType('int', [], 8),
         new Type.CustomType('int', [], 15), 12))
@@ -2597,7 +2598,7 @@ it("pattern - typed", () => {
             4,
             new Expr.TypedExpression(
                 4,
-                new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
+                new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken("x", 4)),
                 new Type.CustomType('int', [], 6)
             ),
             new Type.CustomType('int', [], 10)
@@ -2619,13 +2620,13 @@ it("pattern - layered", () => {
     expect(parse(layered)).toEqualWithType(pattern_tester(
         new Expr.LayeredPattern(
             4,
-            new Lexer.AlphanumericIdentifierToken("x", 4),
+            new Token.AlphanumericIdentifierToken("x", 4),
             undefined,
             new Expr.Wildcard(9)
         ),
         13
     ));
-    let x: Lexer.AlphanumericIdentifierToken = new Lexer.AlphanumericIdentifierToken("x", 7);
+    let x: Token.AlphanumericIdentifierToken = new Token.AlphanumericIdentifierToken("x", 7);
     x.opPrefixed = true;
     let layered1: string = "val op x as _ = 42;";
     expect(parse(layered1)).toEqualWithType(pattern_tester(
@@ -2641,7 +2642,7 @@ it("pattern - layered", () => {
     expect(parse(layered2)).toEqualWithType(pattern_tester(
         new Expr.LayeredPattern(
             4,
-            new Lexer.AlphanumericIdentifierToken("x", 4),
+            new Token.AlphanumericIdentifierToken("x", 4),
             new Type.CustomType("int", [], 7),
             new Expr.Wildcard(14)
         ),

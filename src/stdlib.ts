@@ -296,7 +296,7 @@ fun Char.isAlpha c  = Char.isLower c orelse Char.isUpper c;
 `;
 
 export function addStdLib(state: State, options: { [name: string]: any }): State {
-    state = Interpreter.interpret(code, state, options)[0];
+    state = Interpreter.interpret(code, state, options)['state'];
     state = addMathLib(state);
     state = addCharLib(state);
     state = addRealLib(state);

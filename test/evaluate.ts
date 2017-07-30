@@ -20,7 +20,12 @@ function run_test(commands): void {
     let exception;
     let value;
     for(let step of commands) {
-        step[1](() => { [state, exception, value] = API.Interpreter.interpret(step[0], state); });
+        step[1](() => {
+            let res = API.interpret(step[0], state);
+            state = res['state'];
+            exception = res['evaluationErrored'];
+            value = res['error'];
+        });
 
         step[2](state, exception, value);
 
@@ -35,7 +40,7 @@ it("basic", () => {
     run_test([
         ['42;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(42));
+            expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(42), 0]);
         }]
     ]);
     run_test([
@@ -44,7 +49,7 @@ it("basic", () => {
         }],
         ['f 10;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(42));
+            expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(42), 0]);
         }]
     ]);
 });
@@ -53,11 +58,11 @@ it("exp", () => {
     run_test([
         ['42; 10.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Real(10));
+            expect(state.getDynamicValue('it')).toEqualWithType([new Val.Real(10), 0]);
         }],
         ['val it = 42;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('it')).toEqualWithType(new Val.Integer(42));
+            expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(42), 0]);
         }]
     ]);
 });

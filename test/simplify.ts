@@ -1,4 +1,5 @@
 const Lexer = require("../src/lexer");
+const Token = require("../src/tokens");
 const Parser = require("../src/parser");
 const Errors = require("../src/errors");
 
@@ -26,7 +27,7 @@ function expression_tester(expression: Expr.Expression) {
                     new Decl.ValueBinding(
                         4,
                         false,
-                        new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken("x", 4)),
+                        new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken("x", 4)),
                         expression
                     )
                 ], 2
@@ -41,25 +42,25 @@ it("exp - tuple to record", () => {
     );
 
     let record: Expr.Record = new Expr.Record(8, true, [
-        ["1", new Expr.Constant(9, new Lexer.NumericToken("11", 9, 11))],
-        ["2", new Expr.Constant(13, new Lexer.NumericToken("12", 13, 12))]
+        ["1", new Expr.Constant(9, new Token.NumericToken("11", 9, 11))],
+        ["2", new Expr.Constant(13, new Token.NumericToken("12", 13, 12))]
     ]);
     expect(parse("val x = (11, 12);").simplify()).toEqualWithType(
         expression_tester(record);
     );
 
     let record1: Expr.Record = new Expr.Record(8, true, [
-        ["1", new Expr.Constant(9, new Lexer.NumericToken("11", 9, 11))],
-        ["2", new Expr.Constant(13, new Lexer.NumericToken("12", 13, 12))],
-        ["3", new Expr.ValueIdentifier(17, new Lexer.AlphanumericIdentifierToken("a", 17))],
-        ["4", new Expr.Constant(20, new Lexer.NumericToken("14", 20, 14))],
+        ["1", new Expr.Constant(9, new Token.NumericToken("11", 9, 11))],
+        ["2", new Expr.Constant(13, new Token.NumericToken("12", 13, 12))],
+        ["3", new Expr.ValueIdentifier(17, new Token.AlphanumericIdentifierToken("a", 17))],
+        ["4", new Expr.Constant(20, new Token.NumericToken("14", 20, 14))],
     ]);
     expect(parse("val x = (11, 12, a, 14);").simplify()).toEqualWithType(
         expression_tester(record1);
     );
 
     expect(parse("val x = (11);").simplify()).toEqualWithType(
-        expression_tester(new Expr.Constant(9, new Lexer.NumericToken("11", 9, 11)))
+        expression_tester(new Expr.Constant(9, new Token.NumericToken("11", 9, 11)))
     )
 });
 
@@ -72,9 +73,9 @@ it("exp", () => {
                 new Expr.Record(
                     12,
                     false,
-                    [["y", new Expr.ValueIdentifier(16, new Lexer.AlphanumericIdentifierToken("fish",16))]]
+                    [["y", new Expr.ValueIdentifier(16, new Token.AlphanumericIdentifierToken("fish",16))]]
                 ),
-                new Expr.ValueIdentifier(30, new Lexer.AlphanumericIdentifierToken("fish", 30))
+                new Expr.ValueIdentifier(30, new Token.AlphanumericIdentifierToken("fish", 30))
             ]]
         )
     );
@@ -91,9 +92,9 @@ it("exp", () => {
                 new Expr.Record(
                     -1,
                     false,
-                    [["y", new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken("__rs",-1))]]
+                    [["y", new Expr.ValueIdentifier(-1, new Token.IdentifierToken("__rs",-1))]]
                 ),
-                new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken("__rs", -1))
+                new Expr.ValueIdentifier(-1, new Token.IdentifierToken("__rs", -1))
             ]]
         )
     );
@@ -107,10 +108,10 @@ it("exp", () => {
             8,
             new Expr.Match(
                 19,
-                [[new Expr.Wildcard(19), new Expr.Constant(24, new Lexer.NumericToken("1", 24, 1))]]
+                [[new Expr.Wildcard(19), new Expr.Constant(24, new Token.NumericToken("1", 24, 1))]]
             )
         ),
-        new Expr.Constant(13, new Lexer.NumericToken("42", 13, 42))
+        new Expr.Constant(13, new Token.NumericToken("42", 13, 42))
     );
     expect(parse("val x = case 42 of _ => 1;").simplify()).toEqualWithType(
         expression_tester(case_stuff)
@@ -119,10 +120,10 @@ it("exp", () => {
     let if_then_else: Expr.Expression = new Expr.FunctionApplication(
         8,
         new Expr.Lambda(8, new Expr.Match(8, [
-            [new Expr.ValueIdentifier(0, new Lexer.IdentifierToken("true", 0)), new Expr.ValueIdentifier(21, new Lexer.AlphanumericIdentifierToken("blah", 21))],
-            [new Expr.ValueIdentifier(0, new Lexer.IdentifierToken("false", 0)), new Expr.ValueIdentifier(31, new Lexer.AlphanumericIdentifierToken("blub", 31))]
+            [new Expr.ValueIdentifier(0, new Token.IdentifierToken("true", 0)), new Expr.ValueIdentifier(21, new Token.AlphanumericIdentifierToken("blah", 21))],
+            [new Expr.ValueIdentifier(0, new Token.IdentifierToken("false", 0)), new Expr.ValueIdentifier(31, new Token.AlphanumericIdentifierToken("blub", 31))]
         ])),
-        new Expr.ValueIdentifier(11, new Lexer.AlphanumericIdentifierToken("fish", 11))
+        new Expr.ValueIdentifier(11, new Token.AlphanumericIdentifierToken("fish", 11))
     )
     expect(parse("val x = if fish then blah else blub;").simplify()).toEqualWithType(
         expression_tester(if_then_else)
@@ -131,10 +132,10 @@ it("exp", () => {
     let orelse: Expr.Expression = new Expr.FunctionApplication(
         8,
         new Expr.Lambda(8, new Expr.Match(8, [
-            [new Expr.ValueIdentifier(0, new Lexer.IdentifierToken("true", 0)), new Expr.ValueIdentifier(0, new Lexer.IdentifierToken("true", 0))],
-            [new Expr.ValueIdentifier(0, new Lexer.IdentifierToken("false", 0)), new Expr.ValueIdentifier(20, new Lexer.AlphanumericIdentifierToken("blub", 20))]
+            [new Expr.ValueIdentifier(0, new Token.IdentifierToken("true", 0)), new Expr.ValueIdentifier(0, new Token.IdentifierToken("true", 0))],
+            [new Expr.ValueIdentifier(0, new Token.IdentifierToken("false", 0)), new Expr.ValueIdentifier(20, new Token.AlphanumericIdentifierToken("blub", 20))]
         ])),
-        new Expr.ValueIdentifier(8, new Lexer.AlphanumericIdentifierToken("fish", 8))
+        new Expr.ValueIdentifier(8, new Token.AlphanumericIdentifierToken("fish", 8))
     )
     expect(parse("val x = fish orelse blub;").simplify()).toEqualWithType(
         expression_tester(orelse)
@@ -143,10 +144,10 @@ it("exp", () => {
     let andalso: Expr.Expression = new Expr.FunctionApplication(
         8,
         new Expr.Lambda(8, new Expr.Match(8, [
-            [new Expr.ValueIdentifier(0, new Lexer.IdentifierToken("true", 0)), new Expr.ValueIdentifier(21, new Lexer.AlphanumericIdentifierToken("blah", 21))],
-            [new Expr.ValueIdentifier(0, new Lexer.IdentifierToken("false", 0)), new Expr.ValueIdentifier(0, new Lexer.IdentifierToken("false", 0))]
+            [new Expr.ValueIdentifier(0, new Token.IdentifierToken("true", 0)), new Expr.ValueIdentifier(21, new Token.AlphanumericIdentifierToken("blah", 21))],
+            [new Expr.ValueIdentifier(0, new Token.IdentifierToken("false", 0)), new Expr.ValueIdentifier(0, new Token.IdentifierToken("false", 0))]
         ])),
-        new Expr.ValueIdentifier(8, new Lexer.AlphanumericIdentifierToken("fish", 8))
+        new Expr.ValueIdentifier(8, new Token.AlphanumericIdentifierToken("fish", 8))
     )
     expect(parse("val x = fish andalso blah;").simplify()).toEqualWithType(
         expression_tester(andalso)
@@ -155,9 +156,9 @@ it("exp", () => {
     let br_semicolon: Expr.Expression = new Expr.FunctionApplication(
         -1,
         new Expr.Lambda(-1, new Expr.Match(-1, [
-            [new Expr.Wildcard(0), new Expr.Constant(11, new Lexer.NumericToken("2", 11, 2))]
+            [new Expr.Wildcard(0), new Expr.Constant(11, new Token.NumericToken("2", 11, 2))]
         ])),
-        new Expr.Constant(9, new Lexer.NumericToken("1", 9 , 1))
+        new Expr.Constant(9, new Token.NumericToken("1", 9 , 1))
     )
     expect(parse("val x = (1;2);").simplify()).toEqualWithType(
         expression_tester(br_semicolon)
@@ -173,16 +174,16 @@ it("exp", () => {
     */
 
     expect(parse("val x = [1];").simplify()).toEqualWithType(
-        expression_tester(new Expr.FunctionApplication(-1, new Expr.ValueIdentifier(0, new Lexer.IdentifierToken("::", 0)), new Expr.Record(-1, true, [
-            ["1", new Expr.Constant(9, new Lexer.NumericToken("1", 9, 1))],
-            ["2", new Expr.ValueIdentifier(0, new Lexer.IdentifierToken("nil",0))],
+        expression_tester(new Expr.FunctionApplication(-1, new Expr.ValueIdentifier(0, new Token.IdentifierToken("::", 0)), new Expr.Record(-1, true, [
+            ["1", new Expr.Constant(9, new Token.NumericToken("1", 9, 1))],
+            ["2", new Expr.ValueIdentifier(0, new Token.IdentifierToken("nil",0))],
         ])))
     )
     //TODO
 });
 
 function get42(pos: Errors.Position): Expr.Expresion {
-    return new Expr.Constant(pos, new Lexer.NumericToken('42', pos, 42));
+    return new Expr.Constant(pos, new Token.NumericToken('42', pos, 42));
 }
 
 function pattern_tester(pattern: Expr.Pattern, pos42: Errors.Position): Decl.Declaration {
@@ -218,7 +219,7 @@ it("patrow", () => {
     expect(parse("val {x  } = 42;").simplify()).toEqualWithType(
         pattern_tester(
             new Expr.Record(5, true, [
-                ["x", new Expr.ValueIdentifier(5, new Lexer.AlphanumericIdentifierToken("x", 5))]
+                ["x", new Expr.ValueIdentifier(5, new Token.AlphanumericIdentifierToken("x", 5))]
             ]),
             12
         )
@@ -233,11 +234,11 @@ it("patrow", () => {
                         "x",
                         new Expr.LayeredPattern(
                             5,
-                            new Lexer.AlphanumericIdentifierToken("x", 5),
+                            new Token.AlphanumericIdentifierToken("x", 5),
                             undefined,
                             new Expr.ValueIdentifier(
                                 10,
-                                new Lexer.AlphanumericIdentifierToken("y", 10)
+                                new Token.AlphanumericIdentifierToken("y", 10)
                             )
                         )
                     ]
@@ -253,7 +254,7 @@ it("patrow", () => {
                     "x",
                     new Expr.TypedExpression(
                         5,
-                        new Expr.ValueIdentifier(5, new Lexer.AlphanumericIdentifierToken("x", 5)),
+                        new Expr.ValueIdentifier(5, new Token.AlphanumericIdentifierToken("x", 5)),
                         new Type.CustomType('int', [], 7)
                     )
                 ]
@@ -287,6 +288,7 @@ it("ty", () => {
                 ["2", new Type.CustomType("int", [], 17)]
             ]),
             true,
+            15
         ))
     )
 
@@ -298,6 +300,7 @@ it("ty", () => {
                 ["3", new Type.CustomType("int", [], 23)]
             ]),
             true,
+            15
         ))
     )
     //TODO
@@ -308,21 +311,21 @@ function fvalbind_helper(expr: Expr.Expression) {
         new Decl.FunctionDeclaration(0, [], [
             new Decl.FunctionValueBinding(4,[
                     [
-                        [new Expr.ValueIdentifier(6, new Lexer.AlphanumericIdentifierToken('x', 6))],
+                        [new Expr.ValueIdentifier(6, new Token.AlphanumericIdentifierToken('x', 6))],
                         undefined,
                         expr
                     ]
                 ],
-                new Expr.ValueIdentifier(4, new Lexer.AlphanumericIdentifierToken('f', 4)),
+                new Expr.ValueIdentifier(4, new Token.AlphanumericIdentifierToken('f', 4)),
             )
         ], 2)
     ], 1)
 }
 
 it("fvalbind", () => {
-    expect(parse("fun f x = 1;").simplify()).toEqualWithType(
-        parse("val rec f = fn fish => case (fish) of (x) => 1;").simplify()
-    )
+    // expect(parse("fun f x = 1;").simplify()).toEqualWithType(
+    //     parse("val rec f = fn fish => case (fish) of (x) => 1;").simplify()
+    // )
     //TODO
 });
 
@@ -332,17 +335,17 @@ it("dec", () => {
              new Decl.ValueDeclaration(0, [new Type.TypeVariable('\'a', false, 4)], [
                  new Decl.ValueBinding(7,
                      true,
-                     new Expr.ValueIdentifier(7, new Lexer.AlphanumericIdentifierToken('f', 7)),
+                     new Expr.ValueIdentifier(7, new Token.AlphanumericIdentifierToken('f', 7)),
                      new Expr.Lambda(-1,
                          new Expr.Match(-1, [
-                             [new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken('__arg0', -1)),
+                             [new Expr.ValueIdentifier(-1, new Token.IdentifierToken('__arg0', -1)),
                                 new Expr.FunctionApplication(-1,
                                     new Expr.Lambda(-1,
                                         new Expr.Match(-1, [
-                                            [new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken('x', 9)), get42(13)]
+                                            [new Expr.ValueIdentifier(9, new Token.AlphanumericIdentifierToken('x', 9)), get42(13)]
                                         ])
                                     )
-                                    new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken('__arg0', -1)),
+                                    new Expr.ValueIdentifier(-1, new Token.IdentifierToken('__arg0', -1)),
                                  )
                              ]
                          ])
@@ -356,17 +359,17 @@ it("dec", () => {
              new Decl.ValueDeclaration(0, [new Type.TypeVariable('\'a', false, 4)], [
                  new Decl.ValueBinding(7,
                      true,
-                     new Expr.ValueIdentifier(7, new Lexer.AlphanumericIdentifierToken('f', 7)),
+                     new Expr.ValueIdentifier(7, new Token.AlphanumericIdentifierToken('f', 7)),
                      new Expr.Lambda(-1,
                          new Expr.Match(-1, [
-                             [new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken('__arg0', -1)),
+                             [new Expr.ValueIdentifier(-1, new Token.IdentifierToken('__arg0', -1)),
                                 new Expr.FunctionApplication(-1,
                                     new Expr.Lambda(-1,
                                         new Expr.Match(-1, [
-                                            [new Expr.ValueIdentifier(9, new Lexer.AlphanumericIdentifierToken('x', 9)), get42(13)]
+                                            [new Expr.ValueIdentifier(9, new Token.AlphanumericIdentifierToken('x', 9)), get42(13)]
                                         ])
                                     )
-                                    new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken('__arg0', -1)),
+                                    new Expr.ValueIdentifier(-1, new Token.IdentifierToken('__arg0', -1)),
                                  )
                              ]
                          ])
@@ -374,17 +377,17 @@ it("dec", () => {
                  ),
                  new Decl.ValueBinding(20,
                      true,
-                     new Expr.ValueIdentifier(20, new Lexer.AlphanumericIdentifierToken('g', 20)),
+                     new Expr.ValueIdentifier(20, new Token.AlphanumericIdentifierToken('g', 20)),
                      new Expr.Lambda(-1,
                          new Expr.Match(-1, [
-                             [new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken('__arg0', -1)),
+                             [new Expr.ValueIdentifier(-1, new Token.IdentifierToken('__arg0', -1)),
                                 new Expr.FunctionApplication(-1,
                                     new Expr.Lambda(-1,
                                         new Expr.Match(-1, [
-                                            [new Expr.ValueIdentifier(22, new Lexer.AlphanumericIdentifierToken('x', 22)), get42(26)]
+                                            [new Expr.ValueIdentifier(22, new Token.AlphanumericIdentifierToken('x', 22)), get42(26)]
                                         ])
                                     )
-                                    new Expr.ValueIdentifier(-1, new Lexer.IdentifierToken('__arg0', -1)),
+                                    new Expr.ValueIdentifier(-1, new Token.IdentifierToken('__arg0', -1)),
                                  )
                              ]
                          ])
@@ -416,8 +419,8 @@ it("program", () => {
             [new Decl.ValueBinding(
                 0,
                 false,
-                new Expr.ValueIdentifier(-1, new Lexer.AlphanumericIdentifierToken("it", -1)),
-                new Expr.Constant(0, new Lexer.NumericToken("1",0,1))
+                new Expr.ValueIdentifier(-1, new Token.AlphanumericIdentifierToken("it", -1)),
+                new Expr.Constant(0, new Token.NumericToken("1",0,1))
             )], 2
         )], 1)
     )

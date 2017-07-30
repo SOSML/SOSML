@@ -211,7 +211,7 @@ export class RecordType extends Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.simplify());
         });
-        return new RecordType(newElements, this.complete);
+        return new RecordType(newElements, this.complete, this.position);
     }
 
     equals(other: any): boolean {
@@ -355,7 +355,7 @@ export class CustomType extends Type {
         for (let i: number = 0; i < this.typeArguments.length; ++i) {
             args.push(this.typeArguments[i].simplify());
         }
-        return new CustomType(this.name, args);
+        return new CustomType(this.name, args, this.position);
     }
 
     equals(other: any): boolean {
@@ -392,9 +392,9 @@ export class TupleType extends Type {
     simplify(): RecordType {
         let entries: Map<string, Type> = new Map<string, Type>();
         for (let i: number = 0; i < this.elements.length; ++i) {
-            entries.set(String(i + 1), this.elements[i].simplify());
+            entries.set('' + (i + 1), this.elements[i].simplify());
         }
-        return new RecordType(entries, true);
+        return new RecordType(entries, true, this.position);
     }
 
     equals(other: any): boolean {
