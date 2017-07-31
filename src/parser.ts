@@ -20,7 +20,7 @@ export class Parser {
     private position: number = 0; // position of the next not yet parsed token
 
     constructor(private tokens: Token[], private state: State, private currentId: number,
-                /* private */ options: { [name: string]: any }) {
+  /* private */ options: { [name: string]: any }) {
         if (this.state === undefined) {
             throw new InternalInterpreterError(-1, 'What are you, stupid? Hurry up and give me ' +
                 'a state already!');
@@ -1459,7 +1459,7 @@ export class Parser {
     }
 }
 
-export function parse(tokens: Token[], state: State, options: {[name:string]: any}): Declaration {
+export function parse(tokens: Token[], state: State, options: {[name: string]: any}): Declaration {
     let p: Parser = new Parser(tokens, state, state.id, options);
     return p.parseDeclaration(true);
 }

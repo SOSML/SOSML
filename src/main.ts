@@ -30,7 +30,7 @@ export function interpret(nextInstruction: string,
 
     let tkn = Lexer.lex(nextInstruction, options);
 
-    if (options['allowLongFunctionNames']) {
+    if (options.allowLongFunctionNames) {
         let newTkn: Token[] = [];
         for (let t of tkn) {
             if (t instanceof LongIdentifierToken) {

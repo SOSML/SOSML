@@ -45,7 +45,7 @@ let initialState: State = new State(
             'string':   new TypeInformation(new CustomType('string'), []),
             'char':     new TypeInformation(new CustomType('char'),  []),
             'list':     new TypeInformation(new CustomType('list', [typeVar]), ['nil', '::']),
-            'array':    new TypeInformation(new CustomType('array', [typeVar]), [])
+            'array':    new TypeInformation(new CustomType('array', [typeVar]), []),
             'ref':      new TypeInformation(new CustomType('ref', [typeVar]), ['ref']),
             'exn':      new TypeInformation(new CustomType('exn'), [])
         },
@@ -60,10 +60,10 @@ let initialState: State = new State(
             '<=':       [bfunctionType(anyType), IdentifierStatus.VALUE_VARIABLE],
             '>':        [bfunctionType(anyType), IdentifierStatus.VALUE_VARIABLE],
             '>=':       [bfunctionType(anyType), IdentifierStatus.VALUE_VARIABLE],
-            '=':        [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(), IdentifierStatus.VALUE_VARIABLE],
-            '<>':       [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(), IdentifierStatus.VALUE_VARIABLE],
-            // ':='
-            // 'ref': new ValueIdentifier(new FunctionType(typeVar, new CustomType('ref', typeVar)),
+            '=':        [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(),
+                IdentifierStatus.VALUE_VARIABLE],
+            '<>':       [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(),
+                IdentifierStatus.VALUE_VARIABLE],
             'true':     [new CustomType('bool'), IdentifierStatus.VALUE_CONSTRUCTOR],
             'false':    [new CustomType('bool'), IdentifierStatus.VALUE_CONSTRUCTOR],
             'nil':      [new CustomType('list', [typeVar]), IdentifierStatus.VALUE_CONSTRUCTOR],
@@ -75,12 +75,21 @@ let initialState: State = new State(
             'Div':      [new CustomType('exn'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
             'Overflow': [new CustomType('exn'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
             '^':        [functionType(stringType), IdentifierStatus.VALUE_VARIABLE],
-            'explode':  [new FunctionType(stringType, new CustomType('list', [charType])).simplify(), IdentifierStatus.VALUE_VARIABLE],
-            'implode':  [new FunctionType(new CustomType('list', [charType]), stringType).simplify(), IdentifierStatus.VALUE_VARIABLE],
+            'explode':  [new FunctionType(stringType, new CustomType('list', [charType])).simplify(),
+                IdentifierStatus.VALUE_VARIABLE],
+            'implode':  [new FunctionType(new CustomType('list', [charType]), stringType).simplify(),
+                IdentifierStatus.VALUE_VARIABLE],
             '~':        [new FunctionType(intRealType, intRealType), IdentifierStatus.VALUE_VARIABLE],
             'abs':      [new FunctionType(intRealType, intRealType), IdentifierStatus.VALUE_VARIABLE],
             'print':    [new FunctionType(typeVar, new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE],
             'printLn':  [new FunctionType(typeVar, new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE],
+            ':=':       [new FunctionType(new TupleType([
+                            new CustomType('ref', [typeVar]),
+                            typeVar]), new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE],
+            'ref':      [new FunctionType(typeVar, new CustomType('ref', [typeVar])),
+                            IdentifierStatus.VALUE_CONSTRUCTOR],
+            '!':        [new FunctionType(new CustomType('ref', [typeVar]), typeVar),
+                            IdentifierStatus.VALUE_VARIABLE]
         }
     ),
     new DynamicBasis(
@@ -441,8 +450,10 @@ let initialState: State = new State(
                 }
                 return [new RecordValue(), false, warns];
             }), IdentifierStatus.VALUE_VARIABLE]
+            // ref, :=, ! are implemented directly within evaluate.
         }
     ),
+    [ 0, {} ],
     {
         'bool':     new TypeNameInformation(0, true),
         'int':      new TypeNameInformation(0, true),

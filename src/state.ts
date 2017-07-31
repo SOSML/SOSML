@@ -101,6 +101,7 @@ export class State {
                 public parent: State | undefined,
                 public staticBasis: StaticBasis,
                 public dynamicBasis: DynamicBasis,
+                public memory: [number, {[address: number]: Value}],
                 private typeNames: TypeNames,
                 private infixEnvironment: InfixEnvironment,
                 private rebindEnvironment: RebindEnvironment,
@@ -128,8 +129,19 @@ export class State {
         let res = new State(<number> newId, this,
             new StaticBasis({}, {}),
             new DynamicBasis({}, {}),
+            [this.memory[0], {}],
             {}, {}, {});
         return res;
+    }
+
+    getCell(address: number): Value | undefined {
+         if (this.memory[1][address] !== undefined) {
+            return this.memory[1][address];
+        } else if (this.parent === undefined) {
+            return undefined;
+        } else {
+            return (<State> this.parent).getCell(address);
+        }
     }
 
     getRebindStatus(name: string, idLimit: number = 0): RebindStatus {

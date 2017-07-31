@@ -92,7 +92,8 @@ function addMathLib(state: State): State {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Math.pow', new FunctionType(new TupleType([realType, realType]), realType).simplify(), IdentifierStatus.VALUE_VARIABLE);
+    state.setStaticValue('Math.pow', new FunctionType(new TupleType([realType, realType]), realType).simplify(),
+        IdentifierStatus.VALUE_VARIABLE);
 
     state.setDynamicValue('Math.ln', new PredefinedFunction('Math.ln', (val: Value) => {
         if (val instanceof Real) {
@@ -295,8 +296,8 @@ fun Char.isDigit c  = #"0" <= c andalso c <= #"9";
 fun Char.isAlpha c  = Char.isLower c orelse Char.isUpper c;
 `;
 
-export function addStdLib(state: State, options: { [name: string]: any }): State {
-    state = Interpreter.interpret(code, state, options)['state'];
+export function addStdLib(state: State, options: {[name: string]: any }): State {
+    state = Interpreter.interpret(code, state, options).state;
     state = addMathLib(state);
     state = addCharLib(state);
     state = addRealLib(state);

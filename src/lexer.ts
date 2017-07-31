@@ -244,7 +244,7 @@ class Lexer {
                                     'unicode escape sequence must have four digits');
                             }
                             let v: number = parseInt(s, 16);
-                            if (v >= 256 && !this.options['allowUnicodeInStrings']) {
+                            if (v >= 256 && !this.options.allowUnicodeInStrings) {
                                 throw new LexerError(this.position - s.length - 1,
                                     'character code ' + s + ' is too large, only 00 to ff is allowed');
                             }
@@ -262,7 +262,7 @@ class Lexer {
                                     'numeric escape sequence must have three digits');
                             }
                             let v: number = parseInt(s, 10);
-                            if (v >= 256 && !this.options['allowUnicodeInStrings']) {
+                            if (v >= 256 && !this.options.allowUnicodeInStrings) {
                                 throw new LexerError(this.position - s.length - 1,
                                     'character code ' + s + ' is too large, only 000 to 255 is allowed');
                             }

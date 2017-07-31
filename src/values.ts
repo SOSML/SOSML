@@ -13,9 +13,29 @@ export abstract class Value {
         throw new InternalInterpreterError(-1,
             'Tried comparing incomparable things.');
     }
+}
 
-    isSimpleValue(): boolean { return true; }
-    isConstructedValue(): boolean { return false; }
+export class ReferenceValue extends Value {
+    constructor(public address: number) {
+        super();
+    }
+
+    equals(other: ReferenceValue) {
+        return this.address === other.address;
+    }
+
+    prettyPrint(state: State|undefined) {
+        if (state === undefined) {
+            return '$' + this.address;
+        } else {
+            if (state.getCell(this.address) !== undefined) {
+                return 'ref ' + (<Value> state.getCell(this.address)).prettyPrint(state);
+            } else {
+                throw new EvaluationError(-1, 'Ouch, you may not de-reference "$'
+                    + this.address + '".');
+            }
+        }
+    }
 }
 
 export class BoolValue extends Value {
@@ -34,8 +54,6 @@ export class BoolValue extends Value {
             return 'false';
         }
     }
-
-    isConstructedValue(): boolean { return true; }
 }
 
 export class CharValue extends Value {
@@ -150,7 +168,6 @@ export class StringValue extends Value {
 
         return ret;
     }
-
 }
 
 export class Word extends Value {
@@ -494,8 +511,6 @@ export class ConstructedValue extends Value {
             return (<ConstructedValue> other).argument === undefined;
         }
     }
-
-    isConstructedValue(): boolean { return true; }
 }
 
 export class ExceptionValue extends Value {
@@ -538,8 +553,6 @@ export class ExceptionValue extends Value {
             return (<ExceptionValue> other).argument === undefined;
         }
     }
-
-    isConstructedValue(): boolean { return true; }
 }
 
 
@@ -558,10 +571,6 @@ export class PredefinedFunction extends Value {
             return false;
         }
         return this.name === (<PredefinedFunction> other).name;
-    }
-
-    isSimpleValue(): boolean {
-        return false;
     }
 }
 
@@ -590,10 +599,6 @@ export class ValueConstructor extends Value {
         }
         return result;
     }
-
-    isSimpleValue(): boolean {
-        return false;
-    }
 }
 
 export class ExceptionConstructor extends Value {
@@ -620,9 +625,5 @@ export class ExceptionConstructor extends Value {
             result += '/' + this.id;
         }
         return result;
-    }
-
-    isSimpleValue(): boolean {
-        return false;
     }
 }
