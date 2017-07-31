@@ -79,6 +79,7 @@ let initialState: State = new State(
             '~':        [new FunctionType(intRealType, intRealType), IdentifierStatus.VALUE_VARIABLE],
             'abs':      [new FunctionType(intRealType, intRealType), IdentifierStatus.VALUE_VARIABLE],
             'print':    [new FunctionType(typeVar, new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE],
+            'printLn':  [new FunctionType(typeVar, new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE],
         }
     ),
     new DynamicBasis(
@@ -426,6 +427,15 @@ let initialState: State = new State(
                     warns.push(new Warning(-1, (<StringValue> val).value));
                 } else {
                     warns.push(new Warning(-1, val.prettyPrint(undefined)));
+                }
+                return [new RecordValue(), false, warns];
+            }), IdentifierStatus.VALUE_VARIABLE],
+            'printLn':        [new PredefinedFunction('printLn', (val: Value) => {
+                let warns: Warning[] = [];
+                if (val instanceof StringValue) {
+                    warns.push(new Warning(-1, (<StringValue> val).value + '\n'));
+                } else {
+                    warns.push(new Warning(-1, val.prettyPrint(undefined) + '\n'));
                 }
                 return [new RecordValue(), false, warns];
             }), IdentifierStatus.VALUE_VARIABLE]
