@@ -45,6 +45,7 @@ let initialState: State = new State(
             'string':   new TypeInformation(new CustomType('string'), []),
             'char':     new TypeInformation(new CustomType('char'),  []),
             'list':     new TypeInformation(new CustomType('list', [typeVar]), ['nil', '::']),
+            'array':    new TypeInformation(new CustomType('array', [typeVar]), [])
             'ref':      new TypeInformation(new CustomType('ref', [typeVar]), ['ref']),
             'exn':      new TypeInformation(new CustomType('exn'), [])
         },
@@ -92,6 +93,7 @@ let initialState: State = new State(
             'string':   [],
             'char':     [],
             'list':     ['nil', '::'],
+            'array':    [],
             'ref':      ['ref'],
             'exn':      [],
         },
@@ -449,6 +451,7 @@ let initialState: State = new State(
         'char':     new TypeNameInformation(0, true),
         'word':     new TypeNameInformation(0, true),
         'list':     new TypeNameInformation(1, true),
+        'array':    new TypeNameInformation(1, true),
         'ref':      new TypeNameInformation(1, true),
         'exn':      new TypeNameInformation(0, false),
     },

@@ -281,78 +281,6 @@ export class DatatypeReplication extends Declaration {
     }
 }
 
-export class AbstypeDeclaration extends Declaration {
-// abstype datatypeBinding <withtype typeBinding> with declaration end
-    constructor(public position: number, public datatypeBinding: DatatypeBinding[],
-                public typeBinding: (TypeBinding[]) | undefined, public declaration: Declaration,
-                public id: number = 0) {
-        super();
-
-        if (this.typeBinding !== undefined) {
-            throw new FeatureDisabledError(this.position, 'Don\'t use "withtype". It is evil.');
-        }
-    }
-
-    simplify(): AbstypeDeclaration {
-        let datbnd: DatatypeBinding[] = [];
-
-        for (let i = 0; i < this.datatypeBinding.length; ++i) {
-            let ntype: [IdentifierToken, Type|undefined][] = [];
-            for (let j = 0; j < this.datatypeBinding[i].type.length; ++j) {
-                if (this.datatypeBinding[i].type[j][1] !== undefined) {
-                    ntype.push([this.datatypeBinding[i].type[j][0],
-                               (<Type> this.datatypeBinding[i].type[j][1]).simplify()]);
-                } else {
-                    ntype.push(this.datatypeBinding[i].type[j]);
-                }
-            }
-            datbnd.push(new DatatypeBinding(this.datatypeBinding[i].position,
-                this.datatypeBinding[i].typeVariableSequence,
-                this.datatypeBinding[i].name,
-                ntype));
-        }
-
-        // TODO Correctly implement the withtype ~> type transition or clean up this mess
-        /* if (this.typeBinding) {
-            return new AbstypeDeclaration(this.position, datbnd, undefined,
-                new SequentialDeclaration(this.position, [
-                    new TypeDeclaration(this.position, this.typeBinding).simplify(),
-                    this.declaration.simplify()]));
-        } else { */
-        return new AbstypeDeclaration(this.position, datbnd, this.typeBinding,
-            this.declaration.simplify(), this.id);
-        /* } */
-
-    }
-
-    elaborate(state: State): [State, Warning[]] {
-        // TODO
-        return [state, []];
-    }
-
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
-        // I'm assuming the withtype is empty
-        let nstate = state.getNestedState(state.id);
-        for (let i = 0; i < this.datatypeBinding.length; ++i) {
-            let res = this.datatypeBinding[i].compute(state);
-
-            for (let j = 0; j < res[0].length; ++j) {
-                nstate.setDynamicValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
-            }
-        }
-        let input = nstate.getNestedState(nstate.id);
-        let res = this.declaration.evaluate(input);
-        // Forget about the datatype
-        input.parent = state;
-        return res;
-    }
-
-    prettyPrint(indentation: number, oneLine: boolean): string {
-        // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
-    }
-}
-
 export class ExceptionDeclaration extends Declaration {
     constructor(public position: number, public bindings: ExceptionBinding[],
                 public id: number = 0) {
@@ -567,6 +495,31 @@ export class FunctionDeclaration extends Declaration {
         return res + ';';
     }
 }
+
+export class AbstypeDeclaration extends Declaration {
+// abstype datatypeBinding <withtype typeBinding> with declaration end
+    constructor(public position: number, public datatypeBinding: DatatypeBinding[],
+                public typeBinding: (TypeBinding[]) | undefined, public declaration: Declaration,
+                public id: number = 0) {
+        super();
+
+        if (this.typeBinding !== undefined) {
+            throw new FeatureDisabledError(this.position, 'Don\'t use "withtype". It is evil.');
+        }
+    }
+
+    simplify(): LocalDeclaration {
+        // TODO
+        throw new InternalInterpreterError(-1,
+            'Right at the moment, "abstype" declaration are not support.');
+    }
+
+    prettyPrint(indentation: number, oneLine: boolean): string {
+        // TODO
+        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+    }
+}
+
 
 export class InfixDeclaration extends Declaration {
 // infix <d> vid1 .. vidn
