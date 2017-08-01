@@ -2,7 +2,7 @@
  * Contains classes to represent SML values, e.g. int, string, functions, …
  */
 
-import { State, IdentifierStatus } from './state';
+import { State, IdentifierStatus, Memory } from './state';
 import { InternalInterpreterError, EvaluationError, Warning } from './errors';
 import { int, char, IdentifierToken } from './tokens';
 import { Match } from './expressions';
@@ -394,7 +394,7 @@ export class FunctionValue extends Value {
 
     // Computes the function on the given argument,
     // returns [result, is thrown]
-    compute(argument: Value): [Value, boolean, Warning[], [number, Value][]] {
+    compute(argument: Value, memory: Memory): [Value, boolean, Warning[], [number, Value][]] {
         // adjoin the bindings in this.state into the state
         let nstate = this.state.getNestedState(this.state.id);
         for (let i = 0; i < this.recursives.length; ++i) {
@@ -408,6 +408,7 @@ export class FunctionValue extends Value {
             }
         }
 
+        nstate.memory = memory;
         return this.body.compute(nstate, argument);
     }
 
