@@ -67,6 +67,31 @@ it("exp", () => {
     ]);
 });
 
+it("local", () => {
+    run_test([
+        ['fun avg (x,y) = (x+y)/2.0; local infix avg in val x = 1.0 avg 1.0 end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('x')).toEqualWithType([new Val.Real(1), 0]);
+        }],
+        ['1.0 avg 1.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(true);
+        }],
+    ]);
+
+    run_test([
+        ['fun avg (x,y) = (x+y)/2.0; infix avg;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['local nonfix avg in val x = avg(1.0, 1.0) end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('x')).toEqualWithType([new Val.Real(1), 0]);
+        }],
+        ['1.0 avg 1.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+    ]);
+});
+
 it("match", () => {
 });
 
