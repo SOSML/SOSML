@@ -238,6 +238,9 @@ export class State {
     }
 
     setCell(address: number, value: Value) {
+        if (address >= this.memory[0]) {
+            this.memory[0] = address + 1;
+        }
         this.memory[1][address] = value;
     }
 

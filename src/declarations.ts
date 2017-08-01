@@ -64,6 +64,9 @@ export class ValueDeclaration extends Declaration {
             }
             let val = this.valueBinding[i].compute(state);
             warns = warns.concat(val[2]);
+            for (let j = 0; j < val[3].length; ++j) {
+                state.setCell(val[3][j][0], val[3][j][1]);
+            }
 
             if (val[1] !== undefined) {
                 return [state, true, val[1], warns];
@@ -628,12 +631,12 @@ export class ValueBinding {
     }
 
     // Returns [ VE | undef, Excep | undef, Warning[]]
-    compute(state: State): [[string, Value][] | undefined, Value | undefined, Warning[]] {
+    compute(state: State): [[string, Value][] | undefined, Value | undefined, Warning[], [number, Value][]] {
         let v = this.expression.compute(state);
         if (v[1]) {
-            return [undefined, v[0], v[2]];
+            return [undefined, v[0], v[2], v[3]];
         }
-        return [this.pattern.matches(state, v[0]), undefined, v[2]];
+        return [this.pattern.matches(state, v[0]), undefined, v[2], v[3]];
     }
 }
 

@@ -6,7 +6,7 @@ import { State, IdentifierStatus } from './state';
 import { InternalInterpreterError, ElaborationError, EvaluationError, ParserError, Warning } from './errors';
 import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
-         ExceptionValue, ConstructedValue } from './values';
+         ExceptionValue, ConstructedValue, ReferenceValue } from './values';
 
 type MemBind = [number, Value][];
 
@@ -273,7 +273,7 @@ export class LocalDeclarationExpression extends Expression {
         if (res[1]) {
             return [<Value> res[2], true, res[3], []];
         }
-        let nres = this.expression.compute(res[0])
+        let nres = this.expression.compute(res[0]);
         return [nres[0], nres[1], res[3].concat(nres[2]), nres[3]];
     }
 }
@@ -322,7 +322,8 @@ export class FunctionApplication extends Expression implements Pattern {
         } else if (v instanceof ConstructedValue) {
             if (this.func instanceof ValueIdentifier
                 && (<ValueIdentifier> this.func).name.getText()
-                === (<ConstructedValue> v).constructorName) {
+                === (<ConstructedValue> v).constructorName
+                && (<ValueIdentifier> this.func).name.getText() !== 'ref') {
                 if ((<ConstructedValue> v).argument !== undefined) {
                     return (<PatternExpression> this.argument).matches(
                         state, <Value> (<ConstructedValue> v).argument);
@@ -333,7 +334,7 @@ export class FunctionApplication extends Expression implements Pattern {
         } else if (v instanceof ExceptionValue) {
             if (this.func instanceof ValueIdentifier
                 && (<ValueIdentifier> this.func).name.getText()
-                    === (<ExceptionValue> v).constructorName) {
+                === (<ExceptionValue> v).constructorName) {
                 if ((<ExceptionValue> v).argument !== undefined) {
                     return (<PatternExpression> this.argument).matches(
                         state, <Value> (<ExceptionValue> v).argument);
@@ -344,6 +345,13 @@ export class FunctionApplication extends Expression implements Pattern {
         } else if (v instanceof PredefinedFunction) {
             throw new EvaluationError(this.position,
                 'You simply cannot match predefined functions.');
+        } else if (v instanceof ReferenceValue) {
+            if (this.func instanceof ValueIdentifier
+                && (<ValueIdentifier> this.func).name.getText() === 'ref') {
+                return (<PatternExpression> this.argument).matches(
+                    state, <Value> state.getCell((<ReferenceValue> v).address));
+            }
+            return undefined;
         }
         throw new EvaluationError(this.position, 'Help me, I\'m broken. ('
             + v.constructor.name + ').' );
@@ -356,7 +364,7 @@ export class FunctionApplication extends Expression implements Pattern {
             f.parameterType.unify(arg, state, this.argument.position);
             return f.returnType;
         } else { */
-            throw new ElaborationError(this.func.position, this.func.prettyPrint() + ' is not a function.');
+        throw new ElaborationError(this.func.position, this.func.prettyPrint() + ' is not a function.');
         // }
     }
 
@@ -371,6 +379,51 @@ export class FunctionApplication extends Expression implements Pattern {
     }
 
     compute(state: State): [Value, boolean, Warning[], MemBind] {
+        if (this.func instanceof ValueIdentifier) {
+            if (this.func.name.getText() === 'ref') {
+                let aVal = this.argument.compute(state);
+                if (aVal[1]) {
+                    return [aVal[0], true, aVal[2], aVal[3]];
+                }
+                for (let i = 0; i < aVal[3].length; ++i) {
+                    state.setCell(aVal[3][i][0], aVal[3][i][1]);
+                }
+                let res: ReferenceValue = state.setNewCell(aVal[0]);
+                aVal[3].push([res.address, aVal[0]]);
+
+                return [res, false, aVal[2], aVal[3]];
+            } else if (this.func.name.getText() === ':=') {
+                let aVal = this.argument.compute(state);
+                if (aVal[1]) {
+                    return [aVal[0], true, aVal[2], aVal[3]];
+                }
+                for (let i = 0; i < aVal[3].length; ++i) {
+                    state.setCell(aVal[3][i][0], aVal[3][i][1]);
+                }
+
+                if ((!(aVal[0] instanceof RecordValue))
+                    || (!((<RecordValue> aVal[0]).getValue('1') instanceof ReferenceValue))) {
+                    throw new EvaluationError(this.position, 'That\'s not how ":=" works.');
+                }
+                aVal[3].push([(<ReferenceValue> (<RecordValue> aVal[0]).getValue('1')).address,
+                    (<RecordValue> aVal[0]).getValue('2')]);
+                return [new RecordValue(), false, aVal[2], aVal[3]];
+            } else if (this.func.name.getText() === '!') {
+                let aVal = this.argument.compute(state);
+                if (aVal[1]) {
+                    return [aVal[0], true, aVal[2], aVal[3]];
+                }
+                for (let i = 0; i < aVal[3].length; ++i) {
+                    state.setCell(aVal[3][i][0], aVal[3][i][1]);
+                }
+                if (!(aVal[0] instanceof ReferenceValue)) {
+                    throw new EvaluationError(this.position,
+                        'You cannot dereference "' + this.argument.prettyPrint() + '".');
+                }
+                return [<Value> state.getCell((<ReferenceValue> aVal[0]).address), false, aVal[2], aVal[3]];
+            }
+        }
+
         let funcVal = this.func.compute(state);
         if (funcVal[1]) {
             // computing the function failed
@@ -404,7 +457,7 @@ export class FunctionApplication extends Expression implements Pattern {
 }
 
 export class HandleException extends Expression {
-// expression handle match
+    // expression handle match
     constructor(public position: number, public expression: Expression, public match: Match) {
         super();
     }
@@ -444,7 +497,7 @@ export class HandleException extends Expression {
 }
 
 export class RaiseException extends Expression {
-// raise expression
+    // raise expression
     constructor(public position: number, public expression: Expression) { super(); }
 
     simplify(): RaiseException {
@@ -472,7 +525,7 @@ export class RaiseException extends Expression {
 }
 
 export class Lambda extends Expression {
-// fn match
+    // fn match
     constructor(public position: number, public match: Match) { super(); }
 
     simplify(): Lambda {
@@ -497,7 +550,7 @@ export class Lambda extends Expression {
 // Matches
 
 export class Match {
-// pat => exp or pat => exp | match
+    // pat => exp or pat => exp | match
     constructor(public position: number, public matches: [PatternExpression, Expression][]) { }
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
@@ -570,7 +623,7 @@ export class Wildcard extends Expression implements Pattern {
 }
 
 export class LayeredPattern extends Expression implements Pattern {
-// <op> identifier <:type> as pattern
+    // <op> identifier <:type> as pattern
     constructor(public position: number, public identifier: IdentifierToken,
                 public typeAnnotation: Type | undefined,
                 public pattern: Expression|PatternExpression) { super(); }
@@ -680,8 +733,8 @@ export class InfixExpression extends Expression implements Pattern {
             let left = exps[ops[i][1]];
             let right = exps[ops[i][1] + 1];
             let com = new FunctionApplication(ops[i][0].position,
-                                              new ValueIdentifier(ops[i][0].position, ops[i][0]),
-                                              new Tuple(ops[i][0].position, [left, right]));
+                new ValueIdentifier(ops[i][0].position, ops[i][0]),
+                new Tuple(ops[i][0].position, [left, right]));
             let npos = poses[ops[i][1]];
             for (let j of poses[ops[i][1] + 1]) {
                 npos.push(j);
@@ -701,7 +754,7 @@ let nilConstant = new ValueIdentifier(0, new IdentifierToken('nil', 0));
 let consConstant = new ValueIdentifier(0, new IdentifierToken('::', 0));
 
 export class Conjunction extends Expression {
-// leftOperand andalso rightOperand
+    // leftOperand andalso rightOperand
     constructor(public position: number, public leftOperand: Expression, public rightOperand: Expression) { super(); }
 
     simplify(): FunctionApplication {
@@ -711,12 +764,12 @@ export class Conjunction extends Expression {
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         return '( ' + this.leftOperand.prettyPrint(indentation, oneLine) + ' andalso '
-        + this.rightOperand.prettyPrint(indentation, oneLine) + ' )';
+            + this.rightOperand.prettyPrint(indentation, oneLine) + ' )';
     }
 }
 
 export class Disjunction extends Expression {
-// leftOperand orelse rightOperand
+    // leftOperand orelse rightOperand
     constructor(public position: number, public leftOperand: Expression, public rightOperand: Expression) { super(); }
 
     simplify(): FunctionApplication {
@@ -725,12 +778,12 @@ export class Disjunction extends Expression {
 
     prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
         return '( ' + this.leftOperand.prettyPrint(indentation, oneLine) + ' orelse '
-        + this.rightOperand.prettyPrint(indentation, oneLine) + ' )';
+            + this.rightOperand.prettyPrint(indentation, oneLine) + ' )';
     }
 }
 
 export class Tuple extends Expression implements Pattern {
-// (exp1, ..., expn), n > 1
+    // (exp1, ..., expn), n > 1
     constructor(public position: number, public expressions: Expression[]) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -758,7 +811,7 @@ export class Tuple extends Expression implements Pattern {
 }
 
 export class List extends Expression implements Pattern {
-// [exp1, ..., expn]
+    // [exp1, ..., expn]
     constructor(public position: number, public expressions: Expression[]) { super(); }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -787,7 +840,7 @@ export class List extends Expression implements Pattern {
 }
 
 export class Sequence extends Expression {
-// (exp1; ...; expn), n >= 2
+    // (exp1; ...; expn), n >= 2
     constructor(public position: number, public expressions: Expression[]) { super(); }
 
     simplify(): FunctionApplication {
@@ -814,7 +867,7 @@ export class Sequence extends Expression {
 }
 
 export class RecordSelector extends Expression {
-// #label record
+    // #label record
     constructor(public position: number, public label: IdentifierToken | NumericToken) { super(); }
 
     simplify(): Lambda {
@@ -829,7 +882,7 @@ export class RecordSelector extends Expression {
 }
 
 export class CaseAnalysis extends Expression {
-// case expression of match
+    // case expression of match
     constructor(public position: number, public expression: Expression, public match: Match) { super(); }
 
     simplify(): FunctionApplication {
@@ -846,13 +899,13 @@ export class CaseAnalysis extends Expression {
 }
 
 export class Conditional extends Expression {
-// if condition then consequence else alternative
+    // if condition then consequence else alternative
     constructor(public position: number, public condition: Expression, public consequence: Expression,
                 public alternative: Expression) { super(); }
 
     simplify(): FunctionApplication {
         let match: Match = new Match(this.position, [[trueConstant, this.consequence],
-                                                    [falseConstant, this.alternative]]);
+            [falseConstant, this.alternative]]);
         return new CaseAnalysis(this.position, this.condition, match).simplify();
     }
 
@@ -865,7 +918,7 @@ export class Conditional extends Expression {
 }
 
 export class While extends Expression {
-// while exp do exp
+    // while exp do exp
     constructor(public position: number, public condition: Expression,
                 public body: Expression) {
         super();
