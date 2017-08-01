@@ -1,5 +1,5 @@
 import { Type } from './types';
-import { Value } from './values';
+import { Value, ReferenceValue } from './values';
 import { Token, LongIdentifierToken } from './tokens';
 import { InternalInterpreterError, EvaluationError } from './errors';
 
@@ -95,13 +95,15 @@ export class StaticBasis {
     }
 }
 
+export type Memory = [number, {[address: number]: Value}];
+
 export class State {
     // The states' ids are non-decreasing; a single declaration uses the same ids
     constructor(public id: number,
                 public parent: State | undefined,
                 public staticBasis: StaticBasis,
                 public dynamicBasis: DynamicBasis,
-                public memory: [number, {[address: number]: Value}],
+                public memory: Memory,
                 private typeNames: TypeNames,
                 private infixEnvironment: InfixEnvironment,
                 private rebindEnvironment: RebindEnvironment,
@@ -233,6 +235,15 @@ export class State {
         } else {
             this.parent.incrementValueIdentifierId(name, atId);
         }
+    }
+
+    setCell(address: number, value: Value) {
+        this.memory[1][address] = value;
+    }
+
+    setNewCell(value: Value): ReferenceValue {
+        this.memory[1][this.memory[0]] = value;
+        return new ReferenceValue(this.memory[0]++);
     }
 
     setStaticValue(name: string, type: Type, is: IdentifierStatus, atId: number|undefined = undefined) {

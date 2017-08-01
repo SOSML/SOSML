@@ -8,6 +8,8 @@ import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
          ExceptionValue, ConstructedValue } from './values';
 
+type MemBind = [number, Value][];
+
 export abstract class Expression {
     position: number;
 
@@ -16,7 +18,7 @@ export abstract class Expression {
     }
 
     // Computes the value of an expression, returns [computed value, is thrown exception]
-    compute(state: State): [Value, boolean, Warning[]] {
+    compute(state: State): [Value, boolean, Warning[], MemBind] {
         throw new InternalInterpreterError(this.position, 'Called "getValue" on a derived form.');
     }
 
@@ -74,17 +76,18 @@ export class Constant extends Expression implements Pattern {
         return this.token.getText();
     }
 
-    compute(state: State): [Value, boolean, Warning[]] {
+    compute(state: State): [Value, boolean, Warning[], MemBind] {
         if (this.token instanceof IntegerConstantToken || this.token instanceof NumericToken) {
-            return [new Integer((<IntegerConstantToken | NumericToken> this.token).value), false, []];
+            return [new Integer((<IntegerConstantToken | NumericToken> this.token).value),
+                false, [], []];
         } else if (this.token instanceof RealConstantToken) {
-            return [new Real((<RealConstantToken> this.token).value), false, []];
+            return [new Real((<RealConstantToken> this.token).value), false, [], []];
         } else if (this.token instanceof WordConstantToken) {
-            return [new Word((<WordConstantToken> this.token).value), false, []];
+            return [new Word((<WordConstantToken> this.token).value), false, [], []];
         } else if (this.token instanceof CharacterConstantToken) {
-            return [new CharValue((<CharacterConstantToken> this.token).value), false, []];
+            return [new CharValue((<CharacterConstantToken> this.token).value), false, [], []];
         } else if (this.token instanceof StringConstantToken) {
-            return [new StringValue((<StringConstantToken> this.token).value), false, []];
+            return [new StringValue((<StringConstantToken> this.token).value), false, [], []];
         }
         throw new EvaluationError(this.token.position, 'You sure that this is a constant?');
     }
@@ -117,7 +120,7 @@ export class ValueIdentifier extends Expression implements Pattern {
         throw new InternalInterpreterError(this.position, 'nyi\'an :3');
     }
 
-    compute(state: State): [Value, boolean, Warning[]] {
+    compute(state: State): [Value, boolean, Warning[], MemBind] {
         let res = state.getDynamicValue(this.name.getText());
         if (res === undefined) {
             throw new EvaluationError(this.position, 'Unbound value identifier "'
@@ -126,14 +129,14 @@ export class ValueIdentifier extends Expression implements Pattern {
 
         if (res[1] === IdentifierStatus.VALUE_CONSTRUCTOR
             && (<ValueConstructor> res[0]).numArgs === 0) {
-            return [(<ValueConstructor> res[0]).construct(), false, []];
+            return [(<ValueConstructor> res[0]).construct(), false, [], []];
         }
         if (res[1] === IdentifierStatus.EXCEPTION_CONSTRUCTOR
             && (<ExceptionConstructor> res[0]).numArgs === 0) {
-            return [(<ExceptionConstructor> res[0]).construct(), false, []];
+            return [(<ExceptionConstructor> res[0]).construct(), false, [], []];
         }
 
-        return [res[0], false, []];
+        return [res[0], false, [], []];
     }
 }
 
@@ -222,19 +225,24 @@ export class Record extends Expression implements Pattern {
         return result + '}';
     }
 
-    compute(state: State): [Value, boolean, Warning[]] {
+    compute(state: State): [Value, boolean, Warning[], MemBind] {
         let nentr = new Map<string, Value>();
         let warns: Warning[] = [];
+        let membnd: MemBind = [];
         for (let i = 0; i < this.entries.length; ++i) {
             let res = this.entries[i][1].compute(state);
             warns = warns.concat(res[2]);
+            membnd = membnd.concat(res[3]);
+            for (let j = 0; j < res[3].length; ++j) {
+                state.setCell(res[3][j][0], res[3][j][1]);
+            }
             if (res[1]) {
                 // Computing some expression failed
-                return [res[0], true, warns];
+                return [res[0], true, warns, membnd];
             }
             nentr = nentr.set(this.entries[i][0], res[0]);
         }
-        return [new RecordValue(nentr), false, warns];
+        return [new RecordValue(nentr), false, warns, membnd];
     }
 }
 
@@ -259,14 +267,14 @@ export class LocalDeclarationExpression extends Expression {
         throw new InternalInterpreterError(this.position, 'nyi\'an :3');
     }
 
-    compute(state: State): [Value, boolean, Warning[]] {
+    compute(state: State): [Value, boolean, Warning[], MemBind] {
         let nstate = state.getNestedState(state.id);
         let res = this.declaration.evaluate(nstate);
         if (res[1]) {
-            return [<Value> res[2], true, res[3]];
+            return [<Value> res[2], true, res[3], []];
         }
-        let nres = this.expression.compute(res[0]);
-        return [nres[0], nres[1], res[3].concat(nres[2])];
+        let nres = this.expression.compute(res[0])
+        return [nres[0], nres[1], res[3].concat(nres[2]), nres[3]];
     }
 }
 
@@ -295,7 +303,7 @@ export class TypedExpression extends Expression implements Pattern {
         return res + ' )';
     }
 
-    compute(state: State): [Value, boolean, Warning[]] {
+    compute(state: State): [Value, boolean, Warning[], MemBind] {
         return this.expression.compute(state);
     }
 }
@@ -362,27 +370,33 @@ export class FunctionApplication extends Expression implements Pattern {
         return res + ' )';
     }
 
-    compute(state: State): [Value, boolean, Warning[]] {
+    compute(state: State): [Value, boolean, Warning[], MemBind] {
         let funcVal = this.func.compute(state);
         if (funcVal[1]) {
             // computing the function failed
             return funcVal;
         }
+
+        for (let i = 0; i < funcVal[3].length; ++i) {
+            state.setCell(funcVal[3][i][0], funcVal[3][i][1]);
+        }
+
         let argVal = this.argument.compute(state);
         let warns = funcVal[2].concat(argVal[2]);
+        let membnd = funcVal[3].concat(argVal[3]);
         if (argVal[1]) {
-            return [argVal[0], true, warns];
+            return [argVal[0], true, warns, membnd];
         }
         if (funcVal[0] instanceof FunctionValue) {
             let res = (<FunctionValue> funcVal[0]).compute(argVal[0]);
-            return [res[0], res[1], warns.concat(res[2])];
+            return [res[0], res[1], warns.concat(res[2]), membnd.concat(res[3])];
         } else if (funcVal[0] instanceof ValueConstructor) {
-            return [(<ValueConstructor> funcVal[0]).construct(argVal[0]), false, warns];
+            return [(<ValueConstructor> funcVal[0]).construct(argVal[0]), false, warns, membnd];
         } else if (funcVal[0] instanceof ExceptionConstructor) {
-            return [(<ExceptionConstructor> funcVal[0]).construct(argVal[0]), false, warns];
+            return [(<ExceptionConstructor> funcVal[0]).construct(argVal[0]), false, warns, membnd];
         } else if (funcVal[0] instanceof PredefinedFunction) {
             let res = (<PredefinedFunction> funcVal[0]).apply(argVal[0]);
-            return [res[0], res[1], warns.concat(res[2])];
+            return [res[0], res[1], warns.concat(res[2]), membnd];
         }
         throw new EvaluationError(this.position, 'Cannot evaluate the function "'
             + this.func.prettyPrint() + '" (' + funcVal[0].constructor.name + ').');
@@ -410,15 +424,20 @@ export class HandleException extends Expression {
         throw new InternalInterpreterError(this.position, 'nyi\'an :3');
     }
 
-    compute(state: State): [Value, boolean, Warning[]] {
+    compute(state: State): [Value, boolean, Warning[], MemBind] {
         let res = this.expression.compute(state);
         if (res[1]) {
+            for (let i = 0; i < res[3].length; ++i) {
+                state.setCell(res[3][i][0], res[3][i][1]);
+            }
+
             let next = this.match.compute(state, res[0]);
             if (!next[1] || !next[0].equals(new ExceptionValue('Match', undefined, 0))) {
                 // Exception got handled
-                return [next[0], next[1], res[2].concat(next[2])];
+                return [next[0], next[1], res[2].concat(next[2]), res[3].concat(next[3])];
             }
             res[2] = res[2].concat(next[2]);
+            res[3] = res[3].concat(next[3]);
         }
         return res;
     }
@@ -441,14 +460,14 @@ export class RaiseException extends Expression {
         throw new InternalInterpreterError(this.position, 'nyi\'an :3');
     }
 
-    compute(state: State): [Value, boolean, Warning[]] {
+    compute(state: State): [Value, boolean, Warning[], MemBind] {
         let res = this.expression.compute(state);
         if (!(res[0] instanceof ExceptionValue)) {
             throw new EvaluationError(this.position,
                 'Cannot "raise" value of type "' + res.constructor.name
                 + '" (type must be "exn").');
         }
-        return [res[0], true, res[2]];
+        return [res[0], true, res[2], res[3]];
     }
 }
 
@@ -470,8 +489,8 @@ export class Lambda extends Expression {
         throw new InternalInterpreterError(this.position, 'nyi\'an :3');
     }
 
-    compute(state: State): [Value, boolean, Warning[]] {
-        return [new FunctionValue(state, [], this.match), false, []];
+    compute(state: State): [Value, boolean, Warning[], MemBind] {
+        return [new FunctionValue(state, [], this.match), false, [], []];
     }
 }
 
@@ -493,7 +512,7 @@ export class Match {
         return res;
     }
 
-    compute(state: State, value: Value): [Value, boolean, Warning[]] {
+    compute(state: State, value: Value): [Value, boolean, Warning[], MemBind] {
         for (let i = 0; i < this.matches.length; ++i) {
             let nstate = state.getNestedState(state.id);
 
@@ -505,7 +524,7 @@ export class Match {
                 return this.matches[i][1].compute(nstate);
             }
         }
-        return [new ExceptionValue('Match', undefined, 0), true, []];
+        return [new ExceptionValue('Match', undefined, 0), true, [], []];
     }
 
     getType(state: State): Type[] {
@@ -532,7 +551,7 @@ export class Wildcard extends Expression implements Pattern {
         return [new TypeVariable('\'\'__wc'), new TypeVariable('\'__wc')];
     }
 
-    compute(state: State): [Value, boolean, Warning[]] {
+    compute(state: State): [Value, boolean, Warning[], MemBind] {
         throw new InternalInterpreterError(this.position,
             'Wildcards are far too wild to have a value.');
     }
@@ -556,7 +575,7 @@ export class LayeredPattern extends Expression implements Pattern {
                 public typeAnnotation: Type | undefined,
                 public pattern: Expression|PatternExpression) { super(); }
 
-    compute(state: State): [Value, boolean, Warning[]] {
+    compute(state: State): [Value, boolean, Warning[], MemBind] {
         throw new InternalInterpreterError(this.position,
             'Layered patterns are far too layered to have a value.');
     }

@@ -482,18 +482,6 @@ export class FunctionDeclaration extends Declaration {
         }
         return new ValueDeclaration(this.position, this.typeVariableSequence, valbnd, this.id);
     }
-
-    prettyPrint(indentation: number, oneLine: boolean): string {
-        // TODO
-        let res = 'fun <stuff>';
-        for (let i = 0; i < this.functionValueBinding.length; ++i) {
-            if (i > 0) {
-                res += ' and';
-            }
-            res += ' ' + this.functionValueBinding[i].prettyPrint(indentation, oneLine);
-        }
-        return res + ';';
-    }
 }
 
 export class AbstypeDeclaration extends Declaration {
@@ -509,14 +497,19 @@ export class AbstypeDeclaration extends Declaration {
     }
 
     simplify(): LocalDeclaration {
-        // TODO
-        throw new InternalInterpreterError(-1,
-            'Right at the moment, "abstype" declaration are not support.');
-    }
-
-    prettyPrint(indentation: number, oneLine: boolean): string {
-        // TODO
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        let dat = new DatatypeDeclaration(this.position, this.datatypeBinding, undefined, this.id);
+        let tpbnd: TypeBinding[] = [];
+        for (let i = 0; i < this.datatypeBinding.length; ++i) {
+            tpbnd.push(new TypeBinding(this.datatypeBinding[i].position,
+                this.datatypeBinding[i].typeVariableSequence,
+                this.datatypeBinding[i].name,
+                new CustomType(this.datatypeBinding[i].name.getText(),
+                    this.datatypeBinding[i].typeVariableSequence)));
+        }
+        let tp = new TypeDeclaration(this.position, tpbnd, this.id);
+        return new LocalDeclaration(this.position,
+            dat, new SequentialDeclaration(this.position, [tp, this.declaration],
+                this.id), this.id);
     }
 }
 

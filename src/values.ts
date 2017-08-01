@@ -394,7 +394,7 @@ export class FunctionValue extends Value {
 
     // Computes the function on the given argument,
     // returns [result, is thrown]
-    compute(argument: Value): [Value, boolean, Warning[]] {
+    compute(argument: Value): [Value, boolean, Warning[], [number, Value][]] {
         // adjoin the bindings in this.state into the state
         let nstate = this.state.getNestedState(this.state.id);
         for (let i = 0; i < this.recursives.length; ++i) {
