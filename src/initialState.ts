@@ -489,6 +489,9 @@ let initialState: State = new State(
     },
     {
         '=':        RebindStatus.Never,
+        ':=':       RebindStatus.Never,
+        '!':        RebindStatus.Never,
+        'ref':      RebindStatus.Never,
 
         'true':     RebindStatus.Never,
         'false':    RebindStatus.Never,
