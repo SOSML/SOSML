@@ -1047,6 +1047,11 @@ export class Parser {
                 throw new ParserError('Different number of arguments.', curTok.position);
             }
 
+            if (argcnt === 0) {
+                throw new ParserError('Functions need arguments to survive. Rely on "val" instead.',
+                    curTok.position);
+            }
+
             if (name === undefined) {
                 name = nm;
             } else if (nm.name.getText() !== name.name.getText()) {
