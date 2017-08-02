@@ -4,7 +4,7 @@ SOSML is an online interpreter for the functional programming language Standard 
 It is to be used as a learning tool in a freshman class at Saarland University; you can try it out at https://sosml.github.io.
 
 ## Features
-Correctly lexing, parsing and interpreting any functional SML core language program, i.e. a program that may contain the following constructs:
+Correctly lexing, parsing and interpreting any SML core language program, i.e. a program that may contain the following constructs:
 
 * Supported declarations
   * [x] value declarations (`val x = 42;`)
@@ -12,7 +12,8 @@ Correctly lexing, parsing and interpreting any functional SML core language prog
   * [x] type alias declarations (`type t = 'a -> (int * int)`)
   * [x] datatype declarations (`datatype tree = T of tree list;`)
     * `withtype` will not be supported.
-  * [ ] abstract datatype declarations (`abstype tree = T of tree list with val empty = T [];`)
+  * [x] abstract datatype declarations (`abstype tree = T of tree list with val empty = T [];`)
+        Note that `abstype` is implemented as a derived form as proposed by Successor ML.
     * `withtype` will not be supported.
   * [x] exception declarations (`exception E of int;`)
   * [x] local declarations (`local val x = 42; in val y = x + 2; end;`)
@@ -32,7 +33,7 @@ Correctly lexing, parsing and interpreting any functional SML core language prog
   * [x] abstractions (`fn 0 => 0 | _ => 1`)
   * [x] `while` loops
   * [x] `print` (though you may not want to use it, as it is rather buggy)
-  * [ ] `ref` and `:=`
+  * [x] `ref`, `!`, and `:=`
   * [ ] anything structure related
   * [ ] anything signature related
   * [ ] anything functor related
