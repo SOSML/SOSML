@@ -512,7 +512,7 @@ export class AbstypeDeclaration extends Declaration {
         let tp = new TypeDeclaration(this.position, tpbnd, this.id);
         return new LocalDeclaration(this.position,
             dat, new SequentialDeclaration(this.position, [tp, this.declaration],
-                this.id), this.id);
+                this.id), this.id).simplify();
     }
 }
 
