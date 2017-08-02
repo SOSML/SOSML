@@ -351,7 +351,7 @@ export class LocalDeclaration extends Declaration {
         let nres = this.body.evaluate(nstate);
 
         // Forget all local definitions
-        res[0].parent = state;
+        nstate.parent = state;
         nres[3] = res[3].concat(nres[3]);
         return nres;
     }

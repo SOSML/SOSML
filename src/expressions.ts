@@ -7,6 +7,7 @@ import { InternalInterpreterError, ElaborationError, EvaluationError, ParserErro
 import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
          ExceptionValue, ConstructedValue, ReferenceValue } from './values';
+import { getInitialState } from './initialState.ts';
 
 type MemBind = [number, Value][];
 
@@ -554,7 +555,23 @@ export class Lambda extends Expression {
     }
 
     compute(state: State): [Value, boolean, Warning[], MemBind] {
-        return [new FunctionValue(state, [], this.match), false, [], []];
+        // We need to ensure that the function value receives a capture
+        // of the current state, and that that capture stays that way
+        // (Local declarations may change the past, so we must record that, too.
+        let nstate = getInitialState().getNestedState(state.id);
+
+        state.getDefinedIdentifiers().forEach((val: string) => {
+            let value = state.getDynamicValue(val);
+            let type = state.getDynamicType(val);
+            if (value !== undefined) {
+                nstate.setDynamicValue(val, value[0], value[1]);
+            }
+            if (type !== undefined) {
+                nstate.setDynamicType(val, type);
+            }
+        });
+
+        return [new FunctionValue(nstate, [], this.match), false, [], []];
     }
 }
 
