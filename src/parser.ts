@@ -540,6 +540,12 @@ export class Parser {
                 }
 
                 let tp: Type|undefined = undefined;
+
+                if (newTok instanceof NumericToken) {
+                    throw new ParserError('You cannot assign to "' + newTok.getText() + '".',
+                        newTok.position);
+                }
+
                 let pat: PatternExpression = new ValueIdentifier(newTok.position, newTok);
                 if (nextTok.text === ':') {
                     ++this.position;
@@ -551,6 +557,8 @@ export class Parser {
                     pat = new LayeredPattern(pat.position, <IdentifierToken> (<ValueIdentifier> pat).name,
                         tp, this.parsePattern());
                     nextTok = this.currentToken();
+                } else if (tp !== undefined) {
+                    pat = new TypedExpression(pat.position, pat, tp);
                 }
                 res.push([newTok.getText(), pat]);
                 continue;
@@ -1037,6 +1045,11 @@ export class Parser {
                 argcnt = args.length;
             } else if (argcnt !== 2 && argcnt !== 3 && argcnt !== args.length) {
                 throw new ParserError('Different number of arguments.', curTok.position);
+            }
+
+            if (argcnt === 0) {
+                throw new ParserError('Functions need arguments to survive. Rely on "val" instead.',
+                    curTok.position);
             }
 
             if (name === undefined) {
