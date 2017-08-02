@@ -137,7 +137,7 @@ export class State {
     }
 
     getCell(address: number): Value | undefined {
-         if (this.memory[1][address] !== undefined) {
+        if (this.memory[1][address] !== undefined) {
             return this.memory[1][address];
         } else if (this.parent === undefined) {
             return undefined;

@@ -444,7 +444,15 @@ export class FunctionApplication extends Expression implements Pattern {
             for (let i = 0; i < argVal[3].length; ++i) {
                 state.setCell(argVal[3][i][0], argVal[3][i][1]);
             }
-            let res = (<FunctionValue> funcVal[0]).compute(argVal[0], state.memory);
+            let nmem: MemBind = [];
+
+            for (let i = 0; i < state.memory[0]; ++i) {
+                if (state.getCell(i) !== undefined) {
+                    nmem.push([i, <Value> state.getCell(i)]);
+                }
+            }
+
+            let res = (<FunctionValue> funcVal[0]).compute(argVal[0], nmem);
             return [res[0], res[1], warns.concat(res[2]), membnd.concat(res[3])];
         } else if (funcVal[0] instanceof ValueConstructor) {
             return [(<ValueConstructor> funcVal[0]).construct(argVal[0]), false, warns, membnd];
