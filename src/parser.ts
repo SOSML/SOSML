@@ -551,6 +551,8 @@ export class Parser {
                     pat = new LayeredPattern(pat.position, <IdentifierToken> (<ValueIdentifier> pat).name,
                         tp, this.parsePattern());
                     nextTok = this.currentToken();
+                } else if (tp !== undefined) {
+                    pat = new TypedExpression(pat.position, pat, tp);
                 }
                 res.push([newTok.getText(), pat]);
                 continue;
