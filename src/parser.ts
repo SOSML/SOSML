@@ -540,6 +540,12 @@ export class Parser {
                 }
 
                 let tp: Type|undefined = undefined;
+
+                if (newTok instanceof NumericToken) {
+                    throw new ParserError('You cannot assign to "' + newTok.getText() + '".',
+                        newTok.position);
+                }
+
                 let pat: PatternExpression = new ValueIdentifier(newTok.position, newTok);
                 if (nextTok.text === ':') {
                     ++this.position;
