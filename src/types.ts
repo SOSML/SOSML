@@ -29,6 +29,24 @@ export abstract class Type {
     }
 }
 
+export class TypeVariableBind extends Type {
+    constructor(public name: string, public type: Type) {
+        super();
+    }
+
+    prettyPrint(): string {
+        return '∀' + this.name + '.' + this.type.prettyPrint();
+    }
+
+    equals(other: any) {
+        if (!(other instanceof TypeVariableBind)
+            || (<TypeVariableBind> other).name !== this.name) {
+            return false;
+        }
+        return (<TypeVariableBind> other).type.equals(this.type);
+    }
+}
+
 export class TypeVariable extends Type {
     constructor(public name: string, public isFree: boolean = true, public position: number = 0,
                 public domain: Type[] = []) {
