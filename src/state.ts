@@ -1,7 +1,7 @@
 import { Type } from './types';
 import { Value, ReferenceValue } from './values';
 import { Token, LongIdentifierToken } from './tokens';
-import { InternalInterpreterError, EvaluationError } from './errors';
+import { InternalInterpreterError } from './errors';
 
 export enum IdentifierStatus {
     VALUE_VARIABLE,
@@ -17,22 +17,14 @@ type StaticValueEnvironment = { [name: string]: [Type, IdentifierStatus] };
 export class TypeInformation {
     // Every constructor also appears in the value environment,
     // thus it suffices to record their names here.
-    constructor(public type: Type, public constructors: string[]) { }
+    constructor(public type: Type, public constructors: string[],
+                public arity: number, public allowsEquality: boolean = true) { }
 }
 
 // maps type name to constructor names
 type DynamicTypeEnvironment = { [name: string]: string[] };
 // maps type name to (Type, constructor name)
 type StaticTypeEnvironment = { [name: string]: TypeInformation };
-
-export class TypeNameInformation {
-    constructor(public arity: number,
-                public allowsEquality: boolean) {
-    }
-}
-
-// Maps type name to (arity, allows Equality)
-type TypeNames = { [name: string]: TypeNameInformation };
 
 export class InfixStatus {
     constructor(public infix: boolean,
@@ -41,15 +33,6 @@ export class InfixStatus {
 }
 
 type InfixEnvironment = { [name: string]: InfixStatus };
-
-// Maps id to whether that id can be rebound
-// TODO I want this to be gone
-export enum RebindStatus {
-    Never,
-    Half,
-    Allowed
-}
-type RebindEnvironment = { [name: string]: RebindStatus };
 
 export class DynamicBasis {
     constructor(public typeEnvironment: DynamicTypeEnvironment,
@@ -90,23 +73,36 @@ export class StaticBasis {
         this.valueEnvironment[name] = [value, is];
     }
 
-    setType(name: string, type: Type, constructors: string[]) {
-        this.typeEnvironment[name] = new TypeInformation(type, constructors);
+    setType(name: string, type: Type, constructors: string[], arity: number) {
+        this.typeEnvironment[name] = new TypeInformation(type, constructors, arity);
     }
 }
 
 export type Memory = [number, {[address: number]: Value}];
 
 export class State {
+    static allowsRebind(name: string): boolean {
+        return {
+            'true': false,
+            'false': false,
+            'nil': false,
+            '::': false,
+
+            '=': false,
+
+            'ref': false,
+            ':=': false,
+            '!': false
+        }[name] === undefined;
+    }
+
     // The states' ids are non-decreasing; a single declaration uses the same ids
     constructor(public id: number,
                 public parent: State | undefined,
                 public staticBasis: StaticBasis,
                 public dynamicBasis: DynamicBasis,
                 public memory: Memory,
-                private typeNames: TypeNames,
-                private infixEnvironment: InfixEnvironment,
-                private rebindEnvironment: RebindEnvironment,
+                private infixEnvironment: InfixEnvironment = {},
                 private valueIdentifierId: { [name: string]: number } = {},
                 private declaredIdentifiers: Set<string> = new Set<string>()) {
     }
@@ -131,8 +127,7 @@ export class State {
         let res = new State(<number> newId, this,
             new StaticBasis({}, {}),
             new DynamicBasis({}, {}),
-            [this.memory[0], {}],
-            {}, {}, {});
+            [this.memory[0], {}]);
         return res;
     }
 
@@ -144,17 +139,6 @@ export class State {
         } else {
             return (<State> this.parent).getCell(address);
         }
-    }
-
-    getRebindStatus(name: string, idLimit: number = 0): RebindStatus {
-        if (this.rebindEnvironment[name] !== undefined) {
-            return this.rebindEnvironment[name];
-        } else if (this.parent === undefined || this.parent.id < idLimit) {
-            return RebindStatus.Allowed;
-        } else if (this.rebindEnvironment[name] === undefined) {
-            return (<State> this.parent).getRebindStatus(name);
-        }
-        return RebindStatus.Half;
     }
 
     // Gets an identifier's type. The value  intermediate  determines whether to return intermediate results
@@ -209,14 +193,6 @@ export class State {
         }
     }
 
-    getCustomType(name: string, idLimit: number = 0): TypeNameInformation {
-        if (this.typeNames.hasOwnProperty(name) || !this.parent || this.parent.id < idLimit) {
-            return this.typeNames[name];
-        } else {
-            return this.parent.getCustomType(name, idLimit);
-        }
-    }
-
     getValueIdentifierId(name: string, idLimit: number = 0): number {
         if (this.valueIdentifierId.hasOwnProperty(name)) {
             return this.valueIdentifierId[name];
@@ -259,29 +235,21 @@ export class State {
         }
     }
 
-    setStaticType(name: string, type: Type, constructors: string[], atId: number|undefined = undefined) {
+    setStaticType(name: string, type: Type, constructors: string[], arity: number,
+                  atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
-            this.staticBasis.setType(name, type, constructors);
+            this.staticBasis.setType(name, type, constructors, arity);
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
-            (<State> this.parent).setStaticType(name, type, constructors, atId);
+            (<State> this.parent).setStaticType(name, type, constructors, atId, arity);
         }
     }
 
     setDynamicValue(name: string, value: Value, is: IdentifierStatus, atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
-            if (this.rebindEnvironment[name] === RebindStatus.Never) {
-                throw new EvaluationError(-1, 'How could you ever want to redefine "' + name + '".');
-            }
-
             this.dynamicBasis.setValue(name, value, is);
             this.declaredIdentifiers.add(name);
-            if (is !== IdentifierStatus.VALUE_VARIABLE) {
-                this.rebindEnvironment[name] = RebindStatus.Half;
-            } else {
-                this.rebindEnvironment[name] = RebindStatus.Allowed;
-            }
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {

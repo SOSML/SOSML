@@ -914,11 +914,6 @@ export class Parser {
             if (!this.checkIdentifierOrLongToken(nextTok)) {
                 return ty;
             }
-            if (this.state.getCustomType(nextTok.getText()) !== undefined) {
-                if (this.state.getCustomType(nextTok.getText()).arity === 0) {
-                    return ty;
-                }
-            }
             ++this.position;
             ty = new CustomType(nextTok.getText(), [ty], curTok.position);
             continue;

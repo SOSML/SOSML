@@ -1,5 +1,5 @@
 import { State, StaticBasis, DynamicBasis, InfixStatus, TypeInformation,
-         TypeNameInformation, RebindStatus, IdentifierStatus } from './state';
+         IdentifierStatus } from './state';
 import { FunctionType, CustomType, TupleType, Type, TypeVariable } from './types';
 import { CharValue, Real, Integer, StringValue, PredefinedFunction, Word, ConstructedValue,
          ValueConstructor, ExceptionConstructor, BoolValue, Value, RecordValue } from './values';
@@ -37,17 +37,17 @@ let initialState: State = new State(
     new StaticBasis(
         {
             'unit':     new TypeInformation(
-                new FunctionType(new TupleType([]), new TupleType([])).simplify(), []),
-            'bool':     new TypeInformation(new CustomType('bool'),  ['true', 'false']),
-            'int':      new TypeInformation(new CustomType('int'),   []),
-            'word':     new TypeInformation(new CustomType('word'),  []),
-            'real':     new TypeInformation(new CustomType('real'),  []),
-            'string':   new TypeInformation(new CustomType('string'), []),
-            'char':     new TypeInformation(new CustomType('char'),  []),
-            'list':     new TypeInformation(new CustomType('list', [typeVar]), ['nil', '::']),
-            'array':    new TypeInformation(new CustomType('array', [typeVar]), []),
-            'ref':      new TypeInformation(new CustomType('ref', [typeVar]), ['ref']),
-            'exn':      new TypeInformation(new CustomType('exn'), [])
+                new FunctionType(new TupleType([]), new TupleType([])).simplify(), [], 0, true),
+            'bool':     new TypeInformation(new CustomType('bool'),  ['true', 'false'], 0, true),
+            'int':      new TypeInformation(new CustomType('int'),   [], 0, true),
+            'word':     new TypeInformation(new CustomType('word'),  [], 0, true),
+            'real':     new TypeInformation(new CustomType('real'),  [], 0, false),
+            'string':   new TypeInformation(new CustomType('string'), [], 0, false),
+            'char':     new TypeInformation(new CustomType('char'),  [], 0, false),
+            'list':     new TypeInformation(new CustomType('list', [typeVar]), ['nil', '::'], 1, true),
+            'array':    new TypeInformation(new CustomType('array', [typeVar]), [], 1, true),
+            'ref':      new TypeInformation(new CustomType('ref', [typeVar]), ['ref'], 1, true),
+            'exn':      new TypeInformation(new CustomType('exn'), [], 0, false)
         },
         {
             'div':      [functionType(intWordType), IdentifierStatus.VALUE_VARIABLE],
@@ -455,18 +455,6 @@ let initialState: State = new State(
     ),
     [ 0, {} ],
     {
-        'bool':     new TypeNameInformation(0, true),
-        'int':      new TypeNameInformation(0, true),
-        'real':     new TypeNameInformation(0, false),
-        'string':   new TypeNameInformation(0, true),
-        'char':     new TypeNameInformation(0, true),
-        'word':     new TypeNameInformation(0, true),
-        'list':     new TypeNameInformation(1, true),
-        'array':    new TypeNameInformation(1, true),
-        'ref':      new TypeNameInformation(1, true),
-        'exn':      new TypeNameInformation(0, false),
-    },
-    {
         'div': new InfixStatus(true, 7, false),
         'mod': new InfixStatus(true, 7, false),
         '*': new InfixStatus(true, 7, false),
@@ -486,22 +474,6 @@ let initialState: State = new State(
         ':=': new InfixStatus(true, 3, false),
 
         '^': new InfixStatus(true, 6, false),
-    },
-    {
-        '=':        RebindStatus.Never,
-        ':=':       RebindStatus.Never,
-        '!':        RebindStatus.Never,
-        'ref':      RebindStatus.Never,
-
-        'true':     RebindStatus.Never,
-        'false':    RebindStatus.Never,
-        'nil':      RebindStatus.Never,
-        '::':       RebindStatus.Never,
-
-        'Match':    RebindStatus.Half,
-        'Bind':     RebindStatus.Half,
-        'Div':      RebindStatus.Half,
-        'Overflow': RebindStatus.Half,
     },
     {
         'nil':      1,
