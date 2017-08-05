@@ -341,8 +341,14 @@ export class LocalDeclaration extends Declaration {
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
-        let nstate = state.getNestedState(state.id);
+        let nstate = state.getNestedState(0).getNestedState(state.id);
         let res = this.declaration.evaluate(nstate);
+        let membnd = res[0].getMemoryChanges(0);
+
+        for (let i = 0; i < membnd.length; ++i) {
+            state.setCell(membnd[i][0], membnd[i][1]);
+        }
+
         if (res[1]) {
             // Something came flying in our direction. So hide we were here and let it flow.
             return [state, true, res[2], res[3]];

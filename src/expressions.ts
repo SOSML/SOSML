@@ -269,13 +269,14 @@ export class LocalDeclarationExpression extends Expression {
     }
 
     compute(state: State): [Value, boolean, Warning[], MemBind] {
-        let nstate = state.getNestedState(state.id);
+        let nstate = state.getNestedState(0).getNestedState(state.id);
         let res = this.declaration.evaluate(nstate);
+        let membnd = res[0].getMemoryChanges(0);
         if (res[1]) {
-            return [<Value> res[2], true, res[3], []];
+            return [<Value> res[2], true, res[3], membnd];
         }
         let nres = this.expression.compute(res[0]);
-        return [nres[0], nres[1], res[3].concat(nres[2]), nres[3]];
+        return [nres[0], nres[1], res[3].concat(nres[2]), membnd.concat(nres[3])];
     }
 }
 

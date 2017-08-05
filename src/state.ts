@@ -120,6 +120,24 @@ export class State {
         return rec;
     }
 
+    getMemoryChanges(stopId: number): [number, Value][] {
+        if (this.id === stopId) {
+            return [];
+        }
+        let res: [number, Value][] = [];
+
+        if (this.parent !== undefined) {
+            res = this.parent.getMemoryChanges(stopId);
+        }
+
+        for (let i in this.memory[1]) {
+            if (this.memory[1].hasOwnProperty(i)) {
+                res.push([+i, this.memory[1][i]]);
+            }
+        }
+        return res;
+    }
+
     getNestedState(newId: number|undefined = undefined) {
         if (newId === undefined) {
             newId = this.id + 1;
