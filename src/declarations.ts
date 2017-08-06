@@ -2,7 +2,7 @@ import { Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
          Pattern, TypedExpression, Tuple, PatternExpression } from './expressions';
 import { IdentifierToken, Token } from './tokens';
 import { Type, TypeVariable, FunctionType, CustomType } from './types';
-import { State, RebindStatus, IdentifierStatus } from './state';
+import { State, IdentifierStatus } from './state';
 import { InternalInterpreterError, ElaborationError,
          EvaluationError, FeatureDisabledError, Warning } from './errors';
 import { Value, ValueConstructor, ExceptionConstructor, ExceptionValue,
@@ -215,7 +215,7 @@ export class DatatypeDeclaration extends Declaration {
             let res = this.datatypeBinding[i].compute(state);
 
             for (let j = 0; j < res[0].length; ++j) {
-                if (state.getRebindStatus(res[0][j][0]) === RebindStatus.Never) {
+                if (!State.allowsRebind(res[0][j][0])) {
                     throw new EvaluationError(this.position, 'You simply cannot rebind "'
                         + res[0][j][0] + '".');
                 }
@@ -265,7 +265,7 @@ export class DatatypeReplication extends Declaration {
             throw new ElaborationError(this.position,
                 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
         }
-        state.setStaticType(this.name.getText(), res.type, res.constructors);
+        state.setStaticType(this.name.getText(), res.type, res.constructors, res.arity);
         return [state, []];
    }
 
@@ -341,8 +341,14 @@ export class LocalDeclaration extends Declaration {
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
-        let nstate = state.getNestedState(state.id);
+        let nstate = state.getNestedState(0).getNestedState(state.id);
         let res = this.declaration.evaluate(nstate);
+        let membnd = res[0].getMemoryChanges(0);
+
+        for (let i = 0; i < membnd.length; ++i) {
+            state.setCell(membnd[i][0], membnd[i][1]);
+        }
+
         if (res[1]) {
             // Something came flying in our direction. So hide we were here and let it flow.
             return [state, true, res[2], res[3]];
@@ -795,7 +801,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
         let id = state.getValueIdentifierId(this.name.getText());
         state.incrementValueIdentifierId(this.name.getText());
 
-        if (state.getRebindStatus(this.name.getText()) === RebindStatus.Never) {
+        if (!State.allowsRebind(this.name.getText())) {
             throw new EvaluationError(this.position, 'You simply cannot rebind "'
                 + this.name.getText() + '".');
         }

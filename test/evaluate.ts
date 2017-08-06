@@ -73,8 +73,18 @@ it("local", () => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('y')).toEqualWithType([new Val.Integer(1), 0]);
         }],
+        ['x;', (x) => { expect(x).toThrow(Errors.EvaluationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        }],
+    ]);
+
+    run_test([
+        [' val x = 2 ; local val x = 1 in val y = x end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('y')).toEqualWithType([new Val.Integer(1), 0]);
+        }],
         ['x;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
-            expect(hasThrown).toEqual(true);
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(2), 0])
         }],
     ]);
 
@@ -83,8 +93,7 @@ it("local", () => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('x')).toEqualWithType([new Val.Real(1), 0]);
         }],
-        ['1.0 avg 1.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
-            expect(hasThrown).toEqual(true);
+        ['1.0 avg 1.0;', (x) => { expect(x).toThrow(Errors.EvaluationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
         }],
     ]);
 
