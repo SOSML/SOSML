@@ -1,6 +1,6 @@
 import { State, StaticBasis, DynamicBasis, InfixStatus, TypeInformation,
          IdentifierStatus } from './state';
-import { FunctionType, CustomType, TupleType, Type, TypeVariable } from './types';
+import { FunctionType, CustomType, TupleType, Type, TypeVariable, TypeVariableBind } from './types';
 import { CharValue, Real, Integer, StringValue, PredefinedFunction, Word, ConstructedValue,
          ValueConstructor, ExceptionConstructor, BoolValue, Value, RecordValue } from './values';
 import { InternalInterpreterError, Warning } from './errors';
@@ -24,12 +24,25 @@ function bfunctionType(type: Type): Type {
 let typeVar = new TypeVariable('\'a');
 let eqTypeVar = new TypeVariable('\'\'b');
 
-let intWordType = new TypeVariable('*iw', true, 0, [new CustomType('int'), new CustomType('word')]);
-let intRealType = new TypeVariable('*ir', true, 0, [new CustomType('int'), new CustomType('real')]);
-let intWordRealType = new TypeVariable('*iwr', true, 0, [new CustomType('int'), new CustomType('word'),
-    new CustomType('real')]);
-let anyType = new TypeVariable('*any', true, 0, [new CustomType('int'), new CustomType('word'),
-    new CustomType('real'), new CustomType('string'), new CustomType('char')]);
+let intWordType = new TypeVariable('iw');
+let intRealType = new TypeVariable('ir');
+let intWordRealType = new TypeVariable('iwr');
+let anyType = new TypeVariable('any');
+
+function intWordBind(type: Type): Type {
+    return new TypeVariableBind('iw', type, [new CustomType('int'), new CustomType('word')]);
+}
+function intRealBind(type: Type): Type {
+    return new TypeVariableBind('ir', type, [new CustomType('int'), new CustomType('real')]);
+}
+function intWordRealBind(type: Type): Type {
+    return new TypeVariableBind('iwr', type, [new CustomType('int'), new CustomType('word'),
+        new CustomType('real')]);
+}
+function anyBind(type: Type): Type {
+    return new TypeVariableBind('any', type, [new CustomType('int'), new CustomType('word'),
+        new CustomType('real'), new CustomType('string'), new CustomType('char')]);
+}
 
 let initialState: State = new State(
     0,
@@ -50,16 +63,19 @@ let initialState: State = new State(
             'exn':      new TypeInformation(new CustomType('exn'), [], 0, false)
         },
         {
-            'div':      [functionType(intWordType), IdentifierStatus.VALUE_VARIABLE],
-            'mod':      [functionType(intWordType), IdentifierStatus.VALUE_VARIABLE],
-            '*':        [functionType(intWordRealType), IdentifierStatus.VALUE_VARIABLE],
+            'div':      [intWordBind(functionType(intWordType)), IdentifierStatus.VALUE_VARIABLE],
+            'mod':      [intWordBind(functionType(intWordType)), IdentifierStatus.VALUE_VARIABLE],
+            '*':        [intWordRealBind(functionType(intWordRealType)),
+                IdentifierStatus.VALUE_VARIABLE],
             '/':        [functionType(realType), IdentifierStatus.VALUE_VARIABLE],
-            '+':        [functionType(intWordRealType), IdentifierStatus.VALUE_VARIABLE],
-            '-':        [functionType(intWordRealType), IdentifierStatus.VALUE_VARIABLE],
-            '<':        [bfunctionType(anyType), IdentifierStatus.VALUE_VARIABLE],
-            '<=':       [bfunctionType(anyType), IdentifierStatus.VALUE_VARIABLE],
-            '>':        [bfunctionType(anyType), IdentifierStatus.VALUE_VARIABLE],
-            '>=':       [bfunctionType(anyType), IdentifierStatus.VALUE_VARIABLE],
+            '+':        [intWordRealBind(functionType(intWordRealType)),
+                IdentifierStatus.VALUE_VARIABLE],
+            '-':        [intWordRealBind(functionType(intWordRealType)),
+                IdentifierStatus.VALUE_VARIABLE],
+            '<':        [anyBind(bfunctionType(anyType)), IdentifierStatus.VALUE_VARIABLE],
+            '<=':       [anyBind(bfunctionType(anyType)), IdentifierStatus.VALUE_VARIABLE],
+            '>':        [anyBind(bfunctionType(anyType)), IdentifierStatus.VALUE_VARIABLE],
+            '>=':       [anyBind(bfunctionType(anyType)), IdentifierStatus.VALUE_VARIABLE],
             '=':        [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(),
                 IdentifierStatus.VALUE_VARIABLE],
             '<>':       [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(),
@@ -79,13 +95,16 @@ let initialState: State = new State(
                 IdentifierStatus.VALUE_VARIABLE],
             'implode':  [new FunctionType(new CustomType('list', [charType]), stringType).simplify(),
                 IdentifierStatus.VALUE_VARIABLE],
-            '~':        [new FunctionType(intRealType, intRealType), IdentifierStatus.VALUE_VARIABLE],
-            'abs':      [new FunctionType(intRealType, intRealType), IdentifierStatus.VALUE_VARIABLE],
-            'print':    [new FunctionType(typeVar, new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE],
-            'printLn':  [new FunctionType(typeVar, new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE],
-            ':=':       [new FunctionType(new TupleType([
-                            new CustomType('ref', [typeVar]),
-                            typeVar]), new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE],
+            '~':        [intRealBind(new FunctionType(intRealType, intRealType)),
+                IdentifierStatus.VALUE_VARIABLE],
+            'abs':      [intRealBind(new FunctionType(intRealType, intRealType)),
+                IdentifierStatus.VALUE_VARIABLE],
+            'print':    [new FunctionType(typeVar, new TupleType([])).simplify(),
+                IdentifierStatus.VALUE_VARIABLE],
+            'printLn':  [new FunctionType(typeVar, new TupleType([])).simplify(),
+                IdentifierStatus.VALUE_VARIABLE],
+            ':=':       [new FunctionType(new TupleType([new CustomType('ref', [typeVar]), typeVar]),
+                new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE],
             'ref':      [new FunctionType(typeVar, new CustomType('ref', [typeVar])),
                             IdentifierStatus.VALUE_CONSTRUCTOR],
             '!':        [new FunctionType(new CustomType('ref', [typeVar]), typeVar),

@@ -48,8 +48,38 @@ export class ValueDeclaration extends Declaration {
     }
 
     elaborate(state: State): [State, Warning[]] {
-        // TODO
-        return [state, []];
+        let result: [string, Type][] = [];
+
+        let isRec = false;
+        let warns: Warning[] = [];
+        for (let i = 0; i < this.valueBinding.length; ++i) {
+            if (this.valueBinding[i].isRecursive) {
+                isRec = true;
+
+                // TODO correctly handle functions
+
+                break;
+            }
+            let val = this.valueBinding[i].getType(state);
+
+            if (val[0] === undefined) {
+                // TODO improve this error message
+                throw new ElaborationError(this.position,
+                    'That assignment doesn\'t type.');
+            }
+
+            // TODO WARNINGS: warns = warns.concat(val[1]);
+
+            for (let j = 0; j < (<[string, Type][]> val[0]).length; ++j) {
+                result.push((<[string, Type][]> val[0])[j]);
+            }
+        }
+
+        for (let j = 0; j < result.length; ++j) {
+            state.setStaticValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
+        }
+
+        return [state, warns];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
@@ -636,6 +666,12 @@ export class ValueBinding {
         return res + this.expression.prettyPrint(indentation, oneLine);
     }
 
+    getType(state: State): [[string, Type][] | undefined, Warning[]] {
+        // TODO Warnings
+        let tp = this.expression.getType(state);
+        return [this.pattern.matchType(state, tp), []];
+    }
+
     // Returns [ VE | undef, Excep | undef, Warning[]]
     compute(state: State): [[string, Value][] | undefined, Value | undefined, Warning[], [number, Value][]] {
         let v = this.expression.compute(state);
@@ -775,9 +811,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
         if (this.type !== undefined) {
             let tyvars: TypeVariable[] = [];
             this.type.getTypeVariables(true).forEach((val: TypeVariable) => {
-                if (val.kill() instanceof TypeVariable) {
-                    tyvars.push(val);
-                }
+                tyvars.push(val);
             });
             if (tyvars.length > 0) {
                 throw ElaborationError.getUnguarded(this.position, tyvars);

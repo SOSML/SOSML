@@ -1,4 +1,4 @@
-import { InternalInterpreterError, ElaborationError } from './errors';
+import { InternalInterpreterError } from './errors';
 import { State } from './state';
 
 export abstract class Type {
@@ -6,11 +6,13 @@ export abstract class Type {
     abstract equals(other: any): boolean;
 
     // Constructs types with type variables instantiated as much as possible
+    // TODO add param for current TyVarBinds
     instantiate(state: State): Type {
         return this.simplify().instantiate(state);
     }
 
     // Return all (free) type variables
+    // TODO add param for current TyVarBinds
     getTypeVariables(free: boolean): Set<TypeVariable> {
         return this.simplify().getTypeVariables(free);
     }
@@ -29,13 +31,51 @@ export abstract class Type {
     }
 }
 
-export class TypeVariableBind extends Type {
-    constructor(public name: string, public type: Type) {
+// A type representing any type
+export class AnyType extends Type {
+    constructor() {
         super();
     }
 
     prettyPrint(): string {
-        return '∀' + this.name + '.' + this.type.prettyPrint();
+        return 'any';
+    }
+
+    equals(other: any) {
+        return true;
+    }
+
+    instantiate(state: State): Type {
+        return this;
+    }
+
+    matches(state: State, type: Type): [string, Type][] | undefined {
+        return [];
+    }
+
+    getTypeVariables(free: boolean): Set<TypeVariable> {
+        return new Set<TypeVariable>();
+    }
+}
+
+export class TypeVariableBind extends Type {
+    constructor(public name: string, public type: Type, public domain: Type[] = []) {
+        super();
+    }
+
+    prettyPrint(): string {
+        if (this.domain === []) {
+            return '∀ ' + this.name + ' . ' + this.type.prettyPrint();
+        } else {
+            let res = '∀ ' + this.name + ' ∈ {';
+            for (let i = 0; i < this.domain.length; ++i) {
+                if (i > 0) {
+                    res += ', ';
+                }
+                res += this.domain[i].prettyPrint();
+            }
+            return res + '} . ' + this.type.prettyPrint();
+        }
     }
 
     equals(other: any) {
@@ -48,17 +88,8 @@ export class TypeVariableBind extends Type {
 }
 
 export class TypeVariable extends Type {
-    constructor(public name: string, public isFree: boolean = true, public position: number = 0,
-                public domain: Type[] = []) {
+    constructor(public name: string, public position: number = 0) {
         super();
-    }
-
-    kill(): Type {
-        if (this.domain.length === 0) {
-            // Real type vars won't die so easily
-            return this;
-        }
-        return this.domain[0];
     }
 
     prettyPrint(): string {
@@ -67,74 +98,30 @@ export class TypeVariable extends Type {
 
     instantiate(state: State): Type {
         let res = state.getStaticValue(this.name);
-        if (!this.isFree || res === undefined || res[0].equals(this)) {
+        if (res === undefined || res[0].equals(this)) {
             return this;
         }
-        if (this.domain.length === 0) {
-            return res[0];
-        }
-        if (res[0] instanceof TypeVariable && (<TypeVariable> res[0]).domain.length !== 0) {
-            let resty: Type[] = [];
-
-            for (let i = 0; i < this.domain.length; ++i) {
-                for (let j = 0; j < (<TypeVariable> res[0]).domain.length; ++j) {
-                    if (this.domain[i].equals((<TypeVariable> res[0]).domain[j])) {
-                        resty.push(this.domain[i]);
-                    }
-                }
-            }
-            if (resty.length > 0) {
-                return new TypeVariable((<TypeVariable> res[0]).name, (<TypeVariable> res[0]).isFree,
-                    (<TypeVariable> res[0]).position, resty);
-            }
-        } else {
-            for (let i = 0; i < this.domain.length; ++i) {
-                if (this.domain[i].equals(res[0])) {
-                    return res[0];
-                }
-            }
-        }
-        throw new ElaborationError(this.position, 'Cannot instanciate "'
-            + this.prettyPrint() + '" with "' + res[0].prettyPrint() + '".');
+        return res[0];
     }
 
     getTypeVariables(free: boolean): Set<TypeVariable> {
         let res = new Set<TypeVariable>();
-        if (free === this.isFree) {
-            res.add(this);
-        }
+        res.add(this);
         return res;
     }
 
     matches(state: State, type: Type): [string, Type][] | undefined {
         // TODO
-        throw new Error('ニャ－');
+        throw new InternalInterpreterError(-1, 'ニャ－');
     }
 
     admitsEquality(state: State): boolean {
-        for (let i = 0; i < this.domain.length; ++i) {
-            if (!this.domain[i].admitsEquality(state)) {
-                return false;
-            }
-        }
-        if (this.domain.length === 0 ) {
-            return this.name[1] === '\'';
-        } else {
-            return true;
-        }
+        return this.name[1] === '\'';
     }
 
     equals(other: any): boolean {
         if (!(other instanceof TypeVariable && this.name === other.name)) {
             return false;
-        }
-        if (this.domain.length !== (<TypeVariable> other).domain.length) {
-            return false;
-        }
-        for (let i = 0; i < this.domain.length; ++i) {
-            if (!this.domain[i].equals((<TypeVariable> other).domain[i])) {
-                return false;
-            }
         }
         return true;
     }

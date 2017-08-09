@@ -827,7 +827,7 @@ export class Parser {
 
         if (curTok instanceof TypeVariableToken) {
             ++this.position;
-            return new TypeVariable(curTok.getText(), true, curTok.position);
+            return new TypeVariable(curTok.getText(), curTok.position);
         }
 
         if (this.checkIdentifierOrLongToken(curTok)) {
@@ -1163,7 +1163,7 @@ export class Parser {
         let curTok = this.currentToken();
         let res: TypeVariable[] = [];
         if (curTok instanceof TypeVariableToken) {
-            res.push(new TypeVariable(curTok.text, false, curTok.position));
+            res.push(new TypeVariable(curTok.text, curTok.position));
             ++this.position;
             return res;
         }
@@ -1177,7 +1177,7 @@ export class Parser {
                     }
                     throw new ParserError('Expected a type varible.', curTok.position);
                 }
-                res.push(new TypeVariable(curTok.text, false, curTok.position));
+                res.push(new TypeVariable(curTok.text, curTok.position));
                 ++this.position;
                 curTok = this.currentToken();
                 if (this.checkKeywordToken(curTok, ',')) {
