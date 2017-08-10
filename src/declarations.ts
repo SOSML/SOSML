@@ -1,7 +1,7 @@
 import { Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
          Pattern, TypedExpression, Tuple, PatternExpression } from './expressions';
 import { IdentifierToken, Token } from './tokens';
-import { Type, TypeVariable, FunctionType, CustomType } from './types';
+import { Type, TypeVariable, FunctionType, CustomType, AnyType } from './types';
 import { State, IdentifierStatus } from './state';
 import { InternalInterpreterError, ElaborationError,
          EvaluationError, FeatureDisabledError, Warning } from './errors';
@@ -57,16 +57,17 @@ export class ValueDeclaration extends Declaration {
                 isRec = true;
 
                 // TODO correctly handle functions
+                for (; i < this.valueBinding.length; ++i) {
+                    let r = this.valueBinding[i].getType(state);
+
+                    for (let j = 0; j < r[0].length; ++j) {
+                        result.push([r[0][j][0], new AnyType()]);
+                    }
+                }
 
                 break;
             }
             let val = this.valueBinding[i].getType(state);
-
-            if (val[0] === undefined) {
-                // TODO improve this error message
-                throw new ElaborationError(this.position,
-                    'That assignment doesn\'t type.');
-            }
 
             // TODO WARNINGS: warns = warns.concat(val[1]);
 
@@ -666,10 +667,18 @@ export class ValueBinding {
         return res + this.expression.prettyPrint(indentation, oneLine);
     }
 
-    getType(state: State): [[string, Type][] | undefined, Warning[]] {
+    getType(state: State): [[string, Type][], Warning[]] {
         // TODO Warnings
-        let tp = this.expression.getType(state);
-        return [this.pattern.matchType(state, tp), []];
+        let nstate = state.getNestedState(state.id);
+        let tp = this.expression.getType(nstate);
+        let res = this.pattern.matchType(nstate, tp);
+        if (res === undefined) {
+            // TODO improve Error message
+            throw new ElaborationError(this.position,
+                'Type clash. An expression of type "' + tp.prettyPrint()
+                + '" cannot be assigned to "' + res[1].prettyPrint() + '".');
+        }
+        return [res[0], []];
     }
 
     // Returns [ VE | undef, Excep | undef, Warning[]]

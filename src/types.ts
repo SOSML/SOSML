@@ -1,5 +1,5 @@
-import { InternalInterpreterError } from './errors';
-import { State } from './state';
+import { InternalInterpreterError, ElaborationError } from './errors';
+import { State, IdentifierStatus } from './state';
 
 export abstract class Type {
     abstract prettyPrint(): string;
@@ -111,8 +111,14 @@ export class TypeVariable extends Type {
     }
 
     matches(state: State, type: Type): [string, Type][] | undefined {
-        // TODO
-        throw new InternalInterpreterError(-1, 'ニャ－');
+        if (this.equals(type)) {
+            return [];
+        }
+        let st = state.getStaticValue(this.name);
+        if (st === undefined) {
+            return [[this.name, type]];
+        }
+        return st[0].matches(state, type);
     }
 
     admitsEquality(state: State): boolean {
@@ -150,9 +156,46 @@ export class RecordType extends Type {
         return res;
     }
 
+    getType(name: string): Type {
+        if (!this.elements.has(name)) {
+            throw new ElaborationError(0, 'Tried accessing non-existing record part.');
+        }
+        return <Type> this.elements.get(name);
+    }
+
+    hasType(name: string): boolean {
+        return this.elements.has(name);
+    }
+
     matches(state: State, type: Type): [string, Type][] | undefined {
-        // TODO
-        throw new Error('ニャ－');
+        if (!(type instanceof RecordType)
+            || this.elements.size !== (<RecordType> type).elements.size) {
+            return undefined;
+        }
+        let res: [string, Type][] = [];
+
+        let fail = false;
+        this.elements.forEach((tp: Type, key: string) => {
+            if (!(<RecordType> type).hasType(key)) {
+                fail = true;
+            }
+            if (!fail) {
+                let r = tp.matches(state, (<RecordType> type).getType(key));
+                if (r === undefined) {
+                    fail = true;
+                } else {
+                    res = res.concat(r);
+                    for (let i = 0; i < r.length; ++i) {
+                        state.setStaticValue(r[i][0], r[i][1], IdentifierStatus.VALUE_VARIABLE);
+                    }
+                }
+            }
+        });
+
+        if (fail) {
+            return undefined;
+        }
+        return res;
     }
 
     admitsEquality(state: State): boolean {
@@ -164,7 +207,6 @@ export class RecordType extends Type {
         });
         return res;
     }
-
 
     prettyPrint(): string {
         let isTuple = true;
@@ -267,8 +309,21 @@ export class FunctionType extends Type {
     }
 
     matches(state: State, type: Type): [string, Type][] | undefined {
-        // TODO
-        throw new Error('ニャ－');
+        if (!(type instanceof FunctionType)) {
+            return undefined;
+        }
+        let r1 = this.parameterType.matches(state, (<FunctionType> type).parameterType);
+        if (r1 === undefined) {
+            return undefined;
+        }
+        for (let j = 0; j < r1.length; ++j) {
+            state.setStaticValue(r1[j][0], r1[j][1], IdentifierStatus.VALUE_VARIABLE);
+        }
+        let r2 = this.returnType.matches(state, (<FunctionType> type).returnType);
+        if (r2 === undefined) {
+            return undefined;
+        }
+        return r1.concat(r2);
     }
 
     admitsEquality(state: State): boolean {
@@ -321,8 +376,25 @@ export class CustomType extends Type {
     }
 
     matches(state: State, type: Type): [string, Type][] | undefined {
-        // TODO
-        throw new Error('ニャ－');
+        if (!(type instanceof CustomType)
+            || (<CustomType> type).typeArguments.length !== this.typeArguments.length
+            || (<CustomType> type).name !== this.name) {
+            return undefined;
+        }
+
+        let res: [string, Type][] = [];
+
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            let r = this.typeArguments[i].matches(state, (<CustomType> type).typeArguments[i]);
+            if (r === undefined) {
+                return undefined;
+            }
+            for (let j = 0; j < r.length; ++j) {
+                state.setStaticValue(r[j][0], r[j][1], IdentifierStatus.VALUE_VARIABLE);
+            }
+            res = res.concat(r);
+        }
+        return res;
     }
 
     admitsEquality(state: State): boolean {

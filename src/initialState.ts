@@ -1,6 +1,6 @@
 import { State, StaticBasis, DynamicBasis, InfixStatus, TypeInformation,
          IdentifierStatus } from './state';
-import { FunctionType, CustomType, TupleType, Type, TypeVariable, TypeVariableBind } from './types';
+import { FunctionType, CustomType, TupleType, Type, TypeVariable, /* TypeVariableBind */ } from './types';
 import { CharValue, Real, Integer, StringValue, PredefinedFunction, Word, ConstructedValue,
          ValueConstructor, ExceptionConstructor, BoolValue, Value, RecordValue } from './values';
 import { InternalInterpreterError, Warning } from './errors';
@@ -24,24 +24,28 @@ function bfunctionType(type: Type): Type {
 let typeVar = new TypeVariable('\'a');
 let eqTypeVar = new TypeVariable('\'\'b');
 
-let intWordType = new TypeVariable('iw');
-let intRealType = new TypeVariable('ir');
-let intWordRealType = new TypeVariable('iwr');
-let anyType = new TypeVariable('any');
+let intWordType = new TypeVariable('\'iw');
+let intRealType = new TypeVariable('\'ir');
+let intWordRealType = new TypeVariable('\'iwr');
+let anyType = new TypeVariable('\'any');
 
 function intWordBind(type: Type): Type {
-    return new TypeVariableBind('iw', type, [new CustomType('int'), new CustomType('word')]);
+    return type;
+    // return new TypeVariableBind('iw', type, [new CustomType('int'), new CustomType('word')]);
 }
 function intRealBind(type: Type): Type {
-    return new TypeVariableBind('ir', type, [new CustomType('int'), new CustomType('real')]);
+    return type;
+    // return new TypeVariableBind('ir', type, [new CustomType('int'), new CustomType('real')]);
 }
 function intWordRealBind(type: Type): Type {
-    return new TypeVariableBind('iwr', type, [new CustomType('int'), new CustomType('word'),
-        new CustomType('real')]);
+    return type;
+    // return new TypeVariableBind('iwr', type, [new CustomType('int'), new CustomType('word'),
+    //    new CustomType('real')]);
 }
 function anyBind(type: Type): Type {
-    return new TypeVariableBind('any', type, [new CustomType('int'), new CustomType('word'),
-        new CustomType('real'), new CustomType('string'), new CustomType('char')]);
+    return type;
+    // return new TypeVariableBind('any', type, [new CustomType('int'), new CustomType('word'),
+    //    new CustomType('real'), new CustomType('string'), new CustomType('char')]);
 }
 
 let initialState: State = new State(
