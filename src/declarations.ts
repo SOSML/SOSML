@@ -58,11 +58,9 @@ export class ValueDeclaration extends Declaration {
 
                 // TODO correctly handle functions
                 for (; i < this.valueBinding.length; ++i) {
-                    let r = this.valueBinding[i].getType(state);
+                    let r = (<ValueIdentifier> this.valueBinding[i].pattern).name.getText();
 
-                    for (let j = 0; j < r[0].length; ++j) {
-                        result.push([r[0][j][0], new AnyType()]);
-                    }
+                    result.push([r, new FunctionType(new AnyType(), new AnyType())]);
                 }
 
                 break;
@@ -236,7 +234,21 @@ export class DatatypeDeclaration extends Declaration {
     }
 
     elaborate(state: State): [State, Warning[]] {
-        // TODO
+        // I'm assuming the withtype is empty
+        for (let i = 0; i < this.datatypeBinding.length; ++i) {
+            let res = this.datatypeBinding[i].getType(state);
+
+            for (let j = 0; j < res[0].length; ++j) {
+                if (!State.allowsRebind(res[0][j][0])) {
+                    throw new ElaborationError(this.position, 'You simply cannot rebind "'
+                        + res[0][j][0] + '".');
+                }
+                state.setStaticValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
+            }
+            // TODO id
+            state.setStaticType(res[1][0], res[1][1], this.datatypeBinding[i].typeVariableSequence.length);
+        }
+
         return [state, []];
     }
 
@@ -783,6 +795,25 @@ export class DatatypeBinding {
     // type: [constructorName, <type>]
     constructor(public position: number, public typeVariableSequence: TypeVariable[],
                 public name: IdentifierToken, public type: [IdentifierToken, Type | undefined][]) {
+    }
+
+    getType(state: State): [[string, Type][], [string, string[]]] {
+        let connames: string[] = [];
+        let ve: [string, Type][] = [];
+        for (let i = 0; i < this.type.length; ++i) {
+            let numArg: number = 0;
+            let tp = new CustomType(this.name.getText(), this.typeVariableSequence);
+            if (this.type[i][1] !== undefined) {
+                numArg = 1;
+                tp = new FunctionType(this.type[i][1], tp);
+            }
+            // TODO ID
+            // let id = state.getValueIdentifierId(this.type[i][0].getText());
+            // state.incrementValueIdentifierId(this.type[i][0].getText());
+            ve.push([this.type[i][0].getText(), tp]);
+            connames.push(this.type[i][0].getText());
+        }
+        return [ve, [this.name.getText(), connames]];
     }
 
     compute(state: State): [[string, Value][], [string, string[]]] {

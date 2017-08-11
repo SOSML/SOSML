@@ -466,6 +466,9 @@ export class FunctionApplication extends Expression implements Pattern {
     getType(state: State): Type {
         let f: Type = this.func.getType(state);
         let arg: Type = this.argument.getType(state);
+        if (f instanceof AnyType) {
+            f = new FunctionType(new AnyType(), new AnyType());
+        }
         if (f instanceof FunctionType) {
             let tp = (<FunctionType> f).parameterType.matches(state, arg);
             if (tp === undefined) {

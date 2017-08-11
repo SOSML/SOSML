@@ -852,16 +852,16 @@ it("expression - typed expression", () => {
     expect(parse(testcase_simple)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
-            new Type.TypeVariable('\'a', true, 4)
+            new Type.TypeVariable('\'a', 4)
         )
     ));
     expect(parse(testcase_nested)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             new Expr.TypedExpression(0,
                 get42(0),
-                new Type.TypeVariable('\'a', true, 4)
+                new Type.TypeVariable('\'a', 4)
             )
-            new Type.TypeVariable('\'b', true, 8)
+            new Type.TypeVariable('\'b', 8)
         )
     ));
     expect(parse(testcase_precedence_conj)).toEqualWithType(createItExpression(
@@ -870,8 +870,8 @@ it("expression - typed expression", () => {
             new Expr.TypedExpression(11,
                 get42(11),
                 new Type.FunctionType(
-                    new Type.TypeVariable('\'a', true, 15),
-                    new Type.TypeVariable('\'b', true, 21),
+                    new Type.TypeVariable('\'a', 15),
+                    new Type.TypeVariable('\'b', 21),
                     18
                 )
             )
@@ -883,8 +883,8 @@ it("expression - typed expression", () => {
             new Expr.TypedExpression(10,
                 get42(10),
                 new Type.FunctionType(
-                    new Type.TypeVariable('\'a', true, 14),
-                    new Type.TypeVariable('\'b', true, 20),
+                    new Type.TypeVariable('\'a', 14),
+                    new Type.TypeVariable('\'b', 20),
                     17
                 )
             )
@@ -898,8 +898,8 @@ it("expression - typed expression", () => {
                     new Expr.TypedExpression(15,
                         get42(15),
                         new Type.FunctionType(
-                            new Type.TypeVariable('\'a', true, 20),
-                            new Type.TypeVariable('\'b', true, 26),
+                            new Type.TypeVariable('\'a', 20),
+                            new Type.TypeVariable('\'b', 26),
                             23
                         )
                     )
@@ -912,8 +912,8 @@ it("expression - typed expression", () => {
             new Expr.TypedExpression(6,
                 get42(6),
                 new Type.FunctionType(
-                    new Type.TypeVariable('\'a', true, 10),
-                    new Type.TypeVariable('\'b', true, 16),
+                    new Type.TypeVariable('\'a', 10),
+                    new Type.TypeVariable('\'b', 16),
                     13
                 )
             )
@@ -926,8 +926,8 @@ it("expression - typed expression", () => {
             new Expr.TypedExpression(51,
                 get42(51),
                 new Type.FunctionType(
-                    new Type.TypeVariable('\'a', true, 55),
-                    new Type.TypeVariable('\'b', true, 61),
+                    new Type.TypeVariable('\'a', 55),
+                    new Type.TypeVariable('\'b', 61),
                     58
                 )
             )
@@ -1281,7 +1281,7 @@ it("declaration - value declaration", () => {
     expect(parse(testcase_1_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.ValueDeclaration(0, [
-                    new Type.TypeVariable('\'a', false, 4)
+                    new Type.TypeVariable('\'a', 4)
                 ], [
                     new Decl.ValueBinding(7, false,
                         new Expr.ValueIdentifier(7, new Token.AlphanumericIdentifierToken('x', 7)),
@@ -1294,7 +1294,7 @@ it("declaration - value declaration", () => {
     expect(parse(testcase_1_tyvar_seq)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.ValueDeclaration(0, [
-                    new Type.TypeVariable('\'a', false, 5)
+                    new Type.TypeVariable('\'a', 5)
                 ], [
                     new Decl.ValueBinding(9, false,
                         new Expr.ValueIdentifier(9, new Token.AlphanumericIdentifierToken('x', 9)),
@@ -1307,8 +1307,8 @@ it("declaration - value declaration", () => {
     expect(parse(testcase_2_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.ValueDeclaration(0, [
-                    new Type.TypeVariable('\'a', false, 5),
-                    new Type.TypeVariable('\'b', false, 9)
+                    new Type.TypeVariable('\'a', 5),
+                    new Type.TypeVariable('\'b', 9)
                 ], [
                     new Decl.ValueBinding(13, false,
                         new Expr.ValueIdentifier(13, new Token.AlphanumericIdentifierToken('x', 13)),
@@ -1321,9 +1321,9 @@ it("declaration - value declaration", () => {
     expect(parse(testcase_3_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.ValueDeclaration(0, [
-                    new Type.TypeVariable('\'a', false, 5),
-                    new Type.TypeVariable('\'b', false, 9),
-                    new Type.TypeVariable('\'c', false, 13)
+                    new Type.TypeVariable('\'a', 5),
+                    new Type.TypeVariable('\'b', 9),
+                    new Type.TypeVariable('\'c', 13)
                 ], [
                     new Decl.ValueBinding(17, false,
                         new Expr.ValueIdentifier(17, new Token.AlphanumericIdentifierToken('x', 17)),
@@ -1360,7 +1360,7 @@ it("declaration - function declaration", () => {
     expect(parse(testcase_1_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.FunctionDeclaration(0, [
-                    new Type.TypeVariable('\'a', false, 4)
+                    new Type.TypeVariable('\'a', 4)
                 ], [
                     new Decl.FunctionValueBinding(7,[
                             [
@@ -1378,7 +1378,7 @@ it("declaration - function declaration", () => {
     expect(parse(testcase_1_tyvar_seq)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.FunctionDeclaration(0, [
-                    new Type.TypeVariable('\'a', false, 5)
+                    new Type.TypeVariable('\'a', 5)
                 ], [
                     new Decl.FunctionValueBinding(9,[
                             [
@@ -1396,8 +1396,8 @@ it("declaration - function declaration", () => {
     expect(parse(testcase_2_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.FunctionDeclaration(0, [
-                    new Type.TypeVariable('\'a', false, 5),
-                    new Type.TypeVariable('\'b', false, 9)
+                    new Type.TypeVariable('\'a', 5),
+                    new Type.TypeVariable('\'b', 9)
                 ], [
                     new Decl.FunctionValueBinding(13,[
                             [
@@ -1415,9 +1415,9 @@ it("declaration - function declaration", () => {
     expect(parse(testcase_3_tyvar)).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Decl.FunctionDeclaration(0, [
-                    new Type.TypeVariable('\'a', false, 5),
-                    new Type.TypeVariable('\'b', false, 9),
-                    new Type.TypeVariable('\'c', false, 13)
+                    new Type.TypeVariable('\'a', 5),
+                    new Type.TypeVariable('\'b', 9),
+                    new Type.TypeVariable('\'c', 13)
                 ], [
                     new Decl.FunctionValueBinding(17,[
                             [
@@ -1446,7 +1446,7 @@ it("declaration - type declaration", () => {
             new Decl.TypeDeclaration(0, [
                 new Decl.TypeBinding(5, [] ,
                     new Token.AlphanumericIdentifierToken('blub', 5),
-                    new Type.TypeVariable('\'a', true, 12)
+                    new Type.TypeVariable('\'a', 12)
                 )
             ], 2)
         ], 1)
@@ -1456,7 +1456,7 @@ it("declaration - type declaration", () => {
             new Decl.TypeDeclaration(0, [
                 new Decl.TypeBinding(5, [] ,
                     new Token.IdentifierToken('####', 5),
-                    new Type.TypeVariable('\'a', true, 12)
+                    new Type.TypeVariable('\'a', 12)
                 )
             ], 2)
         ], 1)
@@ -1478,7 +1478,7 @@ it("declaration - datatype declaration", () => {
                 new Decl.DatatypeBinding(9, [] ,
                     new Token.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [new Token.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', true, 21)]
+                        [new Token.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', 21)]
                     ]
                 )
             ], undefined, 2)
@@ -1490,7 +1490,7 @@ it("declaration - datatype declaration", () => {
                 new Decl.DatatypeBinding(9, [] ,
                     new Token.IdentifierToken('####', 9),
                     [
-                        [new Token.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', true, 21)]
+                        [new Token.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', 21)]
                     ]
                 )
             ], undefined, 2)
@@ -1527,7 +1527,7 @@ it("declaration - exception declaration", () => {
             new Decl.ExceptionDeclaration(0, [
                 new Decl.DirectExceptionBinding(10,
                     new Token.AlphanumericIdentifierToken('X', 10),
-                    new Type.TypeVariable('\'a', true, 15)
+                    new Type.TypeVariable('\'a', 15)
                 )
             ], 2)
         ], 1)
@@ -1971,7 +1971,7 @@ it("function value bindings", () => {
                 new Decl.FunctionValueBinding(4,[
                         [
                             [new Expr.ValueIdentifier(6, new Token.AlphanumericIdentifierToken('x', 6))],
-                            new Type.TypeVariable('\'a', true, 10),
+                            new Type.TypeVariable('\'a', 10),
                             get42(15),
                         ]
                     ],
@@ -1986,7 +1986,7 @@ it("function value bindings", () => {
                 new Decl.FunctionValueBinding(4,[
                         [
                             [new Expr.ValueIdentifier(9, new Token.AlphanumericIdentifierToken('x', 9))],
-                            new Type.TypeVariable('\'a', true, 13),
+                            new Type.TypeVariable('\'a', 13),
                             get42(18),
                         ]
                     ],
@@ -2072,10 +2072,10 @@ it("type bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.TypeDeclaration(0, [
                 new Decl.TypeBinding(5, [
-                        new Type.TypeVariable('\'a', false, 5)
+                        new Type.TypeVariable('\'a', 5)
                     ],
                     new Token.AlphanumericIdentifierToken('blub', 8),
-                    new Type.TypeVariable('\'a', true, 15)
+                    new Type.TypeVariable('\'a', 15)
                 )
             ], 2)
         ], 1)
@@ -2084,11 +2084,11 @@ it("type bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.TypeDeclaration(0, [
                 new Decl.TypeBinding(5, [
-                        new Type.TypeVariable('\'a', false, 6),
-                        new Type.TypeVariable('\'b', false, 10)
+                        new Type.TypeVariable('\'a', 6),
+                        new Type.TypeVariable('\'b', 10)
                     ],
                     new Token.AlphanumericIdentifierToken('blub', 14),
-                    new Type.TypeVariable('\'a', true, 21)
+                    new Type.TypeVariable('\'a', 21)
                 )
             ], 2)
         ], 1)
@@ -2097,16 +2097,16 @@ it("type bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.TypeDeclaration(0, [
                 new Decl.TypeBinding(5, [
-                        new Type.TypeVariable('\'a', false, 5)
+                        new Type.TypeVariable('\'a', 5)
                     ],
                     new Token.AlphanumericIdentifierToken('blub', 8),
-                    new Type.TypeVariable('\'a', true, 15)
+                    new Type.TypeVariable('\'a', 15)
                 ),
                 new Decl.TypeBinding(22, [
-                        new Type.TypeVariable('\'b', false, 22)
+                        new Type.TypeVariable('\'b', 22)
                     ],
                     new Token.AlphanumericIdentifierToken('blob', 25),
-                    new Type.TypeVariable('\'b', true, 32)
+                    new Type.TypeVariable('\'b', 32)
                 )
             ], 2)
         ], 1)
@@ -2122,11 +2122,11 @@ it("datatype bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.DatatypeDeclaration(0, [
                 new Decl.DatatypeBinding(9, [
-                        new Type.TypeVariable('\'a', false, 9)
+                        new Type.TypeVariable('\'a', 9)
                     ],
                     new Token.AlphanumericIdentifierToken('blub', 12),
                     [
-                        [new Token.AlphanumericIdentifierToken('x', 19), new Type.TypeVariable('\'a', true, 24)]
+                        [new Token.AlphanumericIdentifierToken('x', 19), new Type.TypeVariable('\'a', 24)]
                     ]
                 )
             ], undefined, 2)
@@ -2136,8 +2136,8 @@ it("datatype bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.DatatypeDeclaration(0, [
                 new Decl.DatatypeBinding(9, [
-                        new Type.TypeVariable('\'a', false, 10),
-                        new Type.TypeVariable('\'b', false, 14)
+                        new Type.TypeVariable('\'a', 10),
+                        new Type.TypeVariable('\'b', 14)
                     ],
                     new Token.AlphanumericIdentifierToken('blub', 18),
                     [
@@ -2151,15 +2151,15 @@ it("datatype bindings", () => {
         new Decl.SequentialDeclaration(0, [
             new Decl.DatatypeDeclaration(0, [
                 new Decl.DatatypeBinding(9, [
-                        new Type.TypeVariable('\'a', false, 9)
+                        new Type.TypeVariable('\'a', 9)
                     ],
                     new Token.AlphanumericIdentifierToken('blub', 12),
                     [
-                        [new Token.AlphanumericIdentifierToken('x', 19), new Type.TypeVariable('\'a', true, 24)]
+                        [new Token.AlphanumericIdentifierToken('x', 19), new Type.TypeVariable('\'a', 24)]
                     ]
                 ),
                 new Decl.DatatypeBinding(31, [
-                        new Type.TypeVariable('\'b', false, 31)
+                        new Type.TypeVariable('\'b', 31)
                     ],
                     new Token.AlphanumericIdentifierToken('blob', 34),
                     [
@@ -2209,7 +2209,7 @@ it("constructor bindings", () => {
                 new Decl.DatatypeBinding(9, [] ,
                     new Token.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [new Token.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', true, 21)]
+                        [new Token.AlphanumericIdentifierToken('X', 16), new Type.TypeVariable('\'a', 21)]
                     ]
                 )
             ], undefined, 2)
@@ -2221,7 +2221,7 @@ it("constructor bindings", () => {
                 new Decl.DatatypeBinding(9, [] ,
                     new Token.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [prefixWithOp(new Token.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', true, 24)]
+                        [prefixWithOp(new Token.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', 24)]
                     ]
                 )
             ], undefined, 2)
@@ -2233,7 +2233,7 @@ it("constructor bindings", () => {
                 new Decl.DatatypeBinding(9, [] ,
                     new Token.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [prefixWithOp(new Token.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', true, 24)],
+                        [prefixWithOp(new Token.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', 24)],
                         [new Token.AlphanumericIdentifierToken('Y', 29), undefined]
                     ]
                 )
@@ -2246,7 +2246,7 @@ it("constructor bindings", () => {
                 new Decl.DatatypeBinding(9, [] ,
                     new Token.AlphanumericIdentifierToken('blub', 9),
                     [
-                        [prefixWithOp(new Token.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', true, 24)],
+                        [prefixWithOp(new Token.AlphanumericIdentifierToken('X', 19)), new Type.TypeVariable('\'a', 24)],
                         [new Token.AlphanumericIdentifierToken('Y', 29), undefined]
                     ]
                 )
@@ -2296,7 +2296,7 @@ it("exception bindings", () => {
             new Decl.ExceptionDeclaration(0, [
                 new Decl.DirectExceptionBinding(10,
                     new Token.AlphanumericIdentifierToken('X', 10),
-                    new Type.TypeVariable('\'a', true, 15)
+                    new Type.TypeVariable('\'a', 15)
                 )
             ], 2)
         ], 1)
@@ -2306,7 +2306,7 @@ it("exception bindings", () => {
             new Decl.ExceptionDeclaration(0, [
                 new Decl.DirectExceptionBinding(10,
                     prefixWithOp(new Token.AlphanumericIdentifierToken('X', 13)),
-                    new Type.TypeVariable('\'a', true, 18)
+                    new Type.TypeVariable('\'a', 18)
                 )
             ], 2)
         ], 1)
@@ -2340,7 +2340,7 @@ it("exception bindings", () => {
                 ),
                 new Decl.DirectExceptionBinding(20,
                     new Token.AlphanumericIdentifierToken('Z', 20),
-                    new Type.TypeVariable('\'a', true, 25)
+                    new Type.TypeVariable('\'a', 25)
                 ),
                 new Decl.ExceptionAlias(32,
                     new Token.AlphanumericIdentifierToken('W', 32),
@@ -2667,13 +2667,13 @@ it("type - type variable", () => {
     expect(parse(testcase_tyvar)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
-            new Type.TypeVariable('\'a', true, 4)
+            new Type.TypeVariable('\'a', 4)
         )
     ));
     expect(parse(testcase_etyvar)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
-            new Type.TypeVariable('\'\'meaningoflive', true, 4)
+            new Type.TypeVariable('\'\'meaningoflive', 4)
         )
     ));
 });
@@ -2700,7 +2700,7 @@ it("type - record type expression", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["hi", new Type.TypeVariable('\'int', true, 11)]
+                    ["hi", new Type.TypeVariable('\'int', 11)]
                 ]),
                 true,
                 6
@@ -2712,8 +2712,8 @@ it("type - record type expression", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["hello", new Type.TypeVariable('\'a', true, 13)],
-                    ["world", new Type.TypeVariable('\'b', true, 24)]
+                    ["hello", new Type.TypeVariable('\'a', 13)],
+                    ["world", new Type.TypeVariable('\'b', 24)]
                 ]),
                 true,
                 6
@@ -2738,7 +2738,7 @@ it("type - type construction", () => {
     expect(parse(testcase_single)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
-            new Type.CustomType('list', [new Type.TypeVariable('\'a', true, 4)], 4)
+            new Type.CustomType('list', [new Type.TypeVariable('\'a', 4)], 4)
         )
     ));
     expect(parse(testcase_multiple)).toEqualWithType(createItExpression(
@@ -2746,12 +2746,12 @@ it("type - type construction", () => {
             get42(0),
             new Type.CustomType('list', [
                     new Type.TupleType([
-                            new Type.TypeVariable('\'a', true, 5),
-                            new Type.TypeVariable('\'b', true, 10)
+                            new Type.TypeVariable('\'a', 5),
+                            new Type.TypeVariable('\'b', 10)
                         ],
                         8
                     ),
-                    new Type.TypeVariable('\'c', true, 14),
+                    new Type.TypeVariable('\'c', 14),
                 ],
                 4
             )
@@ -2768,8 +2768,8 @@ it("type - tuple type", () => {
         new Expr.TypedExpression(0,
             get42(0),
             new Type.TupleType([
-                    new Type.TypeVariable('\'a', true, 4),
-                    new Type.TypeVariable('\'b', true, 9)
+                    new Type.TypeVariable('\'a', 4),
+                    new Type.TypeVariable('\'b', 9)
                 ],
                 7
             )
@@ -2779,9 +2779,9 @@ it("type - tuple type", () => {
         new Expr.TypedExpression(0,
             get42(0),
             new Type.TupleType([
-                    new Type.TypeVariable('\'a', true, 4),
-                    new Type.TypeVariable('\'b', true, 9),
-                    new Type.TypeVariable('\'c', true, 14)
+                    new Type.TypeVariable('\'a', 4),
+                    new Type.TypeVariable('\'b', 9),
+                    new Type.TypeVariable('\'c', 14)
                 ],
                 7
             )
@@ -2791,10 +2791,10 @@ it("type - tuple type", () => {
         new Expr.TypedExpression(0,
             get42(0),
             new Type.TupleType([
-                    new Type.TypeVariable('\'a', true, 4),
+                    new Type.TypeVariable('\'a', 4),
                     new Type.TupleType([
-                            new Type.TypeVariable('\'b', true, 10),
-                            new Type.TypeVariable('\'c', true, 15)
+                            new Type.TypeVariable('\'b', 10),
+                            new Type.TypeVariable('\'c', 15)
                         ],
                         13
                     )
@@ -2814,8 +2814,8 @@ it("type - function type expression", () => {
         new Expr.TypedExpression(0,
             get42(0),
             new Type.FunctionType(
-                new Type.TypeVariable('\'a', true, 4),
-                new Type.TypeVariable('\'b', true, 10),
+                new Type.TypeVariable('\'a', 4),
+                new Type.TypeVariable('\'b', 10),
                 7
             )
         )
@@ -2824,10 +2824,10 @@ it("type - function type expression", () => {
         new Expr.TypedExpression(0,
             get42(0),
             new Type.FunctionType(
-                new Type.TypeVariable('\'a', true, 4),
+                new Type.TypeVariable('\'a', 4),
                 new Type.FunctionType(
-                    new Type.TypeVariable('\'b', true, 10),
-                    new Type.TypeVariable('\'c', true, 16),
+                    new Type.TypeVariable('\'b', 10),
+                    new Type.TypeVariable('\'c', 16),
                     13
                 ),
                 7
@@ -2839,11 +2839,11 @@ it("type - function type expression", () => {
             get42(0),
             new Type.FunctionType(
                 new Type.FunctionType(
-                    new Type.TypeVariable('\'a', true, 5),
-                    new Type.TypeVariable('\'b', true, 11),
+                    new Type.TypeVariable('\'a', 5),
+                    new Type.TypeVariable('\'b', 11),
                     8
                 ),
-                new Type.TypeVariable('\'c', true, 18),
+                new Type.TypeVariable('\'c', 18),
                 15
             )
         )
@@ -2858,15 +2858,15 @@ it("type - bracketed", () => {
     expect(parse(testcase_simple)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
-            new Type.TypeVariable('\'a', true, 5)]
+            new Type.TypeVariable('\'a', 5)]
         )
     ));
     expect(parse(testcase_multiple_nested)).toEqualWithType(createItExpression(
         new Expr.TypedExpression(0,
             get42(0),
             new Type.FunctionType(
-                new Type.TypeVariable('\'a', true, 8),
-                new Type.TypeVariable('\'b', true, 14),
+                new Type.TypeVariable('\'a', 8),
+                new Type.TypeVariable('\'b', 14),
                 11
             )
         )
@@ -2876,7 +2876,7 @@ it("type - bracketed", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["hi", new Type.TypeVariable('\'a', true, 12)]
+                    ["hi", new Type.TypeVariable('\'a', 12)]
                 ]),
                 true,
                 7
@@ -2902,7 +2902,7 @@ it("type row", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["hi", new Type.TypeVariable('\'a', true, 10)]
+                    ["hi", new Type.TypeVariable('\'a', 10)]
                 ]),
                 true,
                 6
@@ -2914,7 +2914,7 @@ it("type row", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["1337", new Type.TypeVariable('\'a', true, 12)]
+                    ["1337", new Type.TypeVariable('\'a', 12)]
                 ]),
                 true,
                 6
@@ -2926,7 +2926,7 @@ it("type row", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["###", new Type.TypeVariable('\'a', true, 12)]
+                    ["###", new Type.TypeVariable('\'a', 12)]
                 ]),
                 true,
                 6
@@ -2938,7 +2938,7 @@ it("type row", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["*", new Type.TypeVariable('\'a', true, 10)]
+                    ["*", new Type.TypeVariable('\'a', 10)]
                 ]),
                 true,
                 6
@@ -2967,7 +2967,7 @@ it("type row", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["hi", new Type.TypeVariable('\'a', true, 10)]
+                    ["hi", new Type.TypeVariable('\'a', 10)]
                 ]),
                 true,
                 6
@@ -2979,7 +2979,7 @@ it("type row", () => {
             get42(0),
             new Type.RecordType(
                 new Map([
-                    ["hi", new Type.TypeVariable('\'\'a', true, 10)]
+                    ["hi", new Type.TypeVariable('\'\'a', 10)]
                 ]),
                 true,
                 6

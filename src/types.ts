@@ -348,6 +348,7 @@ export class FunctionType extends Type {
 
 // A custom defined type similar to "list" or "option".
 // May have a type argument.
+// TODO ID?
 export class CustomType extends Type {
     constructor(public name: string,
                 public typeArguments: Type[] = [],
