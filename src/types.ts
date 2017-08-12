@@ -17,6 +17,12 @@ export abstract class Type {
         return this.simplify().getTypeVariables(free);
     }
 
+    replaceTypeVariables(state: State, nextName: string = '\'t1',
+                         replacements: Map<string, string> = new Map<string, string>())
+        : [Type, string, Map<string, string>] {
+        return this.simplify().replaceTypeVariables(state, nextName, replacements);
+    }
+
     // Checks if two types are unifyable; returns all required type variable bindings
     matches(state: State, type: Type): [string, Type][] | undefined {
         return this.simplify().matches(state, type);
@@ -56,6 +62,12 @@ export class AnyType extends Type {
     getTypeVariables(free: boolean): Set<TypeVariable> {
         return new Set<TypeVariable>();
     }
+
+    replaceTypeVariables(state: State, nextName: string = '\'t1',
+                         replacements: Map<string, string> = new Map<string, string>())
+        : [Type, string, Map<string, string>] {
+        return [this, nextName, replacements];
+    }
 }
 
 export class TypeVariableBind extends Type {
@@ -64,7 +76,7 @@ export class TypeVariableBind extends Type {
     }
 
     prettyPrint(): string {
-        if (this.domain === []) {
+        if (this.domain.length === 0) {
             return '∀ ' + this.name + ' . ' + this.type.prettyPrint();
         } else {
             let res = '∀ ' + this.name + ' ∈ {';
@@ -110,6 +122,30 @@ export class TypeVariable extends Type {
         return res;
     }
 
+    replaceTypeVariables(state: State, nextName: string = '\'t1',
+                         replacements: Map<string, string> = new Map<string, string>())
+        : [Type, string, Map<string, string>] {
+        if (replacements.has(this.name)) {
+            return [new TypeVariable(replacements[this.name], this.position), nextName, replacements];
+        }
+        if (state.getStaticValue(this.name) !== undefined) {
+            if (!this.admitsEquality(state)) {
+                replacements = replacements.set(this.name, nextName);
+            } else {
+                replacements = replacements.set(this.name, '\'' + nextName);
+            }
+            let cur: number = (+nextName.substring(2)) + 1;
+            for (; ; ++cur) {
+                if (state.getStaticValue('\'t' + cur) === undefined) {
+                    nextName = '\'t' + cur;
+                    break;
+                }
+            }
+            return [new TypeVariable(replacements[this.name], this.position), nextName, replacements];
+        }
+        return [this, nextName, replacements];
+    }
+
     matches(state: State, type: Type): [string, Type][] | undefined {
         if (this.equals(type)) {
             return [];
@@ -118,6 +154,7 @@ export class TypeVariable extends Type {
         if (st === undefined) {
             return [[this.name, type]];
         }
+
         return st[0].matches(state, type);
     }
 
@@ -154,6 +191,18 @@ export class RecordType extends Type {
             });
         });
         return res;
+    }
+
+    replaceTypeVariables(state: State, nextName: string = '\'t1',
+                         replacements: Map<string, string> = new Map<string, string>())
+        : [Type, string, Map<string, string>] {
+        let res: [Type, string, Map<string, string>] = [this, nextName, replacements];
+        let rt: Map<string, Type> = new Map<string, Type>();
+        this.elements.forEach((val: Type, key: string) => {
+            res = val.replaceTypeVariables(state, res[1], res[2]);
+            rt = rt.set(key, res[0]);
+        });
+        return [new RecordType(rt, this.complete, this.position), res[1], res[2]];
     }
 
     getType(name: string): Type {
@@ -308,6 +357,14 @@ export class FunctionType extends Type {
         return res;
     }
 
+    replaceTypeVariables(state: State, nextName: string = '\'t1',
+                         replacements: Map<string, string> = new Map<string, string>())
+        : [Type, string, Map<string, string>] {
+        let res = this.parameterType.replaceTypeVariables(state, nextName, replacements);
+        let res2 = this.returnType.replaceTypeVariables(state, res[1], res[2]);
+        return [new FunctionType(res[0], res2[0], this.position), res2[1], res2[2]];
+    }
+
     matches(state: State, type: Type): [string, Type][] | undefined {
         if (!(type instanceof FunctionType)) {
             return undefined;
@@ -376,7 +433,29 @@ export class CustomType extends Type {
         return res;
     }
 
+    replaceTypeVariables(state: State, nextName: string = '\'t1',
+                         replacements: Map<string, string> = new Map<string, string>())
+        : [Type, string, Map<string, string>] {
+        let res: [Type, string, Map<string, string>] = [this, nextName, replacements];
+        let rt: Type[] = [];
+
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            res = this.typeArguments[i].replaceTypeVariables(state, res[1], res[2]);
+            rt.push(res[0]);
+        }
+        return [new CustomType(this.name, rt, this.position), res[1], res[2]];
+    }
+
     matches(state: State, type: Type): [string, Type][] | undefined {
+        if (type instanceof TypeVariable) {
+            let r = state.getStaticValue((<TypeVariable> type).name);
+            if (r === undefined) {
+                return [[(<TypeVariable> type).name, this]];
+            } else {
+                type = r[0];
+            }
+        }
+
         if (!(type instanceof CustomType)
             || (<CustomType> type).typeArguments.length !== this.typeArguments.length
             || (<CustomType> type).name !== this.name) {
