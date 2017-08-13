@@ -449,6 +449,25 @@ export class CustomType extends Type {
     }
 
     instantiate(state: State): Type {
+        let tp = state.getStaticType(this.name);
+        if (tp !== undefined && tp.type instanceof FunctionType) {
+            let nstate = state.getNestedState(state.id);
+
+            let mt = (<FunctionType> tp.type).parameterType.matches(nstate, this);
+
+            if (mt === undefined) {
+                throw new ElaborationError(this.position,
+                    '"' + (<FunctionType> tp.type).parameterType.prettyPrint()
+                    + '" does not match "' + this.prettyPrint() + '".');
+            }
+
+            for (let i = 0; i < mt.length; ++i) {
+                nstate.setStaticValue(mt[i][0], mt[i][1], IdentifierStatus.VALUE_VARIABLE);
+            }
+
+            return (<FunctionType> tp.type).returnType.instantiate(nstate);
+        }
+
         let res: Type[] = [];
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].instantiate(state));

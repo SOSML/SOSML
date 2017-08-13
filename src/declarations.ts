@@ -163,7 +163,10 @@ export class TypeDeclaration extends Declaration {
     elaborate(state: State): [State, Warning[]] {
         for (let i = 0; i < this.typeBinding.length; ++i) {
             state.setStaticType(this.typeBinding[i].name.getText(),
-                this.typeBinding[i].type, [], this.typeBinding[i].typeVariableSequence.length);
+                new FunctionType(new CustomType(this.typeBinding[i].name.getText(),
+                    this.typeBinding[i].typeVariableSequence),
+                    this.typeBinding[i].type), [],
+                this.typeBinding[i].typeVariableSequence.length);
         }
 
         return [state, []];
