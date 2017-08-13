@@ -680,17 +680,15 @@ export class ValueBinding {
     }
 
     getType(state: State): [[string, Type][], Warning[]] {
-        // TODO Warnings
         let nstate = state.getNestedState(state.id);
         let tp = this.expression.getType(nstate);
-        let res = this.pattern.matchType(nstate, tp);
+        let res = this.pattern.matchType(nstate, tp[0]);
         if (res === undefined) {
-            // TODO improve Error message
             throw new ElaborationError(this.position,
-                'Type clash. An expression of type "' + tp.prettyPrint()
+                'Type clash. An expression of type "' + tp[0].prettyPrint()
                 + '" cannot be assigned to "' + res[1].prettyPrint() + '".');
         }
-        return [res[0], []];
+        return [res[0], tp[1]];
     }
 
     // Returns [ VE | undef, Excep | undef, Warning[]]
@@ -850,8 +848,8 @@ export class DirectExceptionBinding implements ExceptionBinding {
 
     elaborate(state: State): State {
         if (this.type !== undefined) {
-            let tyvars: TypeVariable[] = [];
-            this.type.getTypeVariables(true).forEach((val: TypeVariable) => {
+            let tyvars: string[] = [];
+            this.type.getTypeVariables().forEach((val: string) => {
                 tyvars.push(val);
             });
             if (tyvars.length > 0) {

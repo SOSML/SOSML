@@ -1,5 +1,3 @@
-import { TypeVariable } from './types';
-
 export interface InterpreterMessage {
     message: string;
     position: number;
@@ -62,7 +60,7 @@ export class ParserError extends InterpreterError {
 }
 
 export class ElaborationError extends InterpreterError {
-    static getUnguarded(position: number, tyvars: TypeVariable[]) {
+    static getUnguarded(position: number, tyvars: string[]) {
         let res = '';
         if (tyvars.length > 1) {
             res += 's';
@@ -72,7 +70,7 @@ export class ElaborationError extends InterpreterError {
             if (i > 0) {
                 res += ', ';
             }
-            res += '"' + tyvars[i].name + '"';
+            res += '"' + tyvars[i] + '"';
         }
         return new ElaborationError(position,
             'Unguarded type variable' + res + '.');

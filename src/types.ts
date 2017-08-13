@@ -11,10 +11,9 @@ export abstract class Type {
         return this.simplify().instantiate(state);
     }
 
-    // Return all (free) type variables
-    // TODO add param for current TyVarBinds
-    getTypeVariables(free: boolean): Set<TypeVariable> {
-        return this.simplify().getTypeVariables(free);
+    // Return all () type variables
+    getTypeVariables(): Set<string> {
+        return this.simplify().getTypeVariables();
     }
 
     replaceTypeVariables(state: State, nextName: string = '\'t1',
@@ -59,8 +58,8 @@ export class AnyType extends Type {
         return [];
     }
 
-    getTypeVariables(free: boolean): Set<TypeVariable> {
-        return new Set<TypeVariable>();
+    getTypeVariables(): Set<string> {
+        return new Set<string>();
     }
 
     replaceTypeVariables(state: State, nextName: string = '\'t1',
@@ -116,9 +115,9 @@ export class TypeVariable extends Type {
         return res[0];
     }
 
-    getTypeVariables(free: boolean): Set<TypeVariable> {
-        let res = new Set<TypeVariable>();
-        res.add(this);
+    getTypeVariables(): Set<string> {
+        let res = new Set<string>();
+        res.add(this.name);
         return res;
     }
 
@@ -126,7 +125,8 @@ export class TypeVariable extends Type {
                          replacements: Map<string, string> = new Map<string, string>())
         : [Type, string, Map<string, string>] {
         if (replacements.has(this.name)) {
-            return [new TypeVariable(replacements[this.name], this.position), nextName, replacements];
+            return [new TypeVariable(<string> replacements.get(this.name),
+                this.position), nextName, replacements];
         }
         if (state.getStaticValue(this.name) !== undefined) {
             if (!this.admitsEquality(state)) {
@@ -141,21 +141,38 @@ export class TypeVariable extends Type {
                     break;
                 }
             }
-            return [new TypeVariable(replacements[this.name], this.position), nextName, replacements];
+            return [new TypeVariable(<string> replacements.get(this.name),
+                this.position), nextName, replacements];
         }
         return [this, nextName, replacements];
     }
 
     matches(state: State, type: Type): [string, Type][] | undefined {
+        //        let res = (() => {
+        let st = state.getStaticValue(this.name);
+        // console.log(this.prettyPrint()+ ' vs ' + type.prettyPrint() );
+        if (type instanceof TypeVariable) {
+            let t = state.getStaticValue((<TypeVariable> type).name);
+            if (t === undefined) {
+                if (st !== undefined) {
+                    return [[(<TypeVariable> type).name, st[0]]];
+                } else {
+                    return [[(<TypeVariable> type).name, this]];
+                }
+            } else {
+                //    type = t[0];
+            }
+        }
         if (this.equals(type)) {
             return [];
         }
-        let st = state.getStaticValue(this.name);
         if (st === undefined) {
             return [[this.name, type]];
         }
-
         return st[0].matches(state, type);
+        // })();
+        // console.log(res);
+        // return res;
     }
 
     admitsEquality(state: State): boolean {
@@ -163,6 +180,9 @@ export class TypeVariable extends Type {
     }
 
     equals(other: any): boolean {
+        if (other instanceof AnyType) {
+            return true;
+        }
         if (!(other instanceof TypeVariable && this.name === other.name)) {
             return false;
         }
@@ -183,10 +203,10 @@ export class RecordType extends Type {
         return new RecordType(newElements, this.complete);
     }
 
-    getTypeVariables(free: boolean): Set<TypeVariable> {
-        let res = new Set<TypeVariable>();
+    getTypeVariables(): Set<string> {
+        let res = new Set<string>();
         this.elements.forEach((val: Type) => {
-            val.getTypeVariables(free).forEach((id: TypeVariable) => {
+            val.getTypeVariables().forEach((id: string) => {
                 res.add(id);
             });
         });
@@ -217,6 +237,15 @@ export class RecordType extends Type {
     }
 
     matches(state: State, type: Type): [string, Type][] | undefined {
+        // console.log(this.prettyPrint()+ ' vs ' + type.prettyPrint() );
+        if (type instanceof TypeVariable) {
+            let t = state.getStaticValue((<TypeVariable> type).name);
+            if (t === undefined) {
+                return [[(<TypeVariable> type).name, this]];
+            } else {
+                type = t[0];
+            }
+        }
         if (!(type instanceof RecordType)
             || this.elements.size !== (<RecordType> type).elements.size) {
             return undefined;
@@ -311,6 +340,9 @@ export class RecordType extends Type {
     }
 
     equals(other: any): boolean {
+        if (other instanceof AnyType) {
+            return true;
+        }
         if (!(other instanceof RecordType) || this.complete !== other.complete) {
             return false;
         } else {
@@ -346,12 +378,12 @@ export class FunctionType extends Type {
             this.position);
     }
 
-    getTypeVariables(free: boolean): Set<TypeVariable> {
-        let res = new Set<TypeVariable>();
-        this.parameterType.getTypeVariables(free).forEach((value: TypeVariable) => {
+    getTypeVariables(): Set<string> {
+        let res = new Set<string>();
+        this.parameterType.getTypeVariables().forEach((value: string) => {
             res.add(value);
         });
-        this.returnType.getTypeVariables(free).forEach((value: TypeVariable) => {
+        this.returnType.getTypeVariables().forEach((value: string) => {
             res.add(value);
         });
         return res;
@@ -398,6 +430,9 @@ export class FunctionType extends Type {
     }
 
     equals(other: any): boolean {
+        if (other instanceof AnyType) {
+            return true;
+        }
         return other instanceof FunctionType && this.parameterType.equals(other.parameterType)
             && this.returnType.equals(other.returnType);
     }
@@ -421,11 +456,11 @@ export class CustomType extends Type {
         return new CustomType(this.name, res, this.position);
     }
 
-    getTypeVariables(free: boolean): Set<TypeVariable> {
-        let res = new Set<TypeVariable>();
+    getTypeVariables(): Set<string> {
+        let res = new Set<string>();
         if (this.typeArguments.length > 0) {
             for (let i = 0; i < this.typeArguments.length; ++i) {
-                this.typeArguments[i].getTypeVariables(free).forEach((val: TypeVariable) => {
+                this.typeArguments[i].getTypeVariables().forEach((val: string) => {
                     res.add(val);
                 });
             }
@@ -516,6 +551,9 @@ export class CustomType extends Type {
     }
 
     equals(other: any): boolean {
+        if (other instanceof AnyType) {
+            return true;
+        }
         if (!(other instanceof CustomType) || this.name !== other.name) {
             return false;
         }
