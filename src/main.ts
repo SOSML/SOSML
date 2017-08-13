@@ -88,7 +88,7 @@ export function interpret(nextInstruction: string,
 
                     let tp = state.getStaticType(i, curState.id);
                     if (tp !== undefined) {
-                        curState.setStaticType(i, tp.type, tp.constructors);
+                        curState.setStaticType(i, tp.type, tp.constructors, tp.arity);
                     }
                 }
             }
