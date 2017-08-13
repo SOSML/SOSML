@@ -14,7 +14,7 @@ type MemBind = [number, Value][];
 export abstract class Expression {
     position: number;
 
-    getType(state: State, nextName: string = '\'t1', tyVars: Set<string> = new Set<string>())
+    getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>())
         : [Type, Warning[], string, Set<string>] {
         throw new InternalInterpreterError(this.position, 'Called "getType" on a derived form.');
     }
@@ -59,7 +59,7 @@ export class Constant extends Expression implements Pattern {
         }
     }
 
-    getType(state: State, nextName: string = '\'t1', tyVars: Set<string> = new Set<string>())
+    getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>())
         : [Type, Warning[], string, Set<string>] {
 
         if (this.token instanceof IntegerConstantToken || this.token instanceof NumericToken) {
@@ -135,7 +135,7 @@ export class ValueIdentifier extends Expression implements Pattern {
         return this.name.getText();
     }
 
-    getType(state: State, nextName: string = '\'t1', tyVars: Set<string> = new Set<string>())
+    getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>())
         : [Type, Warning[], string, Set<string>] {
 
         let res = state.getStaticValue(this.name.getText());
@@ -151,7 +151,7 @@ export class ValueIdentifier extends Expression implements Pattern {
         let nwvar: string[] = [];
 
         vars.forEach((val: string) => {
-            let cur = (+nextName.substring(2));
+            let cur = (+nextName.substring(2)) + 1;
             let nm = '';
             for (; ; ++cur) {
                 nextName = '\'t' + cur;
@@ -265,7 +265,7 @@ export class Record extends Expression implements Pattern {
         return res;
     }
 
-    getType(state: State, nextName: string = '\'t1', tyVars: Set<string> = new Set<string>())
+    getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>())
         : [Type, Warning[], string, Set<string>] {
 
         let e: Map<string, Type> = new Map<string, Type>();
@@ -352,7 +352,7 @@ export class LocalDeclarationExpression extends Expression {
         return res;
     }
 
-    getType(state: State, nextName: string = '\'t1', tyVars: Set<string> = new Set<string>())
+    getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>())
         : [Type, Warning[], string, Set<string>] {
 
         let res = this.declaration.elaborate(state.getNestedState(state.id));
@@ -395,7 +395,7 @@ export class TypedExpression extends Expression implements Pattern {
         return (<PatternExpression> this.expression).matches(state, v);
     }
 
-    getType(state: State, nextName: string = '\'t1', tyVars: Set<string> = new Set<string>())
+    getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>())
         : [Type, Warning[], string, Set<string>] {
 
         let tp = this.expression.getType(state, nextName, tyVars);
@@ -508,7 +508,7 @@ export class FunctionApplication extends Expression implements Pattern {
             + v.constructor.name + ').' );
     }
 
-    getType(state: State, nextName: string = '\'t1', tyVars: Set<string> = new Set<string>())
+    getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>())
         : [Type, Warning[], string, Set<string>] {
 
         let f = this.func.getType(state, nextName, tyVars);
@@ -651,7 +651,7 @@ export class HandleException extends Expression {
         return res;
     }
 
-    getType(state: State, nextName: string = '\'t1', tyVars: Set<string> = new Set<string>())
+    getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>())
         : [Type, Warning[], string, Set<string>] {
 
         let mtp = this.match.getType(state, nextName, tyVars);
@@ -703,7 +703,7 @@ export class RaiseException extends Expression {
         return 'raise ' + this.expression.prettyPrint(indentation, oneLine);
     }
 
-    getType(state: State, nextName: string = '\'t1', tyVars: Set<string> = new Set<string>())
+    getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>())
         : [Type, Warning[], string, Set<string>] {
 
         let res = this.expression.getType(state, nextName, tyVars);
@@ -738,7 +738,7 @@ export class Lambda extends Expression {
         return '( fn ' + this.match.prettyPrint(indentation, oneLine) + ' )';
     }
 
-    getType(state: State, nextName: string = '\'t1', tyVars: Set<string> = new Set<string>())
+    getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>())
         : [Type, Warning[], string, Set<string>] {
         return this.match.getType(state, nextName, tyVars);
     }
@@ -797,7 +797,7 @@ export class Match {
         return [new ExceptionValue('Match', undefined, 0), true, [], []];
     }
 
-    getType(state: State, nextName: string = '\'t1', tyVars: Set<string> = new Set<string>())
+    getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>())
         : [Type, Warning[], string, Set<string>] {
         // TODO
         throw new InternalInterpreterError(this.position, 'nyi\'an :3');
@@ -818,7 +818,7 @@ export class Match {
 export class Wildcard extends Expression implements Pattern {
     constructor(public position: number) { super(); }
 
-    getType(state: State, nextName: string = '\'t1', tyVars: Set<string> = new Set<string>())
+    getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>())
         : [Type, Warning[], string, Set<string>] {
         return [new AnyType(), [], nextName, tyVars];
     }
@@ -856,7 +856,7 @@ export class LayeredPattern extends Expression implements Pattern {
             'Layered patterns are far too layered to have a value.');
     }
 
-    getType(state: State, nextName: string = '\'t1', tyVars: Set<string> = new Set<string>())
+    getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>())
         : [Type, Warning[], string, Set<string>] {
         throw new InternalInterpreterError(this.position,
             'Layered patterns are far too layered to have a type.');

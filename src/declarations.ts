@@ -162,10 +162,8 @@ export class TypeDeclaration extends Declaration {
 
     elaborate(state: State): [State, Warning[]] {
         for (let i = 0; i < this.typeBinding.length; ++i) {
-            // TODO
-            // Make tyvars from seq as unfree
-            // instantiate
-            // return all resulting types without free type vars
+            state.setStaticType(this.typeBinding[i].name.getText(),
+                this.typeBinding[i].type, [], this.typeBinding[i].typeVariableSequence.length);
         }
 
         return [state, []];
@@ -803,7 +801,7 @@ export class DatatypeBinding {
             let tp: Type = new CustomType(this.name.getText(), this.typeVariableSequence);
             if (this.type[i][1] !== undefined) {
                 numArg = 1;
-                tp = new FunctionType(<Type> this.type[i][1], tp);
+                tp = new FunctionType((<Type> this.type[i][1]).instantiate(state), tp);
             }
             // TODO ID
             // let id = state.getValueIdentifierId(this.type[i][0].getText());
@@ -848,8 +846,9 @@ export class DirectExceptionBinding implements ExceptionBinding {
 
     elaborate(state: State): State {
         if (this.type !== undefined) {
+            let tp = this.type.simplify().instantiate(state);
             let tyvars: string[] = [];
-            this.type.getTypeVariables().forEach((val: string) => {
+            tp.getTypeVariables().forEach((val: string) => {
                 tyvars.push(val);
             });
             if (tyvars.length > 0) {
@@ -857,7 +856,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
             }
 
             state.setStaticValue(this.name.getText(),
-                new FunctionType(this.type.simplify(), new CustomType('exn')),
+                new FunctionType(tp, new CustomType('exn')),
                 IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         } else {
             state.setStaticValue(this.name.getText(), new CustomType('exn'),
