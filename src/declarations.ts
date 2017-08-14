@@ -52,22 +52,21 @@ export class ValueDeclaration extends Declaration {
 
         let isRec = false;
         let warns: Warning[] = [];
-        for (let i = 0; i < this.valueBinding.length; ++i) {
+        let i = 0;
+        for (; i < this.valueBinding.length; ++i) {
             if (this.valueBinding[i].isRecursive) {
                 isRec = true;
 
-                // TODO correctly handle functions
-                for (; i < this.valueBinding.length; ++i) {
-                    let r = (<ValueIdentifier> this.valueBinding[i].pattern).name.getText();
-
-                    result.push([r, new FunctionType(new AnyType(), new AnyType())]);
+                for (let j = i; j < this.valueBinding.length; ++j) {
+                    let r = (<ValueIdentifier> this.valueBinding[j].pattern).name.getText();
+                    result.push([r, new FunctionType(new TypeVariable('\'a'), new TypeVariable('\'b'))]);
                 }
 
                 break;
             }
             let val = this.valueBinding[i].getType(state);
 
-            // TODO WARNINGS: warns = warns.concat(val[1]);
+            warns = warns.concat(val[1]);
 
             for (let j = 0; j < (<[string, Type][]> val[0]).length; ++j) {
                 result.push((<[string, Type][]> val[0])[j]);
@@ -76,6 +75,14 @@ export class ValueDeclaration extends Declaration {
 
         for (let j = 0; j < result.length; ++j) {
             state.setStaticValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
+        }
+
+        for (let j = i; j < this.valueBinding.length; ++j) {
+            let val = this.valueBinding[i].getType(state);
+            warns = warns.concat(val[1]);
+            for (let k = 0; k < val[0].length; ++k) {
+                state.setStaticValue(val[0][k][0], val[0][k][1], IdentifierStatus.VALUE_VARIABLE);
+            }
         }
 
         return [state, warns];

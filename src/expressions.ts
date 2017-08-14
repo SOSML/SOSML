@@ -797,9 +797,9 @@ export class Match {
         return [new ExceptionValue('Match', undefined, 0), true, [], []];
     }
 
-    getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>())
-        : [Type, Warning[], string, Set<string>] {
-            // TODO
+    getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>()): [Type, Warning[], string, Set<string>] {
+        // TODO
+
         return [new FunctionType(new AnyType(), new AnyType()), [], nextName, tyVars];
     }
 
