@@ -656,7 +656,7 @@ export class HandleException extends Expression {
 
         let mtp = this.match.getType(state, nextName, tyVars);
         if ((!(mtp[0] instanceof FunctionType))
-            || (<FunctionType> mtp[0]).parameterType.equals(new CustomType('exn'))) {
+            || !(<FunctionType> mtp[0]).parameterType.equals(new CustomType('exn'))) {
             throw new ElaborationError(this.match.position,
                 'You can only handle things of type "exn".');
         }
@@ -799,8 +799,8 @@ export class Match {
 
     getType(state: State, nextName: string = '\'t0', tyVars: Set<string> = new Set<string>())
         : [Type, Warning[], string, Set<string>] {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
+            // TODO
+        return [new FunctionType(new AnyType(), new AnyType()), [], nextName, tyVars];
     }
 
     simplify(): Match {
