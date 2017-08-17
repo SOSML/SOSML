@@ -1,14 +1,18 @@
 import { InternalInterpreterError, ElaborationError } from './errors';
-import { State, IdentifierStatus } from './state';
+import { State } from './state';
 
 export abstract class Type {
     abstract prettyPrint(): string;
     abstract equals(other: any): boolean;
 
     // Constructs types with type variables instantiated as much as possible
-    // TODO add param for current TyVarBinds
-    instantiate(state: State): Type {
-        return this.simplify().instantiate(state);
+    instantiate(state: State, tyVarBind: Map<string, Type>): Type {
+        return this.simplify().instantiate(state, tyVarBind);
+    }
+
+    // Merge this type with the other type. This operation is commutative
+    merge(state: State, tyVarBind: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
+        return this.simplify().merge(state, tyVarBind, other);
     }
 
     // Return all () type variables
@@ -20,11 +24,6 @@ export abstract class Type {
                          replacements: Map<string, string> = new Map<string, string>())
         : [Type, string, Map<string, string>] {
         return this.simplify().replaceTypeVariables(state, nextName, replacements);
-    }
-
-    // Checks if two types are unifyable; returns all required type variable bindings
-    matches(state: State, type: Type): [string, Type][] | undefined {
-        return this.simplify().matches(state, type);
     }
 
     simplify(): Type {
@@ -50,12 +49,12 @@ export class AnyType extends Type {
         return true;
     }
 
-    instantiate(state: State): Type {
+    instantiate(state: State, tyVarBind: Map<string, Type>): Type {
         return this;
     }
 
-    matches(state: State, type: Type): [string, Type][] | undefined {
-        return [];
+    merge(state: State, tyVarBind: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
+        return [other, tyVarBind];
     }
 
     getTypeVariables(): Set<string> {
@@ -69,6 +68,7 @@ export class AnyType extends Type {
     }
 }
 
+    /*
 export class TypeVariableBind extends Type {
     constructor(public name: string, public type: Type, public domain: Type[] = []) {
         super();
@@ -97,6 +97,7 @@ export class TypeVariableBind extends Type {
         return (<TypeVariableBind> other).type.equals(this.type);
     }
 }
+     */
 
 export class TypeVariable extends Type {
     constructor(public name: string, public position: number = 0) {
@@ -107,12 +108,38 @@ export class TypeVariable extends Type {
         return this.name;
     }
 
-    instantiate(state: State): Type {
-        let res = state.getStaticValue(this.name);
-        if (res === undefined || res[0].equals(this)) {
+    instantiate(state: State, tyVarBind: Map<string, Type>): Type {
+        if (!tyVarBind.has(this.name)) {
             return this;
         }
-        return res[0];
+        return (<Type> tyVarBind.get(this.name)).instantiate(state, tyVarBind);
+    }
+
+    merge(state: State, tyVarBind: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
+        let ths = this.instantiate(state, tyVarBind);
+
+        if (ths instanceof TypeVariable) {
+            let oth = other.instantiate(state, tyVarBind);
+
+            if (oth instanceof TypeVariable) {
+                // TODO equality checks
+                if (ths.name === oth.name) {
+                    return [ths, tyVarBind];
+                } else if (ths.name < oth.name) {
+                    // TODO Check that we really don't need to create a new TypeVariable
+                    return [ths, tyVarBind.set(oth.name, ths)];
+                } else {
+                    return [ths, tyVarBind.set(ths.name, oth)];
+                }
+            } else {
+                if (ths.admitsEquality(state) && !oth.admitsEquality(state)) {
+                    throw ['Type "' + other.prettyPrint() + '" does not admit equality.', ths, oth];
+                }
+                return [oth, tyVarBind.set(ths.name, oth)];
+            }
+        } else {
+            return ths.merge(state, tyVarBind, other);
+        }
     }
 
     getTypeVariables(): Set<string> {
@@ -147,34 +174,6 @@ export class TypeVariable extends Type {
         return [this, nextName, replacements];
     }
 
-    matches(state: State, type: Type): [string, Type][] | undefined {
-        //        let res = (() => {
-        let st = state.getStaticValue(this.name);
-        // console.log(this.prettyPrint()+ ' vs ' + type.prettyPrint() );
-        if (type instanceof TypeVariable) {
-            let t = state.getStaticValue((<TypeVariable> type).name);
-            if (t === undefined) {
-                if (st !== undefined) {
-                    return [[(<TypeVariable> type).name, st[0]]];
-                } else {
-                    return [[(<TypeVariable> type).name, this]];
-                }
-            } else {
-                //    type = t[0];
-            }
-        }
-        if (this.equals(type)) {
-            return [];
-        }
-        if (st === undefined) {
-            return [[this.name, type]];
-        }
-        return st[0].matches(state, type);
-        // })();
-        // console.log(res);
-        // return res;
-    }
-
     admitsEquality(state: State): boolean {
         return this.name[1] === '\'';
     }
@@ -195,12 +194,59 @@ export class RecordType extends Type {
         super();
     }
 
-    instantiate(state: State): Type {
+    instantiate(state: State, tyVarBind: Map<string, Type>): Type {
         let newElements: Map<string, Type> = new Map<string, Type>();
         this.elements.forEach((type: Type, key: string) => {
-            newElements.set(key, type.instantiate(state));
+            newElements.set(key, type.instantiate(state, tyVarBind));
         });
         return new RecordType(newElements, this.complete);
+    }
+
+    merge(state: State, tyVarBind: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
+        if (other instanceof TypeVariable || other instanceof AnyType) {
+            return other.merge(state, tyVarBind, this);
+        }
+
+        if (other instanceof RecordType) {
+            if (!this.complete && other.complete) {
+                return other.merge(state, tyVarBind, this);
+            }
+
+            let rt: Map<string, Type> = new Map<string, Type>();
+            let tybnd = tyVarBind;
+            other.elements.forEach((val: Type, key: string) => {
+                if (this.complete && !this.elements.has(key)) {
+                    throw ['Records don\'t agree on members ("' + key
+                        + '" occurs only once.)', this.instantiate(state, tybnd),
+                        other.instantiate(state, tybnd)];
+                }
+
+                if (!this.elements.has(key)) {
+                    rt = rt.set(key, val.instantiate(state, tybnd));
+                } else {
+                    let mg = val.merge(state, tybnd, <Type> this.elements.get(key));
+                    rt = rt.set(key, mg[0]);
+                    tybnd = mg[1];
+                }
+            });
+
+            if (other.complete) {
+                this.elements.forEach((val: Type, key: string) => {
+                    if (!other.elements.has(key)) {
+                        throw ['Records don\'t agree on members ("' + key
+                            + '" occurs only once.)', this.instantiate(state, tybnd),
+                            other.instantiate(state, tybnd)];
+                    }
+                });
+            }
+
+            return [new RecordType(rt, this.complete || other.complete), tybnd];
+        }
+
+        // Merging didn't work
+        throw ['Cannot merge "RecordType" and "' + other.constructor.name + '".',
+            this.instantiate(state, tyVarBind),
+            other.instantiate(state, tyVarBind)];
     }
 
     getTypeVariables(): Set<string> {
@@ -234,46 +280,6 @@ export class RecordType extends Type {
 
     hasType(name: string): boolean {
         return this.elements.has(name);
-    }
-
-    matches(state: State, type: Type): [string, Type][] | undefined {
-        // console.log(this.prettyPrint()+ ' vs ' + type.prettyPrint() );
-        if (type instanceof TypeVariable) {
-            let t = state.getStaticValue((<TypeVariable> type).name);
-            if (t === undefined) {
-                return [[(<TypeVariable> type).name, this]];
-            } else {
-                type = t[0];
-            }
-        }
-        if (!(type instanceof RecordType)
-            || this.elements.size !== (<RecordType> type).elements.size) {
-            return undefined;
-        }
-        let res: [string, Type][] = [];
-
-        let fail = false;
-        this.elements.forEach((tp: Type, key: string) => {
-            if (!(<RecordType> type).hasType(key)) {
-                fail = true;
-            }
-            if (!fail) {
-                let r = tp.matches(state, (<RecordType> type).getType(key));
-                if (r === undefined) {
-                    fail = true;
-                } else {
-                    res = res.concat(r);
-                    for (let i = 0; i < r.length; ++i) {
-                        state.setStaticValue(r[i][0], r[i][1], IdentifierStatus.VALUE_VARIABLE);
-                    }
-                }
-            }
-        });
-
-        if (fail) {
-            return undefined;
-        }
-        return res;
     }
 
     admitsEquality(state: State): boolean {
@@ -373,9 +379,27 @@ export class FunctionType extends Type {
         super();
     }
 
-    instantiate(state: State): Type {
-        return new FunctionType(this.parameterType.instantiate(state), this.returnType.instantiate(state),
+    instantiate(state: State, tyVarBind: Map<string, Type>): Type {
+        return new FunctionType(this.parameterType.instantiate(state, tyVarBind),
+            this.returnType.instantiate(state, tyVarBind),
             this.position);
+    }
+
+    merge(state: State, tyVarBind: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
+        if (other instanceof TypeVariable || other instanceof AnyType) {
+            return other.merge(state, tyVarBind, this);
+        }
+        if (other instanceof FunctionType) {
+            let p = this.parameterType.merge(state, tyVarBind, other.parameterType);
+            let r = this.returnType.merge(state, p[1], other.returnType);
+
+            return [new FunctionType(p[0], r[0]), r[1]];
+        }
+
+        // Merging didn't work
+        throw ['Cannot merge "FunctionType" and "' + other.constructor.name + '".',
+            this.instantiate(state, tyVarBind),
+            other.instantiate(state, tyVarBind)];
     }
 
     getTypeVariables(): Set<string> {
@@ -397,32 +421,18 @@ export class FunctionType extends Type {
         return [new FunctionType(res[0], res2[0], this.position), res2[1], res2[2]];
     }
 
-    matches(state: State, type: Type): [string, Type][] | undefined {
-        if (!(type instanceof FunctionType)) {
-            return undefined;
-        }
-        let r1 = this.parameterType.matches(state, (<FunctionType> type).parameterType);
-        if (r1 === undefined) {
-            return undefined;
-        }
-        for (let j = 0; j < r1.length; ++j) {
-            state.setStaticValue(r1[j][0], r1[j][1], IdentifierStatus.VALUE_VARIABLE);
-        }
-        let r2 = this.returnType.matches(state, (<FunctionType> type).returnType);
-        if (r2 === undefined) {
-            return undefined;
-        }
-        return r1.concat(r2);
-    }
-
     admitsEquality(state: State): boolean {
         return this.parameterType.admitsEquality(state) && this.returnType.admitsEquality(state);
     }
 
-
     prettyPrint(): string {
-        return '(' + this.parameterType.prettyPrint()
-            + ' -> ' + this.returnType.prettyPrint() + ')';
+        if (this.parameterType instanceof FunctionType) {
+            return '(' + this.parameterType.prettyPrint() + ')'
+                + ' -> ' + this.returnType.prettyPrint();
+        } else {
+            return this.parameterType.prettyPrint()
+                + ' -> ' + this.returnType.prettyPrint();
+        }
     }
 
     simplify(): FunctionType {
@@ -448,31 +458,63 @@ export class CustomType extends Type {
         super();
     }
 
-    instantiate(state: State): Type {
+    instantiate(state: State, tyVarBind: Map<string, Type>): Type {
         let tp = state.getStaticType(this.name);
         if (tp !== undefined && tp.type instanceof FunctionType) {
-            let nstate = state.getNestedState(state.id);
-
-            let mt = (<FunctionType> tp.type).parameterType.matches(nstate, this);
-
-            if (mt === undefined) {
+            try {
+                let mt = this.merge(state, tyVarBind,  (<FunctionType> tp.type).parameterType, true);
+                return (<FunctionType> tp.type).returnType.instantiate(state, mt[1]);
+            } catch (e) {
+                throw e;
                 throw new ElaborationError(this.position,
-                    '"' + (<FunctionType> tp.type).parameterType.prettyPrint()
-                    + '" does not match "' + this.prettyPrint() + '".');
+                    'Instantiating "' + this.prettyPrint() + '" failed:\n'
+                    + 'Cannot merge "' + e[1].prettyPrint() + '" and "' + e[2].prettyPrint()
+                    + '" (' + e[0] + ').');
             }
-
-            for (let i = 0; i < mt.length; ++i) {
-                nstate.setStaticValue(mt[i][0], mt[i][1], IdentifierStatus.VALUE_VARIABLE);
-            }
-
-            return (<FunctionType> tp.type).returnType.instantiate(nstate);
         }
 
         let res: Type[] = [];
         for (let i = 0; i < this.typeArguments.length; ++i) {
-            res.push(this.typeArguments[i].instantiate(state));
+            res.push(this.typeArguments[i].instantiate(state, tyVarBind));
         }
         return new CustomType(this.name, res, this.position);
+    }
+
+    merge(state: State, tyVarBind: Map<string, Type>, other: Type, noinst: boolean = false): [Type, Map<string, Type>] {
+        if (other instanceof TypeVariable || other instanceof AnyType) {
+            return other.merge(state, tyVarBind, this);
+        }
+
+        let ths = this;
+        let oth = other;
+        if (!noinst) {
+            // Remove type alias and stuff
+            ths = this.instantiate(state, tyVarBind);
+
+            if (!(ths instanceof CustomType)) {
+                return ths.merge(state, tyVarBind, other);
+            }
+            oth = other.instantiate(state, tyVarBind);
+        }
+
+        if (oth instanceof CustomType && ths.name === oth.name
+            && ths.typeArguments.length === oth.typeArguments.length) {
+            let res: Type[] = [];
+            let tybnd = tyVarBind;
+
+            for (let i = 0; i < ths.typeArguments.length; ++i) {
+                let tmp = ths.typeArguments[i].merge(state, tybnd, oth.typeArguments[i]);
+                res.push(tmp[0]);
+                tybnd = tmp[1];
+            }
+
+            return [new CustomType(ths.name, res), tybnd];
+        }
+
+        // Merging didn't work
+        throw ['Cannot merge "CustomType" and "' + other.constructor.name + '".',
+            this.instantiate(state, tyVarBind),
+            other.instantiate(state, tyVarBind)];
     }
 
     getTypeVariables(): Set<string> {
@@ -498,37 +540,6 @@ export class CustomType extends Type {
             rt.push(res[0]);
         }
         return [new CustomType(this.name, rt, this.position), res[1], res[2]];
-    }
-
-    matches(state: State, type: Type): [string, Type][] | undefined {
-        if (type instanceof TypeVariable) {
-            let r = state.getStaticValue((<TypeVariable> type).name);
-            if (r === undefined) {
-                return [[(<TypeVariable> type).name, this]];
-            } else {
-                type = r[0];
-            }
-        }
-
-        if (!(type instanceof CustomType)
-            || (<CustomType> type).typeArguments.length !== this.typeArguments.length
-            || (<CustomType> type).name !== this.name) {
-            return undefined;
-        }
-
-        let res: [string, Type][] = [];
-
-        for (let i = 0; i < this.typeArguments.length; ++i) {
-            let r = this.typeArguments[i].matches(state, (<CustomType> type).typeArguments[i]);
-            if (r === undefined) {
-                return undefined;
-            }
-            for (let j = 0; j < r.length; ++j) {
-                state.setStaticValue(r[j][0], r[j][1], IdentifierStatus.VALUE_VARIABLE);
-            }
-            res = res.concat(r);
-        }
-        return res;
     }
 
     admitsEquality(state: State): boolean {

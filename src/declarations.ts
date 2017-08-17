@@ -1,7 +1,7 @@
 import { Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
          Pattern, TypedExpression, Tuple, PatternExpression } from './expressions';
 import { IdentifierToken, Token } from './tokens';
-import { Type, TypeVariable, FunctionType, CustomType, AnyType } from './types';
+import { Type, TypeVariable, FunctionType, CustomType } from './types';
 import { State, IdentifierStatus } from './state';
 import { InternalInterpreterError, ElaborationError,
          EvaluationError, FeatureDisabledError, Warning } from './errors';
@@ -690,7 +690,7 @@ export class ValueBinding {
     getType(state: State): [[string, Type][], Warning[]] {
         let nstate = state.getNestedState(state.id);
         let tp = this.expression.getType(nstate);
-        let res = this.pattern.matchType(nstate, tp[0]);
+        let res = this.pattern.matchType(nstate, tp[0].instantiate(state, tp[4]));
         if (res === undefined) {
             throw new ElaborationError(this.position,
                 'Type clash. An expression of type "' + tp[0].prettyPrint()
@@ -811,7 +811,8 @@ export class DatatypeBinding {
             let tp: Type = new CustomType(this.name.getText(), this.typeVariableSequence);
             if (this.type[i][1] !== undefined) {
                 numArg = 1;
-                tp = new FunctionType((<Type> this.type[i][1]).instantiate(state), tp);
+                tp = new FunctionType((<Type> this.type[i][1]).instantiate(
+                    state, new Map<string, Type>()), tp);
             }
             // TODO ID
             // let id = state.getValueIdentifierId(this.type[i][0].getText());
@@ -856,7 +857,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
 
     elaborate(state: State): State {
         if (this.type !== undefined) {
-            let tp = this.type.simplify().instantiate(state);
+            let tp = this.type.simplify().instantiate(state, new Map<string, Type>());
             let tyvars: string[] = [];
             tp.getTypeVariables().forEach((val: string) => {
                 tyvars.push(val);

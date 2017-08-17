@@ -206,7 +206,7 @@ it("1.2.3", () => {
 vall x = 5;
      */
     run_test([
-        ['vall x = 5;', (x) => { expect(x).toThrow(Errors.EvaluationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['vall x = 5;', (x) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
         }]
     ]);
 });
