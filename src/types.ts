@@ -6,13 +6,17 @@ export abstract class Type {
     abstract equals(other: any): boolean;
 
     // Constructs types with type variables instantiated as much as possible
-    instantiate(state: State, tyVarBind: Map<string, Type>): Type {
-        return this.simplify().instantiate(state, tyVarBind);
+    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
+        return this.simplify().instantiate(state, tyVarBnd);
     }
 
     // Merge this type with the other type. This operation is commutative
-    merge(state: State, tyVarBind: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
-        return this.simplify().merge(state, tyVarBind, other);
+    merge(state: State, tyVarBnd: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
+        return this.simplify().merge(state, tyVarBnd, other);
+    }
+
+    makeEqType(state: State, tyVarBnd: Map<string, Type>) : [Type, Map<string, Type>] {
+        return this.simplify().makeEqType(state, tyVarBnd);
     }
 
     // Return all () type variables
@@ -49,12 +53,16 @@ export class AnyType extends Type {
         return true;
     }
 
-    instantiate(state: State, tyVarBind: Map<string, Type>): Type {
+    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
         return this;
     }
 
-    merge(state: State, tyVarBind: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
-        return [other, tyVarBind];
+    merge(state: State, tyVarBnd: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
+        return [other, tyVarBnd];
+    }
+
+    makeEqType(state: State, tyVarBnd: Map<string, Type>) : [Type, Map<string, Type>] {
+        return [this, tyVarBnd];
     }
 
     getTypeVariables(): Set<string> {
@@ -108,38 +116,57 @@ export class TypeVariable extends Type {
         return this.name;
     }
 
-    instantiate(state: State, tyVarBind: Map<string, Type>): Type {
-        if (!tyVarBind.has(this.name)) {
+    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
+        if (!tyVarBnd.has(this.name)) {
             return this;
         }
-        return (<Type> tyVarBind.get(this.name)).instantiate(state, tyVarBind);
+        return (<Type> tyVarBnd.get(this.name)).instantiate(state, tyVarBnd);
     }
 
-    merge(state: State, tyVarBind: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
-        let ths = this.instantiate(state, tyVarBind);
+    merge(state: State, tyVarBnd: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
+        let ths = this.instantiate(state, tyVarBnd);
 
         if (ths instanceof TypeVariable) {
-            let oth = other.instantiate(state, tyVarBind);
+            let oth = other.instantiate(state, tyVarBnd);
 
             if (oth instanceof TypeVariable) {
                 // TODO equality checks
                 if (ths.name === oth.name) {
-                    return [ths, tyVarBind];
+                    return [ths, tyVarBnd];
                 } else if (ths.name < oth.name) {
                     // TODO Check that we really don't need to create a new TypeVariable
-                    return [ths, tyVarBind.set(oth.name, ths)];
+                    return [ths, tyVarBnd.set(oth.name, ths)];
                 } else {
-                    return [ths, tyVarBind.set(ths.name, oth)];
+                    return [ths, tyVarBnd.set(ths.name, oth)];
                 }
             } else {
                 if (ths.admitsEquality(state) && !oth.admitsEquality(state)) {
-                    throw ['Type "' + other.prettyPrint() + '" does not admit equality.', ths, oth];
+                    let nt = oth.makeEqType(state, tyVarBnd);
+                    if (!nt[0].admitsEquality(state)) {
+                        throw ['Type "' + oth.prettyPrint() + '" does not admit equality.', ths, oth];
+                    } else {
+                        oth = nt[0];
+                        tyVarBnd = nt[1];
+                    }
                 }
-                return [oth, tyVarBind.set(ths.name, oth)];
+                return [oth, tyVarBnd.set(ths.name, oth)];
             }
         } else {
-            return ths.merge(state, tyVarBind, other);
+            return ths.merge(state, tyVarBnd, other);
         }
+    }
+
+    makeEqType(state: State, tyVarBnd: Map<string, Type>) : [Type, Map<string, Type>] {
+        if (this.admitsEquality(state)) {
+            return [this, tyVarBnd];
+        }
+        if (tyVarBnd.has(this.name)) {
+            let tmp = (<Type> tyVarBnd.get(this.name)).makeEqType(state, tyVarBnd);
+            tyVarBnd = tmp[1];
+            tyVarBnd = tyVarBnd.set('\'' + this.name, tmp[0]);
+        }
+        let nt = new TypeVariable('\'' + this.name, this.position);
+        return [nt, tyVarBnd.set(this.name, nt)];
     }
 
     getTypeVariables(): Set<string> {
@@ -194,26 +221,26 @@ export class RecordType extends Type {
         super();
     }
 
-    instantiate(state: State, tyVarBind: Map<string, Type>): Type {
+    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
         let newElements: Map<string, Type> = new Map<string, Type>();
         this.elements.forEach((type: Type, key: string) => {
-            newElements.set(key, type.instantiate(state, tyVarBind));
+            newElements.set(key, type.instantiate(state, tyVarBnd));
         });
         return new RecordType(newElements, this.complete);
     }
 
-    merge(state: State, tyVarBind: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
+    merge(state: State, tyVarBnd: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
         if (other instanceof TypeVariable || other instanceof AnyType) {
-            return other.merge(state, tyVarBind, this);
+            return other.merge(state, tyVarBnd, this);
         }
 
         if (other instanceof RecordType) {
             if (!this.complete && other.complete) {
-                return other.merge(state, tyVarBind, this);
+                return other.merge(state, tyVarBnd, this);
             }
 
             let rt: Map<string, Type> = new Map<string, Type>();
-            let tybnd = tyVarBind;
+            let tybnd = tyVarBnd;
             other.elements.forEach((val: Type, key: string) => {
                 if (this.complete && !this.elements.has(key)) {
                     throw ['Records don\'t agree on members ("' + key
@@ -245,8 +272,18 @@ export class RecordType extends Type {
 
         // Merging didn't work
         throw ['Cannot merge "RecordType" and "' + other.constructor.name + '".',
-            this.instantiate(state, tyVarBind),
-            other.instantiate(state, tyVarBind)];
+            this.instantiate(state, tyVarBnd),
+            other.instantiate(state, tyVarBnd)];
+    }
+
+    makeEqType(state: State, tyVarBnd: Map<string, Type>) : [Type, Map<string, Type>] {
+        let newElements: Map<string, Type> = new Map<string, Type>();
+        this.elements.forEach((type: Type, key: string) => {
+            let tmp = type.makeEqType(state, tyVarBnd);
+            newElements.set(key, tmp[0]);
+            tyVarBnd = tmp[1];
+        });
+        return [new RecordType(newElements, this.complete), tyVarBnd];
     }
 
     getTypeVariables(): Set<string> {
@@ -379,18 +416,18 @@ export class FunctionType extends Type {
         super();
     }
 
-    instantiate(state: State, tyVarBind: Map<string, Type>): Type {
-        return new FunctionType(this.parameterType.instantiate(state, tyVarBind),
-            this.returnType.instantiate(state, tyVarBind),
+    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
+        return new FunctionType(this.parameterType.instantiate(state, tyVarBnd),
+            this.returnType.instantiate(state, tyVarBnd),
             this.position);
     }
 
-    merge(state: State, tyVarBind: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
+    merge(state: State, tyVarBnd: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
         if (other instanceof TypeVariable || other instanceof AnyType) {
-            return other.merge(state, tyVarBind, this);
+            return other.merge(state, tyVarBnd, this);
         }
         if (other instanceof FunctionType) {
-            let p = this.parameterType.merge(state, tyVarBind, other.parameterType);
+            let p = this.parameterType.merge(state, tyVarBnd, other.parameterType);
             let r = this.returnType.merge(state, p[1], other.returnType);
 
             return [new FunctionType(p[0], r[0]), r[1]];
@@ -398,8 +435,12 @@ export class FunctionType extends Type {
 
         // Merging didn't work
         throw ['Cannot merge "FunctionType" and "' + other.constructor.name + '".',
-            this.instantiate(state, tyVarBind),
-            other.instantiate(state, tyVarBind)];
+            this.instantiate(state, tyVarBnd),
+            other.instantiate(state, tyVarBnd)];
+    }
+
+    makeEqType(state: State, tyVarBnd: Map<string, Type>) : [Type, Map<string, Type>] {
+        return [this, tyVarBnd];
     }
 
     getTypeVariables(): Set<string> {
@@ -458,11 +499,11 @@ export class CustomType extends Type {
         super();
     }
 
-    instantiate(state: State, tyVarBind: Map<string, Type>): Type {
+    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
         let tp = state.getStaticType(this.name);
         if (tp !== undefined && tp.type instanceof FunctionType) {
             try {
-                let mt = this.merge(state, tyVarBind,  (<FunctionType> tp.type).parameterType, true);
+                let mt = this.merge(state, tyVarBnd,  (<FunctionType> tp.type).parameterType, true);
                 return (<FunctionType> tp.type).returnType.instantiate(state, mt[1]);
             } catch (e) {
                 throw new ElaborationError(this.position,
@@ -476,32 +517,32 @@ export class CustomType extends Type {
 
         let res: Type[] = [];
         for (let i = 0; i < this.typeArguments.length; ++i) {
-            res.push(this.typeArguments[i].instantiate(state, tyVarBind));
+            res.push(this.typeArguments[i].instantiate(state, tyVarBnd));
         }
         return new CustomType(this.name, res, this.position);
     }
 
-    merge(state: State, tyVarBind: Map<string, Type>, other: Type, noinst: boolean = false): [Type, Map<string, Type>] {
+    merge(state: State, tyVarBnd: Map<string, Type>, other: Type, noinst: boolean = false): [Type, Map<string, Type>] {
         if (other instanceof TypeVariable || other instanceof AnyType) {
-            return other.merge(state, tyVarBind, this);
+            return other.merge(state, tyVarBnd, this);
         }
 
         let ths: Type = this;
         let oth = other;
         if (!noinst) {
             // Remove type alias and stuff
-            ths = this.instantiate(state, tyVarBind);
+            ths = this.instantiate(state, tyVarBnd);
 
             if (!(ths instanceof CustomType)) {
-                return ths.merge(state, tyVarBind, other);
+                return ths.merge(state, tyVarBnd, other);
             }
-            oth = other.instantiate(state, tyVarBind);
+            oth = other.instantiate(state, tyVarBnd);
         }
 
         if (oth instanceof CustomType && (<CustomType> ths).name === (<CustomType> oth).name
             && (<CustomType> ths).typeArguments.length === (<CustomType> oth).typeArguments.length) {
             let res: Type[] = [];
-            let tybnd = tyVarBind;
+            let tybnd = tyVarBnd;
 
             for (let i = 0; i < (<CustomType> ths).typeArguments.length; ++i) {
                 let tmp = (<CustomType> ths).typeArguments[i].merge(state, tybnd, oth.typeArguments[i]);
@@ -514,8 +555,18 @@ export class CustomType extends Type {
 
         // Merging didn't work
         throw ['Cannot merge "CustomType" and "' + other.constructor.name + '".',
-            this.instantiate(state, tyVarBind),
-            other.instantiate(state, tyVarBind)];
+            this.instantiate(state, tyVarBnd),
+            other.instantiate(state, tyVarBnd)];
+    }
+
+    makeEqType(state: State, tyVarBnd: Map<string, Type>) : [Type, Map<string, Type>] {
+        let res: Type[] = [];
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            let tmp = this.typeArguments[i].makeEqType(state, tyVarBnd);
+            res.push(tmp[0]);
+            tyVarBnd = tmp[1];
+        }
+        return [new CustomType(this.name, res, this.position), tyVarBnd];
     }
 
     getTypeVariables(): Set<string> {
