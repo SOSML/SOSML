@@ -15,7 +15,7 @@ export abstract class Type {
         return this.simplify().merge(state, tyVarBnd, other);
     }
 
-    makeEqType(state: State, tyVarBnd: Map<string, Type>) : [Type, Map<string, Type>] {
+    makeEqType(state: State, tyVarBnd: Map<string, Type>): [Type, Map<string, Type>] {
         return this.simplify().makeEqType(state, tyVarBnd);
     }
 
@@ -61,7 +61,7 @@ export class AnyType extends Type {
         return [other, tyVarBnd];
     }
 
-    makeEqType(state: State, tyVarBnd: Map<string, Type>) : [Type, Map<string, Type>] {
+    makeEqType(state: State, tyVarBnd: Map<string, Type>): [Type, Map<string, Type>] {
         return [this, tyVarBnd];
     }
 
@@ -156,7 +156,7 @@ export class TypeVariable extends Type {
         }
     }
 
-    makeEqType(state: State, tyVarBnd: Map<string, Type>) : [Type, Map<string, Type>] {
+    makeEqType(state: State, tyVarBnd: Map<string, Type>): [Type, Map<string, Type>] {
         if (this.admitsEquality(state)) {
             return [this, tyVarBnd];
         }
@@ -276,7 +276,7 @@ export class RecordType extends Type {
             other.instantiate(state, tyVarBnd)];
     }
 
-    makeEqType(state: State, tyVarBnd: Map<string, Type>) : [Type, Map<string, Type>] {
+    makeEqType(state: State, tyVarBnd: Map<string, Type>): [Type, Map<string, Type>] {
         let newElements: Map<string, Type> = new Map<string, Type>();
         this.elements.forEach((type: Type, key: string) => {
             let tmp = type.makeEqType(state, tyVarBnd);
@@ -363,7 +363,7 @@ export class RecordType extends Type {
             } else {
                 first = false;
             }
-            result += key + ' : ' + type.prettyPrint();
+            result += key + ': ' + type.prettyPrint();
         });
         if (!this.complete) {
             if (!first) {
@@ -439,7 +439,7 @@ export class FunctionType extends Type {
             other.instantiate(state, tyVarBnd)];
     }
 
-    makeEqType(state: State, tyVarBnd: Map<string, Type>) : [Type, Map<string, Type>] {
+    makeEqType(state: State, tyVarBnd: Map<string, Type>): [Type, Map<string, Type>] {
         return [this, tyVarBnd];
     }
 
@@ -559,7 +559,7 @@ export class CustomType extends Type {
             other.instantiate(state, tyVarBnd)];
     }
 
-    makeEqType(state: State, tyVarBnd: Map<string, Type>) : [Type, Map<string, Type>] {
+    makeEqType(state: State, tyVarBnd: Map<string, Type>): [Type, Map<string, Type>] {
         let res: Type[] = [];
         for (let i = 0; i < this.typeArguments.length; ++i) {
             let tmp = this.typeArguments[i].makeEqType(state, tyVarBnd);

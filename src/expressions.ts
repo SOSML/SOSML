@@ -884,8 +884,10 @@ export class Match {
         let bnds = tyVarBnd;
 
         for (let i = 0; i < this.matches.length; ++i) {
-            // TODO: Ensure that stuff doesn't spread over different rules
-            // fun f x 3 = x 3 | f _ x = x;
+            let nmap = new Map<string, Type>();
+            bnds.forEach((val: Type, key: string) => {
+                nmap = nmap.set(key, val);
+            });
             let r1 = this.matches[i][0].getType(state, bnds, nextName, tyVars, true);
 
             warns = warns.concat(r1[1]);
@@ -905,8 +907,13 @@ export class Match {
                     + e[2].prettyPrint() + '")');
             }
             restp = restp.instantiate(state, bnds);
+            bnds.forEach((val: Type, key: string) => {
+                if (key[1] !== '_' || key[2] !== '_') {
+                    nmap = nmap.set(key, val);
+                }
+            });
+            bnds = nmap;
         }
-
         return [restp, warns, nextName, tyVars, bnds];
     }
 
