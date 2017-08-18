@@ -181,6 +181,9 @@ export class ValueIdentifier extends Expression implements Pattern {
             let rt = t.merge(state, tyVarBnd, res[0]);
             return [[], rt[0], rt[1]];
         } catch (e) {
+            if (!(e instanceof Array)) {
+                throw e;
+            }
             throw new ElaborationError(this.position,
                 'Type clash: "' + t.prettyPrint() + '" vs. "'
                 + res[0].prettyPrint() + '":\n' + e[0]);
@@ -432,6 +435,9 @@ export class TypedExpression extends Expression implements Pattern {
             }
             return [tp[0], res[0], res[1]];
         } catch (e) {
+            if (!(e instanceof Array)) {
+                throw e;
+            }
             throw new ElaborationError(this.position,
                 'The annotated type "' + this.typeAnnotation.prettyPrint()
                 + '" does not match the expression\'s type "'
@@ -454,6 +460,9 @@ export class TypedExpression extends Expression implements Pattern {
             let tmp = tp[0].merge(state, tyVarBnd, this.typeAnnotation.instantiate(state, tyVarBnd));
             return [tmp[0], tp[1], tp[2], tp[3], tmp[1]];
         } catch (e) {
+            if (!(e instanceof Array)) {
+                throw e;
+            }
             throw new ElaborationError(this.position,
                 'The specified type "' + this.typeAnnotation.prettyPrint()
                 + '" does not match the annotated expression\'s type "'
@@ -591,6 +600,9 @@ export class FunctionApplication extends Expression implements Pattern {
                 return [(<FunctionType> f[0]).returnType.instantiate(state, tp[1]),
                     f[1].concat(arg[1]), arg[2], arg[3], f[4]];
             } catch (e) {
+                if (!(e instanceof Array)) {
+                    throw e;
+                }
                 throw new ElaborationError(this.position,
                     'Do not feed functions of type "' + f[0].prettyPrint()
                     + '" an argument of type "' + arg[0].prettyPrint() + '":\n'
@@ -737,6 +749,9 @@ export class HandleException extends Expression {
             let res = rt.merge(state, etp[4], etp[0]);
             return [res[0], mtp[1].concat(etp[1]), etp[2], etp[3], res[1]];
         } catch (e) {
+            if (!(e instanceof Array)) {
+                throw e;
+            }
             throw new ElaborationError(this.expression.position,
                 'The "handle" cannot change the type of the expression from "'
                 + etp[0].prettyPrint() + '" to "' + rt.prettyPrint() + '":\n' + e[0]);
@@ -784,6 +799,9 @@ export class RaiseException extends Expression {
             let mg = res[0].merge(state, tyVarBnd, new CustomType('exn'));
             return [new AnyType(), res[1], res[2], res[3], mg[1]];
         } catch (e) {
+            if (!(e instanceof Array)) {
+                throw e;
+            }
             throw new ElaborationError(this.expression.position,
                 'Raising anything but exceptions will only raise exceptions:\n' + e[0]);
         }
@@ -902,6 +920,9 @@ export class Match {
             try {
                 [restp, bnds] = restp.merge(state, r2[4], rtp);
             } catch (e) {
+                if (!(e instanceof Array)) {
+                    throw e;
+                }
                 throw new ElaborationError(this.position,
                     'Match rules disagree on type:\n' + e[0] + ' ("' + e[1].prettyPrint() + '" vs. "'
                     + e[2].prettyPrint() + '")');
