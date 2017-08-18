@@ -690,11 +690,16 @@ export class ValueBinding {
     getType(state: State): [[string, Type][], Warning[]] {
         let nstate = state.getNestedState(state.id);
         let tp = this.expression.getType(nstate);
-        let res = this.pattern.matchType(nstate, tp[0].instantiate(state, tp[4]));
+        let res = this.pattern.matchType(nstate, tp[4], tp[0]);
+
         if (res === undefined) {
             throw new ElaborationError(this.position,
                 'Type clash. An expression of type "' + tp[0].prettyPrint()
                 + '" cannot be assigned to "' + res[1].prettyPrint() + '".');
+        }
+
+        for (let i = 0; i < res[0].length; ++i) {
+            res[0][i][1] = res[0][i][1].instantiate(state, res[2]);
         }
         return [res[0], tp[1]];
     }
@@ -806,13 +811,16 @@ export class DatatypeBinding {
     getType(state: State): [[string, Type][], Type, [string, string[]]] {
         let connames: string[] = [];
         let ve: [string, Type][] = [];
+        let nstate = state.getNestedState(state.id);
+        let restp = new CustomType(this.name.getText(), this.typeVariableSequence);
+        nstate.setStaticType(this.name.getText(), restp, [], this.typeVariableSequence.length);
         for (let i = 0; i < this.type.length; ++i) {
             let numArg: number = 0;
-            let tp: Type = new CustomType(this.name.getText(), this.typeVariableSequence);
+            let tp: Type = restp;
             if (this.type[i][1] !== undefined) {
                 numArg = 1;
                 tp = new FunctionType((<Type> this.type[i][1]).instantiate(
-                    state, new Map<string, Type>()), tp);
+                    nstate, new Map<string, Type>()), tp);
             }
             // TODO ID
             // let id = state.getValueIdentifierId(this.type[i][0].getText());
@@ -820,8 +828,7 @@ export class DatatypeBinding {
             ve.push([this.type[i][0].getText(), tp]);
             connames.push(this.type[i][0].getText());
         }
-        return [ve, new CustomType(this.name.getText(), this.typeVariableSequence),
-            [this.name.getText(), connames]];
+        return [ve, restp, [this.name.getText(), connames]];
     }
 
     compute(state: State): [[string, Value][], [string, string[]]] {
@@ -862,9 +869,10 @@ export class DirectExceptionBinding implements ExceptionBinding {
             tp.getTypeVariables().forEach((val: string) => {
                 tyvars.push(val);
             });
-            if (tyvars.length > 0) {
-                throw ElaborationError.getUnguarded(this.position, tyvars);
-            }
+            // TODO Only do this if we're at top level
+            // if (tyvars.length > 0) {
+            //    throw ElaborationError.getUnguarded(this.position, tyvars);
+            // }
 
             state.setStaticValue(this.name.getText(),
                 new FunctionType(tp, new CustomType('exn')),

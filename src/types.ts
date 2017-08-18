@@ -422,7 +422,7 @@ export class FunctionType extends Type {
     }
 
     admitsEquality(state: State): boolean {
-        return this.parameterType.admitsEquality(state) && this.returnType.admitsEquality(state);
+        return false;
     }
 
     prettyPrint(): string {
@@ -465,12 +465,13 @@ export class CustomType extends Type {
                 let mt = this.merge(state, tyVarBind,  (<FunctionType> tp.type).parameterType, true);
                 return (<FunctionType> tp.type).returnType.instantiate(state, mt[1]);
             } catch (e) {
-                throw e;
                 throw new ElaborationError(this.position,
                     'Instantiating "' + this.prettyPrint() + '" failed:\n'
                     + 'Cannot merge "' + e[1].prettyPrint() + '" and "' + e[2].prettyPrint()
                     + '" (' + e[0] + ').');
             }
+        } else if (tp === undefined) {
+            throw new ElaborationError(this.position, 'Unbound type "' + this.name + '".');
         }
 
         let res: Type[] = [];
@@ -485,7 +486,7 @@ export class CustomType extends Type {
             return other.merge(state, tyVarBind, this);
         }
 
-        let ths = this;
+        let ths: Type = this;
         let oth = other;
         if (!noinst) {
             // Remove type alias and stuff
@@ -497,18 +498,18 @@ export class CustomType extends Type {
             oth = other.instantiate(state, tyVarBind);
         }
 
-        if (oth instanceof CustomType && ths.name === oth.name
-            && ths.typeArguments.length === oth.typeArguments.length) {
+        if (oth instanceof CustomType && (<CustomType> ths).name === (<CustomType> oth).name
+            && (<CustomType> ths).typeArguments.length === (<CustomType> oth).typeArguments.length) {
             let res: Type[] = [];
             let tybnd = tyVarBind;
 
-            for (let i = 0; i < ths.typeArguments.length; ++i) {
-                let tmp = ths.typeArguments[i].merge(state, tybnd, oth.typeArguments[i]);
+            for (let i = 0; i < (<CustomType> ths).typeArguments.length; ++i) {
+                let tmp = (<CustomType> ths).typeArguments[i].merge(state, tybnd, oth.typeArguments[i]);
                 res.push(tmp[0]);
                 tybnd = tmp[1];
             }
 
-            return [new CustomType(ths.name, res), tybnd];
+            return [new CustomType((<CustomType> ths).name, res), tybnd];
         }
 
         // Merging didn't work

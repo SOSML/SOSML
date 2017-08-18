@@ -271,7 +271,7 @@ export class State {
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
-            (<State> this.parent).setStaticType(name, type, constructors, atId, arity);
+            (<State> this.parent).setStaticType(name, type, constructors, arity, atId);
         }
     }
 
