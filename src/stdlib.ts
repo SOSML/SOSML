@@ -208,6 +208,11 @@ function addRealLib(state: State): State {
 }
 
 let code = `
+fun ! (a : \'a ref): \'a = ! a;
+fun op := ((a, b) : (\'a ref * \'a)): unit = a := b;
+fun ref (a : \'a): \'a ref = ref a;
+
+
 exception Domain;
 exception Empty;
 exception Subscript;
