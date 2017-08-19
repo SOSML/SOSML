@@ -244,6 +244,21 @@ export class Record extends Expression implements Pattern {
 
     matchType(state: State, tyVarBnd: Map<string, Type>, t: Type): [[string, Type][], Type, Map<string, Type>] {
         if (!(t instanceof RecordType)) {
+            t = t.instantiate(state, tyVarBnd);
+        }
+        if (t instanceof TypeVariable) {
+            let ntype = new Map<string, Type>();
+            for (let i = 0; i < this.entries.length; ++i) {
+                ntype = ntype.set(this.entries[i][0],
+                    new TypeVariable((<TypeVariable> t).name + '_' + i));
+            }
+            let tp = new RecordType(ntype, this.complete);
+            tyVarBnd = tyVarBnd.set((<TypeVariable> t).name, tp);
+            t = tp;
+        }
+
+
+        if (!(t instanceof RecordType)) {
             throw new ElaborationError(this.position,
                 'Expected pattern of a record type, got "' + t.constructor.name + '".');
         }
