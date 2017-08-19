@@ -469,7 +469,7 @@ export class ConstructedValue extends Value {
                 && infix.infix
                 && this.argument instanceof RecordValue && this.argument.entries.size === 2) {
                 let left = this.argument.getValue('1');
-                let right = this.argument.getValue('1');
+                let right = this.argument.getValue('2');
                 if (left instanceof Value && right instanceof Value) {
                     let res: string = '(' + left.prettyPrint(state);
                     res += ' ' + this.constructorName;
