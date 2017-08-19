@@ -506,6 +506,9 @@ export class CustomType extends Type {
                 let mt = this.merge(state, tyVarBnd,  (<FunctionType> tp.type).parameterType, true);
                 return (<FunctionType> tp.type).returnType.instantiate(state, mt[1]);
             } catch (e) {
+                if (!(e instanceof Array)) {
+                    throw e;
+                }
                 throw new ElaborationError(this.position,
                     'Instantiating "' + this.prettyPrint() + '" failed:\n'
                     + 'Cannot merge "' + e[1].prettyPrint() + '" and "' + e[2].prettyPrint()
