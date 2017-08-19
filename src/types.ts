@@ -338,6 +338,9 @@ export class RecordType extends Type {
         }
 
         if (isTuple) {
+            if (this.elements.size == 0) {
+                return 'unit';
+            }
             let res: string = '(';
             for (let i = 1; i <= this.elements.size; ++i) {
                 if (i > 1) {
