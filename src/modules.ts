@@ -1,6 +1,6 @@
 import { Expression } from './expressions';
 import { Declaration } from './declarations';
-import { IdentifierToken, LongIdentifierToken } from './tokens';
+import { IdentifierToken, LongIdentifierToken, Token } from './tokens';
 import { Type, TypeVariable } from './types';
 
 // Module Expressions
@@ -21,7 +21,7 @@ export class StructureExpression extends Expression {
 
 export class StructureIdentifier extends Expression {
 // longstrid
-    constructor(public position: number, public identifier: LongIdentifierToken) {
+    constructor(public position: number, public identifier: Token) {
         super();
     }
 
@@ -58,7 +58,7 @@ export class OpaqueConstraint extends Expression {
 
 export class FunctorApplication extends Expression {
 // funid ( strexp )
-    constructor(public position: number, public functorId: LongIdentifierToken,
+    constructor(public position: number, public functorId: IdentifierToken,
                 public structureExpression: Expression) {
         super();
     }

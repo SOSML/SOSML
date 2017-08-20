@@ -15,7 +15,8 @@ import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
          ExceptionBinding, DirectExceptionBinding, ExceptionAlias, NonfixDeclaration,
          ExceptionDeclaration, OpenDeclaration, InfixDeclaration, InfixRDeclaration } from './declarations';
 import { FunctorDeclaration, StructureDeclaration, SignatureDeclaration, FunctorBinding,
-         StructureBinding, SignatureBinding } from './modules';
+         StructureBinding, SignatureBinding, StructureExpression, OpaqueConstraint,
+         TransparentConstraint, FunctorApplication, StructureIdentifier } from './modules';
 import { State } from './state';
 
 export class Parser {
@@ -471,14 +472,81 @@ export class Parser {
         return exp;
     }
 
+
+    parseSimpleStructureExpression(): Expression {
+        /*
+         * strexp ::= struct strdec end         StructureExpression(pos, dec)
+         *            longstrid                 StructureIdentifier(pos, token)
+         *            funid ( strexp )          FunctorApplication(pos, funid, exp)
+         *            let strdec in strexp end  LocalDeclarationExpression(pos, dec, exp)
+         */
+        let curTok = this.currentToken();
+
+        if (this.checkKeywordToken(curTok, 'struct')) {
+            ++this.position;
+            let dec = this.parseDeclaration(false, true);
+            this.assertKeywordToken(this.currentToken(), 'end');
+            ++this.position;
+            return new StructureExpression(curTok.position, dec);
+        } else if (this.checkKeywordToken(curTok, 'let')) {
+            ++this.position;
+            let dec = this.parseDeclaration(false, true);
+            this.assertKeywordToken(this.currentToken(), 'in');
+            ++this.position;
+            let exp = this.parseStructureExpression();
+            this.assertKeywordToken(this.currentToken(), 'end');
+            ++this.position;
+            return new LocalDeclarationExpression(curTok.position, dec, exp);
+        }
+
+        if (curTok instanceof IdentifierToken) {
+            ++this.position;
+            if (this.checkKeywordToken(this.currentToken(), '(')) {
+                ++this.position;
+                let exp = this.parseStructureExpression();
+                this.assertKeywordToken(this.currentToken(), ')');
+                ++this.position;
+                return new FunctorApplication(curTok.position, <IdentifierToken> curTok, exp);
+            } else {
+                --this.position;
+            }
+        }
+
+        if (this.checkIdentifierOrLongToken(curTok)) {
+            ++this.position;
+            return new StructureIdentifier(curTok.position, curTok);
+        }
+
+        throw new ParserError('Expected a simple structure expression.', curTok.position);
+    }
+
     parseStructureExpression(): Expression {
-        // TODO
-        throw new Error('ニャハ');
+        /*
+         * strexp ::= strexp : sigexp           TransparentConstraint(pos, strexp, sigexp)
+         *            strexp :> sigexp          OpaqueConstraint(pos, strexp, sigexp)
+         */
+
+        let curTok = this.currentToken();
+
+        let exp = this.parseSimpleStructureExpression();
+
+        while (true) {
+            if (this.checkKeywordToken(this.currentToken(), ':')) {
+                ++this.position;
+                exp = new TransparentConstraint(curTok.position, exp, this.parseSignatureExpression());
+            } else if (this.checkKeywordToken(this.currentToken(), ':>')) {
+                ++this.position;
+                exp = new OpaqueConstraint(curTok.position, exp, this.parseSignatureExpression());
+            } else {
+                break;
+            }
+        }
+        return exp;
     }
 
     parseSignatureExpression(): Expression {
         // TODO
-        throw new Error('ニャハ');
+        throw new Error('ニャー');
     }
 
     parseMatch(): Match {
