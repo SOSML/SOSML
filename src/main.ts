@@ -24,7 +24,8 @@ export function interpret(nextInstruction: string,
                           oldState: State = getInitialState(),
                           options: { [name: string]: any } = {
                               'allowLongFunctionNames': false,
-                              'allowUnicodeInStrings': false
+                              'allowUnicodeInStrings': false,
+                              'allowSuccessorML': false
                           }): { [name: string]: any } {
     let state = oldState.getNestedState();
 

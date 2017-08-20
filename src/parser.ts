@@ -164,10 +164,19 @@ export class Parser {
                 if (this.checkKeywordToken(nextCurTok, ',') && !isSequence) {
                     ++this.position;
                     isTuple = true;
+                    results.push(this.parseExpression());
+                    continue;
                 } else if (this.checkKeywordToken(nextCurTok, ';') && !isTuple) {
                     ++this.position;
                     isSequence = true;
-                } else if (this.checkKeywordToken(nextCurTok, ')')) {
+
+                    if (!this.options.allowSuccessorML
+                        || !this.checkKeywordToken(this.currentToken(), ')')) {
+                        results.push(this.parseExpression());
+                        continue;
+                    }
+                }
+                if (this.checkKeywordToken(nextCurTok, ')')) {
                     ++this.position;
                     if (results.length === 1) {
                         return results[0];
@@ -382,9 +391,14 @@ export class Parser {
             this.assertKeywordToken(this.currentToken(), 'then');
             ++this.position;
             let cons = this.parseExpression();
-            this.assertKeywordToken(this.currentToken(), 'else');
-            ++this.position;
-            return new Conditional(curTok.position, cond, cons, this.parseExpression());
+            if (this.options.allowSuccessorML
+                && !this.checkKeywordToken(this.currentToken(), 'else')) {
+                return new Conditional(curTok.position, cond, cons, new Tuple(-1, []));
+            } else {
+                this.assertKeywordToken(this.currentToken(), 'else');
+                ++this.position;
+                return new Conditional(curTok.position, cond, cons, this.parseExpression());
+            }
         } else if (this.checkKeywordToken(curTok, 'case')) {
             ++this.position;
             let cond = this.parseExpression();
@@ -832,6 +846,9 @@ export class Parser {
          * match ::= pat => exp [| match]       Match(pos, [Pattern, Expression][])
          */
         let curTok = this.currentToken();
+        if (this.options.allowSuccessorML && this.checkKeywordToken(this.currentToken(), '|')) {
+            ++this.position;
+        }
         let res: [PatternExpression, Expression][] = [];
         while (true) {
             let pat = this.parsePattern();
