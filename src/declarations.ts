@@ -207,7 +207,7 @@ export class DatatypeDeclaration extends Declaration {
         super();
 
         if (this.typeBinding !== undefined) {
-            throw new FeatureDisabledError(this.position, 'Don\'t use "withtype". It is evil.');
+            throw new FeatureDisabledError(this.position, 'Who is "withtype"?');
         }
     }
 
@@ -564,7 +564,7 @@ export class AbstypeDeclaration extends Declaration {
         super();
 
         if (this.typeBinding !== undefined) {
-            throw new FeatureDisabledError(this.position, 'Don\'t use "withtype". It is evil.');
+            throw new FeatureDisabledError(this.position, 'Who is "withtype"?');
         }
     }
 
