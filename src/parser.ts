@@ -14,13 +14,15 @@ import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
          DatatypeBinding, TypeBinding, AbstypeDeclaration, LocalDeclaration,
          ExceptionBinding, DirectExceptionBinding, ExceptionAlias, NonfixDeclaration,
          ExceptionDeclaration, OpenDeclaration, InfixDeclaration, InfixRDeclaration } from './declarations';
+import { FunctorDeclaration, StructureDeclaration, SignatureDeclaration, FunctorBinding,
+         StructureBinding, SignatureBinding } from './modules';
 import { State } from './state';
 
 export class Parser {
     private position: number = 0; // position of the next not yet parsed token
 
     constructor(private tokens: Token[], private state: State, private currentId: number,
-  /* private */ options: { [name: string]: any }) {
+                private options: { [name: string]: any }) {
         if (this.state === undefined) {
             throw new InternalInterpreterError(-1, 'What are you, stupid? Hurry up and give me ' +
                 'a state already!');
@@ -1154,6 +1156,60 @@ export class Parser {
         return datbinds;
     }
 
+    parseStructureBinding(): StructureBinding {
+        // TODO
+        throw new Error('ニャハハ');
+    }
+
+    parseStructureBindingSeq(): StructureBinding[] {
+        let strbinds: StructureBinding[] = [];
+        while (true) {
+            strbinds.push(this.parseStructureBinding());
+            if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                ++this.position;
+            } else {
+                break;
+            }
+        }
+        return strbinds;
+    }
+
+    parseSignatureBinding(): SignatureBinding {
+        // TODO
+        throw new Error('ニャハハ');
+    }
+
+    parseSignatureBindingSeq(): SignatureBinding[] {
+        let sigbinds: SignatureBinding[] = [];
+        while (true) {
+            sigbinds.push(this.parseSignatureBinding());
+            if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                ++this.position;
+            } else {
+                break;
+            }
+        }
+        return sigbinds;
+    }
+
+    parseFunctorBinding(): FunctorBinding {
+        // TODO
+        throw new Error('ニャハハ');
+    }
+
+    parseFunctorBindingSeq(): FunctorBinding[] {
+        let funbinds: FunctorBinding[] = [];
+        while (true) {
+            funbinds.push(this.parseFunctorBinding());
+            if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                ++this.position;
+            } else {
+                break;
+            }
+        }
+        return funbinds;
+    }
+
     parseTypeVarSequence(allowFail: boolean = false): TypeVariable[] | undefined {
         /*
          * ε                    []
@@ -1194,7 +1250,7 @@ export class Parser {
         return res;
     }
 
-    parseDeclaration(topLevel: boolean = false): Declaration {
+    parseDeclaration(topLevel: boolean = false, strDec: boolean = false): Declaration {
         /*
          * dec ::= dec [;] dec                          SequentialDeclaration(pos, Declaration[])
          */
@@ -1202,7 +1258,7 @@ export class Parser {
         let curTok = this.currentToken();
         let curId = this.currentId++;
         while (this.position < this.tokens.length) {
-            let cur = this.parseSimpleDeclaration(topLevel);
+            let cur = this.parseSimpleDeclaration(topLevel, strDec);
             if (cur instanceof EmptyDeclaration) {
                 if (this.position >= this.tokens.length
                     || this.checkKeywordToken(this.currentToken(), 'in')
@@ -1219,7 +1275,7 @@ export class Parser {
         return new SequentialDeclaration(curTok.position, res, curId);
     }
 
-    parseSimpleDeclaration(topLevel: boolean = false): Declaration {
+    parseSimpleDeclaration(topLevel: boolean = false, strDec: boolean = false): Declaration {
         /*
          * dec ::= val tyvarseq valbind                 ValueDeclaration(pos, tyvarseq, ValueBinding[])
          *         fun tyvarseq fvalbind                FunctionDeclaration(pos, tyvarseq, FunctionValueBinding[])
@@ -1234,6 +1290,11 @@ export class Parser {
          *         infix [d] vid1 … vidn                InfixDeclaration(pos, ValueIdentifier[], d=0)
          *         infixr [d] vid1 … vidn               InfixRDeclaration(pos, ValueIdentifier[], d=0)
          *         nonfix vid1 … vidn                   NonfixDeclaration(pos, ValueIdentifier[])
+         *
+         *         structure strbind                    StructureDeclaration(pos, StrBind[])
+         *         signature sigbind                    SignatureDeclaration(pos, SigBind[])
+         *         functor funbind                      FunctorDeclaration(pos, FunBind[])
+         *
          *         (empty)                              EmptyDeclaration()
          *         exp                                  val it = exp
          */
@@ -1353,10 +1414,10 @@ export class Parser {
             let nstate = this.state;
             this.state = this.state.getNestedState(this.state.id);
 
-            let dec: Declaration = this.parseDeclaration();
+            let dec: Declaration = this.parseDeclaration(false, strDec);
             this.assertKeywordToken(this.currentToken(), 'in');
             ++this.position;
-            let dec2: Declaration = this.parseDeclaration();
+            let dec2: Declaration = this.parseDeclaration(false, strDec);
             this.assertKeywordToken(this.currentToken(), 'end');
             ++this.position;
 
@@ -1441,6 +1502,27 @@ export class Parser {
             return resdec;
         }
 
+        if (this.options.allowStructuresAnywhere === true || strDec) {
+            if (this.checkKeywordToken(curTok, 'structure')) {
+                ++this.position;
+                return new StructureDeclaration(curTok.position, this.parseStructureBindingSeq());
+            }
+        }
+
+        if (this.options.allowSignaturesAnywhere === true || topLevel) {
+            if (this.checkKeywordToken(curTok, 'signature')) {
+                ++this.position;
+                return new SignatureDeclaration(curTok.position, this.parseSignatureBindingSeq());
+            }
+        }
+
+        if (this.options.allowFunctorsAnywhere === true || topLevel) {
+            if (this.checkKeywordToken(curTok, 'functor')) {
+                ++this.position;
+                return new FunctorDeclaration(curTok.position, this.parseFunctorBindingSeq());
+            }
+        }
+
         if (this.checkKeywordToken(curTok, ';')) {
             ++this.position;
             return new EmptyDeclaration(curId);
@@ -1469,5 +1551,5 @@ export class Parser {
 
 export function parse(tokens: Token[], state: State, options: {[name: string]: any}): Declaration {
     let p: Parser = new Parser(tokens, state, state.id, options);
-    return p.parseDeclaration(true);
+    return p.parseDeclaration(true, true);
 }

@@ -338,7 +338,7 @@ export class RecordType extends Type {
         }
 
         if (isTuple) {
-            if (this.elements.size == 0) {
+            if (this.elements.size === 0) {
                 return 'unit';
             }
             let res: string = '(';
