@@ -471,6 +471,16 @@ export class Parser {
         return exp;
     }
 
+    parseStructureExpression(): Expression {
+        // TODO
+        throw new Error('ニャハ');
+    }
+
+    parseSignatureExpression(): Expression {
+        // TODO
+        throw new Error('ニャハ');
+    }
+
     parseMatch(): Match {
         /*
          * match ::= pat => exp [| match]       Match(pos, [Pattern, Expression][])
@@ -1157,8 +1167,16 @@ export class Parser {
     }
 
     parseStructureBinding(): StructureBinding {
-        // TODO
-        throw new Error('ニャハハ');
+        /*
+         * strbind ::= strid = strexp
+         */
+        let curTok = this.currentToken();
+        this.assertIdentifierToken(this.currentToken());
+        let tycon = <IdentifierToken> this.currentToken();
+        ++this.position;
+        this.assertKeywordToken(this.currentToken(), '=');
+        ++this.position;
+        return new StructureBinding(curTok.position, tycon, this.parseStructureExpression());
     }
 
     parseStructureBindingSeq(): StructureBinding[] {
@@ -1175,8 +1193,16 @@ export class Parser {
     }
 
     parseSignatureBinding(): SignatureBinding {
-        // TODO
-        throw new Error('ニャハハ');
+        /*
+         * sigbind ::= sigid = sigexp
+         */
+        let curTok = this.currentToken();
+        this.assertIdentifierToken(this.currentToken());
+        let tycon = <IdentifierToken> this.currentToken();
+        ++this.position;
+        this.assertKeywordToken(this.currentToken(), '=');
+        ++this.position;
+        return new SignatureBinding(curTok.position, tycon, this.parseSignatureExpression());
     }
 
     parseSignatureBindingSeq(): SignatureBinding[] {
@@ -1193,8 +1219,31 @@ export class Parser {
     }
 
     parseFunctorBinding(): FunctorBinding {
-        // TODO
-        throw new Error('ニャハハ');
+        /*
+         * funbind ::= funid (tycon : sigexp) = strexp
+         */
+        let curTok = this.currentToken();
+        this.assertIdentifierToken(this.currentToken());
+        let funid = <IdentifierToken> this.currentToken();
+        ++this.position;
+
+        this.assertKeywordToken(this.currentToken(), '(');
+        ++this.position;
+
+        this.assertIdentifierToken(this.currentToken());
+        let tycon = <IdentifierToken> this.currentToken();
+        ++this.position;
+        this.assertKeywordToken(this.currentToken(), ':');
+        ++this.position;
+        let sigexp = this.parseSignatureExpression();
+
+        this.assertKeywordToken(this.currentToken(), ')');
+        ++this.position;
+
+        this.assertKeywordToken(this.currentToken(), '=');
+        ++this.position;
+        return new FunctorBinding(curTok.position, funid, tycon, sigexp,
+            this.parseStructureExpression());
     }
 
     parseFunctorBindingSeq(): FunctorBinding[] {

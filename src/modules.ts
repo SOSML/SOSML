@@ -137,22 +137,22 @@ export class FunctorDeclaration extends Declaration {
 export class StructureBinding {
 // strid = strexp
     constructor(public position: number, public name: IdentifierToken,
-                public binding: StructureExpression) {
+                public binding: Expression) {
     }
 }
 
 export class SignatureBinding {
 // sigid = sigexp
     constructor(public position: number, public name: IdentifierToken,
-                public binding: SignatureExpression) {
+                public binding: Expression) {
     }
 }
 
 export class FunctorBinding {
 // funid ( strid : sigexp ) = strexp
     constructor(public position: number, public name: IdentifierToken,
-                public signatureName: IdentifierToken, public signatureBinding: SignatureExpression,
-                public binding: StructureExpression) {
+                public signatureName: IdentifierToken, public signatureBinding: Expression,
+                public binding: Expression) {
     }
 }
 
