@@ -1,6 +1,6 @@
 import { Expression } from './expressions';
 import { Declaration } from './declarations';
-import { IdentifierToken, LongIdentifierToken, Token } from './tokens';
+import { IdentifierToken, Token } from './tokens';
 import { Type, TypeVariable } from './types';
 
 // Module Expressions
@@ -195,8 +195,7 @@ export class DatatypeSpecification extends Specification {
 
 export class DatatypeReplicationSpecification extends Specification {
 // datatype tycon = datatype longtycon
-    constructor(public position: number, public name: IdentifierToken,
-                public oldname: LongIdentifierToken) {
+    constructor(public position: number, public name: IdentifierToken, public oldname: Token) {
         super();
     }
 }
@@ -239,7 +238,7 @@ export class SequentialSpecification extends Specification {
 export class SharingSpecification extends Specification {
 // spec sharing type longtycon = ... = longtycon
     constructor(public position: number, public specification: Specification,
-                public typeNames: LongIdentifierToken[]) {
+                public typeNames: Token[]) {
         super();
     }
 }

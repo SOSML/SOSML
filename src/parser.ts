@@ -17,7 +17,10 @@ import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
 import { FunctorDeclaration, StructureDeclaration, SignatureDeclaration, FunctorBinding,
          StructureBinding, SignatureBinding, StructureExpression, OpaqueConstraint,
          TransparentConstraint, FunctorApplication, StructureIdentifier, TypeRealisation,
-         Specification, SignatureIdentifier, SignatureExpression } from './modules';
+         Specification, SignatureIdentifier, SignatureExpression, ValueSpecification,
+         TypeSpecification, EqualityTypeSpecification, DatatypeSpecification,
+         DatatypeReplicationSpecification, ExceptionSpecification, StructureSpecification,
+         IncludeSpecification, EmptySpecification, SequentialSpecification, SharingSpecification } from './modules';
 import { State } from './state';
 
 export class Parser {
@@ -591,9 +594,237 @@ export class Parser {
         return sig;
     }
 
+    parseSimpleSpecification(): Specification {
+        /*
+         * spec ::= val vid : ty <and valdesc>          ValueSpecification(pos, [Token, Type][])
+         *          type tyvarseq tycon <and tydesc>    TypeSpecification(pos, [tyvar, tycon][])
+         *          eqtype tyvarseq tycon <and tydesc>  EqualityTypeSpecification(ps, [tyva, tycn][])
+         *          datatype datdesc
+         *          datatype tycon = datatype longtycon
+         *          exception exdesc
+         *          structure strdesc
+         *          include sigexp
+         *
+         */
+        let curTok = this.currentToken();
+
+        if (this.checkKeywordToken(curTok, 'val')) {
+            ++this.position;
+            let res: [IdentifierToken, Type][] = [];
+
+            while (true) {
+                this.assertIdentifierOrLongToken(this.currentToken());
+                let tkn = <IdentifierToken> this.currentToken();
+                ++this.position;
+                this.assertKeywordToken(this.currentToken(), ':');
+                ++this.position;
+
+                res.push([tkn, this.parseType()]);
+
+                if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                    ++this.position;
+                    continue;
+                }
+                break;
+            }
+            return new ValueSpecification(curTok.position, res);
+
+        } else if (this.checkKeywordToken(curTok, 'type')) {
+            ++this.position;
+            let res: [TypeVariable[], IdentifierToken][] = [];
+            while (true) {
+                let tyvar = <TypeVariable[]> this.parseTypeVarSequence();
+                this.assertIdentifierToken(this.currentToken());
+                res.push([tyvar, <IdentifierToken> this.currentToken()]);
+                ++this.position;
+                if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                    ++this.position;
+                    continue;
+                }
+                break;
+            }
+            return new TypeSpecification(curTok.position, res);
+
+        } else if (this.checkKeywordToken(curTok, 'eqtype')) {
+            ++this.position;
+            let res: [TypeVariable[], IdentifierToken][] = [];
+            while (true) {
+                let tyvar = <TypeVariable[]> this.parseTypeVarSequence();
+                this.assertIdentifierToken(this.currentToken());
+                res.push([tyvar, <IdentifierToken> this.currentToken()]);
+                ++this.position;
+                if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                    ++this.position;
+                    continue;
+                }
+                break;
+            }
+            return new EqualityTypeSpecification(curTok.position, res);
+
+        } else if (this.checkKeywordToken(curTok, 'datatype')) {
+            ++this.position;
+
+            if (this.position + 2 < this.tokens.length &&
+                this.checkKeywordToken(this.tokens[this.position + 2], 'datatype')) {
+                this.assertIdentifierToken(this.currentToken());
+                let tk = <IdentifierToken> this.currentToken();
+                ++this.position;
+                this.assertKeywordToken(this.currentToken(), '=');
+                ++this.position;
+                this.assertKeywordToken(this.currentToken(), 'datatype');
+                ++this.position;
+                this.assertIdentifierOrLongToken(this.currentToken());
+                let on = this.currentToken();
+                ++this.position;
+                return new DatatypeReplicationSpecification(curTok.position, tk, on);
+            }
+
+            // Yeah I know that this stuff is ugly
+            let res: [TypeVariable[], IdentifierToken, [IdentifierToken, Type|undefined][]][] = [];
+
+            while (true) {
+                let tyvar = <TypeVariable[]> this.parseTypeVarSequence();
+                this.assertIdentifierToken(this.currentToken());
+                let tk = <IdentifierToken> this.currentToken();
+                ++this.position;
+                this.assertKeywordToken(this.currentToken(), '=');
+                ++this.position;
+
+                let cons: [IdentifierToken, Type|undefined][] = [];
+                while (true) {
+                    this.assertIdentifierToken(this.currentToken());
+                    let cn = <IdentifierToken> this.currentToken();
+                    ++this.position;
+                    let tp: Type | undefined = undefined;
+
+                    if (this.checkKeywordToken(this.currentToken(), 'of')) {
+                        ++this.position;
+                        tp = this.parseType();
+                    }
+                    cons.push([cn, tp]);
+
+                    if (this.checkKeywordToken(this.currentToken(), '|')) {
+                        ++this.position;
+                        continue;
+                    }
+                    break;
+                }
+
+                res.push([tyvar, tk, cons]);
+
+                if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                    ++this.position;
+                    continue;
+                }
+                break;
+            }
+
+            return new DatatypeSpecification(curTok.position, res);
+        } else if (this.checkKeywordToken(curTok, 'exception')) {
+            ++this.position;
+            let res: [IdentifierToken, Type|undefined][] = [];
+
+            while (true) {
+                this.assertIdentifierToken(this.currentToken());
+                let tk = <IdentifierToken> this.currentToken();
+                ++this.position;
+
+                let tp: Type | undefined = undefined;
+
+                if (this.checkKeywordToken(this.currentToken(), 'of')) {
+                    ++this.position;
+                    tp = this.parseType();
+                }
+
+                res.push([tk, tp]);
+
+                if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                    ++this.position;
+                    continue;
+                }
+                break;
+            }
+            return new ExceptionSpecification(curTok.position, res);
+
+        } else if (this.checkKeywordToken(curTok, 'structure')) {
+            ++this.position;
+            let res: [IdentifierToken, Expression][] = [];
+
+            while (true) {
+                this.assertIdentifierToken(this.currentToken());
+                let tk = <IdentifierToken> this.currentToken();
+                ++this.position;
+
+                res.push([tk, this.parseStructureExpression()]);
+
+                if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                    ++this.position;
+                    continue;
+                }
+                break;
+            }
+
+            return new StructureSpecification(curTok.position, res);
+        } else if (this.checkKeywordToken(curTok, 'include')) {
+            ++this.position;
+            return new IncludeSpecification(curTok.position, this.parseSignatureExpression());
+        }
+
+        return new EmptySpecification(curTok.position);
+    }
+
+    parseSequentialSpecification(): Specification {
+        /*
+         * spec ::= spec <;> spec       SequentialSpecification(pos, Spec[])
+         */
+        let curTok = this.currentToken();
+        let res: Specification[] = [];
+
+        while (true) {
+            let cur = this.parseSimpleSpecification();
+
+            if (cur instanceof EmptySpecification) {
+                break;
+            }
+
+            res.push(cur);
+
+            if (this.checkKeywordToken(this.currentToken(), ';')) {
+                ++this.position;
+            }
+        }
+        return new SequentialSpecification(curTok.position, res);
+    }
+
     parseSpecification(): Specification {
-        // TODO
-        throw new Error('ニャ－');
+        /*
+         * spec ::= spec sharing type longtycon = ... = longtycon
+         */
+        let curTok = this.currentToken();
+        let spec = this.parseSequentialSpecification();
+
+        while (this.checkKeywordToken(this.currentToken(), 'sharing')) {
+            ++this.position;
+            this.assertKeywordToken(this.currentToken(), 'type');
+            ++this.position;
+            this.assertIdentifierOrLongToken(this.currentToken());
+            let tkn: Token[] = [this.currentToken()];
+            ++this.position;
+            while (this.checkKeywordToken(this.currentToken(), '=')) {
+                ++this.position;
+                this.assertIdentifierOrLongToken(this.currentToken());
+                tkn.push(this.currentToken());
+                ++this.position;
+            }
+
+            if (tkn.length < 2) {
+                throw new ParserError('A "sharing" expression requires at least 2 type names.',
+                    curTok.position);
+            }
+            spec = new SharingSpecification(curTok.position, spec, tkn);
+        }
+
+        return spec;
     }
 
     parseMatch(): Match {
@@ -1713,7 +1944,7 @@ export class Parser {
     }
 }
 
-export function parse(tokens: Token[], state: State, options: {[name: string]: any}): Declaration {
+export function parse(tokens: Token[], state: State, options: {[name: string]: any} = {}): Declaration {
     let p: Parser = new Parser(tokens, state, state.id, options);
     return p.parseDeclaration(true, true);
 }
