@@ -544,6 +544,18 @@ export class FunctionDeclaration extends Declaration {
     }
 }
 
+export class Evaluation extends Declaration {
+// do exp
+    constructor(public position: number, public expression: Expression) {
+        super();
+    }
+
+    simplify(): ValueDeclaration {
+        return new ValueDeclaration(this.position, [],
+            [new ValueBinding(this.position, false, new Tuple(-1, []), this.expression)]).simplify();
+    }
+}
+
 export class AbstypeDeclaration extends Declaration {
 // abstype datatypeBinding <withtype typeBinding> with declaration end
     constructor(public position: number, public datatypeBinding: DatatypeBinding[],

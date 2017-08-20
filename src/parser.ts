@@ -9,7 +9,7 @@ import { Token, KeywordToken, IdentifierToken, ConstantToken,
          TypeVariableToken, LongIdentifierToken, IntegerConstantToken,
          AlphanumericIdentifierToken, NumericToken } from './tokens';
 import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
-         FunctionValueBinding, FunctionDeclaration, TypeDeclaration,
+         FunctionValueBinding, FunctionDeclaration, TypeDeclaration, Evaluation,
          DatatypeReplication, DatatypeDeclaration, SequentialDeclaration,
          DatatypeBinding, TypeBinding, AbstypeDeclaration, LocalDeclaration,
          ExceptionBinding, DirectExceptionBinding, ExceptionAlias, NonfixDeclaration,
@@ -1707,6 +1707,8 @@ export class Parser {
          *         signature sigbind                    SignatureDeclaration(pos, SigBind[])
          *         functor funbind                      FunctorDeclaration(pos, FunBind[])
          *
+         *         do exp                               Evaluation(pos, exp) [succML]
+         *
          *         (empty)                              EmptyDeclaration()
          *         exp                                  val it = exp
          */
@@ -1912,6 +1914,11 @@ export class Parser {
             let resdec = new NonfixDeclaration(curTok.position, res, curId);
             this.state = resdec.evaluate(this.state)[0];
             return resdec;
+        }
+
+        if (this.options.allowSuccessorML && this.checkKeywordToken(curTok, 'do')) {
+            ++this.position;
+            return new Evaluation(curTok.position, this.parseExpression());
         }
 
         if (this.options.allowStructuresAnywhere === true || strDec) {
