@@ -161,13 +161,12 @@ export class ValueIdentifier extends Expression implements Pattern {
             tyVars = tyVars.add(nwvar[i]);
         }
 
-        let r2 = res[0].replaceTypeVariables(state, nextName, repl);
-        r2[0] = r2[0].instantiate(state, mps);
+        let r2 = res[0].replaceTypeVariables(repl).instantiate(state, mps);
 
         if (bnd) {
-            mps = mps.set('\'__' + this.name.getText(), r2[0]);
+            mps = mps.set('\'__' + this.name.getText(), r2);
         }
-        return [r2[0], [], r2[1], tyVars, mps];
+        return [r2, [], nextName, tyVars, mps];
     }
 
     matchType(state: State, tyVarBnd: Map<string, Type>, t: Type): [[string, Type][], Type, Map<string, Type>] {
