@@ -84,7 +84,7 @@ export class SignatureExpression extends Expression {
 
 export class SignatureIdentifier extends Expression {
 // sigid
-    constructor(public position: number, public identifier: LongIdentifierToken) {
+    constructor(public position: number, public identifier: Token) {
         super();
     }
 
@@ -96,7 +96,7 @@ export class SignatureIdentifier extends Expression {
 export class TypeRealisation extends Expression {
 // sigexp where type tyvarseq longtycon = ty
     constructor(public position: number, public signatureExpression: Expression,
-                public tyvarseq: TypeVariable[], public name: LongIdentifierToken,
+                public tyvarseq: TypeVariable[], public name: Token,
                 public type: Type) {
         super();
     }

@@ -16,7 +16,8 @@ import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
          ExceptionDeclaration, OpenDeclaration, InfixDeclaration, InfixRDeclaration } from './declarations';
 import { FunctorDeclaration, StructureDeclaration, SignatureDeclaration, FunctorBinding,
          StructureBinding, SignatureBinding, StructureExpression, OpaqueConstraint,
-         TransparentConstraint, FunctorApplication, StructureIdentifier } from './modules';
+         TransparentConstraint, FunctorApplication, StructureIdentifier, TypeRealisation,
+         Specification, SignatureIdentifier, SignatureExpression } from './modules';
 import { State } from './state';
 
 export class Parser {
@@ -544,9 +545,55 @@ export class Parser {
         return exp;
     }
 
+    parseSimpleSignatureExpression(): Expression {
+        /*
+         * sigexp ::= sig spec end              SignatureExpression
+         *            sigid                     SignatureIdentifier
+         */
+        let curTok = this.currentToken();
+
+        if (this.checkKeywordToken(curTok, 'sig')) {
+            ++this.position;
+            let spec = this.parseSpecification();
+            this.assertKeywordToken(this.currentToken(), 'end');
+            ++this.position;
+            return new SignatureExpression(curTok.position, spec);
+        }
+
+        if (curTok instanceof IdentifierToken) {
+            ++this.position;
+            return new SignatureIdentifier(curTok.position, <IdentifierToken> curTok);
+        }
+
+        throw new ParserError('Expected a simple signature expression.', curTok.position);
+    }
+
     parseSignatureExpression(): Expression {
+        /*
+         * sigexp ::= sigexp where type tyvarseq longtycon = ty TypeRealisation(pos, exp, tyvar, ty)
+         */
+        let curTok = this.currentToken();
+
+        let sig = this.parseSimpleSignatureExpression();
+
+        while (this.checkKeywordToken(this.currentToken(), 'where')) {
+            ++this.position;
+            this.assertKeywordToken(this.currentToken(), 'type');
+            ++this.position;
+            let tyvarseq = <TypeVariable[]> this.parseTypeVarSequence();
+            this.assertIdentifierOrLongToken(this.currentToken());
+            let token = this.currentToken();
+            ++this.position;
+            this.assertKeywordToken(this.currentToken(), '=');
+            ++this.position;
+            sig = new TypeRealisation(curTok.position, sig, tyvarseq, token, this.parseType());
+        }
+        return sig;
+    }
+
+    parseSpecification(): Specification {
         // TODO
-        throw new Error('ニャー');
+        throw new Error('ニャ－');
     }
 
     parseMatch(): Match {
