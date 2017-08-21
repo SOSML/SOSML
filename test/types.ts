@@ -1,4 +1,97 @@
-it();
+const Lexer = require("../src/lexer");
+const Parser = require("../src/parser");
+const Errors = require("../src/errors");
+
+const API = require("../src/main.ts");
+
+const State = require("../src/state.ts");
+const InitialState = require("../src/initialState.ts");
+const Expr = require("../src/expressions.ts");
+const Decl = require("../src/declarations.ts");
+const Type = require("../src/types.ts");
+const Val = require("../src/values.ts");
+
+const TestHelper = require("./test_helper.ts");
+TestHelper.init();
+
+function run_test(commands): void {
+    let oldTests = [];
+    let state = InitialState.getInitialState();
+    let exception;
+    let value;
+    for(let step of commands) {
+        step[1](() => {
+            let res = API.interpret(step[0], state);
+            state = res['state'];
+            exception = res['evaluationErrored'];
+            value = res['error'];
+        });
+
+        step[2](state, exception, value);
+
+        for(let test of oldTests)
+            test[1](test[0][0], test[0][1], test[0][2]);
+
+        oldTests.push([[state, exception, value], step[2]]);
+    }
+}
+
+it("basic", () => {
+    run_test([
+        ['42;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("int"), 0]);
+        }]
+    ]);
+    run_test([
+        ['42.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("real"), 0]);
+        }]
+    ]);
+    run_test([
+        ['#"1";', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("char"), 0]);
+        }]
+    ]);
+    run_test([
+        ['"1";', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("string"), 0]);
+        }]
+    ]);
+    run_test([
+        ['"13";', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("string"), 0]);
+        }]
+    ]);
+    run_test([
+        ['[1];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("list", [new Type.CustomType("int")]), 0]);
+        }]
+    ]);
+    run_test([
+        ['[1.0];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("list", [new Type.CustomType("real")]), 0]);
+        }]
+    ]);
+    run_test([
+        ['[1, 1.0];', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+        (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        }],
+    ]);
+
+    run_test([
+        ['["1", #"1"];', (x) => { expect(x).toThrow(Errors.ElaborationError); }, 
+        (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        }],
+    ]);
+
+});
 
 /*
 import {
