@@ -86,11 +86,96 @@ it("basic", () => {
     ]);
 
     run_test([
-        ['["1", #"1"];', (x) => { expect(x).toThrow(Errors.ElaborationError); }, 
+        ['["1", #"1"];', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+        (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        }],
+    ]);
+});
+
+it("basic with annotation", () => {
+    run_test([
+        ['42:int;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("int"), 0]);
+        }]
+    ]);
+    run_test([
+        ['42:real;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+        (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        }],
+    ]);
+    run_test([
+        ['42.0:real;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("real"), 0]);
+        }]
+    ]);
+    run_test([
+        ['42.0:int;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+        (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        }],
+    ]);
+    run_test([
+        ['#"1":char;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("char"), 0]);
+        }]
+    ]);
+    run_test([
+        ['#"4":string;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+        (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        }],
+    ]);
+    run_test([
+        ['"1":string;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("string"), 0]);
+        }]
+    ]);
+    run_test([
+        ['"4":char;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+        (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        }],
+    ]);
+    run_test([
+        ['"13":string;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("string"), 0]);
+        }]
+    ]);
+    run_test([
+        ['[1]:int list;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("list", [new Type.CustomType("int")]), 0]);
+        }]
+    ]);
+    run_test([
+        ['[1]:real list;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+        (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        }],
+    ]);
+    run_test([
+        ['[1.0]:real list;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("list", [new Type.CustomType("real")]), 0]);
+        }]
+    ]);
+    run_test([
+        ['[1.0]:int list;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+        (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        }],
+    ]);
+    run_test([
+        ['[1, 1.0];', (x) => { expect(x).toThrow(Errors.ElaborationError); },
         (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
         }],
     ]);
 
+    run_test([
+        ['["1", #"1"];', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+        (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        }],
+    ]);
 });
 
 /*
