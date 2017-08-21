@@ -24,6 +24,11 @@ export abstract class Type {
         return this.simplify().getTypeVariables();
     }
 
+    // Get all type variables in order (they may appear more than once)
+    getOrderedTypeVariables(): string[] {
+        return this.simplify().getOrderedTypeVariables();
+    }
+
     replaceTypeVariables(replacements: Map<string, string>): Type {
         return this.simplify().replaceTypeVariables(replacements);
     }
@@ -34,6 +39,40 @@ export abstract class Type {
 
     admitsEquality(state: State): boolean {
         return false;
+    }
+
+    normalize(): Type {
+        let orderedVars = this.getOrderedTypeVariables();
+        let replacements = new Map<string, string>();
+
+        for (let v of orderedVars) {
+            if (replacements.has(v)) {
+                continue;
+            }
+
+            let nextVar = '';
+            let cnt = replacements.size + 1;
+            if (cnt <= 26) {
+                nextVar = String.fromCharCode('a'.charCodeAt(0) + cnt - 1);
+            } else {
+                while (cnt > 0) {
+                    let nextChar = (--cnt) % 26;
+                    nextVar = String.fromCharCode('a'.charCodeAt(0) + nextChar) + nextVar;
+                    cnt = Math.floor(cnt / 26);
+                }
+            }
+
+            let newVar = '\'';
+            if (v.length > 2 && v.charAt(1) === '\'') {
+                newVar += '\'';
+            }
+
+            newVar += nextVar;
+
+            replacements.set(v, newVar);
+        }
+
+        return this.replaceTypeVariables(replacements);
     }
 }
 
@@ -65,6 +104,10 @@ export class AnyType extends Type {
 
     getTypeVariables(): Set<string> {
         return new Set<string>();
+    }
+
+    getOrderedTypeVariables(): string[] {
+        return [];
     }
 
     replaceTypeVariables(replacements: Map<string, string>): Type {
@@ -171,6 +214,10 @@ export class TypeVariable extends Type {
         return res;
     }
 
+    getOrderedTypeVariables(): string[] {
+        return [this.name];
+    }
+
     replaceTypeVariables(replacements: Map<string, string>): Type {
         if (replacements.has(this.name)) {
             return new TypeVariable(<string> replacements.get(this.name), this.position);
@@ -269,6 +316,14 @@ export class RecordType extends Type {
             val.getTypeVariables().forEach((id: string) => {
                 res.add(id);
             });
+        });
+        return res;
+    }
+
+    getOrderedTypeVariables(): string[] {
+        let res: string[] = [];
+        this.elements.forEach((val: Type) => {
+            res = res.concat(val.getOrderedTypeVariables());
         });
         return res;
     }
@@ -430,6 +485,13 @@ export class FunctionType extends Type {
         return res;
     }
 
+    getOrderedTypeVariables(): string[] {
+        let res: string[] = [];
+        res = res.concat(this.parameterType.getOrderedTypeVariables());
+        res = res.concat(this.returnType.getOrderedTypeVariables());
+        return res;
+    }
+
     replaceTypeVariables(replacements: Map<string, string>): Type {
         let res = this.parameterType.replaceTypeVariables(replacements);
         let res2 = this.returnType.replaceTypeVariables(replacements);
@@ -554,6 +616,14 @@ export class CustomType extends Type {
                     res.add(val);
                 });
             }
+        }
+        return res;
+    }
+
+    getOrderedTypeVariables(): string[] {
+        let res: string[] = [];
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            res = res.concat(this.typeArguments[i].getOrderedTypeVariables());
         }
         return res;
     }
