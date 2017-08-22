@@ -54,7 +54,7 @@ let initialState: State = new State(
     new StaticBasis(
         {
             'unit':     new TypeInformation(
-                new FunctionType(new TupleType([]), new TupleType([])).simplify(), [], 0, true),
+                new FunctionType(new CustomType('unit'), new TupleType([])).simplify(), [], 0, true),
             'bool':     new TypeInformation(new CustomType('bool'),  ['true', 'false'], 0, true),
             'int':      new TypeInformation(new CustomType('int'),   [], 0, true),
             'word':     new TypeInformation(new CustomType('word'),  [], 0, true),

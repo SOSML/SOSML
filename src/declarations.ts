@@ -74,14 +74,14 @@ export class ValueDeclaration extends Declaration {
         }
 
         for (let j = 0; j < result.length; ++j) {
-            state.setStaticValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
+            state.setStaticValue(result[j][0], result[j][1].normalize(), IdentifierStatus.VALUE_VARIABLE);
         }
 
         for (let j = i; j < this.valueBinding.length; ++j) {
             let val = this.valueBinding[i].getType(state);
             warns = warns.concat(val[1]);
             for (let k = 0; k < val[0].length; ++k) {
-                state.setStaticValue(val[0][k][0], val[0][k][1], IdentifierStatus.VALUE_VARIABLE);
+                state.setStaticValue(val[0][k][0], val[0][k][1].normalize(), IdentifierStatus.VALUE_VARIABLE);
             }
         }
 
@@ -251,7 +251,7 @@ export class DatatypeDeclaration extends Declaration {
                     throw new ElaborationError(this.position, 'You simply cannot rebind "'
                         + res[0][j][0] + '".');
                 }
-                state.setStaticValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
+                state.setStaticValue(res[0][j][0], res[0][j][1].normalize(), IdentifierStatus.VALUE_CONSTRUCTOR);
             }
             // TODO id
             state.setStaticType(res[2][0], res[1], res[2][1], this.datatypeBinding[i].typeVariableSequence.length);
@@ -875,10 +875,10 @@ export class DirectExceptionBinding implements ExceptionBinding {
             // }
 
             state.setStaticValue(this.name.getText(),
-                new FunctionType(tp, new CustomType('exn')),
+                new FunctionType(tp, new CustomType('exn')).normalize(),
                 IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         } else {
-            state.setStaticValue(this.name.getText(), new CustomType('exn'),
+            state.setStaticValue(this.name.getText(), new CustomType('exn').normalize(),
                 IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         }
         return state;
@@ -917,7 +917,7 @@ export class ExceptionAlias implements ExceptionBinding {
             throw new ElaborationError(this.position, 'You cannot transform "'
                 + res[0].prettyPrint() + '" into an exception.');
         }
-        state.setStaticValue(this.name.getText(), res[0], IdentifierStatus.EXCEPTION_CONSTRUCTOR);
+        state.setStaticValue(this.name.getText(), res[0].normalize(), IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         return state;
 
     }

@@ -24,10 +24,13 @@ export abstract class Type {
         return this.simplify().getTypeVariables();
     }
 
-    replaceTypeVariables(state: State, nextName: string = '\'t1',
-                         replacements: Map<string, string> = new Map<string, string>())
-        : [Type, string, Map<string, string>] {
-        return this.simplify().replaceTypeVariables(state, nextName, replacements);
+    // Get all type variables in order (they may appear more than once)
+    getOrderedTypeVariables(): string[] {
+        return this.simplify().getOrderedTypeVariables();
+    }
+
+    replaceTypeVariables(replacements: Map<string, string>): Type {
+        return this.simplify().replaceTypeVariables(replacements);
     }
 
     simplify(): Type {
@@ -36,6 +39,40 @@ export abstract class Type {
 
     admitsEquality(state: State): boolean {
         return false;
+    }
+
+    normalize(): Type {
+        let orderedVars = this.getOrderedTypeVariables();
+        let replacements = new Map<string, string>();
+
+        for (let v of orderedVars) {
+            if (replacements.has(v)) {
+                continue;
+            }
+
+            let nextVar = '';
+            let cnt = replacements.size + 1;
+            if (cnt <= 26) {
+                nextVar = String.fromCharCode('a'.charCodeAt(0) + cnt - 1);
+            } else {
+                while (cnt > 0) {
+                    let nextChar = (--cnt) % 26;
+                    nextVar = String.fromCharCode('a'.charCodeAt(0) + nextChar) + nextVar;
+                    cnt = Math.floor(cnt / 26);
+                }
+            }
+
+            let newVar = '\'';
+            if (v.length > 2 && v.charAt(1) === '\'') {
+                newVar += '\'';
+            }
+
+            newVar += nextVar;
+
+            replacements.set(v, newVar);
+        }
+
+        return this.replaceTypeVariables(replacements);
     }
 }
 
@@ -69,10 +106,12 @@ export class AnyType extends Type {
         return new Set<string>();
     }
 
-    replaceTypeVariables(state: State, nextName: string = '\'t1',
-                         replacements: Map<string, string> = new Map<string, string>())
-        : [Type, string, Map<string, string>] {
-        return [this, nextName, replacements];
+    getOrderedTypeVariables(): string[] {
+        return [];
+    }
+
+    replaceTypeVariables(replacements: Map<string, string>): Type {
+        return this;
     }
 }
 
@@ -175,30 +214,15 @@ export class TypeVariable extends Type {
         return res;
     }
 
-    replaceTypeVariables(state: State, nextName: string = '\'t1',
-                         replacements: Map<string, string> = new Map<string, string>())
-        : [Type, string, Map<string, string>] {
+    getOrderedTypeVariables(): string[] {
+        return [this.name];
+    }
+
+    replaceTypeVariables(replacements: Map<string, string>): Type {
         if (replacements.has(this.name)) {
-            return [new TypeVariable(<string> replacements.get(this.name),
-                this.position), nextName, replacements];
+            return new TypeVariable(<string> replacements.get(this.name), this.position);
         }
-        if (state.getStaticValue(this.name) !== undefined) {
-            if (!this.admitsEquality(state)) {
-                replacements = replacements.set(this.name, nextName);
-            } else {
-                replacements = replacements.set(this.name, '\'' + nextName);
-            }
-            let cur: number = (+nextName.substring(2)) + 1;
-            for (; ; ++cur) {
-                if (state.getStaticValue('\'t' + cur) === undefined) {
-                    nextName = '\'t' + cur;
-                    break;
-                }
-            }
-            return [new TypeVariable(<string> replacements.get(this.name),
-                this.position), nextName, replacements];
-        }
-        return [this, nextName, replacements];
+        return this;
     }
 
     admitsEquality(state: State): boolean {
@@ -296,16 +320,20 @@ export class RecordType extends Type {
         return res;
     }
 
-    replaceTypeVariables(state: State, nextName: string = '\'t1',
-                         replacements: Map<string, string> = new Map<string, string>())
-        : [Type, string, Map<string, string>] {
-        let res: [Type, string, Map<string, string>] = [this, nextName, replacements];
+    getOrderedTypeVariables(): string[] {
+        let res: string[] = [];
+        this.elements.forEach((val: Type) => {
+            res = res.concat(val.getOrderedTypeVariables());
+        });
+        return res;
+    }
+
+    replaceTypeVariables(replacements: Map<string, string>): Type {
         let rt: Map<string, Type> = new Map<string, Type>();
         this.elements.forEach((val: Type, key: string) => {
-            res = val.replaceTypeVariables(state, res[1], res[2]);
-            rt = rt.set(key, res[0]);
+            rt = rt.set(key, val.replaceTypeVariables(replacements));
         });
-        return [new RecordType(rt, this.complete, this.position), res[1], res[2]];
+        return new RecordType(rt, this.complete, this.position);
     }
 
     getType(name: string): Type {
@@ -338,6 +366,9 @@ export class RecordType extends Type {
         }
 
         if (isTuple) {
+            if (this.elements.size === 0) {
+                return 'unit';
+            }
             let res: string = '(';
             for (let i = 1; i <= this.elements.size; ++i) {
                 if (i > 1) {
@@ -454,12 +485,17 @@ export class FunctionType extends Type {
         return res;
     }
 
-    replaceTypeVariables(state: State, nextName: string = '\'t1',
-                         replacements: Map<string, string> = new Map<string, string>())
-        : [Type, string, Map<string, string>] {
-        let res = this.parameterType.replaceTypeVariables(state, nextName, replacements);
-        let res2 = this.returnType.replaceTypeVariables(state, res[1], res[2]);
-        return [new FunctionType(res[0], res2[0], this.position), res2[1], res2[2]];
+    getOrderedTypeVariables(): string[] {
+        let res: string[] = [];
+        res = res.concat(this.parameterType.getOrderedTypeVariables());
+        res = res.concat(this.returnType.getOrderedTypeVariables());
+        return res;
+    }
+
+    replaceTypeVariables(replacements: Map<string, string>): Type {
+        let res = this.parameterType.replaceTypeVariables(replacements);
+        let res2 = this.returnType.replaceTypeVariables(replacements);
+        return new FunctionType(res, res2, this.position);
     }
 
     admitsEquality(state: State): boolean {
@@ -506,6 +542,9 @@ export class CustomType extends Type {
                 let mt = this.merge(state, tyVarBnd,  (<FunctionType> tp.type).parameterType, true);
                 return (<FunctionType> tp.type).returnType.instantiate(state, mt[1]);
             } catch (e) {
+                if (!(e instanceof Array)) {
+                    throw e;
+                }
                 throw new ElaborationError(this.position,
                     'Instantiating "' + this.prettyPrint() + '" failed:\n'
                     + 'Cannot merge "' + e[1].prettyPrint() + '" and "' + e[2].prettyPrint()
@@ -581,17 +620,21 @@ export class CustomType extends Type {
         return res;
     }
 
-    replaceTypeVariables(state: State, nextName: string = '\'t1',
-                         replacements: Map<string, string> = new Map<string, string>())
-        : [Type, string, Map<string, string>] {
-        let res: [Type, string, Map<string, string>] = [this, nextName, replacements];
+    getOrderedTypeVariables(): string[] {
+        let res: string[] = [];
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            res = res.concat(this.typeArguments[i].getOrderedTypeVariables());
+        }
+        return res;
+    }
+
+    replaceTypeVariables(replacements: Map<string, string> = new Map<string, string>()): Type {
         let rt: Type[] = [];
 
         for (let i = 0; i < this.typeArguments.length; ++i) {
-            res = this.typeArguments[i].replaceTypeVariables(state, res[1], res[2]);
-            rt.push(res[0]);
+            rt.push(this.typeArguments[i].replaceTypeVariables(replacements));
         }
-        return [new CustomType(this.name, rt, this.position), res[1], res[2]];
+        return new CustomType(this.name, rt, this.position);
     }
 
     admitsEquality(state: State): boolean {
