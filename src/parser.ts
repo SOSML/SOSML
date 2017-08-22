@@ -959,7 +959,7 @@ export class Parser {
                     || (!((<FunctionApplication> pat).func instanceof ValueIdentifier))) {
                     throw new ParserError('If you start a function declaration with a "(",'
                         + ' some infix expression should follow. But you gave me "'
-                        + pat.prettyPrint() + '" (' + pat.constructor.name + ').', pat.position);
+                        + pat.toString() + '" (' + pat.constructor.name + ').', pat.position);
                 }
                 nm = <ValueIdentifier> (<FunctionApplication> pat).func;
                 args.push(<PatternExpression> (<FunctionApplication> pat).argument);
@@ -989,7 +989,7 @@ export class Parser {
 
                             throwIfError = true;
                             throw new ParserError('Cute little infix identifiers such as "' +
-                                pat.prettyPrint() + '" sure should play somewhere else.', pat.position);
+                                pat.toString() + '" sure should play somewhere else.', pat.position);
                         }
 
                         args.push(pat);
@@ -1260,7 +1260,7 @@ export class Parser {
                     if (!(curbnd.pattern instanceof ValueIdentifier)
                         && !(curbnd.pattern instanceof Wildcard)) {
                         throw new ParserError('Using "rec" requires binding to a single identifier'
-                            + ' and not "' + curbnd.pattern.prettyPrint(0, true) + '".',
+                            + ' and not "' + curbnd.pattern.toString(0, true) + '".',
                             curbnd.position);
                     }
                 }

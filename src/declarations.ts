@@ -19,7 +19,7 @@ export abstract class Declaration {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
@@ -137,14 +137,14 @@ export class ValueDeclaration extends Declaration {
         return [state, false, undefined, warns];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         // TODO
         let res = 'val <stuff>';
         for (let i = 0; i < this.valueBinding.length; ++i) {
             if (i > 0) {
                 res += ' and';
             }
-            res += ' ' + this.valueBinding[i].prettyPrint(indentation, oneLine);
+            res += ' ' + this.valueBinding[i].toString(indentation, oneLine);
         }
         return res += ';';
     }
@@ -186,7 +186,7 @@ export class TypeDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         // TODO
         let res = 'type';
         for (let i = 0; i < this.typeBinding.length; ++i) {
@@ -194,7 +194,7 @@ export class TypeDeclaration extends Declaration {
                 res += ' and';
             }
             res += ' <stuff> ' + this.typeBinding[i].name.getText();
-            res += ' = ' + this.typeBinding[i].type.prettyPrint();
+            res += ' = ' + this.typeBinding[i].type.toString();
         }
         return res + ';';
     }
@@ -278,7 +278,7 @@ export class DatatypeDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = 'datatype';
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
             if (i > 0) {
@@ -291,7 +291,7 @@ export class DatatypeDeclaration extends Declaration {
                 }
                 res += ' ' + this.datatypeBinding[i].type[j][0].getText();
                 if (this.datatypeBinding[i].type[j][1] !== undefined) {
-                    res += ' of ' + (<Type> this.datatypeBinding[i].type[j][1]).prettyPrint();
+                    res += ' of ' + (<Type> this.datatypeBinding[i].type[j][1]).toString();
                 }
             }
         }
@@ -330,7 +330,7 @@ export class DatatypeReplication extends Declaration {
         return [state, false, undefined, []];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         return 'datatype ' + this.name.getText() + ' = datatype ' + this.oldname.getText() + ';';
     }
 }
@@ -345,7 +345,7 @@ export class ExceptionDeclaration extends Declaration {
         return this;
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         // TODO
         throw new InternalInterpreterError(-1, 'Not yet implemented.');
     }
@@ -413,9 +413,9 @@ export class LocalDeclaration extends Declaration {
         return nres;
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
-        let res = 'local ' + this.declaration.prettyPrint(indentation, oneLine);
-        res += ' in ' + this.body.prettyPrint(indentation, oneLine);
+    toString(indentation: number, oneLine: boolean): string {
+        let res = 'local ' + this.declaration.toString(indentation, oneLine);
+        res += ' in ' + this.body.toString(indentation, oneLine);
         res += ' end;';
         return res;
     }
@@ -443,7 +443,7 @@ export class OpenDeclaration extends Declaration {
             'Yeah, you better wait a little before trying this again.');
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = 'open';
         for (let i = 0; i < this.names.length; ++i) {
             res += ' ' + this.names[i].getText();
@@ -470,7 +470,7 @@ export class EmptyDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         return ' ;';
     }
 }
@@ -514,13 +514,13 @@ export class SequentialDeclaration extends Declaration {
         return [state, false, undefined, warns];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = '';
         for (let i = 0; i < this.declarations.length; ++i) {
             if (i > 0) {
                 res += ' ';
             }
-            res += this.declarations[i].prettyPrint(indentation, oneLine);
+            res += this.declarations[i].toString(indentation, oneLine);
         }
         return res;
     }
@@ -596,7 +596,7 @@ export class InfixDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = 'infix';
         res += ' ' + this.precedence;
         for (let i = 0; i < this.operators.length; ++i) {
@@ -628,7 +628,7 @@ export class InfixRDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = 'infixr';
         res += ' ' + this.precedence;
         for (let i = 0; i < this.operators.length; ++i) {
@@ -660,7 +660,7 @@ export class NonfixDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = 'nonfix';
         for (let i = 0; i < this.operators.length; ++i) {
             res += ' ' + this.operators[i].getText();
@@ -677,14 +677,14 @@ export class ValueBinding {
                 public pattern: Pattern, public expression: Expression) {
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = '';
         if (this.isRecursive) {
             res += 'rec ';
         }
-        res += this.pattern.prettyPrint(indentation, oneLine);
+        res += this.pattern.toString(indentation, oneLine);
         res += ' = ';
-        return res + this.expression.prettyPrint(indentation, oneLine);
+        return res + this.expression.toString(indentation, oneLine);
     }
 
     getType(state: State): [[string, Type][], Warning[]] {
@@ -694,8 +694,8 @@ export class ValueBinding {
 
         if (res === undefined) {
             throw new ElaborationError(this.position,
-                'Type clash. An expression of type "' + tp[0].prettyPrint()
-                + '" cannot be assigned to "' + res[1].prettyPrint() + '".');
+                'Type clash. An expression of type "' + tp[0].toString()
+                + '" cannot be assigned to "' + res[1].toString() + '".');
         }
 
         for (let i = 0; i < res[0].length; ++i) {
@@ -771,7 +771,7 @@ export class FunctionValueBinding {
         return new ValueBinding(this.position, true, this.name, exp.simplify());
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = '';
         for (let i = 0; i < this.parameters.length; ++i) {
             if (i > 0) {
@@ -779,12 +779,12 @@ export class FunctionValueBinding {
             }
             res += this.name.name.getText();
             for (let j = 0; j < this.parameters[i][0].length; ++j) {
-                res += ' ' + this.parameters[i][0][j].prettyPrint(indentation, oneLine);
+                res += ' ' + this.parameters[i][0][j].toString(indentation, oneLine);
             }
             if (this.parameters[i][1] !== undefined) {
-                res += ': ' + (<Type> this.parameters[i][1]).prettyPrint();
+                res += ': ' + (<Type> this.parameters[i][1]).toString();
             }
-            res += ' = ' + this.parameters[i][2].prettyPrint(indentation, oneLine);
+            res += ' = ' + this.parameters[i][2].toString(indentation, oneLine);
         }
         return res;
     }
@@ -915,7 +915,7 @@ export class ExceptionAlias implements ExceptionBinding {
                 + this.oldname.getText() + '".');
         } else if (res[1] !== IdentifierStatus.EXCEPTION_CONSTRUCTOR) {
             throw new ElaborationError(this.position, 'You cannot transform "'
-                + res[0].prettyPrint() + '" into an exception.');
+                + res[0].toString() + '" into an exception.');
         }
         state.setStaticValue(this.name.getText(), res[0].normalize(), IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         return state;
@@ -929,7 +929,7 @@ export class ExceptionAlias implements ExceptionBinding {
                 + this.oldname.getText() + '".');
         } else if (res[1] !== IdentifierStatus.EXCEPTION_CONSTRUCTOR) {
             throw new EvaluationError(this.position, 'You cannot transform "'
-                + res[0].prettyPrint(state) + '" into an exception.');
+                + res[0].toString(state) + '" into an exception.');
         }
         state.setDynamicValue(this.name.getText(), res[0], IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         return [state, false, undefined];

@@ -2,7 +2,7 @@ import { InternalInterpreterError, ElaborationError } from './errors';
 import { State } from './state';
 
 export abstract class Type {
-    abstract prettyPrint(): string;
+    abstract toString(): string;
     abstract equals(other: any): boolean;
 
     // Constructs types with type variables instantiated as much as possible
@@ -82,7 +82,7 @@ export class AnyType extends Type {
         super();
     }
 
-    prettyPrint(): string {
+    toString(): string {
         return 'any';
     }
 
@@ -121,18 +121,18 @@ export class TypeVariableBind extends Type {
         super();
     }
 
-    prettyPrint(): string {
+    toString(): string {
         if (this.domain.length === 0) {
-            return '∀ ' + this.name + ' . ' + this.type.prettyPrint();
+            return '∀ ' + this.name + ' . ' + this.type.toString();
         } else {
             let res = '∀ ' + this.name + ' ∈ {';
             for (let i = 0; i < this.domain.length; ++i) {
                 if (i > 0) {
                     res += ', ';
                 }
-                res += this.domain[i].prettyPrint();
+                res += this.domain[i].toString();
             }
-            return res + '} . ' + this.type.prettyPrint();
+            return res + '} . ' + this.type.toString();
         }
     }
 
@@ -151,7 +151,7 @@ export class TypeVariable extends Type {
         super();
     }
 
-    prettyPrint(): string {
+    toString(): string {
         return this.name;
     }
 
@@ -182,7 +182,7 @@ export class TypeVariable extends Type {
                 if (ths.admitsEquality(state) && !oth.admitsEquality(state)) {
                     let nt = oth.makeEqType(state, tyVarBnd);
                     if (!nt[0].admitsEquality(state)) {
-                        throw ['Type "' + oth.prettyPrint() + '" does not admit equality.', ths, oth];
+                        throw ['Type "' + oth.toString() + '" does not admit equality.', ths, oth];
                     } else {
                         oth = nt[0];
                         tyVarBnd = nt[1];
@@ -357,7 +357,7 @@ export class RecordType extends Type {
         return res;
     }
 
-    prettyPrint(): string {
+    toString(): string {
         let isTuple = true;
         for (let i = 1; i <= this.elements.size; ++i) {
             if (!this.elements.has('' + i)) {
@@ -376,7 +376,7 @@ export class RecordType extends Type {
                 }
                 let sub = this.elements.get('' + i);
                 if (sub !== undefined) {
-                    res += sub.prettyPrint();
+                    res += sub.toString();
                 } else {
                     throw new InternalInterpreterError(-1,
                         'How did we loose this value? It was there before. I promise…');
@@ -394,7 +394,7 @@ export class RecordType extends Type {
             } else {
                 first = false;
             }
-            result += key + ': ' + type.prettyPrint();
+            result += key + ': ' + type.toString();
         });
         if (!this.complete) {
             if (!first) {
@@ -502,13 +502,13 @@ export class FunctionType extends Type {
         return false;
     }
 
-    prettyPrint(): string {
+    toString(): string {
         if (this.parameterType instanceof FunctionType) {
-            return '(' + this.parameterType.prettyPrint() + ')'
-                + ' -> ' + this.returnType.prettyPrint();
+            return '(' + this.parameterType.toString() + ')'
+                + ' -> ' + this.returnType.toString();
         } else {
-            return this.parameterType.prettyPrint()
-                + ' -> ' + this.returnType.prettyPrint();
+            return this.parameterType.toString()
+                + ' -> ' + this.returnType.toString();
         }
     }
 
@@ -546,8 +546,8 @@ export class CustomType extends Type {
                     throw e;
                 }
                 throw new ElaborationError(this.position,
-                    'Instantiating "' + this.prettyPrint() + '" failed:\n'
-                    + 'Cannot merge "' + e[1].prettyPrint() + '" and "' + e[2].prettyPrint()
+                    'Instantiating "' + this.toString() + '" failed:\n'
+                    + 'Cannot merge "' + e[1].toString() + '" and "' + e[2].toString()
                     + '" (' + e[0] + ').');
             }
         } else if (tp === undefined) {
@@ -646,7 +646,7 @@ export class CustomType extends Type {
         return true;
     }
 
-    prettyPrint(): string {
+    toString(): string {
         let result: string = '';
         if (this.typeArguments.length > 1) {
             result += '(';
@@ -655,7 +655,7 @@ export class CustomType extends Type {
             if (i > 0) {
                 result += ', ';
             }
-            result += this.typeArguments[i].prettyPrint();
+            result += this.typeArguments[i].toString();
         }
         if (this.typeArguments.length > 1) {
             result += ')';
@@ -698,13 +698,13 @@ export class TupleType extends Type {
         super();
     }
 
-    prettyPrint(): string {
+    toString(): string {
         let result: string = '(';
         for (let i: number = 0; i < this.elements.length; ++i) {
             if (i > 0) {
                 result += ' * ';
             }
-            result += this.elements[i].prettyPrint();
+            result += this.elements[i].toString();
         }
         return result + ')';
     }

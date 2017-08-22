@@ -28,7 +28,7 @@ export abstract class Expression {
         throw new InternalInterpreterError(this.position, 'Called "getValue" on a derived form.');
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         throw new InternalInterpreterError(this.position, 'I don\'t want to be printed.');
     }
 
@@ -43,7 +43,7 @@ export interface Pattern {
     matchType(state: State, tyVarBnd: Map<string, Type>, t: Type): [[string, Type][], Type, Map<string, Type>];
     matches(state: State, v: Value): [string, Value][] | undefined;
     simplify(): PatternExpression;
-    prettyPrint(indentation: number, oneLine: boolean): string;
+    toString(indentation: number, oneLine: boolean): string;
 }
 
 export type PatternExpression = Pattern & Expression;
@@ -80,13 +80,13 @@ export class Constant extends Expression implements Pattern {
             return [new CustomType('string'), [], nextName, tyVars, tyVarBnd];
         } else {
             throw new InternalInterpreterError(this.token.position,
-                '"' + this.prettyPrint() + '" does not seem to be a valid constant.');
+                '"' + this.toString() + '" does not seem to be a valid constant.');
         }
     }
 
     simplify(): Constant { return this; }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         return this.token.getText();
     }
 
@@ -184,8 +184,8 @@ export class ValueIdentifier extends Expression implements Pattern {
                 throw e;
             }
             throw new ElaborationError(this.position,
-                'Type clash: "' + t.prettyPrint() + '" vs. "'
-                + res[0].prettyPrint() + '":\n' + e[0]);
+                'Type clash: "' + t.toString() + '" vs. "'
+                + res[0].toString() + '":\n' + e[0]);
         }
     }
 
@@ -202,7 +202,7 @@ export class ValueIdentifier extends Expression implements Pattern {
 
     simplify(): ValueIdentifier { return this; }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         return this.name.getText();
     }
 
@@ -348,7 +348,7 @@ export class Record extends Expression implements Pattern {
         return new Record(this.position, this.complete, newEntries);
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         let result: string = '{';
         let first: boolean = true;
         for (let i = 0; i < this.entries.length; ++i) {
@@ -357,7 +357,7 @@ export class Record extends Expression implements Pattern {
             }
             first = false;
             result += this.entries[i][0] + ' = '
-                + this.entries[i][1].prettyPrint(indentation, oneLine);
+                + this.entries[i][1].toString(indentation, oneLine);
         }
         if (!this.complete) {
             if (!first) {
@@ -399,9 +399,9 @@ export class LocalDeclarationExpression extends Expression {
         return new LocalDeclarationExpression(this.position, this.declaration.simplify(), this.expression.simplify());
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        let res = 'let ' + this.declaration.prettyPrint(indentation, oneLine);
-        res += ' in ' + this.expression.prettyPrint(indentation, oneLine) + ' end';
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        let res = 'let ' + this.declaration.toString(indentation, oneLine);
+        res += ' in ' + this.expression.toString(indentation, oneLine) + ' end';
         return res;
     }
 
@@ -453,9 +453,9 @@ export class TypedExpression extends Expression implements Pattern {
                 throw e;
             }
             throw new ElaborationError(this.position,
-                'The annotated type "' + this.typeAnnotation.prettyPrint()
+                'The annotated type "' + this.typeAnnotation.toString()
                 + '" does not match the expression\'s type "'
-                + tp[1].prettyPrint() + '":\n' + e[0]);
+                + tp[1].toString() + '":\n' + e[0]);
         }
     }
 
@@ -478,10 +478,10 @@ export class TypedExpression extends Expression implements Pattern {
                 throw e;
             }
             throw new ElaborationError(this.position,
-                'The specified type "' + this.typeAnnotation.prettyPrint()
+                'The specified type "' + this.typeAnnotation.toString()
                 + '" does not match the annotated expression\'s type "'
-                + tp[0].prettyPrint() + '":\n' + e[0] + ' ("' + e[1].prettyPrint() + '" vs. "'
-                + e[2].prettyPrint() + '")');
+                + tp[0].toString() + '":\n' + e[0] + ' ("' + e[1].toString() + '" vs. "'
+                + e[2].toString() + '")');
         }
     }
 
@@ -490,9 +490,9 @@ export class TypedExpression extends Expression implements Pattern {
             this.expression.simplify(), this.typeAnnotation.simplify());
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        let res = '( ' + this.expression.prettyPrint(indentation, oneLine);
-        res += ': ' + this.typeAnnotation.prettyPrint();
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        let res = '( ' + this.expression.toString(indentation, oneLine);
+        res += ': ' + this.typeAnnotation.toString();
         return res + ' )';
     }
 
@@ -618,14 +618,14 @@ export class FunctionApplication extends Expression implements Pattern {
                     throw e;
                 }
                 throw new ElaborationError(this.position,
-                    'Do not feed functions of type "' + f[0].prettyPrint()
-                    + '" an argument of type "' + arg[0].prettyPrint() + '":\n'
-                    + e[0] + ' ("' + e[1].prettyPrint() + '" vs. "' + e[2].prettyPrint() + '")');
+                    'Do not feed functions of type "' + f[0].toString()
+                    + '" an argument of type "' + arg[0].toString() + '":\n'
+                    + e[0] + ' ("' + e[1].toString() + '" vs. "' + e[2].toString() + '")');
             }
         } else {
             throw new ElaborationError(this.func.position,
-                '"' + this.func.prettyPrint() + '" of type "'
-                + f[0].prettyPrint() + '" is not a function.');
+                '"' + this.func.toString() + '" of type "'
+                + f[0].toString() + '" is not a function.');
         }
     }
 
@@ -633,9 +633,9 @@ export class FunctionApplication extends Expression implements Pattern {
         return new FunctionApplication(this.position, this.func.simplify(), this.argument.simplify());
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        let res = '( ' +  this.func.prettyPrint(indentation, oneLine);
-        res += ' ' + this.argument.prettyPrint(indentation, oneLine);
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        let res = '( ' +  this.func.toString(indentation, oneLine);
+        res += ' ' + this.argument.toString(indentation, oneLine);
         return res + ' )';
     }
 
@@ -679,7 +679,7 @@ export class FunctionApplication extends Expression implements Pattern {
                 }
                 if (!(aVal[0] instanceof ReferenceValue)) {
                     throw new EvaluationError(this.position,
-                        'You cannot dereference "' + this.argument.prettyPrint() + '".');
+                        'You cannot dereference "' + this.argument.toString() + '".');
                 }
                 return [<Value> state.getCell((<ReferenceValue> aVal[0]).address), false, aVal[2], aVal[3]];
             }
@@ -724,7 +724,7 @@ export class FunctionApplication extends Expression implements Pattern {
             return [res[0], res[1], warns.concat(res[2]), membnd];
         }
         throw new EvaluationError(this.position, 'Cannot evaluate the function "'
-            + this.func.prettyPrint() + '" (' + funcVal[0].constructor.name + ').');
+            + this.func.toString() + '" (' + funcVal[0].constructor.name + ').');
     }
 }
 
@@ -738,9 +738,9 @@ export class HandleException extends Expression {
         return new HandleException(this.position, this.expression.simplify(), this.match.simplify());
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        let res = '( ( ' + this.expression.prettyPrint(indentation, oneLine) + ' )';
-        res += ' handle ' + this.match.prettyPrint(indentation, oneLine) + ' )';
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        let res = '( ( ' + this.expression.toString(indentation, oneLine) + ' )';
+        res += ' handle ' + this.match.toString(indentation, oneLine) + ' )';
         return res;
     }
 
@@ -754,7 +754,7 @@ export class HandleException extends Expression {
             || !(<FunctionType> mtp[0]).parameterType.equals(new CustomType('exn'))) {
             throw new ElaborationError(this.match.position,
                 'You can only handle things of type "exn" and not "'
-                + (<FunctionType> mtp[0]).parameterType.prettyPrint() + '".');
+                + (<FunctionType> mtp[0]).parameterType.toString() + '".');
         }
         let rt = (<FunctionType> mtp[0]).returnType;
         let etp = this.expression.getType(state, mtp[4], mtp[2], mtp[3], forceRebind);
@@ -768,7 +768,7 @@ export class HandleException extends Expression {
             }
             throw new ElaborationError(this.expression.position,
                 'The "handle" cannot change the type of the expression from "'
-                + etp[0].prettyPrint() + '" to "' + rt.prettyPrint() + '":\n' + e[0]);
+                + etp[0].toString() + '" to "' + rt.toString() + '":\n' + e[0]);
         }
     }
 
@@ -799,8 +799,8 @@ export class RaiseException extends Expression {
         return new RaiseException(this.position, this.expression.simplify());
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        return 'raise ' + this.expression.prettyPrint(indentation, oneLine);
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        return 'raise ' + this.expression.toString(indentation, oneLine);
     }
 
     getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
@@ -840,9 +840,9 @@ export class Lambda extends Expression {
         return new Lambda(this.position, this.match.simplify());
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
-        return '( fn ' + this.match.prettyPrint(indentation, oneLine) + ' )';
+        return '( fn ' + this.match.toString(indentation, oneLine) + ' )';
     }
 
     getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
@@ -879,14 +879,14 @@ export class Match {
     // pat => exp or pat => exp | match
     constructor(public position: number, public matches: [PatternExpression, Expression][]) { }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         let res = '';
         for (let i = 0; i < this.matches.length; ++i) {
             if (i > 0) {
                 res += ' | ';
             }
-            res += this.matches[i][0].prettyPrint(indentation, oneLine);
-            res += ' => ' + this.matches[i][1].prettyPrint(indentation, oneLine);
+            res += this.matches[i][0].toString(indentation, oneLine);
+            res += ' => ' + this.matches[i][1].toString(indentation, oneLine);
         }
         return res;
     }
@@ -938,8 +938,8 @@ export class Match {
                     throw e;
                 }
                 throw new ElaborationError(this.position,
-                    'Match rules disagree on type:\n' + e[0] + ' ("' + e[1].prettyPrint() + '" vs. "'
-                    + e[2].prettyPrint() + '")');
+                    'Match rules disagree on type:\n' + e[0] + ' ("' + e[1].toString() + '" vs. "'
+                    + e[2].toString() + '")');
             }
             restp = restp.instantiate(state, bnds);
             bnds.forEach((val: Type, key: string) => {
@@ -991,7 +991,7 @@ export class Wildcard extends Expression implements Pattern {
         return this;
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         return '_';
     }
 }
@@ -1045,8 +1045,8 @@ export class LayeredPattern extends Expression implements Pattern {
         }
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        return this.identifier.getText() + ' as ' + this.pattern.prettyPrint(indentation, oneLine);
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        return this.identifier.getText() + ' as ' + this.pattern.toString(indentation, oneLine);
     }
 }
 
@@ -1153,9 +1153,9 @@ export class Conjunction extends Expression {
             falseConstant).simplify();
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        return '( ' + this.leftOperand.prettyPrint(indentation, oneLine) + ' andalso '
-            + this.rightOperand.prettyPrint(indentation, oneLine) + ' )';
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        return '( ' + this.leftOperand.toString(indentation, oneLine) + ' andalso '
+            + this.rightOperand.toString(indentation, oneLine) + ' )';
     }
 }
 
@@ -1167,9 +1167,9 @@ export class Disjunction extends Expression {
         return new Conditional(this.position, this.leftOperand, trueConstant, this.rightOperand).simplify();
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        return '( ' + this.leftOperand.prettyPrint(indentation, oneLine) + ' orelse '
-            + this.rightOperand.prettyPrint(indentation, oneLine) + ' )';
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        return '( ' + this.leftOperand.toString(indentation, oneLine) + ' orelse '
+            + this.rightOperand.toString(indentation, oneLine) + ' )';
     }
 }
 
@@ -1193,13 +1193,13 @@ export class Tuple extends Expression implements Pattern {
         return new Record(this.position, true, entries);
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         let res = '( ';
         for (let i = 0; i < this.expressions.length; ++i) {
             if (i > 0) {
                 res += ', ';
             }
-            res += this.expressions[i].prettyPrint(indentation, oneLine);
+            res += this.expressions[i].toString(indentation, oneLine);
         }
         return res + ' )';
     }
@@ -1226,13 +1226,13 @@ export class List extends Expression implements Pattern {
         return res;
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         let res = '[ ';
         for (let i = 0; i < this.expressions.length; ++i) {
             if (i > 0) {
                 res += ', ';
             }
-            res += this.expressions[i].prettyPrint(indentation, oneLine);
+            res += this.expressions[i].toString(indentation, oneLine);
         }
         return res + ' ]';
     }
@@ -1253,13 +1253,13 @@ export class Sequence extends Expression {
         return res.simplify();
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         let res = '( ';
         for (let i = 0; i < this.expressions.length; ++i) {
             if (i > 0) {
                 res += '; ';
             }
-            res += this.expressions[i].prettyPrint(indentation, oneLine);
+            res += this.expressions[i].toString(indentation, oneLine);
         }
         return res + ' )';
     }
@@ -1275,7 +1275,7 @@ export class RecordSelector extends Expression {
             new ValueIdentifier(-1, new IdentifierToken('__rs', -1))]]));
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         return '#' + this.label.getText();
     }
 }
@@ -1290,9 +1290,9 @@ export class CaseAnalysis extends Expression {
             this.expression.simplify());
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        let res = 'case ' + this.expression.prettyPrint(indentation, oneLine);
-        res += ' of ' + this.match.prettyPrint(indentation, oneLine);
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        let res = 'case ' + this.expression.toString(indentation, oneLine);
+        res += ' of ' + this.match.toString(indentation, oneLine);
         return res;
     }
 }
@@ -1308,10 +1308,10 @@ export class Conditional extends Expression {
         return new CaseAnalysis(this.position, this.condition, match).simplify();
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        let res = 'if ' + this.condition.prettyPrint(indentation, oneLine);
-        res += ' then ' + this.consequence.prettyPrint(indentation, oneLine);
-        res += ' else ' + this.alternative.prettyPrint(indentation, oneLine);
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        let res = 'if ' + this.condition.toString(indentation, oneLine);
+        res += ' then ' + this.consequence.toString(indentation, oneLine);
+        res += ' else ' + this.alternative.toString(indentation, oneLine);
         return res;
     }
 }
@@ -1336,8 +1336,8 @@ export class While extends Expression {
         return new LocalDeclarationExpression(this.position, dec, fapp).simplify();
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        return '( while ' + this.condition.prettyPrint(indentation, oneLine)
-            + ' do ' + this.body.prettyPrint(indentation, oneLine) + ' )';
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        return '( while ' + this.condition.toString(indentation, oneLine)
+            + ' do ' + this.body.toString(indentation, oneLine) + ' )';
     }
 }
