@@ -1,4 +1,4 @@
-import { TypeVariable, RecordType, Type, FunctionType, CustomType, AnyType } from './types';
+import { TypeVariable, RecordType, Type, FunctionType, CustomType, AnyType, TypeVariableBind } from './types';
 import { Declaration, ValueBinding, ValueDeclaration } from './declarations';
 import { Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConstantToken,
          NumericToken, WordConstantToken, CharacterConstantToken, StringConstantToken } from './tokens';
@@ -121,10 +121,10 @@ export class ValueIdentifier extends Expression implements Pattern {
         let bnd = false;
         if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
             if (forceRebind) {
-                res = [new TypeVariable('\'__' + this.name.getText()), 0];
+                res = [new TypeVariableBind('\'**' + this.name.getText(), new TypeVariable('\'**' + this.name.getText())), 0];
                 bnd = true;
-            } else if (tyVarBnd.has('\'__' + this.name.getText())) {
-                let tmp = (<Type> tyVarBnd.get('\'__' + this.name.getText())).instantiate(
+            } else if (tyVarBnd.has('\'**' + this.name.getText())) {
+                let tmp = (<Type> tyVarBnd.get('\'**' + this.name.getText())).instantiate(
                     state, mps);
                 return [tmp, [], nextName, tyVars, mps];
             } else if (res === undefined) {
@@ -133,7 +133,13 @@ export class ValueIdentifier extends Expression implements Pattern {
             }
         }
 
-        let vars = res[0].getTypeVariables();
+            //       console.log(this.toString() + ' has ' + res[0] + ' and ' + state.getStaticValue(this.name.getText()));
+        let vars = new Set<string>();
+        while(res[0] instanceof TypeVariableBind) {
+            vars = vars.add((<TypeVariableBind> res[0]).name);
+            res[0] = (<TypeVariableBind> res[0]).type;
+        }
+
         let repl = new Map<string, string>();
         let nwvar: string[] = [];
 
@@ -164,7 +170,7 @@ export class ValueIdentifier extends Expression implements Pattern {
         let r2 = res[0].replaceTypeVariables(repl).instantiate(state, mps);
 
         if (bnd) {
-            mps = mps.set('\'__' + this.name.getText(), r2);
+            mps = mps.set('\'**' + this.name.getText(), r2);
         }
         return [r2, [], nextName, tyVars, mps];
     }
@@ -249,7 +255,7 @@ export class Record extends Expression implements Pattern {
             let ntype = new Map<string, Type>();
             for (let i = 0; i < this.entries.length; ++i) {
                 ntype = ntype.set(this.entries[i][0],
-                    new TypeVariable((<TypeVariable> t).name + '_' + i));
+                    new TypeVariable((<TypeVariable> t).name + '*' + i));
             }
             let tp = new RecordType(ntype, this.complete);
             tyVarBnd = tyVarBnd.set((<TypeVariable> t).name, tp);
@@ -409,14 +415,34 @@ export class LocalDeclarationExpression extends Expression {
             nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, Type>] {
+
         let nstate = state.getNestedState(state.id);
         tyVarBnd.forEach((val: Type, key: string) => {
-            if (key[1] === '_' && key[2] === '_') {
-                nstate.setStaticValue(key.substring(3), val.instantiate(state, tyVarBnd),
-                    IdentifierStatus.VALUE_VARIABLE);
+            if (key[1] === '*' && key[2] === '*') {
+                nstate.setStaticValue(key.substring(3), val.instantiate(state, tyVarBnd), IdentifierStatus.VALUE_VARIABLE);
             }
         });
-        let res = this.declaration.elaborate(nstate);
+
+        let res = this.declaration.elaborate(nstate, tyVarBnd, nextName);
+        nextName = res[3];
+
+        let chg: [string, Type][] = [];
+        tyVarBnd.forEach((val: Type, key: string) => {
+            if (key[1] === '*' && key[2] === '*') {
+                chg.push([key, val]);
+            }
+        });
+
+        for (let i = 0; i < chg.length; ++i) {
+            if ((<Type> tyVarBnd.get(chg[i][0])).equals(res[2].get(chg[i][0]))) {
+                // Make sure we're not using some type of some rebound identifier
+                // console.log('Updating ' + chg[i][0] + ' because ' + tyVarBnd.get(chg[i][0])
+                // + ' === ' + res[2].get(chg[i][0]));
+                let tmp = chg[i][1].merge(nstate, tyVarBnd, chg[i][1].instantiate(nstate, res[2]));
+                tyVarBnd = tmp[1];
+            }
+        }
+
         let r2 = this.expression.getType(res[0], tyVarBnd, nextName, tyVars, forceRebind);
 
         return [r2[0], res[1].concat(r2[1]), r2[2], r2[3], r2[4]];
@@ -597,9 +623,10 @@ export class FunctionApplication extends Expression implements Pattern {
 
         f[0] = f[0].instantiate(state, tyVarBnd);
 
+
         if (f[0] instanceof TypeVariable) {
-            let ntype = new FunctionType(new TypeVariable((<TypeVariable> f[0]).name + '_a'),
-                new TypeVariable((<TypeVariable> f[0]).name + '_b'));
+            let ntype = new FunctionType(new TypeVariable((<TypeVariable> f[0]).name + '*a'),
+                new TypeVariable((<TypeVariable> f[0]).name + '*b'));
             f[4] = f[4].set((<TypeVariable> f[0]).name, ntype);
             f[0] = ntype;
         }
@@ -609,7 +636,15 @@ export class FunctionApplication extends Expression implements Pattern {
 
         if (f[0] instanceof FunctionType) {
             try {
+                // console.log(this.constructor.name + ' 2 ' + this.toString());
+                // console.log('Merging ' + f[0] + ' and ' + arg[0]);
+                // console.log(f[4]);
+
+
                 let tp = (<FunctionType> f[0]).parameterType.merge(state, f[4], arg[0]);
+
+                // console.log(this.constructor.name + ' 3 ' + this.toString());
+                // console.log(f[4]);
 
                 return [(<FunctionType> f[0]).returnType.instantiate(state, tp[1]),
                     f[1].concat(arg[1]), arg[2], arg[3], f[4]];
@@ -943,7 +978,7 @@ export class Match {
             }
             restp = restp.instantiate(state, bnds);
             bnds.forEach((val: Type, key: string) => {
-                if (key[1] !== '_' || key[2] !== '_') {
+                if (key[1] !== '*' || key[2] !== '*') {
                     nmap = nmap.set(key, val);
                 }
             });

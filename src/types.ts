@@ -1,4 +1,4 @@
-import { InternalInterpreterError, ElaborationError } from './errors';
+import { ElaborationError } from './errors';
 import { State } from './state';
 
 export abstract class Type {
@@ -115,7 +115,6 @@ export class AnyType extends Type {
     }
 }
 
-    /*
 export class TypeVariableBind extends Type {
     constructor(public name: string, public type: Type, public domain: Type[] = []) {
         super();
@@ -123,17 +122,41 @@ export class TypeVariableBind extends Type {
 
     toString(): string {
         if (this.domain.length === 0) {
-            return '∀ ' + this.name + ' . ' + this.type.toString();
+            return '∀ ' + this.name + ' . ' + this.type;
         } else {
             let res = '∀ ' + this.name + ' ∈ {';
             for (let i = 0; i < this.domain.length; ++i) {
                 if (i > 0) {
                     res += ', ';
                 }
-                res += this.domain[i].toString();
+                res += this.domain[i];
             }
-            return res + '} . ' + this.type.toString();
+            return res + '} . ' + this.type;
         }
+    }
+
+    getTypeVariables(): Set<string> {
+        let rec = this.type.getTypeVariables();
+        let res = new Set<string>();
+
+        rec.forEach((val: string) => {
+            if (val !== this.name) {
+                res.add(val);
+            }
+        });
+        return res;
+    }
+
+    getOrderedTypeVariables(): string[] {
+        return [this.name].concat(this.type.getOrderedTypeVariables());
+    }
+
+    replaceTypeVariables(replacements: Map<string, string>): Type {
+        if (replacements.has(this.name)) {
+            return new TypeVariableBind(<string> replacements.get(this.name),
+                this.type.replaceTypeVariables(replacements));
+        }
+        return this.type.replaceTypeVariables(replacements);
     }
 
     equals(other: any) {
@@ -144,7 +167,6 @@ export class TypeVariableBind extends Type {
         return (<TypeVariableBind> other).type.equals(this.type);
     }
 }
-     */
 
 export class TypeVariable extends Type {
     constructor(public name: string, public position: number = 0) {
@@ -182,7 +204,7 @@ export class TypeVariable extends Type {
                 if (ths.admitsEquality(state) && !oth.admitsEquality(state)) {
                     let nt = oth.makeEqType(state, tyVarBnd);
                     if (!nt[0].admitsEquality(state)) {
-                        throw ['Type "' + oth.toString() + '" does not admit equality.', ths, oth];
+                        throw ['Type "' + oth + '" does not admit equality.', ths, oth];
                     } else {
                         oth = nt[0];
                         tyVarBnd = nt[1];
@@ -369,20 +391,19 @@ export class RecordType extends Type {
             if (this.elements.size === 0) {
                 return 'unit';
             }
-            let res: string = '(';
+            let res: string = '';
             for (let i = 1; i <= this.elements.size; ++i) {
                 if (i > 1) {
                     res += ' * ';
                 }
                 let sub = this.elements.get('' + i);
-                if (sub !== undefined) {
-                    res += sub.toString();
+                if (sub instanceof FunctionType) {
+                    res += '(' + sub + ')';
                 } else {
-                    throw new InternalInterpreterError(-1,
-                        'How did we loose this value? It was there before. I promise…');
+                    res += sub;
                 }
             }
-            return res + ')';
+            return res + '';
         }
 
         // TODO: print as Tuple if possible
@@ -394,7 +415,7 @@ export class RecordType extends Type {
             } else {
                 first = false;
             }
-            result += key + ': ' + type.toString();
+            result += key + ': ' + type;
         });
         if (!this.complete) {
             if (!first) {
@@ -504,11 +525,11 @@ export class FunctionType extends Type {
 
     toString(): string {
         if (this.parameterType instanceof FunctionType) {
-            return '(' + this.parameterType.toString() + ')'
-                + ' -> ' + this.returnType.toString();
+            return '(' + this.parameterType + ')'
+                + ' -> ' + this.returnType;
         } else {
-            return this.parameterType.toString()
-                + ' -> ' + this.returnType.toString();
+            return this.parameterType
+                + ' -> ' + this.returnType;
         }
     }
 
@@ -546,8 +567,8 @@ export class CustomType extends Type {
                     throw e;
                 }
                 throw new ElaborationError(this.position,
-                    'Instantiating "' + this.toString() + '" failed:\n'
-                    + 'Cannot merge "' + e[1].toString() + '" and "' + e[2].toString()
+                    'Instantiating "' + this + '" failed:\n'
+                    + 'Cannot merge "' + e[1] + '" and "' + e[2]
                     + '" (' + e[0] + ').');
             }
         } else if (tp === undefined) {
@@ -655,7 +676,7 @@ export class CustomType extends Type {
             if (i > 0) {
                 result += ', ';
             }
-            result += this.typeArguments[i].toString();
+            result += this.typeArguments[i];
         }
         if (this.typeArguments.length > 1) {
             result += ')';
@@ -704,7 +725,7 @@ export class TupleType extends Type {
             if (i > 0) {
                 result += ' * ';
             }
-            result += this.elements[i].toString();
+            result += this.elements[i];
         }
         return result + ')';
     }

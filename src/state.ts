@@ -167,6 +167,9 @@ export class State {
     getStaticValue(name: string, idLimit: number = 0): [Type, IdentifierStatus] | undefined {
         let result = this.staticBasis.getValue(name);
         if (result !== undefined || this.parent === undefined || this.parent.id < idLimit) {
+            if (result !== undefined) {
+                return [result[0], result[1]];
+            }
             return result;
         } else {
             return this.parent.getStaticValue(name, idLimit);
@@ -185,6 +188,9 @@ export class State {
     getDynamicValue(name: string, idLimit: number = 0): [Value, IdentifierStatus] | undefined {
         let result = this.dynamicBasis.getValue(name);
         if (result !== undefined || this.parent === undefined || this.parent.id < idLimit) {
+            if (result !== undefined) {
+                return [result[0], result[1]];
+            }
             return result;
         } else {
             return this.parent.getDynamicValue(name, idLimit);
@@ -194,6 +200,9 @@ export class State {
     getDynamicType(name: string, idLimit: number = 0): string[] | undefined {
         let result = this.dynamicBasis.getType(name);
         if (result !== undefined || this.parent === undefined || this.parent.id < idLimit) {
+            if (result !== undefined) {
+                return [result[0], result[1]];
+            }
             return result;
         } else {
             return this.parent.getDynamicType(name, idLimit);
