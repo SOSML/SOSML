@@ -196,6 +196,10 @@ export class TypeVariable extends Type {
     }
 
     merge(state: State, tyVarBnd: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
+        if (other instanceof AnyType) {
+            return [this, tyVarBnd];
+        }
+
         let ths = this.instantiate(state, tyVarBnd);
 
         if (ths instanceof TypeVariable) {
