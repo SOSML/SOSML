@@ -4,7 +4,7 @@ SOSML is an online interpreter for the functional programming language Standard 
 It is to be used as a learning tool in a freshman class at Saarland University; you can try it out at https://sosml.github.io.
 
 ## Features
-Correctly lexing, parsing and interpreting any SML core language program, i.e. a program that may contain the following constructs:
+Correctly lexing, parsing, elaborating and interpreting any SML core language program, i.e. a program that may contain the following constructs:
 
 * Supported declarations
   * [x] value declarations (`val x = 42;`)
@@ -46,9 +46,6 @@ Correctly lexing, parsing and interpreting any SML core language program, i.e. a
   * `order`, `option`
   * List library `hd`, `tl`, `null`, `map`, `@`, `length`, `rev`, `List.concat`, `foldl`, `foldr`
     `List.tabulate`, `List.exists`, `List.all`, `List.filter`, `List.collate`, `List.nth`
-
-Currently, the interpreter does not have any form of elaboration, i.e. type checking and type interference.
-This, and the remaining constructs from the SML module language, will be implemented till October 2017.
 
 ## Building and installation
 The dependencies of this package must be installed to test or build.
