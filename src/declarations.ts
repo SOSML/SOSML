@@ -206,7 +206,7 @@ export class TypeDeclaration extends Declaration {
                 res += ' and';
             }
             res += ' <stuff> ' + this.typeBinding[i].name.getText();
-            res += ' = ' + this.typeBinding[i].type.toString();
+            res += ' = ' + this.typeBinding[i].type;
         }
         return res + ';';
     }
@@ -304,7 +304,7 @@ export class DatatypeDeclaration extends Declaration {
                 }
                 res += ' ' + this.datatypeBinding[i].type[j][0].getText();
                 if (this.datatypeBinding[i].type[j][1] !== undefined) {
-                    res += ' of ' + (<Type> this.datatypeBinding[i].type[j][1]).toString();
+                    res += ' of ' + (<Type> this.datatypeBinding[i].type[j][1]);
                 }
             }
         }
@@ -735,8 +735,8 @@ export class ValueBinding {
 
         if (res === undefined) {
             throw new ElaborationError(this.position,
-                'Type clash. An expression of type "' + tp[0].toString()
-                + '" cannot be assigned to "' + res[1].toString() + '".');
+                'Type clash. An expression of type "' + tp[0]
+                + '" cannot be assigned to "' + res[1] + '".');
         }
 
         let ntys: TypeVariable[] = [];
@@ -853,7 +853,7 @@ export class FunctionValueBinding {
                 res += ' ' + this.parameters[i][0][j].toString(indentation, oneLine);
             }
             if (this.parameters[i][1] !== undefined) {
-                res += ': ' + (<Type> this.parameters[i][1]).toString();
+                res += ': ' + (<Type> this.parameters[i][1]);
             }
             res += ' = ' + this.parameters[i][2].toString(indentation, oneLine);
         }
@@ -986,7 +986,7 @@ export class ExceptionAlias implements ExceptionBinding {
                 + this.oldname.getText() + '".');
         } else if (res[1] !== IdentifierStatus.EXCEPTION_CONSTRUCTOR) {
             throw new ElaborationError(this.position, 'You cannot transform "'
-                + res[0].toString() + '" into an exception.');
+                + res[0] + '" into an exception.');
         }
         state.setStaticValue(this.name.getText(), res[0].normalize(), IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         return state;

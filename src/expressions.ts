@@ -80,7 +80,7 @@ export class Constant extends Expression implements Pattern {
             return [new CustomType('string'), [], nextName, tyVars, tyVarBnd];
         } else {
             throw new InternalInterpreterError(this.token.position,
-                '"' + this.toString() + '" does not seem to be a valid constant.');
+                '"' + this + '" does not seem to be a valid constant.');
         }
     }
 
@@ -190,8 +190,8 @@ export class ValueIdentifier extends Expression implements Pattern {
                 throw e;
             }
             throw new ElaborationError(this.position,
-                'Type clash: "' + t.toString() + '" vs. "'
-                + res[0].toString() + '":\n' + e[0]);
+                'Type clash: "' + t + '" vs. "'
+                + res[0] + '":\n' + e[0]);
         }
     }
 
@@ -483,9 +483,9 @@ export class TypedExpression extends Expression implements Pattern {
                 throw e;
             }
             throw new ElaborationError(this.position,
-                'The annotated type "' + this.typeAnnotation.toString()
+                'The annotated type "' + this.typeAnnotation
                 + '" does not match the expression\'s type "'
-                + tp[1].toString() + '":\n' + e[0]);
+                + tp[1] + '":\n' + e[0]);
         }
     }
 
@@ -508,10 +508,10 @@ export class TypedExpression extends Expression implements Pattern {
                 throw e;
             }
             throw new ElaborationError(this.position,
-                'The specified type "' + this.typeAnnotation.toString()
+                'The specified type "' + this.typeAnnotation
                 + '" does not match the annotated expression\'s type "'
-                + tp[0].toString() + '":\n' + e[0] + ' ("' + e[1].toString() + '" vs. "'
-                + e[2].toString() + '")');
+                + tp[0] + '":\n' + e[0] + ' ("' + e[1] + '" vs. "'
+                + e[2] + '")');
         }
     }
 
@@ -522,7 +522,7 @@ export class TypedExpression extends Expression implements Pattern {
 
     toString(indentation: number = 0, oneLine: boolean = true): string {
         let res = '( ' + this.expression.toString(indentation, oneLine);
-        res += ': ' + this.typeAnnotation.toString();
+        res += ': ' + this.typeAnnotation;
         return res + ' )';
     }
 
@@ -640,14 +640,14 @@ export class FunctionApplication extends Expression implements Pattern {
 
         if (f[0] instanceof FunctionType) {
             try {
-                // console.log(this.constructor.name + ' 2 ' + this.toString());
+                // console.log(this.constructor.name + ' 2 ' + this);
                 // console.log('Merging ' + f[0] + ' and ' + arg[0]);
                 // console.log(f[4]);
 
 
                 let tp = (<FunctionType> f[0]).parameterType.merge(state, f[4], arg[0]);
 
-                // console.log(this.constructor.name + ' 3 ' + this.toString());
+                // console.log(this.constructor.name + ' 3 ' + this);
                 // console.log(f[4]);
 
                 return [(<FunctionType> f[0]).returnType.instantiate(state, tp[1]),
@@ -657,14 +657,14 @@ export class FunctionApplication extends Expression implements Pattern {
                     throw e;
                 }
                 throw new ElaborationError(this.position,
-                    'Do not feed functions of type "' + f[0].toString()
-                    + '" an argument of type "' + arg[0].toString() + '":\n'
-                    + e[0] + ' ("' + e[1].toString() + '" vs. "' + e[2].toString() + '")');
+                    'Do not feed functions of type "' + f[0]
+                    + '" an argument of type "' + arg[0] + '":\n'
+                    + e[0] + ' ("' + e[1] + '" vs. "' + e[2] + '")');
             }
         } else {
             throw new ElaborationError(this.func.position,
-                '"' + this.func.toString() + '" of type "'
-                + f[0].toString() + '" is not a function.');
+                '"' + this.func + '" of type "'
+                + f[0] + '" is not a function.');
         }
     }
 
@@ -718,7 +718,7 @@ export class FunctionApplication extends Expression implements Pattern {
                 }
                 if (!(aVal[0] instanceof ReferenceValue)) {
                     throw new EvaluationError(this.position,
-                        'You cannot dereference "' + this.argument.toString() + '".');
+                        'You cannot dereference "' + this.argument + '".');
                 }
                 return [<Value> state.getCell((<ReferenceValue> aVal[0]).address), false, aVal[2], aVal[3]];
             }
@@ -763,7 +763,7 @@ export class FunctionApplication extends Expression implements Pattern {
             return [res[0], res[1], warns.concat(res[2]), membnd];
         }
         throw new EvaluationError(this.position, 'Cannot evaluate the function "'
-            + this.func.toString() + '" (' + funcVal[0].constructor.name + ').');
+            + this.func + '" (' + funcVal[0].constructor.name + ').');
     }
 }
 
@@ -793,7 +793,7 @@ export class HandleException extends Expression {
             || !(<FunctionType> mtp[0]).parameterType.equals(new CustomType('exn'))) {
             throw new ElaborationError(this.match.position,
                 'You can only handle things of type "exn" and not "'
-                + (<FunctionType> mtp[0]).parameterType.toString() + '".');
+                + (<FunctionType> mtp[0]).parameterType + '".');
         }
         let rt = (<FunctionType> mtp[0]).returnType;
         let etp = this.expression.getType(state, mtp[4], mtp[2], mtp[3], forceRebind);
@@ -807,7 +807,7 @@ export class HandleException extends Expression {
             }
             throw new ElaborationError(this.expression.position,
                 'The "handle" cannot change the type of the expression from "'
-                + etp[0].toString() + '" to "' + rt.toString() + '":\n' + e[0]);
+                + etp[0] + '" to "' + rt + '":\n' + e[0]);
         }
     }
 
@@ -977,8 +977,8 @@ export class Match {
                     throw e;
                 }
                 throw new ElaborationError(this.position,
-                    'Match rules disagree on type:\n' + e[0] + ' ("' + e[1].toString() + '" vs. "'
-                    + e[2].toString() + '")');
+                    'Match rules disagree on type:\n' + e[0] + ' ("' + e[1]
+                    + '" vs. "' + e[2] + '")');
             }
             restp = restp.instantiate(state, bnds);
             bnds.forEach((val: Type, key: string) => {

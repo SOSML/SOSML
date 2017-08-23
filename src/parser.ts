@@ -1334,7 +1334,7 @@ export class Parser {
                     || (!((<FunctionApplication> pat).func instanceof ValueIdentifier))) {
                     throw new ParserError('If you start a function declaration with a "(",'
                         + ' some infix expression should follow. But you gave me "'
-                        + pat.toString() + '" (' + pat.constructor.name + ').', pat.position);
+                        + pat + '" (' + pat.constructor.name + ').', pat.position);
                 }
                 nm = <ValueIdentifier> (<FunctionApplication> pat).func;
                 args.push(<PatternExpression> (<FunctionApplication> pat).argument);
@@ -1364,7 +1364,7 @@ export class Parser {
 
                             throwIfError = true;
                             throw new ParserError('Cute little infix identifiers such as "' +
-                                pat.toString() + '" sure should play somewhere else.', pat.position);
+                                pat + '" sure should play somewhere else.', pat.position);
                         }
 
                         args.push(pat);
