@@ -121,7 +121,8 @@ export class ValueIdentifier extends Expression implements Pattern {
         let bnd = false;
         if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
             if (forceRebind) {
-                res = [new TypeVariableBind('\'**' + this.name.getText(), new TypeVariable('\'**' + this.name.getText())), 0];
+                res = [new TypeVariableBind('\'**' + this.name.getText(),
+                    new TypeVariable('\'**' + this.name.getText())), 0];
                 bnd = true;
             } else if (tyVarBnd.has('\'**' + this.name.getText())) {
                 let tmp = (<Type> tyVarBnd.get('\'**' + this.name.getText())).instantiate(
@@ -133,9 +134,8 @@ export class ValueIdentifier extends Expression implements Pattern {
             }
         }
 
-            //       console.log(this.toString() + ' has ' + res[0] + ' and ' + state.getStaticValue(this.name.getText()));
         let vars = new Set<string>();
-        while(res[0] instanceof TypeVariableBind) {
+        while (res[0] instanceof TypeVariableBind) {
             vars = vars.add((<TypeVariableBind> res[0]).name);
             res[0] = (<TypeVariableBind> res[0]).type;
         }
@@ -419,7 +419,8 @@ export class LocalDeclarationExpression extends Expression {
         let nstate = state.getNestedState(state.id);
         tyVarBnd.forEach((val: Type, key: string) => {
             if (key[1] === '*' && key[2] === '*') {
-                nstate.setStaticValue(key.substring(3), val.instantiate(state, tyVarBnd), IdentifierStatus.VALUE_VARIABLE);
+                nstate.setStaticValue(key.substring(3),
+                    val.instantiate(state, tyVarBnd), IdentifierStatus.VALUE_VARIABLE);
             }
         });
 

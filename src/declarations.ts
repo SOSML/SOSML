@@ -10,7 +10,8 @@ import { Value, ValueConstructor, ExceptionConstructor, ExceptionValue,
 
 export abstract class Declaration {
     id: number;
-    elaborate(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(), nextName: string = '\'t0'): [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(), nextName: string = '\'t0'):
+        [State, Warning[], Map<string, Type>, string] {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
@@ -47,7 +48,8 @@ export class ValueDeclaration extends Declaration {
         return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd, this.id);
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string): [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         let result: [string, Type][] = [];
         let isTopLevel = (tyVarBnd === undefined || tyVarBnd.size === 0);
 
@@ -176,7 +178,8 @@ export class TypeDeclaration extends Declaration {
         return new TypeDeclaration(this.position, bnds, this.id);
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string): [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         for (let i = 0; i < this.typeBinding.length; ++i) {
             state.setStaticType(this.typeBinding[i].name.getText(),
                 new FunctionType(new CustomType(this.typeBinding[i].name.getText(),
@@ -250,7 +253,8 @@ export class DatatypeDeclaration extends Declaration {
         /* } */
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string): [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         // I'm assuming the withtype is empty
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
             let res = this.datatypeBinding[i].getType(state);
@@ -319,7 +323,8 @@ export class DatatypeReplication extends Declaration {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string): [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         let res = state.getStaticType(this.oldname.getText());
         if (res === undefined) {
             throw new ElaborationError(this.position,
@@ -359,7 +364,8 @@ export class ExceptionDeclaration extends Declaration {
         throw new InternalInterpreterError(-1, 'Not yet implemented.');
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string): [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         for (let i = 0; i < this.bindings.length; ++i) {
             state = this.bindings[i].elaborate(state);
         }
@@ -389,7 +395,8 @@ export class LocalDeclaration extends Declaration {
         return new LocalDeclaration(this.position, this.declaration.simplify(), this.body.simplify(), this.id);
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string): [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         let nstate: [State, Warning[], Map<string, Type>, string]
             = [state.getNestedState(state.id), [], tyVarBnd, nextName];
         // TODO Warnings
@@ -441,7 +448,8 @@ export class OpenDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string): [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         // TODO Yeah, if we had structs, we could actually implement this
         throw new InternalInterpreterError(-1,
             'Yeah, you better wait a little before trying this again.');
@@ -472,7 +480,8 @@ export class EmptyDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string): [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         return [state, [], tyVarBnd, nextName];
     }
 
@@ -499,7 +508,8 @@ export class SequentialDeclaration extends Declaration {
         return new SequentialDeclaration(this.position, decls, this.id);
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string): [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         let warns: Warning[] = [];
         let bnds = tyVarBnd;
         let str = nextName;
@@ -600,7 +610,8 @@ export class InfixDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string): [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         return [state, [], tyVarBnd, nextName];
     }
 
@@ -632,7 +643,8 @@ export class InfixRDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string): [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         return [state, [], tyVarBnd, nextName];
     }
 
@@ -664,7 +676,8 @@ export class NonfixDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string): [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         return [state, [], tyVarBnd, nextName];
     }
 
