@@ -77,7 +77,7 @@ export function interpret(nextInstruction: string,
 
                     let tp = state.getStaticValue(i, curState.id);
                     if (tp !== undefined) {
-                        curState.setStaticValue(i, tp[0], tp[1]);
+                        curState.setStaticValue(i, tp[0].normalize(), tp[1]);
                     }
                 }
             }
