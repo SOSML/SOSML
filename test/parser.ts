@@ -32,6 +32,19 @@ function pattern_tester(pattern: Expr.Pattern, pos42: Errors.Position): Decl.Dec
     ], 1);
 }
 
+function spec_tester(specs: Modu.Specification[]): Decl.Declaration {
+    return new Decl.SequentialDeclaration(0, [
+        new Modu.SignatureDeclaration(0, [
+            new Modu.SignatureBinding(10,
+                new Token.AlphanumericIdentifierToken("a", 10),
+                new Modu.SignatureExpression(14,
+                    new Modu.SequentialSpecification(18, specs)
+                )
+            )
+        ])
+    ], 1)
+}
+
 function create_infix(position: Errors.Position, id: number) {
     return new Decl.InfixDeclaration(
         position,
@@ -2989,7 +3002,7 @@ it("type row", () => {
     ));
 });
 
-it("structure definitions", () => {
+it("module language - structure", () => {
     expect(parse("structure a = struct val x = 4 end;")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Modu.StructureDeclaration(0, [
@@ -3161,7 +3174,9 @@ it("structure definitions", () => {
             ])
         ], 1);
     );
+});
 
+it("module language - signature", () => {
     expect(parse("signature a = sig end;")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Modu.SignatureDeclaration(0, [
@@ -3172,7 +3187,7 @@ it("structure definitions", () => {
                     )
                 )
             ])
-        ], 1);
+        ], 1)
     );
 
     expect(parse("signature a = sig end and b = sig end;")).toEqualWithType(
@@ -3191,7 +3206,7 @@ it("structure definitions", () => {
                     )
                 )
             ])
-        ], 1);
+        ], 1)
     );
 
     expect(parse("signature a = a;")).toEqualWithType(
@@ -3204,7 +3219,7 @@ it("structure definitions", () => {
                     )
                 )
             ])
-        ], 1);
+        ], 1)
     );
 
     expect(parse("signature a = sig end where type int=a;")).toEqualWithType(
@@ -3222,6 +3237,142 @@ it("structure definitions", () => {
                     )
                 )
             ])
-        ], 1);
+        ], 1)
     );
+});
+
+it("module language - functor", () => {
+    expect(parse("functor a (b: c) = d;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.FunctorDeclaration(0, [
+                new Modu.FunctorBinding(8,
+                    new Token.AlphanumericIdentifierToken("a", 8),
+                    new Token.AlphanumericIdentifierToken("b", 11),
+                    new Modu.SignatureIdentifier(14,
+                        new Token.AlphanumericIdentifierToken("c", 14)
+                    ),
+                    new Modu.StructureIdentifier(19,
+                        new Token.AlphanumericIdentifierToken("d", 19)
+                    )
+                )
+            ])
+        ], 1)
+    );
+
+    expect(parse("functor a (b: c) = d and a (b: c) = d;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.FunctorDeclaration(0, [
+                new Modu.FunctorBinding(8,
+                    new Token.AlphanumericIdentifierToken("a", 8),
+                    new Token.AlphanumericIdentifierToken("b", 11),
+                    new Modu.SignatureIdentifier(14,
+                        new Token.AlphanumericIdentifierToken("c", 14)
+                    ),
+                    new Modu.StructureIdentifier(19,
+                        new Token.AlphanumericIdentifierToken("d", 19)
+                    )
+                ),
+                new Modu.FunctorBinding(25,
+                    new Token.AlphanumericIdentifierToken("a", 25),
+                    new Token.AlphanumericIdentifierToken("b", 28),
+                    new Modu.SignatureIdentifier(31,
+                        new Token.AlphanumericIdentifierToken("c", 31)
+                    ),
+                    new Modu.StructureIdentifier(36,
+                        new Token.AlphanumericIdentifierToken("d", 36)
+                    )
+                )
+            ])
+        ], 1)
+    );
+});
+
+it("module language - spec", () => {
+    expect(parse("signature a = sig end;")).toEqualWithType(
+        spec_tester([])
+    );
+
+    expect(parse("signature a = sig val a:int end;")).toEqualWithType(
+        spec_tester([
+            new Modu.ValueSpecification(18,[
+                [
+                    new Token.AlphanumericIdentifierToken("a", 22),
+                    new Type.CustomType("int", [], 24)
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig val b:c and q:m end;")).toEqualWithType(
+        spec_tester([
+            new Modu.ValueSpecification(18,[
+                [
+                    new Token.AlphanumericIdentifierToken("b", 22),
+                    new Type.CustomType("c", [], 24)
+                ],
+                [
+                    new Token.AlphanumericIdentifierToken("q", 30),
+                    new Type.CustomType("m", [], 32)
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig type a end;")).toEqualWithType(
+        spec_tester([
+            new Modu.TypeSpecification(18,[
+                [
+                    [],
+                    new Token.AlphanumericIdentifierToken("a", 23)
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig type 'a b end;")).toEqualWithType(
+        spec_tester([
+            new Modu.TypeSpecification(18,[
+                [
+                    [
+                        new Type.TypeVariable("'a", 23)
+                    ],
+                    new Token.AlphanumericIdentifierToken("b", 26)
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig type ('a, 'c) b end;")).toEqualWithType(
+        spec_tester([
+            new Modu.TypeSpecification(18,[
+                [
+                    [
+                        new Type.TypeVariable("'a", 24),
+                        new Type.TypeVariable("'c", 28)
+                    ],
+                    new Token.AlphanumericIdentifierToken("b", 32)
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig type a and 'c b end;")).toEqualWithType(
+        spec_tester([
+            new Modu.TypeSpecification(18,[
+                [
+                    [],
+                    new Token.AlphanumericIdentifierToken("a", 23)
+                ],
+                [
+                    [
+                        new Type.TypeVariable("'c", 29)
+                    ],
+                    new Token.AlphanumericIdentifierToken("b", 32)
+                ]
+            ])
+        ])
+    );
+});
+
+it("module language - signature", () => {
 });
