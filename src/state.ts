@@ -12,7 +12,7 @@ export enum IdentifierStatus {
 // maps id to [Value, rebindable, intermediate]
 type DynamicValueEnvironment = { [name: string]: [Value, IdentifierStatus] };
 // maps id to [type, intermediate]
-type StaticValueEnvironment = { [name: string]: [Type, IdentifierStatus] };
+type StaticValueEnvironment = { [name: string]: [Type, IdentifierStatus] | undefined };
 
 export class TypeInformation {
     // Every constructor also appears in the value environment,
@@ -71,6 +71,10 @@ export class StaticBasis {
 
     setValue(name: string, value: Type, is: IdentifierStatus): void {
         this.valueEnvironment[name] = [value, is];
+    }
+
+    deleteValue(name: string): void {
+        this.valueEnvironment[name] = undefined;
     }
 
     setType(name: string, type: Type, constructors: string[], arity: number) {
@@ -163,6 +167,9 @@ export class State {
     getStaticValue(name: string, idLimit: number = 0): [Type, IdentifierStatus] | undefined {
         let result = this.staticBasis.getValue(name);
         if (result !== undefined || this.parent === undefined || this.parent.id < idLimit) {
+            if (result !== undefined) {
+                return [result[0], result[1]];
+            }
             return result;
         } else {
             return this.parent.getStaticValue(name, idLimit);
@@ -181,6 +188,9 @@ export class State {
     getDynamicValue(name: string, idLimit: number = 0): [Value, IdentifierStatus] | undefined {
         let result = this.dynamicBasis.getValue(name);
         if (result !== undefined || this.parent === undefined || this.parent.id < idLimit) {
+            if (result !== undefined) {
+                return [result[0], result[1]];
+            }
             return result;
         } else {
             return this.parent.getDynamicValue(name, idLimit);
@@ -190,6 +200,9 @@ export class State {
     getDynamicType(name: string, idLimit: number = 0): string[] | undefined {
         let result = this.dynamicBasis.getType(name);
         if (result !== undefined || this.parent === undefined || this.parent.id < idLimit) {
+            if (result !== undefined) {
+                return [result[0], result[1]];
+            }
             return result;
         } else {
             return this.parent.getDynamicType(name, idLimit);
@@ -243,7 +256,14 @@ export class State {
         return new ReferenceValue(this.memory[0]++);
     }
 
-    setStaticValue(name: string, type: Type, is: IdentifierStatus, atId: number|undefined = undefined) {
+    deleteStaticValue(name: string) {
+        this.staticBasis.deleteValue(name);
+        if (this.parent !== undefined) {
+            (<State> this.parent).deleteStaticValue(name);
+        }
+    }
+
+   setStaticValue(name: string, type: Type, is: IdentifierStatus, atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
             this.staticBasis.setValue(name, type, is);
         } else if (atId > this.id || this.parent === undefined) {
@@ -260,7 +280,7 @@ export class State {
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
-            (<State> this.parent).setStaticType(name, type, constructors, atId, arity);
+            (<State> this.parent).setStaticType(name, type, constructors, arity, atId);
         }
     }
 

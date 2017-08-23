@@ -1,6 +1,6 @@
 import { State, StaticBasis, DynamicBasis, InfixStatus, TypeInformation,
          IdentifierStatus } from './state';
-import { FunctionType, CustomType, TupleType, Type, TypeVariable } from './types';
+import { FunctionType, CustomType, TupleType, Type, TypeVariable, TypeVariableBind } from './types';
 import { CharValue, Real, Integer, StringValue, PredefinedFunction, Word, ConstructedValue,
          ValueConstructor, ExceptionConstructor, BoolValue, Value, RecordValue } from './values';
 import { InternalInterpreterError, Warning } from './errors';
@@ -24,12 +24,25 @@ function bfunctionType(type: Type): Type {
 let typeVar = new TypeVariable('\'a');
 let eqTypeVar = new TypeVariable('\'\'b');
 
-let intWordType = new TypeVariable('*iw', true, 0, [new CustomType('int'), new CustomType('word')]);
-let intRealType = new TypeVariable('*ir', true, 0, [new CustomType('int'), new CustomType('real')]);
-let intWordRealType = new TypeVariable('*iwr', true, 0, [new CustomType('int'), new CustomType('word'),
-    new CustomType('real')]);
-let anyType = new TypeVariable('*any', true, 0, [new CustomType('int'), new CustomType('word'),
-    new CustomType('real'), new CustomType('string'), new CustomType('char')]);
+let intWordType = new TypeVariable('\'iw');
+let intRealType = new TypeVariable('\'ir');
+let intWordRealType = new TypeVariable('\'iwr');
+let anyType = new TypeVariable('\'any');
+
+function intWordBind(type: Type): Type {
+    return new TypeVariableBind('\'iw', type, [new CustomType('int'), new CustomType('word')]);
+}
+function intRealBind(type: Type): Type {
+    return new TypeVariableBind('\'ir', type, [new CustomType('int'), new CustomType('real')]);
+}
+function intWordRealBind(type: Type): Type {
+    return new TypeVariableBind('\'iwr', type, [new CustomType('int'), new CustomType('word'),
+        new CustomType('real')]);
+}
+function anyBind(type: Type): Type {
+    return new TypeVariableBind('\'any', type, [new CustomType('int'), new CustomType('word'),
+        new CustomType('real'), new CustomType('string'), new CustomType('char')]);
+}
 
 let initialState: State = new State(
     0,
@@ -37,7 +50,7 @@ let initialState: State = new State(
     new StaticBasis(
         {
             'unit':     new TypeInformation(
-                new FunctionType(new TupleType([]), new TupleType([])).simplify(), [], 0, true),
+                new FunctionType(new CustomType('unit'), new TupleType([])).simplify(), [], 0, true),
             'bool':     new TypeInformation(new CustomType('bool'),  ['true', 'false'], 0, true),
             'int':      new TypeInformation(new CustomType('int'),   [], 0, true),
             'word':     new TypeInformation(new CustomType('word'),  [], 0, true),
@@ -50,26 +63,29 @@ let initialState: State = new State(
             'exn':      new TypeInformation(new CustomType('exn'), [], 0, false)
         },
         {
-            'div':      [functionType(intWordType), IdentifierStatus.VALUE_VARIABLE],
-            'mod':      [functionType(intWordType), IdentifierStatus.VALUE_VARIABLE],
-            '*':        [functionType(intWordRealType), IdentifierStatus.VALUE_VARIABLE],
-            '/':        [functionType(realType), IdentifierStatus.VALUE_VARIABLE],
-            '+':        [functionType(intWordRealType), IdentifierStatus.VALUE_VARIABLE],
-            '-':        [functionType(intWordRealType), IdentifierStatus.VALUE_VARIABLE],
-            '<':        [bfunctionType(anyType), IdentifierStatus.VALUE_VARIABLE],
-            '<=':       [bfunctionType(anyType), IdentifierStatus.VALUE_VARIABLE],
-            '>':        [bfunctionType(anyType), IdentifierStatus.VALUE_VARIABLE],
-            '>=':       [bfunctionType(anyType), IdentifierStatus.VALUE_VARIABLE],
-            '=':        [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(),
+            'div':      [intWordBind(functionType(intWordType)), IdentifierStatus.VALUE_VARIABLE],
+            'mod':      [intWordBind(functionType(intWordType)), IdentifierStatus.VALUE_VARIABLE],
+            '*':        [intWordRealBind(functionType(intWordRealType)),
                 IdentifierStatus.VALUE_VARIABLE],
-            '<>':       [new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType).simplify(),
+            '/':        [functionType(realType), IdentifierStatus.VALUE_VARIABLE],
+            '+':        [intWordRealBind(functionType(intWordRealType)),
+                IdentifierStatus.VALUE_VARIABLE],
+            '-':        [intWordRealBind(functionType(intWordRealType)),
+                IdentifierStatus.VALUE_VARIABLE],
+            '<':        [anyBind(bfunctionType(anyType)), IdentifierStatus.VALUE_VARIABLE],
+            '<=':       [anyBind(bfunctionType(anyType)), IdentifierStatus.VALUE_VARIABLE],
+            '>':        [anyBind(bfunctionType(anyType)), IdentifierStatus.VALUE_VARIABLE],
+            '>=':       [anyBind(bfunctionType(anyType)), IdentifierStatus.VALUE_VARIABLE],
+            '=':        [new TypeVariableBind('\'\'b', new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType)).simplify(),
+                IdentifierStatus.VALUE_VARIABLE],
+            '<>':       [new TypeVariableBind('\'\'b', new FunctionType(new TupleType([eqTypeVar, eqTypeVar]), boolType)).simplify(),
                 IdentifierStatus.VALUE_VARIABLE],
             'true':     [new CustomType('bool'), IdentifierStatus.VALUE_CONSTRUCTOR],
             'false':    [new CustomType('bool'), IdentifierStatus.VALUE_CONSTRUCTOR],
-            'nil':      [new CustomType('list', [typeVar]), IdentifierStatus.VALUE_CONSTRUCTOR],
-            '::':       [new FunctionType(
+            'nil':      [new TypeVariableBind('\'a', new CustomType('list', [typeVar])), IdentifierStatus.VALUE_CONSTRUCTOR],
+            '::':       [new TypeVariableBind('\'a', new FunctionType(
                             new TupleType([typeVar, new CustomType('list', [typeVar])]),
-                            new CustomType('list', [typeVar])).simplify(), IdentifierStatus.VALUE_CONSTRUCTOR],
+                            new CustomType('list', [typeVar]))).simplify(), IdentifierStatus.VALUE_CONSTRUCTOR],
             'Match':    [new CustomType('exn'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
             'Bind':     [new CustomType('exn'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
             'Div':      [new CustomType('exn'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
@@ -79,16 +95,19 @@ let initialState: State = new State(
                 IdentifierStatus.VALUE_VARIABLE],
             'implode':  [new FunctionType(new CustomType('list', [charType]), stringType).simplify(),
                 IdentifierStatus.VALUE_VARIABLE],
-            '~':        [new FunctionType(intRealType, intRealType), IdentifierStatus.VALUE_VARIABLE],
-            'abs':      [new FunctionType(intRealType, intRealType), IdentifierStatus.VALUE_VARIABLE],
-            'print':    [new FunctionType(typeVar, new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE],
-            'printLn':  [new FunctionType(typeVar, new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE],
-            ':=':       [new FunctionType(new TupleType([
-                            new CustomType('ref', [typeVar]),
-                            typeVar]), new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE],
-            'ref':      [new FunctionType(typeVar, new CustomType('ref', [typeVar])),
+            '~':        [intRealBind(new FunctionType(intRealType, intRealType)),
+                IdentifierStatus.VALUE_VARIABLE],
+            'abs':      [intRealBind(new FunctionType(intRealType, intRealType)),
+                IdentifierStatus.VALUE_VARIABLE],
+            'print':    [new TypeVariableBind('\'a', new FunctionType(typeVar, new TupleType([]))).simplify(),
+                IdentifierStatus.VALUE_VARIABLE],
+            'printLn':  [new TypeVariableBind('\'a', new FunctionType(typeVar, new TupleType([]))).simplify(),
+                IdentifierStatus.VALUE_VARIABLE],
+            ':=':       [new TypeVariableBind('\'a', new FunctionType(new TupleType([new CustomType('ref', [typeVar]), typeVar]),
+                new TupleType([]))).simplify(), IdentifierStatus.VALUE_VARIABLE],
+            'ref':      [new TypeVariableBind('\'a', new FunctionType(typeVar, new CustomType('ref', [typeVar]))),
                             IdentifierStatus.VALUE_CONSTRUCTOR],
-            '!':        [new FunctionType(new CustomType('ref', [typeVar]), typeVar),
+            '!':        [new TypeVariableBind('\'a', new FunctionType(new CustomType('ref', [typeVar]), typeVar)),
                             IdentifierStatus.VALUE_VARIABLE]
         }
     ),
@@ -437,7 +456,7 @@ let initialState: State = new State(
                 if (val instanceof StringValue) {
                     warns.push(new Warning(-1, (<StringValue> val).value));
                 } else {
-                    warns.push(new Warning(-1, val.prettyPrint(undefined)));
+                    warns.push(new Warning(-1, val.toString(undefined)));
                 }
                 return [new RecordValue(), false, warns];
             }), IdentifierStatus.VALUE_VARIABLE],
@@ -446,7 +465,7 @@ let initialState: State = new State(
                 if (val instanceof StringValue) {
                     warns.push(new Warning(-1, (<StringValue> val).value + '\n'));
                 } else {
-                    warns.push(new Warning(-1, val.prettyPrint(undefined) + '\n'));
+                    warns.push(new Warning(-1, val.toString(undefined) + '\n'));
                 }
                 return [new RecordValue(), false, warns];
             }), IdentifierStatus.VALUE_VARIABLE]

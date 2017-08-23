@@ -332,7 +332,7 @@ it("fvalbind", () => {
 it("dec", () => {
     expect(parse("fun 'a f x = 42;").simplify()).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
-             new Decl.ValueDeclaration(0, [new Type.TypeVariable('\'a', false, 4)], [
+             new Decl.ValueDeclaration(0, [new Type.TypeVariable('\'a', 4)], [
                  new Decl.ValueBinding(7,
                      true,
                      new Expr.ValueIdentifier(7, new Token.AlphanumericIdentifierToken('f', 7)),
@@ -356,7 +356,7 @@ it("dec", () => {
     )
     expect(parse("fun 'a f x = 42 and g x = 42;").simplify()).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
-             new Decl.ValueDeclaration(0, [new Type.TypeVariable('\'a', false, 4)], [
+             new Decl.ValueDeclaration(0, [new Type.TypeVariable('\'a', 4)], [
                  new Decl.ValueBinding(7,
                      true,
                      new Expr.ValueIdentifier(7, new Token.AlphanumericIdentifierToken('f', 7)),

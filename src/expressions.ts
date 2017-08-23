@@ -1,4 +1,4 @@
-import { CustomType, /* RecordType, */ Type, TypeVariable } from './types';
+import { TypeVariable, RecordType, Type, FunctionType, CustomType, AnyType, TypeVariableBind } from './types';
 import { Declaration, ValueBinding, ValueDeclaration } from './declarations';
 import { Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConstantToken,
          NumericToken, WordConstantToken, CharacterConstantToken, StringConstantToken } from './tokens';
@@ -14,7 +14,12 @@ type MemBind = [number, Value][];
 export abstract class Expression {
     position: number;
 
-    getType(state: State): Type[] {
+    getType(state: State,
+            tyVarBnd: Map<string, Type> = new Map<string, Type>(),
+            nextName: string            = '\'t0',
+            tyVars: Set<string>         = new Set<string>(),
+            forceRebind: boolean       = false)
+        : [Type, Warning[], string, Set<string>, Map<string, Type>] {
         throw new InternalInterpreterError(this.position, 'Called "getType" on a derived form.');
     }
 
@@ -23,7 +28,7 @@ export abstract class Expression {
         throw new InternalInterpreterError(this.position, 'Called "getValue" on a derived form.');
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         throw new InternalInterpreterError(this.position, 'I don\'t want to be printed.');
     }
 
@@ -35,16 +40,20 @@ export interface Pattern {
     // Returns which bindings would be created by matching v to this Pattern,
     // or undefined, if v does not match this Pattern.
     position: number;
-    getType(state: State): Type[];
+    matchType(state: State, tyVarBnd: Map<string, Type>, t: Type): [[string, Type][], Type, Map<string, Type>];
     matches(state: State, v: Value): [string, Value][] | undefined;
     simplify(): PatternExpression;
-    prettyPrint(indentation: number, oneLine: boolean): string;
+    toString(indentation: number, oneLine: boolean): string;
 }
 
 export type PatternExpression = Pattern & Expression;
 
 export class Constant extends Expression implements Pattern {
     constructor(public position: number, public token: ConstantToken) { super(); }
+
+    matchType(state: State, tyVarBnd: Map<string, Type>, t: Type): [[string, Type][], Type, Map<string, Type>] {
+        return [[], this.getType(state, tyVarBnd)[0], tyVarBnd];
+    }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         if (this.compute(state)[0].equals(v)) {
@@ -54,26 +63,30 @@ export class Constant extends Expression implements Pattern {
         }
     }
 
-    getType(state: State): Type[] {
+    getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
+            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false)
+        : [Type, Warning[], string, Set<string>, Map<string, Type>] {
+
         if (this.token instanceof IntegerConstantToken || this.token instanceof NumericToken) {
-            return [new CustomType('int')];
+            return [new CustomType('int'), [], nextName, tyVars, tyVarBnd];
         } else if (this.token instanceof RealConstantToken) {
-            return [new CustomType('real')];
+            return [new CustomType('real'), [], nextName, tyVars, tyVarBnd];
         } else if (this.token instanceof WordConstantToken) {
-            return [new CustomType('word')];
+            return [new CustomType('word'), [], nextName, tyVars, tyVarBnd];
         } else if (this.token instanceof CharacterConstantToken) {
-            return [new CustomType('char')];
+            return [new CustomType('char'), [], nextName, tyVars, tyVarBnd];
         } else if (this.token instanceof StringConstantToken) {
-            return [new CustomType('string')];
+            return [new CustomType('string'), [], nextName, tyVars, tyVarBnd];
         } else {
             throw new InternalInterpreterError(this.token.position,
-                '"' + this.prettyPrint() + '" does not seem to be a valid constant.');
+                '"' + this.toString() + '" does not seem to be a valid constant.');
         }
     }
 
     simplify(): Constant { return this; }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         return this.token.getText();
     }
 
@@ -98,6 +111,90 @@ export class ValueIdentifier extends Expression implements Pattern {
 // op longvid or longvid
     constructor(public position: number, public name: Token) { super(); }
 
+    getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
+            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false)
+        : [Type, Warning[], string, Set<string>, Map<string, Type>] {
+
+        let res = state.getStaticValue(this.name.getText());
+        let mps = tyVarBnd;
+        let bnd = false;
+        if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
+            if (forceRebind) {
+                res = [new TypeVariableBind('\'**' + this.name.getText(), new TypeVariable('\'**' + this.name.getText())), 0];
+                bnd = true;
+            } else if (tyVarBnd.has('\'**' + this.name.getText())) {
+                let tmp = (<Type> tyVarBnd.get('\'**' + this.name.getText())).instantiate(
+                    state, mps);
+                return [tmp, [], nextName, tyVars, mps];
+            } else if (res === undefined) {
+                throw new ElaborationError(this.position, 'Unbound value identifier "'
+                    + this.name.getText() + '".');
+            }
+        }
+
+            //       console.log(this.toString() + ' has ' + res[0] + ' and ' + state.getStaticValue(this.name.getText()));
+        let vars = new Set<string>();
+        while(res[0] instanceof TypeVariableBind) {
+            vars = vars.add((<TypeVariableBind> res[0]).name);
+            res[0] = (<TypeVariableBind> res[0]).type;
+        }
+
+        let repl = new Map<string, string>();
+        let nwvar: string[] = [];
+
+        vars.forEach((val: string) => {
+            if (val[0] !== '"') {
+                let cur = (+nextName.substring(2)) + 1;
+                let nm = '';
+                for (; ; ++cur) {
+                    nextName = '\'t' + cur;
+                    if (!vars.has(nextName) && !tyVars.has(nextName)
+                        && state.getStaticValue(nextName) === undefined) {
+                        if (val[1] === '\'') {
+                            nm = '\'' + nextName;
+                        } else {
+                            nm = nextName;
+                        }
+                        nwvar.push(nm);
+                        repl = repl.set(val, nm);
+                        break;
+                    }
+                }
+            }
+        });
+        for (let i = 0; i < nwvar.length; ++i) {
+            tyVars = tyVars.add(nwvar[i]);
+        }
+
+        let r2 = res[0].replaceTypeVariables(repl).instantiate(state, mps);
+
+        if (bnd) {
+            mps = mps.set('\'**' + this.name.getText(), r2);
+        }
+        return [r2, [], nextName, tyVars, mps];
+    }
+
+    matchType(state: State, tyVarBnd: Map<string, Type>, t: Type): [[string, Type][], Type, Map<string, Type>] {
+        let res = state.getStaticValue(this.name.getText());
+        if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
+            return [[[this.name.getText(), t.instantiate(state, tyVarBnd)]],
+                t.instantiate(state, tyVarBnd), tyVarBnd];
+        }
+
+        try {
+            let rt = t.merge(state, tyVarBnd, res[0]);
+            return [[], rt[0], rt[1]];
+        } catch (e) {
+            if (!(e instanceof Array)) {
+                throw e;
+            }
+            throw new ElaborationError(this.position,
+                'Type clash: "' + t.toString() + '" vs. "'
+                + res[0].toString() + '":\n' + e[0]);
+        }
+    }
+
     matches(state: State, v: Value): [string, Value][] | undefined {
         let res = state.getDynamicValue(this.name.getText());
         if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
@@ -111,14 +208,8 @@ export class ValueIdentifier extends Expression implements Pattern {
 
     simplify(): ValueIdentifier { return this; }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        // TODO
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         return this.name.getText();
-    }
-
-    getType(state: State): Type[] {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
     }
 
     compute(state: State): [Value, boolean, Warning[], MemBind] {
@@ -156,6 +247,51 @@ export class Record extends Expression implements Pattern {
         }
     }
 
+    matchType(state: State, tyVarBnd: Map<string, Type>, t: Type): [[string, Type][], Type, Map<string, Type>] {
+        if (!(t instanceof RecordType)) {
+            t = t.instantiate(state, tyVarBnd);
+        }
+        if (t instanceof TypeVariable) {
+            let ntype = new Map<string, Type>();
+            for (let i = 0; i < this.entries.length; ++i) {
+                ntype = ntype.set(this.entries[i][0],
+                    new TypeVariable((<TypeVariable> t).name + '*' + i));
+            }
+            let tp = new RecordType(ntype, this.complete);
+            tyVarBnd = tyVarBnd.set((<TypeVariable> t).name, tp);
+            t = tp;
+        }
+
+
+        if (!(t instanceof RecordType)) {
+            throw new ElaborationError(this.position,
+                'Expected pattern of a record type, got "' + t.constructor.name + '".');
+        }
+        if (this.complete && this.entries.length !== (<RecordType> t).elements.size) {
+            throw new ElaborationError(this.position,
+                'Expected a record type with ' + this.entries.length + ' entries,'
+                + ' but the given one has ' + (<RecordType> t).elements.size + '.');
+        }
+
+        let res: [string, Type][] = [];
+        let rtp = new Map<string, Type>();
+        let bnd = tyVarBnd;
+
+        for (let i = 0; i < this.entries.length; ++i) {
+            if (!(<RecordType> t).hasType(this.entries[i][0])) {
+                // TODO Better message
+                throw new ElaborationError(this.position, 'Elaboration failed.');
+            }
+            let cur = (<PatternExpression> this.entries[i][1]).matchType(
+                state, bnd, (<RecordType> t).getType(this.entries[i][0]));
+
+            res = res.concat(cur[0]);
+            rtp = rtp.set(this.entries[i][0], cur[1]);
+            bnd = cur[2];
+        }
+        return [res, new RecordType(rtp), bnd];
+    }
+
     matches(state: State, v: Value): [string, Value][] | undefined {
         if (!(v instanceof RecordValue)) {
             return undefined;
@@ -182,9 +318,14 @@ export class Record extends Expression implements Pattern {
         return res;
     }
 
-    getType(state: State): Type[] {
-        throw new Error('nyian');
-        /* let e: Map<string, Type> = new Map<string, Type>();
+    getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
+            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false)
+        : [Type, Warning[], string, Set<string>, Map<string, Type>] {
+
+        let e: Map<string, Type> = new Map<string, Type>();
+        let warns: Warning[] = [];
+        let bnds = tyVarBnd;
         for (let i: number = 0; i < this.entries.length; ++i) {
             let name: string = this.entries[i][0];
             let exp: Expression = this.entries[i][1];
@@ -192,9 +333,16 @@ export class Record extends Expression implements Pattern {
                 throw new ElaborationError(this.position,
                     'Label "' + name + '" occurs more than once in the same record.');
             }
-            e.set(name, exp.getType(state));
+            let tmp = exp.getType(state, bnds, nextName, tyVars, forceRebind);
+            warns = warns.concat(tmp[1]);
+            nextName = tmp[2];
+            tyVars = tmp[3];
+            tmp[4].forEach((val: Type, key: string) => {
+                bnds = bnds.set(key, val);
+            });
+            e = e.set(name, tmp[0]);
         }
-        return [new RecordType(e, this.complete)]; */
+        return [new RecordType(e, this.complete), warns, nextName, tyVars, bnds];
     }
 
     simplify(): Record {
@@ -206,7 +354,7 @@ export class Record extends Expression implements Pattern {
         return new Record(this.position, this.complete, newEntries);
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         let result: string = '{';
         let first: boolean = true;
         for (let i = 0; i < this.entries.length; ++i) {
@@ -215,7 +363,7 @@ export class Record extends Expression implements Pattern {
             }
             first = false;
             result += this.entries[i][0] + ' = '
-                + this.entries[i][1].prettyPrint(indentation, oneLine);
+                + this.entries[i][1].toString(indentation, oneLine);
         }
         if (!this.complete) {
             if (!first) {
@@ -257,15 +405,50 @@ export class LocalDeclarationExpression extends Expression {
         return new LocalDeclarationExpression(this.position, this.declaration.simplify(), this.expression.simplify());
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        let res = 'let ' + this.declaration.prettyPrint(indentation, oneLine);
-        res += ' in ' + this.expression.prettyPrint(indentation, oneLine) + ' end';
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        let res = 'let ' + this.declaration.toString(indentation, oneLine);
+        res += ' in ' + this.expression.toString(indentation, oneLine) + ' end';
         return res;
     }
 
-    getType(state: State): Type[] {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
+    getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
+            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false)
+        : [Type, Warning[], string, Set<string>, Map<string, Type>] {
+
+        let nstate = state.getNestedState(state.id);
+        tyVarBnd.forEach((val: Type, key: string) => {
+            if (key[1] === '*' && key[2] === '*') {
+                nstate.setStaticValue(key.substring(3), val.instantiate(state, tyVarBnd), IdentifierStatus.VALUE_VARIABLE);
+            }
+        });
+
+        let nvbnd = new Map<string, Type>();
+        tyVarBnd.forEach((val: Type, key: string) => {
+            nvbnd = nvbnd.set(key, val);
+        });
+
+        let res = this.declaration.elaborate(nstate, nvbnd, nextName);
+        nextName = res[3];
+
+        let chg: [string, Type][] = [];
+        tyVarBnd.forEach((val: Type, key: string) => {
+            if (key[1] === '*' && key[2] === '*') {
+                chg.push([key, val]);
+            }
+        });
+
+        for (let i = 0; i < chg.length; ++i) {
+            if ((<Type> tyVarBnd.get(chg[i][0])).equals(res[2].get(chg[i][0]))) {
+                // Make sure we're not using some type of some rebound identifier
+                let tmp = chg[i][1].merge(nstate, tyVarBnd, chg[i][1].instantiate(nstate, res[2]));
+                tyVarBnd = tmp[1];
+            }
+        }
+
+        let r2 = this.expression.getType(res[0], tyVarBnd, nextName, tyVars, forceRebind);
+
+        return [r2[0], res[1].concat(r2[1]), r2[2], r2[3], r2[4]];
     }
 
     compute(state: State): [Value, boolean, Warning[], MemBind] {
@@ -285,13 +468,50 @@ export class TypedExpression extends Expression implements Pattern {
     constructor(public position: number, public expression: Expression,
                 public typeAnnotation: Type) { super(); }
 
+    matchType(state: State, tyVarBnd: Map<string, Type>, t: Type): [[string, Type][], Type, Map<string, Type>] {
+        let tp = (<PatternExpression> this.expression).matchType(state, tyVarBnd, t);
+
+        try {
+            let res = tp[1].merge(state, tp[2], this.typeAnnotation);
+            for (let i = 0; i < tp[0].length; ++i) {
+                tp[0][i][1] = tp[0][i][1].instantiate(state, res[1]);
+            }
+            return [tp[0], res[0], res[1]];
+        } catch (e) {
+            if (!(e instanceof Array)) {
+                throw e;
+            }
+            throw new ElaborationError(this.position,
+                'The annotated type "' + this.typeAnnotation.toString()
+                + '" does not match the expression\'s type "'
+                + tp[1].toString() + '":\n' + e[0]);
+        }
+    }
+
     matches(state: State, v: Value): [string, Value][] | undefined {
         return (<PatternExpression> this.expression).matches(state, v);
     }
 
-    getType(state: State): Type[] {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
+    getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
+            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false)
+        : [Type, Warning[], string, Set<string>, Map<string, Type>] {
+
+        let tp = this.expression.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
+
+        try {
+            let tmp = tp[0].merge(state, tyVarBnd, this.typeAnnotation.instantiate(state, tyVarBnd));
+            return [tmp[0], tp[1], tp[2], tp[3], tmp[1]];
+        } catch (e) {
+            if (!(e instanceof Array)) {
+                throw e;
+            }
+            throw new ElaborationError(this.position,
+                'The specified type "' + this.typeAnnotation.toString()
+                + '" does not match the annotated expression\'s type "'
+                + tp[0].toString() + '":\n' + e[0] + ' ("' + e[1].toString() + '" vs. "'
+                + e[2].toString() + '")');
+        }
     }
 
     simplify(): TypedExpression {
@@ -299,9 +519,9 @@ export class TypedExpression extends Expression implements Pattern {
             this.expression.simplify(), this.typeAnnotation.simplify());
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        let res = '( ' + this.expression.prettyPrint(indentation, oneLine);
-        res += ': ' + this.typeAnnotation.prettyPrint();
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        let res = '( ' + this.expression.toString(indentation, oneLine);
+        res += ': ' + this.typeAnnotation.toString();
         return res + ' )';
     }
 
@@ -316,6 +536,39 @@ export class FunctionApplication extends Expression implements Pattern {
     constructor(public position: number,
                 public func: Expression,
                 public argument: Expression|PatternExpression) { super(); }
+
+    matchType(state: State, tyVarBnd: Map<string, Type>, t: Type): [[string, Type][], Type, Map<string, Type>] {
+
+        if (t instanceof FunctionType) {
+            throw new ElaborationError(this.position,
+                'You simply cannot match function values.');
+        }
+        if (!(this.func instanceof ValueIdentifier)) {
+            // TODO Better message
+            throw new ElaborationError(this.position, 'Elaboration failed. 1');
+        }
+
+        let ti = state.getStaticValue((<ValueIdentifier> this.func).name.getText());
+        if (ti === undefined || ti[1] === IdentifierStatus.VALUE_VARIABLE) {
+            throw new ElaborationError(this.position,
+                'Unbound value Identifier "' + (<ValueIdentifier> this.func).name.getText() + '".');
+        }
+
+        if (!(ti[0] instanceof FunctionType) || !(t instanceof CustomType)) {
+            // TODO Better message
+            throw new ElaborationError(this.position, 'Elaboration failed. 2');
+        }
+
+        let res = (<PatternExpression> this.argument).matchType(state, tyVarBnd,
+            (<FunctionType> ti[0]).parameterType);
+
+        if (!res[1].equals((<FunctionType> ti[0]).parameterType)) {
+            // TODO Better message
+            throw new ElaborationError(this.position, 'Elaboration failed. 4');
+        }
+
+        return [res[0], (<FunctionType> ti[0]).returnType, res[2]];
+    }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         if (v instanceof FunctionValue) {
@@ -359,24 +612,68 @@ export class FunctionApplication extends Expression implements Pattern {
             + v.constructor.name + ').' );
     }
 
-    getType(state: State): Type[] {
-        /* let f: Type = this.func.getType(state);
-        let arg: Type = this.argument.getType(state);
-        if (f instanceof FunctionType) {
-            f.parameterType.unify(arg, state, this.argument.position);
-            return f.returnType;
-        } else { */
-        throw new ElaborationError(this.func.position, this.func.prettyPrint() + ' is not a function.');
-        // }
+    getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
+            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false)
+        : [Type, Warning[], string, Set<string>, Map<string, Type>] {
+
+        let f = this.func.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
+        let arg = this.argument.getType(state, f[4], f[2], f[3], forceRebind);
+
+        arg[4].forEach((val: Type, key: string) => {
+            f[4] = f[4].set(key, val);
+        });
+
+        f[0] = f[0].instantiate(state, tyVarBnd);
+
+
+        if (f[0] instanceof TypeVariable) {
+            let ntype = new FunctionType(new TypeVariable((<TypeVariable> f[0]).name + '*a'),
+                new TypeVariable((<TypeVariable> f[0]).name + '*b'));
+            f[4] = f[4].set((<TypeVariable> f[0]).name, ntype);
+            f[0] = ntype;
+        }
+        if (f[0] instanceof AnyType) {
+            f[0] = new FunctionType(new AnyType(), new AnyType());
+        }
+
+        if (f[0] instanceof FunctionType) {
+            try {
+                // console.log(this.constructor.name + ' 2 ' + this.toString());
+                // console.log('Merging ' + f[0] + ' and ' + arg[0]);
+                // console.log(f[4]);
+
+
+                let tp = (<FunctionType> f[0]).parameterType.merge(state, f[4], arg[0]);
+
+                // console.log(this.constructor.name + ' 3 ' + this.toString());
+                // console.log(f[4]);
+
+                return [(<FunctionType> f[0]).returnType.instantiate(state, tp[1]),
+                    f[1].concat(arg[1]), arg[2], arg[3], f[4]];
+            } catch (e) {
+                if (!(e instanceof Array)) {
+                    throw e;
+                }
+                throw new ElaborationError(this.position,
+                    'Do not feed functions of type "' + f[0].toString()
+                    + '" an argument of type "' + arg[0].toString() + '":\n'
+                    + e[0] + ' ("' + e[1].toString() + '" vs. "' + e[2].toString() + '")');
+            }
+        } else {
+            throw new ElaborationError(this.func.position,
+                '"' + this.func.toString() + '" of type "'
+                + f[0].toString() + '" is not a function.');
+        }
     }
 
     simplify(): FunctionApplication {
         return new FunctionApplication(this.position, this.func.simplify(), this.argument.simplify());
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        let res = '( ' +  this.func.prettyPrint(indentation, oneLine);
-        res += ' ' + this.argument.prettyPrint(indentation, oneLine);
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        let res = '( ' +  this.func.toString(indentation, oneLine);
+        res += ' ' + this.argument.toString(indentation, oneLine);
         return res + ' )';
     }
 
@@ -420,7 +717,7 @@ export class FunctionApplication extends Expression implements Pattern {
                 }
                 if (!(aVal[0] instanceof ReferenceValue)) {
                     throw new EvaluationError(this.position,
-                        'You cannot dereference "' + this.argument.prettyPrint() + '".');
+                        'You cannot dereference "' + this.argument.toString() + '".');
                 }
                 return [<Value> state.getCell((<ReferenceValue> aVal[0]).address), false, aVal[2], aVal[3]];
             }
@@ -465,7 +762,7 @@ export class FunctionApplication extends Expression implements Pattern {
             return [res[0], res[1], warns.concat(res[2]), membnd];
         }
         throw new EvaluationError(this.position, 'Cannot evaluate the function "'
-            + this.func.prettyPrint() + '" (' + funcVal[0].constructor.name + ').');
+            + this.func.toString() + '" (' + funcVal[0].constructor.name + ').');
     }
 }
 
@@ -479,15 +776,38 @@ export class HandleException extends Expression {
         return new HandleException(this.position, this.expression.simplify(), this.match.simplify());
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        let res = '( ( ' + this.expression.prettyPrint(indentation, oneLine) + ' )';
-        res += ' handle ' + this.match.prettyPrint(indentation, oneLine) + ' )';
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        let res = '( ( ' + this.expression.toString(indentation, oneLine) + ' )';
+        res += ' handle ' + this.match.toString(indentation, oneLine) + ' )';
         return res;
     }
 
-    getType(state: State): Type[] {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
+    getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
+            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false)
+        : [Type, Warning[], string, Set<string>, Map<string, Type>] {
+
+        let mtp = this.match.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
+        if ((!(mtp[0] instanceof FunctionType))
+            || !(<FunctionType> mtp[0]).parameterType.equals(new CustomType('exn'))) {
+            throw new ElaborationError(this.match.position,
+                'You can only handle things of type "exn" and not "'
+                + (<FunctionType> mtp[0]).parameterType.toString() + '".');
+        }
+        let rt = (<FunctionType> mtp[0]).returnType;
+        let etp = this.expression.getType(state, mtp[4], mtp[2], mtp[3], forceRebind);
+
+        try {
+            let res = rt.merge(state, etp[4], etp[0]);
+            return [res[0], mtp[1].concat(etp[1]), etp[2], etp[3], res[1]];
+        } catch (e) {
+            if (!(e instanceof Array)) {
+                throw e;
+            }
+            throw new ElaborationError(this.expression.position,
+                'The "handle" cannot change the type of the expression from "'
+                + etp[0].toString() + '" to "' + rt.toString() + '":\n' + e[0]);
+        }
     }
 
     compute(state: State): [Value, boolean, Warning[], MemBind] {
@@ -517,13 +837,26 @@ export class RaiseException extends Expression {
         return new RaiseException(this.position, this.expression.simplify());
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        return 'raise ' + this.expression.prettyPrint(indentation, oneLine);
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        return 'raise ' + this.expression.toString(indentation, oneLine);
     }
 
-    getType(state: State): Type[] {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
+    getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
+            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false)
+        : [Type, Warning[], string, Set<string>, Map<string, Type>] {
+
+        let res = this.expression.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
+        try {
+            let mg = res[0].merge(state, tyVarBnd, new CustomType('exn'));
+            return [new AnyType(), res[1], res[2], res[3], mg[1]];
+        } catch (e) {
+            if (!(e instanceof Array)) {
+                throw e;
+            }
+            throw new ElaborationError(this.expression.position,
+                'Raising anything but exceptions will only raise exceptions:\n' + e[0]);
+        }
     }
 
     compute(state: State): [Value, boolean, Warning[], MemBind] {
@@ -545,14 +878,16 @@ export class Lambda extends Expression {
         return new Lambda(this.position, this.match.simplify());
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         // TODO
-        return '( fn ' + this.match.prettyPrint(indentation, oneLine) + ' )';
+        return '( fn ' + this.match.toString(indentation, oneLine) + ' )';
     }
 
-    getType(state: State): Type[] {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
+    getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
+            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false)
+        : [Type, Warning[], string, Set<string>, Map<string, Type>] {
+        return this.match.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
     }
 
     compute(state: State): [Value, boolean, Warning[], MemBind] {
@@ -582,14 +917,14 @@ export class Match {
     // pat => exp or pat => exp | match
     constructor(public position: number, public matches: [PatternExpression, Expression][]) { }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         let res = '';
         for (let i = 0; i < this.matches.length; ++i) {
             if (i > 0) {
                 res += ' | ';
             }
-            res += this.matches[i][0].prettyPrint(indentation, oneLine);
-            res += ' => ' + this.matches[i][1].prettyPrint(indentation, oneLine);
+            res += this.matches[i][0].toString(indentation, oneLine);
+            res += ' => ' + this.matches[i][1].toString(indentation, oneLine);
         }
         return res;
     }
@@ -609,9 +944,50 @@ export class Match {
         return [new ExceptionValue('Match', undefined, 0), true, [], []];
     }
 
-    getType(state: State): Type[] {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'nyi\'an :3');
+    getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
+            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false):
+    [Type, Warning[], string, Set<string>, Map<string, Type>] {
+
+        let restp: Type = new FunctionType(new AnyType(), new AnyType());
+        let warns: Warning[] = [];
+        let bnds = tyVarBnd;
+
+        for (let i = 0; i < this.matches.length; ++i) {
+            let nmap = new Map<string, Type>();
+            bnds.forEach((val: Type, key: string) => {
+                nmap = nmap.set(key, val);
+            });
+            let r1 = this.matches[i][0].getType(state, bnds, nextName, tyVars, true);
+
+            warns = warns.concat(r1[1]);
+
+            let r2 = this.matches[i][1].getType(state, r1[4], r1[2], r1[3], forceRebind);
+            warns = warns.concat(r2[1]);
+            nextName = r2[2];
+            tyVars = r2[3];
+
+            let rtp = new FunctionType(r1[0], r2[0]);
+
+            try {
+                [restp, bnds] = restp.merge(state, r2[4], rtp);
+            } catch (e) {
+                if (!(e instanceof Array)) {
+                    throw e;
+                }
+                throw new ElaborationError(this.position,
+                    'Match rules disagree on type:\n' + e[0] + ' ("' + e[1].toString() + '" vs. "'
+                    + e[2].toString() + '")');
+            }
+            restp = restp.instantiate(state, bnds);
+            bnds.forEach((val: Type, key: string) => {
+                if (key[1] !== '*' || key[2] !== '*') {
+                    nmap = nmap.set(key, val);
+                }
+            });
+            bnds = nmap;
+        }
+        return [restp, warns, nextName, tyVars, bnds];
     }
 
     simplify(): Match {
@@ -629,13 +1005,20 @@ export class Match {
 export class Wildcard extends Expression implements Pattern {
     constructor(public position: number) { super(); }
 
-    getType(state: State): Type[] {
-        return [new TypeVariable('\'\'__wc'), new TypeVariable('\'__wc')];
+    getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
+            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false)
+        : [Type, Warning[], string, Set<string>, Map<string, Type>] {
+        return [new AnyType(), [], nextName, tyVars, tyVarBnd];
     }
 
     compute(state: State): [Value, boolean, Warning[], MemBind] {
         throw new InternalInterpreterError(this.position,
             'Wildcards are far too wild to have a value.');
+    }
+
+    matchType(state: State, tyVarBnd: Map<string, Type>, t: Type): [[string, Type][], Type, Map<string, Type>] {
+        return [[], t, tyVarBnd];
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -646,7 +1029,7 @@ export class Wildcard extends Expression implements Pattern {
         return this;
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         return '_';
     }
 }
@@ -657,13 +1040,26 @@ export class LayeredPattern extends Expression implements Pattern {
                 public typeAnnotation: Type | undefined,
                 public pattern: Expression|PatternExpression) { super(); }
 
+    getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
+            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false)
+        : [Type, Warning[], string, Set<string>, Map<string, Type>] {
+        if (!forceRebind) {
+            throw new InternalInterpreterError(this.position,
+                'Layered patterns are far too layered to have a type.');
+        }
+        // TODO
+        throw new Error('ニャハハハハハ～');
+    }
+
     compute(state: State): [Value, boolean, Warning[], MemBind] {
         throw new InternalInterpreterError(this.position,
             'Layered patterns are far too layered to have a value.');
     }
 
-    getType(state: State): Type[] {
-        throw new Error('nyian');
+    matchType(state: State, tyVarBnd: Map<string, Type>, t: Type): [[string, Type][], Type, Map<string, Type>]  {
+        // TODO
+        throw new Error('ニャハハハハハ～');
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -687,8 +1083,8 @@ export class LayeredPattern extends Expression implements Pattern {
         }
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        return this.identifier.getText() + ' as ' + this.pattern.prettyPrint(indentation, oneLine);
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        return this.identifier.getText() + ' as ' + this.pattern.toString(indentation, oneLine);
     }
 }
 
@@ -700,6 +1096,10 @@ export class InfixExpression extends Expression implements Pattern {
     // operators: (op, idx), to simplify simplify
     constructor(public expressions: Expression[], public operators: [IdentifierToken, number][]) {
         super();
+    }
+
+    matchType(state: State, tyVarBnd: Map<string, Type>, t: Type): [[string, Type][], Type, Map<string, Type>] {
+        return this.reParse(state).matchType(state, tyVarBnd, t);
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -791,9 +1191,9 @@ export class Conjunction extends Expression {
             falseConstant).simplify();
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        return '( ' + this.leftOperand.prettyPrint(indentation, oneLine) + ' andalso '
-            + this.rightOperand.prettyPrint(indentation, oneLine) + ' )';
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        return '( ' + this.leftOperand.toString(indentation, oneLine) + ' andalso '
+            + this.rightOperand.toString(indentation, oneLine) + ' )';
     }
 }
 
@@ -805,15 +1205,19 @@ export class Disjunction extends Expression {
         return new Conditional(this.position, this.leftOperand, trueConstant, this.rightOperand).simplify();
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        return '( ' + this.leftOperand.prettyPrint(indentation, oneLine) + ' orelse '
-            + this.rightOperand.prettyPrint(indentation, oneLine) + ' )';
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        return '( ' + this.leftOperand.toString(indentation, oneLine) + ' orelse '
+            + this.rightOperand.toString(indentation, oneLine) + ' )';
     }
 }
 
 export class Tuple extends Expression implements Pattern {
     // (exp1, ..., expn), n > 1
     constructor(public position: number, public expressions: Expression[]) { super(); }
+
+    matchType(state: State, tyVarBnd: Map<string, Type>, t: Type): [[string, Type][], Type, Map<string, Type>] {
+        return this.simplify().matchType(state, tyVarBnd, t);
+    }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         return this.simplify().matches(state, v);
@@ -827,13 +1231,13 @@ export class Tuple extends Expression implements Pattern {
         return new Record(this.position, true, entries);
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         let res = '( ';
         for (let i = 0; i < this.expressions.length; ++i) {
             if (i > 0) {
                 res += ', ';
             }
-            res += this.expressions[i].prettyPrint(indentation, oneLine);
+            res += this.expressions[i].toString(indentation, oneLine);
         }
         return res + ' )';
     }
@@ -842,6 +1246,10 @@ export class Tuple extends Expression implements Pattern {
 export class List extends Expression implements Pattern {
     // [exp1, ..., expn]
     constructor(public position: number, public expressions: Expression[]) { super(); }
+
+    matchType(state: State, tyVarBnd: Map<string, Type>, t: Type): [[string, Type][], Type, Map<string, Type>] {
+        return this.simplify().matchType(state, tyVarBnd, t);
+    }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         return this.simplify().matches(state, v);
@@ -856,13 +1264,13 @@ export class List extends Expression implements Pattern {
         return res;
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         let res = '[ ';
         for (let i = 0; i < this.expressions.length; ++i) {
             if (i > 0) {
                 res += ', ';
             }
-            res += this.expressions[i].prettyPrint(indentation, oneLine);
+            res += this.expressions[i].toString(indentation, oneLine);
         }
         return res + ' ]';
     }
@@ -883,13 +1291,13 @@ export class Sequence extends Expression {
         return res.simplify();
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         let res = '( ';
         for (let i = 0; i < this.expressions.length; ++i) {
             if (i > 0) {
                 res += '; ';
             }
-            res += this.expressions[i].prettyPrint(indentation, oneLine);
+            res += this.expressions[i].toString(indentation, oneLine);
         }
         return res + ' )';
     }
@@ -905,7 +1313,7 @@ export class RecordSelector extends Expression {
             new ValueIdentifier(-1, new IdentifierToken('__rs', -1))]]));
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
+    toString(indentation: number = 0, oneLine: boolean = true): string {
         return '#' + this.label.getText();
     }
 }
@@ -920,9 +1328,9 @@ export class CaseAnalysis extends Expression {
             this.expression.simplify());
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        let res = 'case ' + this.expression.prettyPrint(indentation, oneLine);
-        res += ' of ' + this.match.prettyPrint(indentation, oneLine);
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        let res = 'case ' + this.expression.toString(indentation, oneLine);
+        res += ' of ' + this.match.toString(indentation, oneLine);
         return res;
     }
 }
@@ -938,10 +1346,10 @@ export class Conditional extends Expression {
         return new CaseAnalysis(this.position, this.condition, match).simplify();
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        let res = 'if ' + this.condition.prettyPrint(indentation, oneLine);
-        res += ' then ' + this.consequence.prettyPrint(indentation, oneLine);
-        res += ' else ' + this.alternative.prettyPrint(indentation, oneLine);
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        let res = 'if ' + this.condition.toString(indentation, oneLine);
+        res += ' then ' + this.consequence.toString(indentation, oneLine);
+        res += ' else ' + this.alternative.toString(indentation, oneLine);
         return res;
     }
 }
@@ -966,8 +1374,8 @@ export class While extends Expression {
         return new LocalDeclarationExpression(this.position, dec, fapp).simplify();
     }
 
-    prettyPrint(indentation: number = 0, oneLine: boolean = true): string {
-        return '( while ' + this.condition.prettyPrint(indentation, oneLine)
-            + ' do ' + this.body.prettyPrint(indentation, oneLine) + ' )';
+    toString(indentation: number = 0, oneLine: boolean = true): string {
+        return '( while ' + this.condition.toString(indentation, oneLine)
+            + ' do ' + this.body.toString(indentation, oneLine) + ' )';
     }
 }

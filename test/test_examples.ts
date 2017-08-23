@@ -206,7 +206,7 @@ it("1.2.3", () => {
 vall x = 5;
      */
     run_test([
-        ['vall x = 5;', (x) => { expect(x).toThrow(Errors.EvaluationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['vall x = 5;', (x) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
         }]
     ]);
 });
@@ -831,7 +831,7 @@ fun f (x:int) : int = if x<1 then 1 else x*f(x-1);
      */
     //TODO test types
     run_test([
-        ['fun p (x:int) = x; fun q (x:int) = 3+(p x);', (x) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['fun q (x:int) = 3+(p x);', (x) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
         }],
         ['fun p (x:int) = x;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -4561,6 +4561,14 @@ eval f e;
             '  | App of exp * exp (* procedure application *) ' +
             ';', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
                 // copy from 12.1
+            }],
+        ['type \'a env = id -> \'a (* environments *) ' +
+            'exception Unbound of id ' +
+            'fun empty x = raise Unbound x ' +
+            'fun update env x a y = if y=x then a else env y ' +
+            'exception Error of string ' +
+            ';', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+                // copy from 12.4
         }],
         ['datatype value = ' +
             '    IV of int ' +
@@ -4596,13 +4604,6 @@ eval f e;
             //expect(state.getStaticValue('evalOpr')).toEqualWithType(TODO);
             expect(state.getDynamicValue('eval')).not.toEqualWithType(undefined);
             //expect(state.getStaticValue('eval')).toEqualWithType(TODO);
-        }],
-        ['type \'a env = id -> \'a (* environments *) ' +
-            'exception Unbound of id ' +
-            'fun empty x = raise Unbound x ' +
-            'fun update env x a y = if y=x then a else env y ' +
-            ';', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
-                // copy from 12.4
         }],
         ['val f = update empty "x" (IV 5);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -5685,7 +5686,8 @@ datatype integer = N of nat | P of nat;
      */
     //TODO test types
     run_test([
-        ['datatype integer = N of nat | P of nat;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['datatype nat = O | S of nat;' +
+            'datatype integer = N of nat | P of nat;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('N')[0]).toEqualWithType(new Val.ValueConstructor('N', 1));
             //expect(state.getStaticValue('N')).toEqualWithType(TODO);
