@@ -49,6 +49,7 @@ export class ValueDeclaration extends Declaration {
 
     elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string): [State, Warning[], Map<string, Type>, string] {
         let result: [string, Type][] = [];
+        let isTopLevel = (tyVarBnd === undefined || tyVarBnd.size === 0);
 
         let isRec = false;
         let warns: Warning[] = [];
@@ -66,7 +67,7 @@ export class ValueDeclaration extends Declaration {
 
                 break;
             }
-            let val = this.valueBinding[i].getType(this.typeVariableSequence, state, bnds, nextName);
+            let val = this.valueBinding[i].getType(this.typeVariableSequence, state, bnds, nextName, isTopLevel);
 
             warns = warns.concat(val[1]);
             bnds = val[2];
@@ -78,16 +79,18 @@ export class ValueDeclaration extends Declaration {
         }
 
         for (let j = 0; j < result.length; ++j) {
-            state.setStaticValue(result[j][0], result[j][1]/*.normalize()*/, IdentifierStatus.VALUE_VARIABLE);
+            state.setStaticValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
         }
 
-        for (let j = i; j < this.valueBinding.length; ++j) {
-            let val = this.valueBinding[i].getType(this.typeVariableSequence, state, bnds, nextName);
-            warns = warns.concat(val[1]);
-            bnds = val[2];
-            nextName = val[3];
-            for (let k = 0; k < val[0].length; ++k) {
-                state.setStaticValue(val[0][k][0], val[0][k][1]/*.normalize()*/, IdentifierStatus.VALUE_VARIABLE);
+        for (let l = 0; l < 2; ++l) {
+            for (let j = i; j < this.valueBinding.length; ++j) {
+                let val = this.valueBinding[i].getType(this.typeVariableSequence, state, bnds, nextName, isTopLevel);
+                warns = warns.concat(val[1]);
+                bnds = val[2];
+                nextName = val[3];
+                for (let k = 0; k < val[0].length; ++k) {
+                    state.setStaticValue(val[0][k][0], val[0][k][1], IdentifierStatus.VALUE_VARIABLE);
+                }
             }
         }
 
@@ -699,7 +702,8 @@ export class ValueBinding {
         return res + this.expression.toString(indentation, oneLine);
     }
 
-    getType(tyVarSeq: TypeVariable[], state: State, tyVarBnd: Map<string, Type>, nextName: string): [[string, Type][], Warning[], Map<string, Type>, string] {
+    getType(tyVarSeq: TypeVariable[], state: State, tyVarBnd: Map<string, Type>, nextName: string, isTopLevel: boolean):
+    [[string, Type][], Warning[], Map<string, Type>, string] {
         let nstate = state.getNestedState(state.id);
         let tp = this.expression.getType(nstate, tyVarBnd, nextName);
         let res = this.pattern.matchType(nstate, tp[4], tp[0]);
@@ -730,7 +734,7 @@ export class ValueBinding {
                     res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1]);
                 }
             }
-            if (tyVarBnd === undefined || tyVarBnd.size === 0) {
+            if (isTopLevel) {
                 // Toplevel so bind all remaining tyvars
                 ntys = [];
                 res[0][i][1].getTypeVariables().forEach((val: string) => {

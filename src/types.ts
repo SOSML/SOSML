@@ -6,8 +6,8 @@ export abstract class Type {
     abstract equals(other: any): boolean;
 
     // Constructs types with type variables instantiated as much as possible
-    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
-        return this.simplify().instantiate(state, tyVarBnd);
+    instantiate(state: State, tyVarBnd: Map<string, Type>, seen: Set<string> = new Set<string>()): Type {
+        return this.simplify().instantiate(state, tyVarBnd, seen);
     }
 
     // Merge this type with the other type. This operation is commutative
@@ -90,7 +90,7 @@ export class AnyType extends Type {
         return true;
     }
 
-    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
+    instantiate(state: State, tyVarBnd: Map<string, Type>, seen: Set<string> = new Set<string>()): Type {
         return this;
     }
 
@@ -177,11 +177,22 @@ export class TypeVariable extends Type {
         return this.name;
     }
 
-    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
+    instantiate(state: State, tyVarBnd: Map<string, Type>, seen: Set<string> = new Set<string>()): Type {
         if (!tyVarBnd.has(this.name)) {
             return this;
         }
-        return (<Type> tyVarBnd.get(this.name)).instantiate(state, tyVarBnd);
+        if (seen.has(this.name)) {
+            throw new ElaborationError(this.position,
+                'Type clash. An expression of type "' + this.name
+                + '" cannot have type "' + (<Type> tyVarBnd.get(this.name))
+                + '" because of circularity.');
+        }
+        let nsen = new Set<string>();
+        seen.forEach((val: string) => {
+            nsen.add(val);
+        });
+        nsen.add(this.name);
+        return (<Type> tyVarBnd.get(this.name)).instantiate(state, tyVarBnd, nsen);
     }
 
     merge(state: State, tyVarBnd: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
@@ -267,10 +278,10 @@ export class RecordType extends Type {
         super();
     }
 
-    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
+    instantiate(state: State, tyVarBnd: Map<string, Type>, seen: Set<string> = new Set<string>()): Type {
         let newElements: Map<string, Type> = new Map<string, Type>();
         this.elements.forEach((type: Type, key: string) => {
-            newElements.set(key, type.instantiate(state, tyVarBnd));
+            newElements.set(key, type.instantiate(state, tyVarBnd, seen));
         });
         return new RecordType(newElements, this.complete);
     }
@@ -468,9 +479,9 @@ export class FunctionType extends Type {
         super();
     }
 
-    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
-        return new FunctionType(this.parameterType.instantiate(state, tyVarBnd),
-            this.returnType.instantiate(state, tyVarBnd),
+    instantiate(state: State, tyVarBnd: Map<string, Type>, seen: Set<string> = new Set<string>()): Type {
+        return new FunctionType(this.parameterType.instantiate(state, tyVarBnd, seen),
+            this.returnType.instantiate(state, tyVarBnd, seen),
             this.position);
     }
 
@@ -556,12 +567,12 @@ export class CustomType extends Type {
         super();
     }
 
-    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
+    instantiate(state: State, tyVarBnd: Map<string, Type>, seen: Set<string> = new Set<string>()): Type {
         let tp = state.getStaticType(this.name);
         if (tp !== undefined && tp.type instanceof FunctionType) {
             try {
                 let mt = this.merge(state, tyVarBnd,  (<FunctionType> tp.type).parameterType, true);
-                return (<FunctionType> tp.type).returnType.instantiate(state, mt[1]);
+                return (<FunctionType> tp.type).returnType.instantiate(state, mt[1], seen);
             } catch (e) {
                 if (!(e instanceof Array)) {
                     throw e;
@@ -577,7 +588,7 @@ export class CustomType extends Type {
 
         let res: Type[] = [];
         for (let i = 0; i < this.typeArguments.length; ++i) {
-            res.push(this.typeArguments[i].instantiate(state, tyVarBnd));
+            res.push(this.typeArguments[i].instantiate(state, tyVarBnd, seen));
         }
         return new CustomType(this.name, res, this.position);
     }

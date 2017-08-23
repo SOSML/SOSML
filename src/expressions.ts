@@ -423,7 +423,12 @@ export class LocalDeclarationExpression extends Expression {
             }
         });
 
-        let res = this.declaration.elaborate(nstate, tyVarBnd, nextName);
+        let nvbnd = new Map<string, Type>();
+        tyVarBnd.forEach((val: Type, key: string) => {
+            nvbnd = nvbnd.set(key, val);
+        });
+
+        let res = this.declaration.elaborate(nstate, nvbnd, nextName);
         nextName = res[3];
 
         let chg: [string, Type][] = [];
@@ -436,8 +441,6 @@ export class LocalDeclarationExpression extends Expression {
         for (let i = 0; i < chg.length; ++i) {
             if ((<Type> tyVarBnd.get(chg[i][0])).equals(res[2].get(chg[i][0]))) {
                 // Make sure we're not using some type of some rebound identifier
-                // console.log('Updating ' + chg[i][0] + ' because ' + tyVarBnd.get(chg[i][0])
-                // + ' === ' + res[2].get(chg[i][0]));
                 let tmp = chg[i][1].merge(nstate, tyVarBnd, chg[i][1].instantiate(nstate, res[2]));
                 tyVarBnd = tmp[1];
             }
