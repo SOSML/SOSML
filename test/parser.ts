@@ -8,6 +8,7 @@ const InitialState = require("../src/initialState.ts");
 const Expr = require("../src/expressions.ts");
 const Decl = require("../src/declarations.ts");
 const Type = require("../src/types.ts");
+const Modu = require("../src/modules.ts");
 
 const TestHelper = require("./test_helper.ts");
 TestHelper.init();
@@ -2534,7 +2535,7 @@ it("pattern row - label as variable", () => {
 });
 
 it("pattern - atomic", () => {
-    //TODO ? tests already tested via atomic tests
+    //tests already tested via atomic tests
 });
 
 it("pattern - constructed value", () => {
@@ -2986,4 +2987,95 @@ it("type row", () => {
             )
         )
     ));
+});
+
+it("structure definitions", () => {
+    expect(parse("structure a = struct val x = 4 end;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.StructureDeclaration(0, [
+                new Modu.StructureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a",10),
+                    new Modu.StructureExpression(14,
+                        new Decl.SequentialDeclaration(21,[
+                            new Decl.ValueDeclaration(21, [], [
+                                new Decl.ValueBinding(25, false,
+                                    new Expr.ValueIdentifier(25,
+                                        new Token.AlphanumericIdentifierToken("x", 25)
+                                    ),
+                                    new Expr.Constant(29,
+                                        new Token.NumericToken("4", 29, 4)
+                                    )
+                                )
+                            ], 4)
+                        ], 3)
+                    )
+                )
+            ])
+        ], 1);
+    );
+
+    expect(parse("structure a = struct val x = 4; val x = 4 end;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.StructureDeclaration(0, [
+                new Modu.StructureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a",10),
+                    new Modu.StructureExpression(14,
+                        new Decl.SequentialDeclaration(21,[
+                            new Decl.ValueDeclaration(21, [], [
+                                new Decl.ValueBinding(25, false,
+                                    new Expr.ValueIdentifier(25,
+                                        new Token.AlphanumericIdentifierToken("x", 25)
+                                    ),
+                                    new Expr.Constant(29,
+                                        new Token.NumericToken("4", 29, 4)
+                                    )
+                                )
+                            ], 4),
+                            new Decl.ValueDeclaration(32, [], [
+                                new Decl.ValueBinding(36, false,
+                                    new Expr.ValueIdentifier(36,
+                                        new Token.AlphanumericIdentifierToken("x", 36)
+                                    ),
+                                    new Expr.Constant(40,
+                                        new Token.NumericToken("4", 40, 4)
+                                    )
+                                )
+                            ], 5)
+                        ], 3)
+                    )
+                )
+            ])
+        ], 1);
+    );
+
+    expect(parse("structure a = struct end;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.StructureDeclaration(0, [
+                new Modu.StructureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a",10),
+                    new Modu.StructureExpression(14,
+                        new Decl.SequentialDeclaration(21,[], 3)
+                    )
+                )
+            ])
+        ], 1);
+    );
+
+    expect(parse("structure a = b.b;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.StructureDeclaration(0, [
+                new Modu.StructureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a",10),
+                    new Modu.StructureIdentifier(14,
+                        new Token.LongIdentifierToken("b.b", 14,
+                            [
+                                new Token.AlphanumericIdentifierToken("b", 14)
+                            ],
+                            new Token.AlphanumericIdentifierToken("b", 16),
+                        )
+                    )
+                )
+            ])
+        ], 1);
+    );
 });
