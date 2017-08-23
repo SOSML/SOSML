@@ -3126,6 +3126,42 @@ it("structure definitions", () => {
         ], 1);
     );
 
+    expect(parse("structure a = b:c;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.StructureDeclaration(0, [
+                new Modu.StructureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a",10),
+                    new Modu.TransparentConstraint(14,
+                        new Modu.StructureIdentifier(14,
+                            new Token.AlphanumericIdentifierToken("b", 14)
+                        ),
+                        new Modu.SignatureIdentifier(16,
+                            new Token.AlphanumericIdentifierToken("c", 16)
+                        )
+                    )
+                )
+            ])
+        ], 1);
+    );
+
+    expect(parse("structure a = b:>c;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.StructureDeclaration(0, [
+                new Modu.StructureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a",10),
+                    new Modu.OpaqueConstraint(14,
+                        new Modu.StructureIdentifier(14,
+                            new Token.AlphanumericIdentifierToken("b", 14)
+                        ),
+                        new Modu.SignatureIdentifier(17,
+                            new Token.AlphanumericIdentifierToken("c", 17)
+                        )
+                    )
+                )
+            ])
+        ], 1);
+    );
+
     expect(parse("signature a = sig end;")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Modu.SignatureDeclaration(0, [
@@ -3139,6 +3175,25 @@ it("structure definitions", () => {
         ], 1);
     );
 
+    expect(parse("signature a = sig end and b = sig end;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.SignatureDeclaration(0, [
+                new Modu.SignatureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a", 10),
+                    new Modu.SignatureExpression(14,
+                        new Modu.SequentialSpecification(18, [])
+                    )
+                ),
+                new Modu.SignatureBinding(26,
+                    new Token.AlphanumericIdentifierToken("b", 26),
+                    new Modu.SignatureExpression(30,
+                        new Modu.SequentialSpecification(34, [])
+                    )
+                )
+            ])
+        ], 1);
+    );
+
     expect(parse("signature a = a;")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Modu.SignatureDeclaration(0, [
@@ -3146,6 +3201,24 @@ it("structure definitions", () => {
                     new Token.AlphanumericIdentifierToken("a", 10),
                     new Modu.SignatureIdentifier(14,
                         new Token.AlphanumericIdentifierToken("a", 14)
+                    )
+                )
+            ])
+        ], 1);
+    );
+
+    expect(parse("signature a = sig end where type int=a;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.SignatureDeclaration(0, [
+                new Modu.SignatureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a", 10),
+                    new Modu.TypeRealisation(14,
+                        new Modu.SignatureExpression(14,
+                            new Modu.SequentialSpecification(18, [])
+                        ),
+                        [],
+                        new Token.AlphanumericIdentifierToken("int", 33),
+                        new Type.CustomType("a", [], 37)
                     )
                 )
             ])
