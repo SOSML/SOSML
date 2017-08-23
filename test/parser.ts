@@ -3372,6 +3372,295 @@ it("module language - spec", () => {
             ])
         ])
     );
+
+    expect(parse("signature a = sig eqtype a end;")).toEqualWithType(
+        spec_tester([
+            new Modu.EqualityTypeSpecification(18,[
+                [
+                    [],
+                    new Token.AlphanumericIdentifierToken("a", 25)
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig eqtype 'a b end;")).toEqualWithType(
+        spec_tester([
+            new Modu.EqualityTypeSpecification(18,[
+                [
+                    [
+                        new Type.TypeVariable("'a", 25)
+                    ],
+                    new Token.AlphanumericIdentifierToken("b", 28)
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig eqtype ('a, 'c) b end;")).toEqualWithType(
+        spec_tester([
+            new Modu.EqualityTypeSpecification(18,[
+                [
+                    [
+                        new Type.TypeVariable("'a", 26),
+                        new Type.TypeVariable("'c", 30)
+                    ],
+                    new Token.AlphanumericIdentifierToken("b", 34)
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig eqtype a and 'c b end;")).toEqualWithType(
+        spec_tester([
+            new Modu.EqualityTypeSpecification(18,[
+                [
+                    [],
+                    new Token.AlphanumericIdentifierToken("a", 25)
+                ],
+                [
+                    [
+                        new Type.TypeVariable("'c", 31)
+                    ],
+                    new Token.AlphanumericIdentifierToken("b", 34)
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig datatype a = b end;")).toEqualWithType(
+        spec_tester([
+            new Modu.DatatypeSpecification(18,[
+                [
+                    [],
+                    new Token.AlphanumericIdentifierToken("a", 27),
+                    [
+                        [
+                            new Token.AlphanumericIdentifierToken("b", 31),
+                            undefined
+                        ]
+                    ]
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig datatype 'a b = c end;")).toEqualWithType(
+        spec_tester([
+            new Modu.DatatypeSpecification(18,[
+                [
+                    [
+                        new Type.TypeVariable("'a", 27)
+                    ],
+                    new Token.AlphanumericIdentifierToken("b", 30),
+                    [
+                        [
+                            new Token.AlphanumericIdentifierToken("c", 34),
+                            undefined
+                        ]
+                    ]
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig datatype ('a, 'c) b = d end;")).toEqualWithType(
+        spec_tester([
+            new Modu.DatatypeSpecification(18,[
+                [
+                    [
+                        new Type.TypeVariable("'a", 28),
+                        new Type.TypeVariable("'c", 32)
+                    ],
+                    new Token.AlphanumericIdentifierToken("b", 36),
+                    [
+                        [
+                            new Token.AlphanumericIdentifierToken("d", 40),
+                            undefined
+                        ]
+                    ]
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig datatype a = b and 'c b = fish end;")).toEqualWithType(
+        spec_tester([
+            new Modu.DatatypeSpecification(18,[
+                [
+                    [],
+                    new Token.AlphanumericIdentifierToken("a", 27),
+                    [
+                        [
+                            new Token.AlphanumericIdentifierToken("b", 31),
+                            undefined
+                        ]
+                    ]
+                ],
+                [
+                    [
+                        new Type.TypeVariable("'c", 37)
+                    ],
+                    new Token.AlphanumericIdentifierToken("b", 40),
+                    [
+                        [
+                            new Token.AlphanumericIdentifierToken("fish", 44),
+                            undefined
+                        ]
+                    ]
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig datatype b = fish of blub end;")).toEqualWithType(
+        spec_tester([
+            new Modu.DatatypeSpecification(18,[
+                [
+                    [],
+                    new Token.AlphanumericIdentifierToken("b", 27),
+                    [
+                        [
+                            new Token.AlphanumericIdentifierToken("fish", 31),
+                            new Type.CustomType("blub", [], 39)
+                        ]
+                    ]
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig datatype b = fish | cow end;")).toEqualWithType(
+        spec_tester([
+            new Modu.DatatypeSpecification(18,[
+                [
+                    [],
+                    new Token.AlphanumericIdentifierToken("b", 27),
+                    [
+                        [
+                            new Token.AlphanumericIdentifierToken("fish", 31),
+                            undefined
+                        ],
+                        [
+                            new Token.AlphanumericIdentifierToken("cow", 38),
+                            undefined
+                        ]
+                    ]
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig datatype b = fish of blub | cow end;")).toEqualWithType(
+        spec_tester([
+            new Modu.DatatypeSpecification(18,[
+                [
+                    [],
+                    new Token.AlphanumericIdentifierToken("b", 27),
+                    [
+                        [
+                            new Token.AlphanumericIdentifierToken("fish", 31),
+                            new Type.CustomType("blub", [], 39)
+                        ],
+                        [
+                            new Token.AlphanumericIdentifierToken("cow", 46),
+                            undefined
+                        ]
+                    ]
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig datatype b = fish of blub | cow of moo end;")).toEqualWithType(
+        spec_tester([
+            new Modu.DatatypeSpecification(18,[
+                [
+                    [],
+                    new Token.AlphanumericIdentifierToken("b", 27),
+                    [
+                        [
+                            new Token.AlphanumericIdentifierToken("fish", 31),
+                            new Type.CustomType("blub", [], 39)
+                        ],
+                        [
+                            new Token.AlphanumericIdentifierToken("cow", 46),
+                            new Type.CustomType("moo", [], 53)
+                        ]
+                    ]
+                ]
+            ])
+        ])
+    );
+    //TODO datatype tycon -=- datatype longtycon
+
+    expect(parse("signature a = sig exception fish end;")).toEqualWithType(
+        spec_tester([
+            new Modu.ExceptionSpecification(18,[
+                [
+                    new Token.AlphanumericIdentifierToken("fish", 28),
+                    undefined
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig exception fish and cow end;")).toEqualWithType(
+        spec_tester([
+            new Modu.ExceptionSpecification(18,[
+                [
+                    new Token.AlphanumericIdentifierToken("fish", 28),
+                    undefined
+                ],
+                [
+                    new Token.AlphanumericIdentifierToken("cow", 37),
+                    undefined
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig exception fish of blub and cow end;")).toEqualWithType(
+        spec_tester([
+            new Modu.ExceptionSpecification(18,[
+                [
+                    new Token.AlphanumericIdentifierToken("fish", 28),
+                    new Type.CustomType("blub", [], 36)
+                ],
+                [
+                    new Token.AlphanumericIdentifierToken("cow", 45),
+                    undefined
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig exception fish of blub and cow of moo end;")).toEqualWithType(
+        spec_tester([
+            new Modu.ExceptionSpecification(18,[
+                [
+                    new Token.AlphanumericIdentifierToken("fish", 28),
+                    new Type.CustomType("blub", [], 36)
+                ],
+                [
+                    new Token.AlphanumericIdentifierToken("cow", 45),
+                    new Type.CustomType("moo", [], 52)
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig structure fish:blub end;")).toEqualWithType(
+        spec_tester([
+            new Modu.StructureSpecification(18)
+        ])
+    );
+
+    expect(parse("signature a = sig structure fish:blub and cow:moo end;")).toEqualWithType(
+        spec_tester([
+            new Modu.StructureSpecification(18)
+        ])
+    );
 });
 
 it("module language - signature", () => {
