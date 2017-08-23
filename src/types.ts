@@ -1,13 +1,13 @@
-import { InternalInterpreterError, ElaborationError } from './errors';
+import { ElaborationError } from './errors';
 import { State } from './state';
 
 export abstract class Type {
-    abstract prettyPrint(): string;
+    abstract toString(): string;
     abstract equals(other: any): boolean;
 
     // Constructs types with type variables instantiated as much as possible
-    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
-        return this.simplify().instantiate(state, tyVarBnd);
+    instantiate(state: State, tyVarBnd: Map<string, Type>, seen: Set<string> = new Set<string>()): Type {
+        return this.simplify().instantiate(state, tyVarBnd, seen);
     }
 
     // Merge this type with the other type. This operation is commutative
@@ -24,6 +24,11 @@ export abstract class Type {
         return this.simplify().getTypeVariables();
     }
 
+    // Get all type variables in order (they may appear more than once)
+    getOrderedTypeVariables(): string[] {
+        return this.simplify().getOrderedTypeVariables();
+    }
+
     replaceTypeVariables(replacements: Map<string, string>): Type {
         return this.simplify().replaceTypeVariables(replacements);
     }
@@ -35,6 +40,40 @@ export abstract class Type {
     admitsEquality(state: State): boolean {
         return false;
     }
+
+    normalize(): Type {
+        let orderedVars = this.getOrderedTypeVariables();
+        let replacements = new Map<string, string>();
+
+        for (let v of orderedVars) {
+            if (replacements.has(v)) {
+                continue;
+            }
+
+            let nextVar = '';
+            let cnt = replacements.size + 1;
+            if (cnt <= 26) {
+                nextVar = String.fromCharCode('a'.charCodeAt(0) + cnt - 1);
+            } else {
+                while (cnt > 0) {
+                    let nextChar = (--cnt) % 26;
+                    nextVar = String.fromCharCode('a'.charCodeAt(0) + nextChar) + nextVar;
+                    cnt = Math.floor(cnt / 26);
+                }
+            }
+
+            let newVar = '\'';
+            if (v.length > 2 && v.charAt(1) === '\'') {
+                newVar += '\'';
+            }
+
+            newVar += nextVar;
+
+            replacements.set(v, newVar);
+        }
+
+        return this.replaceTypeVariables(replacements);
+    }
 }
 
 // A type representing any type
@@ -43,7 +82,7 @@ export class AnyType extends Type {
         super();
     }
 
-    prettyPrint(): string {
+    toString(): string {
         return 'any';
     }
 
@@ -51,7 +90,7 @@ export class AnyType extends Type {
         return true;
     }
 
-    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
+    instantiate(state: State, tyVarBnd: Map<string, Type>, seen: Set<string> = new Set<string>()): Type {
         return this;
     }
 
@@ -67,30 +106,57 @@ export class AnyType extends Type {
         return new Set<string>();
     }
 
+    getOrderedTypeVariables(): string[] {
+        return [];
+    }
+
     replaceTypeVariables(replacements: Map<string, string>): Type {
         return this;
     }
 }
 
-    /*
 export class TypeVariableBind extends Type {
     constructor(public name: string, public type: Type, public domain: Type[] = []) {
         super();
     }
 
-    prettyPrint(): string {
+    toString(): string {
         if (this.domain.length === 0) {
-            return '∀ ' + this.name + ' . ' + this.type.prettyPrint();
+            return '∀ ' + this.name + ' . ' + this.type;
         } else {
             let res = '∀ ' + this.name + ' ∈ {';
             for (let i = 0; i < this.domain.length; ++i) {
                 if (i > 0) {
                     res += ', ';
                 }
-                res += this.domain[i].prettyPrint();
+                res += this.domain[i];
             }
-            return res + '} . ' + this.type.prettyPrint();
+            return res + '} . ' + this.type;
         }
+    }
+
+    getTypeVariables(): Set<string> {
+        let rec = this.type.getTypeVariables();
+        let res = new Set<string>();
+
+        rec.forEach((val: string) => {
+            if (val !== this.name) {
+                res.add(val);
+            }
+        });
+        return res;
+    }
+
+    getOrderedTypeVariables(): string[] {
+        return [this.name].concat(this.type.getOrderedTypeVariables());
+    }
+
+    replaceTypeVariables(replacements: Map<string, string>): Type {
+        if (replacements.has(this.name)) {
+            return new TypeVariableBind(<string> replacements.get(this.name),
+                this.type.replaceTypeVariables(replacements));
+        }
+        return this.type.replaceTypeVariables(replacements);
     }
 
     equals(other: any) {
@@ -101,25 +167,39 @@ export class TypeVariableBind extends Type {
         return (<TypeVariableBind> other).type.equals(this.type);
     }
 }
-     */
 
 export class TypeVariable extends Type {
     constructor(public name: string, public position: number = 0) {
         super();
     }
 
-    prettyPrint(): string {
+    toString(): string {
         return this.name;
     }
 
-    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
+    instantiate(state: State, tyVarBnd: Map<string, Type>, seen: Set<string> = new Set<string>()): Type {
         if (!tyVarBnd.has(this.name)) {
             return this;
         }
-        return (<Type> tyVarBnd.get(this.name)).instantiate(state, tyVarBnd);
+        if (seen.has(this.name)) {
+            throw new ElaborationError(this.position,
+                'Type clash. An expression of type "' + this.name
+                + '" cannot have type "' + (<Type> tyVarBnd.get(this.name))
+                + '" because of circularity.');
+        }
+        let nsen = new Set<string>();
+        seen.forEach((val: string) => {
+            nsen.add(val);
+        });
+        nsen.add(this.name);
+        return (<Type> tyVarBnd.get(this.name)).instantiate(state, tyVarBnd, nsen);
     }
 
     merge(state: State, tyVarBnd: Map<string, Type>, other: Type): [Type, Map<string, Type>] {
+        if (other instanceof AnyType) {
+            return [this, tyVarBnd];
+        }
+
         let ths = this.instantiate(state, tyVarBnd);
 
         if (ths instanceof TypeVariable) {
@@ -139,7 +219,7 @@ export class TypeVariable extends Type {
                 if (ths.admitsEquality(state) && !oth.admitsEquality(state)) {
                     let nt = oth.makeEqType(state, tyVarBnd);
                     if (!nt[0].admitsEquality(state)) {
-                        throw ['Type "' + oth.prettyPrint() + '" does not admit equality.', ths, oth];
+                        throw ['Type "' + oth + '" does not admit equality.', ths, oth];
                     } else {
                         oth = nt[0];
                         tyVarBnd = nt[1];
@@ -171,6 +251,10 @@ export class TypeVariable extends Type {
         return res;
     }
 
+    getOrderedTypeVariables(): string[] {
+        return [this.name];
+    }
+
     replaceTypeVariables(replacements: Map<string, string>): Type {
         if (replacements.has(this.name)) {
             return new TypeVariable(<string> replacements.get(this.name), this.position);
@@ -198,10 +282,10 @@ export class RecordType extends Type {
         super();
     }
 
-    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
+    instantiate(state: State, tyVarBnd: Map<string, Type>, seen: Set<string> = new Set<string>()): Type {
         let newElements: Map<string, Type> = new Map<string, Type>();
         this.elements.forEach((type: Type, key: string) => {
-            newElements.set(key, type.instantiate(state, tyVarBnd));
+            newElements.set(key, type.instantiate(state, tyVarBnd, seen));
         });
         return new RecordType(newElements, this.complete);
     }
@@ -273,6 +357,14 @@ export class RecordType extends Type {
         return res;
     }
 
+    getOrderedTypeVariables(): string[] {
+        let res: string[] = [];
+        this.elements.forEach((val: Type) => {
+            res = res.concat(val.getOrderedTypeVariables());
+        });
+        return res;
+    }
+
     replaceTypeVariables(replacements: Map<string, string>): Type {
         let rt: Map<string, Type> = new Map<string, Type>();
         this.elements.forEach((val: Type, key: string) => {
@@ -302,7 +394,7 @@ export class RecordType extends Type {
         return res;
     }
 
-    prettyPrint(): string {
+    toString(): string {
         let isTuple = true;
         for (let i = 1; i <= this.elements.size; ++i) {
             if (!this.elements.has('' + i)) {
@@ -314,20 +406,19 @@ export class RecordType extends Type {
             if (this.elements.size === 0) {
                 return 'unit';
             }
-            let res: string = '(';
+            let res: string = '';
             for (let i = 1; i <= this.elements.size; ++i) {
                 if (i > 1) {
                     res += ' * ';
                 }
                 let sub = this.elements.get('' + i);
-                if (sub !== undefined) {
-                    res += sub.prettyPrint();
+                if (sub instanceof FunctionType) {
+                    res += '(' + sub + ')';
                 } else {
-                    throw new InternalInterpreterError(-1,
-                        'How did we loose this value? It was there before. I promise…');
+                    res += sub;
                 }
             }
-            return res + ')';
+            return res + '';
         }
 
         // TODO: print as Tuple if possible
@@ -339,7 +430,7 @@ export class RecordType extends Type {
             } else {
                 first = false;
             }
-            result += key + ': ' + type.prettyPrint();
+            result += key + ': ' + type;
         });
         if (!this.complete) {
             if (!first) {
@@ -392,9 +483,9 @@ export class FunctionType extends Type {
         super();
     }
 
-    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
-        return new FunctionType(this.parameterType.instantiate(state, tyVarBnd),
-            this.returnType.instantiate(state, tyVarBnd),
+    instantiate(state: State, tyVarBnd: Map<string, Type>, seen: Set<string> = new Set<string>()): Type {
+        return new FunctionType(this.parameterType.instantiate(state, tyVarBnd, seen),
+            this.returnType.instantiate(state, tyVarBnd, seen),
             this.position);
     }
 
@@ -430,6 +521,13 @@ export class FunctionType extends Type {
         return res;
     }
 
+    getOrderedTypeVariables(): string[] {
+        let res: string[] = [];
+        res = res.concat(this.parameterType.getOrderedTypeVariables());
+        res = res.concat(this.returnType.getOrderedTypeVariables());
+        return res;
+    }
+
     replaceTypeVariables(replacements: Map<string, string>): Type {
         let res = this.parameterType.replaceTypeVariables(replacements);
         let res2 = this.returnType.replaceTypeVariables(replacements);
@@ -440,13 +538,13 @@ export class FunctionType extends Type {
         return false;
     }
 
-    prettyPrint(): string {
+    toString(): string {
         if (this.parameterType instanceof FunctionType) {
-            return '(' + this.parameterType.prettyPrint() + ')'
-                + ' -> ' + this.returnType.prettyPrint();
+            return '(' + this.parameterType + ')'
+                + ' -> ' + this.returnType;
         } else {
-            return this.parameterType.prettyPrint()
-                + ' -> ' + this.returnType.prettyPrint();
+            return this.parameterType
+                + ' -> ' + this.returnType;
         }
     }
 
@@ -473,19 +571,19 @@ export class CustomType extends Type {
         super();
     }
 
-    instantiate(state: State, tyVarBnd: Map<string, Type>): Type {
+    instantiate(state: State, tyVarBnd: Map<string, Type>, seen: Set<string> = new Set<string>()): Type {
         let tp = state.getStaticType(this.name);
         if (tp !== undefined && tp.type instanceof FunctionType) {
             try {
                 let mt = this.merge(state, tyVarBnd,  (<FunctionType> tp.type).parameterType, true);
-                return (<FunctionType> tp.type).returnType.instantiate(state, mt[1]);
+                return (<FunctionType> tp.type).returnType.instantiate(state, mt[1], seen);
             } catch (e) {
                 if (!(e instanceof Array)) {
                     throw e;
                 }
                 throw new ElaborationError(this.position,
-                    'Instantiating "' + this.prettyPrint() + '" failed:\n'
-                    + 'Cannot merge "' + e[1].prettyPrint() + '" and "' + e[2].prettyPrint()
+                    'Instantiating "' + this + '" failed:\n'
+                    + 'Cannot merge "' + e[1] + '" and "' + e[2]
                     + '" (' + e[0] + ').');
             }
         } else if (tp === undefined) {
@@ -494,7 +592,7 @@ export class CustomType extends Type {
 
         let res: Type[] = [];
         for (let i = 0; i < this.typeArguments.length; ++i) {
-            res.push(this.typeArguments[i].instantiate(state, tyVarBnd));
+            res.push(this.typeArguments[i].instantiate(state, tyVarBnd, seen));
         }
         return new CustomType(this.name, res, this.position);
     }
@@ -558,6 +656,14 @@ export class CustomType extends Type {
         return res;
     }
 
+    getOrderedTypeVariables(): string[] {
+        let res: string[] = [];
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            res = res.concat(this.typeArguments[i].getOrderedTypeVariables());
+        }
+        return res;
+    }
+
     replaceTypeVariables(replacements: Map<string, string> = new Map<string, string>()): Type {
         let rt: Type[] = [];
 
@@ -576,7 +682,7 @@ export class CustomType extends Type {
         return true;
     }
 
-    prettyPrint(): string {
+    toString(): string {
         let result: string = '';
         if (this.typeArguments.length > 1) {
             result += '(';
@@ -585,7 +691,7 @@ export class CustomType extends Type {
             if (i > 0) {
                 result += ', ';
             }
-            result += this.typeArguments[i].prettyPrint();
+            result += this.typeArguments[i];
         }
         if (this.typeArguments.length > 1) {
             result += ')';
@@ -628,13 +734,13 @@ export class TupleType extends Type {
         super();
     }
 
-    prettyPrint(): string {
+    toString(): string {
         let result: string = '(';
         for (let i: number = 0; i < this.elements.length; ++i) {
             if (i > 0) {
                 result += ' * ';
             }
-            result += this.elements[i].prettyPrint();
+            result += this.elements[i];
         }
         return result + ')';
     }

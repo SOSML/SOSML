@@ -8,7 +8,7 @@ import { int, char, IdentifierToken } from './tokens';
 import { Match } from './expressions';
 
 export abstract class Value {
-    abstract prettyPrint(state: State|undefined|undefined): string;
+    abstract toString(state: State|undefined|undefined): string;
     equals(other: Value): boolean {
         throw new InternalInterpreterError(-1,
             'Tried comparing incomparable things.');
@@ -24,12 +24,12 @@ export class ReferenceValue extends Value {
         return this.address === other.address;
     }
 
-    prettyPrint(state: State|undefined) {
+    toString(state: State|undefined) {
         if (state === undefined) {
             return '$' + this.address;
         } else {
             if (state.getCell(this.address) !== undefined) {
-                return 'ref ' + (<Value> state.getCell(this.address)).prettyPrint(state);
+                return 'ref ' + (<Value> state.getCell(this.address)).toString(state);
             } else {
                 throw new EvaluationError(-1, 'Ouch, you may not de-reference "$'
                     + this.address + '".');
@@ -47,7 +47,7 @@ export class BoolValue extends Value {
         return this.value === other.value;
     }
 
-    prettyPrint(state: State|undefined) {
+    toString(state: State|undefined) {
         if (this.value) {
             return 'true';
         } else {
@@ -61,8 +61,8 @@ export class CharValue extends Value {
         super();
     }
 
-    prettyPrint(state: State|undefined): string {
-        return '#' + new StringValue(this.value).prettyPrint(state);
+    toString(state: State|undefined): string {
+        return '#' + new StringValue(this.value).toString(state);
     }
 
     compareTo(other: CharValue): number {
@@ -113,7 +113,7 @@ export class StringValue extends Value {
         super();
     }
 
-    prettyPrint(state: State|undefined): string {
+    toString(state: State|undefined): string {
         let pretty = '';
         for (let chr of this.value) {
             switch (chr) {
@@ -175,7 +175,7 @@ export class Word extends Value {
         super();
     }
 
-    prettyPrint(state: State|undefined): string {
+    toString(state: State|undefined): string {
         return '' + this.value;
     }
 
@@ -209,7 +209,7 @@ export class Integer extends Value {
         super();
     }
 
-    prettyPrint(state: State|undefined): string {
+    toString(state: State|undefined): string {
         return '' + this.value;
     }
 
@@ -245,7 +245,7 @@ export class Real extends Value {
         super();
     }
 
-    prettyPrint(state: State|undefined): string {
+    toString(state: State|undefined): string {
         let str = '' + this.value;
         if (str.search(/\./) === -1) {
             str += '.0';
@@ -301,7 +301,7 @@ export class RecordValue extends Value {
         super();
     }
 
-    prettyPrint(state: State|undefined): string {
+    toString(state: State|undefined): string {
         let isTuple = true;
         for (let i = 1; i <= this.entries.size; ++i) {
             if (!this.entries.has('' + i)) {
@@ -317,7 +317,7 @@ export class RecordValue extends Value {
                 }
                 let sub = this.entries.get('' + i);
                 if (sub !== undefined) {
-                    res += sub.prettyPrint(state);
+                    res += sub.toString(state);
                 } else {
                     throw new InternalInterpreterError(-1,
                         'How did we loose this value? It was there before. I promise…');
@@ -334,7 +334,7 @@ export class RecordValue extends Value {
             } else {
                 first = false;
             }
-            result += key + ' = ' + value.prettyPrint(state);
+            result += key + ' = ' + value.toString(state);
         });
         return result + ' }';
     }
@@ -388,7 +388,7 @@ export class FunctionValue extends Value {
         super();
     }
 
-    prettyPrint(state: State|undefined): string {
+    toString(state: State|undefined): string {
         return 'fn';
     }
 
@@ -415,8 +415,8 @@ export class FunctionValue extends Value {
     }
 
     equals(other: Value): boolean {
-        throw new InternalInterpreterError(-1, 'You simply cannot compare "' + this.prettyPrint(undefined)
-            + '" and "' + other.prettyPrint(undefined) + '".');
+        throw new InternalInterpreterError(-1, 'You simply cannot compare "' + this.toString(undefined)
+            + '" and "' + other.toString(undefined) + '".');
     }
 }
 
@@ -428,7 +428,7 @@ export class ConstructedValue extends Value {
         super();
     }
 
-    prettyPrint(state: State|undefined): string {
+    toString(state: State|undefined): string {
         if (this.constructorName === '::') {
             let res = '[';
 
@@ -446,7 +446,7 @@ export class ConstructedValue extends Value {
                         if (list !== this) {
                             res += ', ';
                         }
-                        res += a1.prettyPrint(state);
+                        res += a1.toString(state);
                         list = a2;
                     } else {
                         throw new InternalInterpreterError(-1,
@@ -471,12 +471,12 @@ export class ConstructedValue extends Value {
                 let left = this.argument.getValue('1');
                 let right = this.argument.getValue('2');
                 if (left instanceof Value && right instanceof Value) {
-                    let res: string = '(' + left.prettyPrint(state);
+                    let res: string = '(' + left.toString(state);
                     res += ' ' + this.constructorName;
                     if (this.id > 0) {
                         res += '/' + this.id;
                     }
-                    res += ' ' + right.prettyPrint(state);
+                    res += ' ' + right.toString(state);
                     return res + ')';
                 }
             }
@@ -487,7 +487,7 @@ export class ConstructedValue extends Value {
             result += '/' + this.id;
         }
         if (this.argument) {
-            result += ' ' + this.argument.prettyPrint(state);
+            result += ' ' + this.argument.toString(state);
         }
         return result;
     }
@@ -523,13 +523,13 @@ export class ExceptionValue extends Value {
         super();
     }
 
-    prettyPrint(state: State|undefined): string {
+    toString(state: State|undefined): string {
         let result: string = this.constructorName;
         if (this.id > 0) {
             result += '/' + this.id;
         }
         if (this.argument) {
-            result += ' ' + this.argument.prettyPrint(state);
+            result += ' ' + this.argument.toString(state);
         }
         return result;
     }
@@ -565,7 +565,7 @@ export class PredefinedFunction extends Value {
         super();
     }
 
-    prettyPrint(state: State|undefined): string {
+    toString(state: State|undefined): string {
         return 'fn';
     }
 
@@ -595,7 +595,7 @@ export class ValueConstructor extends Value {
         return new ConstructedValue(this.constructorName, parameter, this.id);
     }
 
-    prettyPrint(state: State|undefined) {
+    toString(state: State|undefined) {
         let result = this.constructorName;
         if (this.id > 0) {
             result += '/' + this.id;
@@ -622,7 +622,7 @@ export class ExceptionConstructor extends Value {
         return new ExceptionValue(this.exceptionName, parameter, this.id);
     }
 
-    prettyPrint(state: State|undefined) {
+    toString(state: State|undefined) {
         let result = this.exceptionName;
         if (this.id > 0) {
             result += '/' + this.id;

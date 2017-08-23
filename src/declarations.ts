@@ -1,7 +1,7 @@
 import { Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
          Pattern, TypedExpression, Tuple, PatternExpression } from './expressions';
 import { IdentifierToken, Token } from './tokens';
-import { Type, TypeVariable, FunctionType, CustomType } from './types';
+import { Type, TypeVariable, FunctionType, CustomType, TypeVariableBind } from './types';
 import { State, IdentifierStatus } from './state';
 import { InternalInterpreterError, ElaborationError,
          EvaluationError, FeatureDisabledError, Warning } from './errors';
@@ -10,7 +10,8 @@ import { Value, ValueConstructor, ExceptionConstructor, ExceptionValue,
 
 export abstract class Declaration {
     id: number;
-    elaborate(state: State): [State, Warning[]] {
+    elaborate(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(), nextName: string = '\'t0'):
+        [State, Warning[], Map<string, Type>, string] {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
@@ -19,7 +20,7 @@ export abstract class Declaration {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
@@ -47,11 +48,14 @@ export class ValueDeclaration extends Declaration {
         return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd, this.id);
     }
 
-    elaborate(state: State): [State, Warning[]] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         let result: [string, Type][] = [];
+        let isTopLevel = (tyVarBnd === undefined || tyVarBnd.size === 0);
 
         let isRec = false;
         let warns: Warning[] = [];
+        let bnds = tyVarBnd;
         let i = 0;
         for (; i < this.valueBinding.length; ++i) {
             if (this.valueBinding[i].isRecursive) {
@@ -59,14 +63,17 @@ export class ValueDeclaration extends Declaration {
 
                 for (let j = i; j < this.valueBinding.length; ++j) {
                     let r = (<ValueIdentifier> this.valueBinding[j].pattern).name.getText();
-                    result.push([r, new FunctionType(new TypeVariable('\'a'), new TypeVariable('\'b'))]);
+                    result.push([r, new TypeVariableBind('\'a', new TypeVariableBind('\'b',
+                        new FunctionType(new TypeVariable('\'a'), new TypeVariable('\'b'))))]);
                 }
 
                 break;
             }
-            let val = this.valueBinding[i].getType(state);
+            let val = this.valueBinding[i].getType(this.typeVariableSequence, state, bnds, nextName, isTopLevel);
 
             warns = warns.concat(val[1]);
+            bnds = val[2];
+            nextName = val[3];
 
             for (let j = 0; j < (<[string, Type][]> val[0]).length; ++j) {
                 result.push((<[string, Type][]> val[0])[j]);
@@ -77,15 +84,19 @@ export class ValueDeclaration extends Declaration {
             state.setStaticValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
         }
 
-        for (let j = i; j < this.valueBinding.length; ++j) {
-            let val = this.valueBinding[i].getType(state);
-            warns = warns.concat(val[1]);
-            for (let k = 0; k < val[0].length; ++k) {
-                state.setStaticValue(val[0][k][0], val[0][k][1], IdentifierStatus.VALUE_VARIABLE);
+        for (let l = 0; l < 2; ++l) {
+            for (let j = i; j < this.valueBinding.length; ++j) {
+                let val = this.valueBinding[i].getType(this.typeVariableSequence, state, bnds, nextName, isTopLevel);
+                warns = warns.concat(val[1]);
+                bnds = val[2];
+                nextName = val[3];
+                for (let k = 0; k < val[0].length; ++k) {
+                    state.setStaticValue(val[0][k][0], val[0][k][1], IdentifierStatus.VALUE_VARIABLE);
+                }
             }
         }
 
-        return [state, warns];
+        return [state, warns, bnds, nextName];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
@@ -137,14 +148,14 @@ export class ValueDeclaration extends Declaration {
         return [state, false, undefined, warns];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         // TODO
         let res = 'val <stuff>';
         for (let i = 0; i < this.valueBinding.length; ++i) {
             if (i > 0) {
                 res += ' and';
             }
-            res += ' ' + this.valueBinding[i].prettyPrint(indentation, oneLine);
+            res += ' ' + this.valueBinding[i].toString(indentation, oneLine);
         }
         return res += ';';
     }
@@ -167,7 +178,8 @@ export class TypeDeclaration extends Declaration {
         return new TypeDeclaration(this.position, bnds, this.id);
     }
 
-    elaborate(state: State): [State, Warning[]] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         for (let i = 0; i < this.typeBinding.length; ++i) {
             state.setStaticType(this.typeBinding[i].name.getText(),
                 new FunctionType(new CustomType(this.typeBinding[i].name.getText(),
@@ -176,7 +188,7 @@ export class TypeDeclaration extends Declaration {
                 this.typeBinding[i].typeVariableSequence.length);
         }
 
-        return [state, []];
+        return [state, [], tyVarBnd, nextName];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
@@ -186,7 +198,7 @@ export class TypeDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         // TODO
         let res = 'type';
         for (let i = 0; i < this.typeBinding.length; ++i) {
@@ -194,7 +206,7 @@ export class TypeDeclaration extends Declaration {
                 res += ' and';
             }
             res += ' <stuff> ' + this.typeBinding[i].name.getText();
-            res += ' = ' + this.typeBinding[i].type.prettyPrint();
+            res += ' = ' + this.typeBinding[i].type.toString();
         }
         return res + ';';
     }
@@ -241,7 +253,8 @@ export class DatatypeDeclaration extends Declaration {
         /* } */
     }
 
-    elaborate(state: State): [State, Warning[]] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         // I'm assuming the withtype is empty
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
             let res = this.datatypeBinding[i].getType(state);
@@ -251,13 +264,13 @@ export class DatatypeDeclaration extends Declaration {
                     throw new ElaborationError(this.position, 'You simply cannot rebind "'
                         + res[0][j][0] + '".');
                 }
-                state.setStaticValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
+                state.setStaticValue(res[0][j][0], res[0][j][1].normalize(), IdentifierStatus.VALUE_CONSTRUCTOR);
             }
             // TODO id
             state.setStaticType(res[2][0], res[1], res[2][1], this.datatypeBinding[i].typeVariableSequence.length);
         }
 
-        return [state, []];
+        return [state, [], tyVarBnd, nextName];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
@@ -278,7 +291,7 @@ export class DatatypeDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = 'datatype';
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
             if (i > 0) {
@@ -291,7 +304,7 @@ export class DatatypeDeclaration extends Declaration {
                 }
                 res += ' ' + this.datatypeBinding[i].type[j][0].getText();
                 if (this.datatypeBinding[i].type[j][1] !== undefined) {
-                    res += ' of ' + (<Type> this.datatypeBinding[i].type[j][1]).prettyPrint();
+                    res += ' of ' + (<Type> this.datatypeBinding[i].type[j][1]).toString();
                 }
             }
         }
@@ -310,14 +323,15 @@ export class DatatypeReplication extends Declaration {
         return this;
     }
 
-    elaborate(state: State): [State, Warning[]] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         let res = state.getStaticType(this.oldname.getText());
         if (res === undefined) {
             throw new ElaborationError(this.position,
                 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
         }
         state.setStaticType(this.name.getText(), res.type, res.constructors, res.arity);
-        return [state, []];
+        return [state, [], tyVarBnd, nextName];
    }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
@@ -330,7 +344,7 @@ export class DatatypeReplication extends Declaration {
         return [state, false, undefined, []];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         return 'datatype ' + this.name.getText() + ' = datatype ' + this.oldname.getText() + ';';
     }
 }
@@ -345,16 +359,17 @@ export class ExceptionDeclaration extends Declaration {
         return this;
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         // TODO
         throw new InternalInterpreterError(-1, 'Not yet implemented.');
     }
 
-    elaborate(state: State): [State, Warning[]] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         for (let i = 0; i < this.bindings.length; ++i) {
             state = this.bindings[i].elaborate(state);
         }
-        return [state, []];
+        return [state, [], tyVarBnd, nextName];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
@@ -380,15 +395,17 @@ export class LocalDeclaration extends Declaration {
         return new LocalDeclaration(this.position, this.declaration.simplify(), this.body.simplify(), this.id);
     }
 
-    elaborate(state: State): [State, Warning[]] {
-        let nstate: [State, Warning[]] = [state.getNestedState(state.id), []];
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
+        let nstate: [State, Warning[], Map<string, Type>, string]
+            = [state.getNestedState(state.id), [], tyVarBnd, nextName];
         // TODO Warnings
-        let res = this.declaration.elaborate(nstate[0]);
+        let res = this.declaration.elaborate(nstate[0], tyVarBnd, nextName);
         let input = res[0].getNestedState(state.id);
-        nstate = this.body.elaborate(input);
+        nstate = this.body.elaborate(input, res[2], res[3]);
         // Forget all local definitions
         input.parent = state;
-        return [nstate[0], res[1].concat(nstate[1])];
+        return [nstate[0], res[1].concat(nstate[1]), nstate[2], nstate[3]];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
@@ -413,9 +430,9 @@ export class LocalDeclaration extends Declaration {
         return nres;
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
-        let res = 'local ' + this.declaration.prettyPrint(indentation, oneLine);
-        res += ' in ' + this.body.prettyPrint(indentation, oneLine);
+    toString(indentation: number, oneLine: boolean): string {
+        let res = 'local ' + this.declaration.toString(indentation, oneLine);
+        res += ' in ' + this.body.toString(indentation, oneLine);
         res += ' end;';
         return res;
     }
@@ -431,7 +448,8 @@ export class OpenDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State): [State, Warning[]] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         // TODO Yeah, if we had structs, we could actually implement this
         throw new InternalInterpreterError(-1,
             'Yeah, you better wait a little before trying this again.');
@@ -443,7 +461,7 @@ export class OpenDeclaration extends Declaration {
             'Yeah, you better wait a little before trying this again.');
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = 'open';
         for (let i = 0; i < this.names.length; ++i) {
             res += ' ' + this.names[i].getText();
@@ -462,15 +480,16 @@ export class EmptyDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State): [State, Warning[]] {
-        return [state, []];
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
+        return [state, [], tyVarBnd, nextName];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]]  {
         return [state, false, undefined, []];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         return ' ;';
     }
 }
@@ -489,14 +508,20 @@ export class SequentialDeclaration extends Declaration {
         return new SequentialDeclaration(this.position, decls, this.id);
     }
 
-    elaborate(state: State): [State, Warning[]] {
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
         let warns: Warning[] = [];
+        let bnds = tyVarBnd;
+        let str = nextName;
         for (let i = 0; i < this.declarations.length; ++i) {
-            let res = this.declarations[i].elaborate(state.getNestedState(this.declarations[i].id));
+            let res = this.declarations[i].elaborate(
+                state.getNestedState(this.declarations[i].id), tyVarBnd, str);
             state = res[0];
             warns = warns.concat(res[1]);
+            bnds = res[2];
+            str = res[3];
         }
-        return [state, warns];
+        return [state, warns, bnds, str];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
@@ -514,13 +539,13 @@ export class SequentialDeclaration extends Declaration {
         return [state, false, undefined, warns];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = '';
         for (let i = 0; i < this.declarations.length; ++i) {
             if (i > 0) {
                 res += ' ';
             }
-            res += this.declarations[i].prettyPrint(indentation, oneLine);
+            res += this.declarations[i].toString(indentation, oneLine);
         }
         return res;
     }
@@ -597,8 +622,9 @@ export class InfixDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State): [State, Warning[]] {
-        return [state, []];
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
+        return [state, [], tyVarBnd, nextName];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]]  {
@@ -608,7 +634,7 @@ export class InfixDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = 'infix';
         res += ' ' + this.precedence;
         for (let i = 0; i < this.operators.length; ++i) {
@@ -629,8 +655,9 @@ export class InfixRDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State): [State, Warning[]] {
-        return [state, []];
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
+        return [state, [], tyVarBnd, nextName];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]]  {
@@ -640,7 +667,7 @@ export class InfixRDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = 'infixr';
         res += ' ' + this.precedence;
         for (let i = 0; i < this.operators.length; ++i) {
@@ -661,8 +688,9 @@ export class NonfixDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State): [State, Warning[]] {
-        return [state, []];
+    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
+        [State, Warning[], Map<string, Type>, string] {
+        return [state, [], tyVarBnd, nextName];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]]  {
@@ -672,7 +700,7 @@ export class NonfixDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = 'nonfix';
         for (let i = 0; i < this.operators.length; ++i) {
             res += ' ' + this.operators[i].getText();
@@ -689,31 +717,62 @@ export class ValueBinding {
                 public pattern: Pattern, public expression: Expression) {
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = '';
         if (this.isRecursive) {
             res += 'rec ';
         }
-        res += this.pattern.prettyPrint(indentation, oneLine);
+        res += this.pattern.toString(indentation, oneLine);
         res += ' = ';
-        return res + this.expression.prettyPrint(indentation, oneLine);
+        return res + this.expression.toString(indentation, oneLine);
     }
 
-    getType(state: State): [[string, Type][], Warning[]] {
+    getType(tyVarSeq: TypeVariable[], state: State, tyVarBnd: Map<string, Type>, nextName: string, isTopLevel: boolean):
+    [[string, Type][], Warning[], Map<string, Type>, string] {
         let nstate = state.getNestedState(state.id);
-        let tp = this.expression.getType(nstate);
+        let tp = this.expression.getType(nstate, tyVarBnd, nextName);
         let res = this.pattern.matchType(nstate, tp[4], tp[0]);
 
         if (res === undefined) {
             throw new ElaborationError(this.position,
-                'Type clash. An expression of type "' + tp[0].prettyPrint()
-                + '" cannot be assigned to "' + res[1].prettyPrint() + '".');
+                'Type clash. An expression of type "' + tp[0].toString()
+                + '" cannot be assigned to "' + res[1].toString() + '".');
         }
+
+        let ntys: TypeVariable[] = [];
+        for (let i = 0; i < tyVarSeq.length; ++i) {
+            let nt = tyVarSeq[i].instantiate(state, res[2]);
+            if (!(nt instanceof TypeVariable)) {
+                throw new ElaborationError(this.position,
+                    'Type clash. An expression of explicit type "' + tyVarSeq[i]
+                    + '" cannot have type "' + nt + '".');
+            }
+            ntys.push(<TypeVariable> nt);
+        }
+
 
         for (let i = 0; i < res[0].length; ++i) {
             res[0][i][1] = res[0][i][1].instantiate(state, res[2]);
+            let tv = res[0][i][1].getTypeVariables();
+            for (let j = ntys.length - 1; j >= 0; --j) {
+                if (tv.has(ntys[j].name)) {
+                    res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1]);
+                }
+            }
+            if (isTopLevel) {
+                // Toplevel so bind all remaining tyvars
+                ntys = [];
+                res[0][i][1].getTypeVariables().forEach((val: string) => {
+                    ntys.push(new TypeVariable(val));
+                });
+                for (let j = ntys.length - 1; j >= 0; --j) {
+                    res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1]);
+                }
+            }
         }
-        return [res[0], tp[1]];
+
+
+        return [res[0], tp[1], res[2], tp[2]];
     }
 
     // Returns [ VE | undef, Excep | undef, Warning[]]
@@ -783,7 +842,7 @@ export class FunctionValueBinding {
         return new ValueBinding(this.position, true, this.name, exp.simplify());
     }
 
-    prettyPrint(indentation: number, oneLine: boolean): string {
+    toString(indentation: number, oneLine: boolean): string {
         let res = '';
         for (let i = 0; i < this.parameters.length; ++i) {
             if (i > 0) {
@@ -791,12 +850,12 @@ export class FunctionValueBinding {
             }
             res += this.name.name.getText();
             for (let j = 0; j < this.parameters[i][0].length; ++j) {
-                res += ' ' + this.parameters[i][0][j].prettyPrint(indentation, oneLine);
+                res += ' ' + this.parameters[i][0][j].toString(indentation, oneLine);
             }
             if (this.parameters[i][1] !== undefined) {
-                res += ': ' + (<Type> this.parameters[i][1]).prettyPrint();
+                res += ': ' + (<Type> this.parameters[i][1]).toString();
             }
-            res += ' = ' + this.parameters[i][2].prettyPrint(indentation, oneLine);
+            res += ' = ' + this.parameters[i][2].toString(indentation, oneLine);
         }
         return res;
     }
@@ -887,10 +946,10 @@ export class DirectExceptionBinding implements ExceptionBinding {
             // }
 
             state.setStaticValue(this.name.getText(),
-                new FunctionType(tp, new CustomType('exn')),
+                new FunctionType(tp, new CustomType('exn')).normalize(),
                 IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         } else {
-            state.setStaticValue(this.name.getText(), new CustomType('exn'),
+            state.setStaticValue(this.name.getText(), new CustomType('exn').normalize(),
                 IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         }
         return state;
@@ -927,9 +986,9 @@ export class ExceptionAlias implements ExceptionBinding {
                 + this.oldname.getText() + '".');
         } else if (res[1] !== IdentifierStatus.EXCEPTION_CONSTRUCTOR) {
             throw new ElaborationError(this.position, 'You cannot transform "'
-                + res[0].prettyPrint() + '" into an exception.');
+                + res[0].toString() + '" into an exception.');
         }
-        state.setStaticValue(this.name.getText(), res[0], IdentifierStatus.EXCEPTION_CONSTRUCTOR);
+        state.setStaticValue(this.name.getText(), res[0].normalize(), IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         return state;
 
     }
@@ -941,7 +1000,7 @@ export class ExceptionAlias implements ExceptionBinding {
                 + this.oldname.getText() + '".');
         } else if (res[1] !== IdentifierStatus.EXCEPTION_CONSTRUCTOR) {
             throw new EvaluationError(this.position, 'You cannot transform "'
-                + res[0].prettyPrint(state) + '" into an exception.');
+                + res[0].toString(state) + '" into an exception.');
         }
         state.setDynamicValue(this.name.getText(), res[0], IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         return [state, false, undefined];
