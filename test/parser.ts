@@ -3110,7 +3110,7 @@ it("module language - structure", () => {
             ])
         ], 1);
     );
-
+    // TODO test that dec in let can only be strdec. Especially in combination with local
     expect(parse("structure a = let structure a = struct end in x.x end;")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Modu.StructureDeclaration(0, [
@@ -3157,6 +3157,12 @@ it("module language - structure", () => {
         ], 1);
     );
 
+    expect(parse("structure a:b = c;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.StructureDeclaration(0, [])
+        ], 1);
+    );
+
     expect(parse("structure a = b:>c;")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Modu.StructureDeclaration(0, [
@@ -3172,6 +3178,12 @@ it("module language - structure", () => {
                     )
                 )
             ])
+        ], 1);
+    );
+
+    expect(parse("structure a:>b = c;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.StructureDeclaration(0, [])
         ], 1);
     );
 
@@ -3839,7 +3851,4 @@ it("module language - spec", () => {
             ])
         ], 1)
     );
-});
-
-it("sample", () => {
 });
