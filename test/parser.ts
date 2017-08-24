@@ -3174,6 +3174,22 @@ it("module language - structure", () => {
             ])
         ], 1);
     );
+
+    expect(parse("structure a = b (c);")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.StructureDeclaration(0, [
+                new Modu.StructureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a",10),
+                    new Modu.FunctorApplication(14,
+                        new Token.AlphanumericIdentifierToken("b", 14),
+                        new Modu.StructureIdentifier(17,
+                            new Token.AlphanumericIdentifierToken("c", 17)
+                        )
+                    )
+                )
+            ])
+        ], 1);
+    );
 });
 
 it("module language - signature", () => {
@@ -3652,16 +3668,178 @@ it("module language - spec", () => {
 
     expect(parse("signature a = sig structure fish:blub end;")).toEqualWithType(
         spec_tester([
-            new Modu.StructureSpecification(18)
+            new Modu.StructureSpecification(18,[
+                [
+                    new Token.AlphanumericIdentifierToken("fish", 28),
+                    new Modu.SignatureIdentifier(33,
+                        new Token.AlphanumericIdentifierToken("blub", 33)
+                    )
+
+                ]
+            ])
         ])
     );
 
     expect(parse("signature a = sig structure fish:blub and cow:moo end;")).toEqualWithType(
         spec_tester([
-            new Modu.StructureSpecification(18)
+            new Modu.StructureSpecification(18,[
+                [
+                    new Token.AlphanumericIdentifierToken("fish", 28),
+                    new Modu.SignatureIdentifier(33,
+                        new Token.AlphanumericIdentifierToken("blub", 33)
+                    )
+                ],
+                [
+                    new Token.AlphanumericIdentifierToken("cow", 42),
+                    new Modu.SignatureIdentifier(46,
+                        new Token.AlphanumericIdentifierToken("moo", 46)
+                    )
+                ],
+            ])
         ])
+    );
+
+    expect(parse("signature a = sig include a end;")).toEqualWithType(
+        spec_tester([
+            new Modu.IncludeSpecification(18,
+                new Modu.SignatureIdentifier(26,
+                    new Token.AlphanumericIdentifierToken("a", 26)
+                )
+            )
+        ])
+    );
+
+    expect(parse("signature a = sig include b ; val b:c end;")).toEqualWithType(
+        spec_tester([
+            new Modu.IncludeSpecification(18,
+                new Modu.SignatureIdentifier(26,
+                    new Token.AlphanumericIdentifierToken("b", 26)
+                )
+            ),
+            new Modu.ValueSpecification(30, [
+                [
+                    new Token.AlphanumericIdentifierToken("b", 34),
+                    new Type.CustomType("c", [], 36)
+                ]
+            ])
+        ])
+    );
+
+    let multi_spec: string = 'signature a = sig val b:c type d eqtype e datatype f = g exception h structure i:m include j val k:l end;';
+    expect(parse(multi_spec)).toEqualWithType(
+        spec_tester([
+            new Modu.ValueSpecification(18,[[
+                new Token.AlphanumericIdentifierToken("b", 22),
+                new Type.CustomType("c", [], 24)
+            ]]),
+            new Modu.TypeSpecification(26, [[
+                [],
+                new Token.AlphanumericIdentifierToken("d", 31)
+            ]]),
+            new Modu.EqualityTypeSpecification(33, [[
+                [],
+                new Token.AlphanumericIdentifierToken("e", 40)
+            ]]),
+            new Modu.DatatypeSpecification(42, [[
+                [],
+                new Token.AlphanumericIdentifierToken("f", 51),
+                [[
+                    new Token.AlphanumericIdentifierToken("g", 55),
+                    undefined
+                ]]
+            ]]),
+            new Modu.ExceptionSpecification(57, [[
+                new Token.AlphanumericIdentifierToken("h", 67),
+                undefined
+            ]]),
+            new Modu.StructureSpecification(69, [[
+                new Token.AlphanumericIdentifierToken("i", 79),
+                new Modu.SignatureIdentifier(81,
+                    new Token.AlphanumericIdentifierToken("m", 81)
+                )
+            ]]),
+            new Modu.IncludeSpecification(83,
+                new Modu.SignatureIdentifier(91,
+                    new Token.AlphanumericIdentifierToken("j", 91)
+                )
+            ),
+            new Modu.ValueSpecification(93, [[
+                new Token.AlphanumericIdentifierToken("k", 97),
+                new Type.CustomType("l", [], 99)
+            ]])
+        ])
+    );
+    let multi_spec: string = 'signature a = sig val b:c;type d;eqtype e;datatype f = g;exception h;structure i:m;include j;val k:l end;';
+    expect(parse(multi_spec)).toEqualWithType(
+        spec_tester([
+            new Modu.ValueSpecification(18,[[
+                new Token.AlphanumericIdentifierToken("b", 22),
+                new Type.CustomType("c", [], 24)
+            ]]),
+            new Modu.TypeSpecification(26, [[
+                [],
+                new Token.AlphanumericIdentifierToken("d", 31)
+            ]]),
+            new Modu.EqualityTypeSpecification(33, [[
+                [],
+                new Token.AlphanumericIdentifierToken("e", 40)
+            ]]),
+            new Modu.DatatypeSpecification(42, [[
+                [],
+                new Token.AlphanumericIdentifierToken("f", 51),
+                [[
+                    new Token.AlphanumericIdentifierToken("g", 55),
+                    undefined
+                ]]
+            ]]),
+            new Modu.ExceptionSpecification(57, [[
+                new Token.AlphanumericIdentifierToken("h", 67),
+                undefined
+            ]]),
+            new Modu.StructureSpecification(69, [[
+                new Token.AlphanumericIdentifierToken("i", 79),
+                new Modu.SignatureIdentifier(81,
+                    new Token.AlphanumericIdentifierToken("m", 81)
+                )
+            ]]),
+            new Modu.IncludeSpecification(83,
+                new Modu.SignatureIdentifier(91,
+                    new Token.AlphanumericIdentifierToken("j", 91)
+                )
+            ),
+            new Modu.ValueSpecification(93, [[
+                new Token.AlphanumericIdentifierToken("k", 97),
+                new Type.CustomType("l", [], 99)
+            ]])
+        ])
+    );
+
+    expect(parse("signature a = sig val b:e sharing type c = d end;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.SignatureDeclaration(0, [
+                new Modu.SignatureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a", 10),
+                    new Modu.SignatureExpression(14,
+                        new Modu.SharingSpecification(18,
+                            new Modu.SequentialSpecification(18,[
+                                new Modu.ValueSpecification(18,[
+                                    [
+                                        new Token.AlphanumericIdentifierToken("b", 22),
+                                        new Type.CustomType("e", [], 24)
+                                    ]
+                                ])
+                            ]),
+                            [
+                                new Token.AlphanumericIdentifierToken("c", 39),
+                                new Token.AlphanumericIdentifierToken("d", 43)
+                            ]
+                        )
+                    )
+                )
+            ])
+        ], 1)
     );
 });
 
-it("module language - signature", () => {
+it("sample", () => {
 });
