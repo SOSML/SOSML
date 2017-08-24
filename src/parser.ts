@@ -20,7 +20,8 @@ import { FunctorDeclaration, StructureDeclaration, SignatureDeclaration, Functor
          Specification, SignatureIdentifier, SignatureExpression, ValueSpecification,
          TypeSpecification, EqualityTypeSpecification, DatatypeSpecification,
          DatatypeReplicationSpecification, ExceptionSpecification, StructureSpecification,
-         IncludeSpecification, EmptySpecification, SequentialSpecification, SharingSpecification } from './modules';
+         IncludeSpecification, EmptySpecification, SequentialSpecification, SharingSpecification,
+         Signature } from './modules';
 import { State } from './state';
 
 export class Parser {
@@ -562,7 +563,7 @@ export class Parser {
         return exp;
     }
 
-    parseSimpleSignatureExpression(): Expression {
+    parseSimpleSignatureExpression(): Expression & Signature {
         /*
          * sigexp ::= sig spec end              SignatureExpression
          *            sigid                     SignatureIdentifier
@@ -585,7 +586,7 @@ export class Parser {
         throw new ParserError('Expected a simple signature expression.', curTok.position);
     }
 
-    parseSignatureExpression(): Expression {
+    parseSignatureExpression(): Expression & Signature {
         /*
          * sigexp ::= sigexp where type tyvarseq longtycon = ty TypeRealisation(pos, exp, tyvar, ty)
          */
@@ -762,14 +763,14 @@ export class Parser {
 
         } else if (this.checkKeywordToken(curTok, 'structure')) {
             ++this.position;
-            let res: [IdentifierToken, Expression][] = [];
+            let res: [IdentifierToken, Expression & Signature][] = [];
 
             while (true) {
                 this.assertIdentifierToken(this.currentToken());
                 let tk = <IdentifierToken> this.currentToken();
                 ++this.position;
 
-                res.push([tk, this.parseStructureExpression()]);
+                res.push([tk, this.parseSignatureExpression()]);
 
                 if (this.checkKeywordToken(this.currentToken(), 'and')) {
                     ++this.position;

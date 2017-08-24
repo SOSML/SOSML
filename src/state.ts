@@ -10,9 +10,12 @@ export enum IdentifierStatus {
 }
 
 // maps id to [Value, rebindable, intermediate]
-type DynamicValueEnvironment = { [name: string]: [Value, IdentifierStatus] };
+export type DynamicValueEnvironment = { [name: string]: [Value, IdentifierStatus] };
+
+export type DynamicValueInterface = { [name: string]: IdentifierStatus };
+
 // maps id to [type, intermediate]
-type StaticValueEnvironment = { [name: string]: [Type, IdentifierStatus] | undefined };
+export type StaticValueEnvironment = { [name: string]: [Type, IdentifierStatus] | undefined };
 
 export class TypeInformation {
     // Every constructor also appears in the value environment,
@@ -22,9 +25,48 @@ export class TypeInformation {
 }
 
 // maps type name to constructor names
-type DynamicTypeEnvironment = { [name: string]: string[] };
+export type DynamicTypeEnvironment = { [name: string]: string[] };
+
+export type DynamicTypeInterface = { [name: string]: string[] };
+
 // maps type name to (Type, constructor name)
-type StaticTypeEnvironment = { [name: string]: TypeInformation };
+export type StaticTypeEnvironment = { [name: string]: TypeInformation };
+
+
+export type DynamicStructureEnvironment = { [name: string]: DynamicBasis };
+
+export type DynamicStructureInterface = { [name: string]: DynamicInterface };
+
+
+export type DynamicSignatureEnvironment = { [name: string]: DynamicInterface };
+
+
+export class DynamicInterface {
+    constructor(public typeInterface: DynamicTypeInterface,
+                public valueInterface: DynamicValueInterface,
+                public structureInterface: DynamicStructureInterface) {
+    }
+
+    extend(other: DynamicInterface): DynamicInterface {
+        for (let i in other.typeInterface) {
+            if (other.typeInterface.hasOwnProperty(i)) {
+                this.typeInterface[i] = other.typeInterface[i];
+            }
+        }
+        for (let i in other.valueInterface) {
+            if (other.valueInterface.hasOwnProperty(i)) {
+                this.valueInterface[i] = other.valueInterface[i];
+            }
+        }
+        for (let i in other.structureInterface) {
+            if (other.structureInterface.hasOwnProperty(i)) {
+                this.structureInterface[i] = other.structureInterface[i];
+            }
+        }
+
+        return this;
+    }
+}
 
 export class InfixStatus {
     constructor(public infix: boolean,
@@ -32,11 +74,13 @@ export class InfixStatus {
                 public rightAssociative: boolean = false) {}
 }
 
-type InfixEnvironment = { [name: string]: InfixStatus };
+export type InfixEnvironment = { [name: string]: InfixStatus };
 
 export class DynamicBasis {
     constructor(public typeEnvironment: DynamicTypeEnvironment,
-                public valueEnvironment: DynamicValueEnvironment) {
+                public valueEnvironment: DynamicValueEnvironment,
+                public structureEnvironment: DynamicStructureEnvironment,
+                public signatureEnvironment: DynamicSignatureEnvironment) {
     }
 
     getValue(name: string): [Value, IdentifierStatus] | undefined {
@@ -47,12 +91,28 @@ export class DynamicBasis {
         return this.typeEnvironment[name];
     }
 
+    getStructure(name: string): DynamicBasis | undefined {
+        return this.structureEnvironment[name];
+    }
+
+    getSignature(name: string): DynamicInterface | undefined {
+        return this.signatureEnvironment[name];
+    }
+
     setValue(name: string, value: Value, is: IdentifierStatus): void {
         this.valueEnvironment[name] = [value, is];
     }
 
     setType(name: string, type: string[]) {
         this.typeEnvironment[name] = type;
+    }
+
+    setStructure(name: string, structure: DynamicBasis) {
+        this.structureEnvironment[name] = structure;
+    }
+
+    setSignature(name: string, signature: DynamicInterface) {
+        this.signatureEnvironment[name] = signature;
     }
 }
 
@@ -148,7 +208,7 @@ export class State {
         }
         let res = new State(<number> newId, this,
             new StaticBasis({}, {}),
-            new DynamicBasis({}, {}),
+            new DynamicBasis({}, {}, {}, {}),
             [this.memory[0], {}]);
         return res;
     }
@@ -206,6 +266,24 @@ export class State {
             return result;
         } else {
             return this.parent.getDynamicType(name, idLimit);
+        }
+    }
+
+    getDynamicStructure(name: string, idLimit: number = 0): DynamicBasis | undefined {
+        let result = this.dynamicBasis.getStructure(name);
+        if (result !== undefined || this.parent === undefined || this.parent.id < idLimit) {
+            return result;
+        } else {
+            return this.parent.getDynamicStructure(name, idLimit);
+        }
+    }
+
+    getDynamicSignature(name: string, idLimit: number = 0): DynamicInterface | undefined {
+        let result = this.dynamicBasis.getSignature(name);
+        if (result !== undefined || this.parent === undefined || this.parent.id < idLimit) {
+            return result;
+        } else {
+            return this.parent.getDynamicSignature(name, idLimit);
         }
     }
 
@@ -303,6 +381,28 @@ export class State {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
             this.parent.setDynamicType(name, constructors, atId);
+        }
+    }
+
+    setDynamicStructure(name: string, structure: DynamicBasis, atId: number|undefined = undefined) {
+        if (atId === undefined || atId === this.id) {
+            this.dynamicBasis.setStructure(name, structure);
+            this.declaredIdentifiers.add(name);
+        } else if (atId > this.id || this.parent === undefined) {
+            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+        } else {
+            this.parent.setDynamicStructure(name, structure, atId);
+        }
+    }
+
+    setDynamicSignature(name: string, signature: DynamicInterface, atId: number|undefined = undefined) {
+        if (atId === undefined || atId === this.id) {
+            this.dynamicBasis.setSignature(name, signature);
+            this.declaredIdentifiers.add(name);
+        } else if (atId > this.id || this.parent === undefined) {
+            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+        } else {
+            this.parent.setDynamicSignature(name, signature, atId);
         }
     }
 

@@ -475,7 +475,9 @@ let initialState: State = new State(
                 return [new RecordValue(), false, warns];
             }), IdentifierStatus.VALUE_VARIABLE]
             // ref, :=, ! are implemented directly within evaluate.
-        }
+        },
+        {},
+        {}
     ),
     [ 0, {} ],
     {

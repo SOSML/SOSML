@@ -300,7 +300,7 @@ export class DatatypeDeclaration extends Declaration {
             res += ' ' + this.datatypeBinding[i].name.getText() + ' =';
             for (let j = 0; j < this.datatypeBinding[i].type.length; ++j) {
                 if (j > 0) {
-                    res += ' | ';
+                    res += ' |';
                 }
                 res += ' ' + this.datatypeBinding[i].type[j][0].getText();
                 if (this.datatypeBinding[i].type[j][1] !== undefined) {
@@ -308,7 +308,7 @@ export class DatatypeDeclaration extends Declaration {
                 }
             }
         }
-        return res;
+        return res + ';';
     }
 }
 
@@ -361,7 +361,7 @@ export class ExceptionDeclaration extends Declaration {
 
     toString(indentation: number, oneLine: boolean): string {
         // TODO
-        throw new InternalInterpreterError(-1, 'Not yet implemented.');
+        return 'exception <stuff>;';
     }
 
     elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
