@@ -3230,6 +3230,7 @@ it("module language - structure", () => {
             ])
         ], 1);
     );
+
 });
 
 it("module language - signature", () => {
@@ -3279,6 +3280,24 @@ it("module language - signature", () => {
     );
 
     expect(parse("signature a = sig end where type int=a;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.SignatureDeclaration(0, [
+                new Modu.SignatureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a", 10),
+                    new Modu.TypeRealisation(14,
+                        new Modu.SignatureExpression(14,
+                            new Modu.SequentialSpecification(18, [])
+                        ),
+                        [],
+                        new Token.AlphanumericIdentifierToken("int", 33),
+                        new Type.CustomType("a", [], 37)
+                    )
+                )
+            ])
+        ], 1)
+    );
+
+    expect(parse("signature a = b where type c=d and type e=f;")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Modu.SignatureDeclaration(0, [
                 new Modu.SignatureBinding(10,
@@ -3392,6 +3411,7 @@ it("module language - functor", () => {
             ])
         ], 1)
     );
+
 });
 
 it("module language - spec", () => {
@@ -3930,4 +3950,81 @@ it("module language - spec", () => {
             ])
         ], 1)
     );
+
+    expect(parse("signature a = sig val b:e sharing type c = d.d = e end;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.SignatureDeclaration(0, [
+                new Modu.SignatureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a", 10),
+                    new Modu.SignatureExpression(14,
+                        new Modu.SharingSpecification(18,
+                            new Modu.SequentialSpecification(18,[
+                                new Modu.ValueSpecification(18,[
+                                    [
+                                        new Token.AlphanumericIdentifierToken("b", 22),
+                                        new Type.CustomType("e", [], 24)
+                                    ]
+                                ])
+                            ]),
+                            [
+                                new Token.AlphanumericIdentifierToken("c", 39),
+                                new Token.LongIdentifierToken("d.d", 43, [
+                                    new Token.AlphanumericIdentifierToken("d", 43)
+                                ], new Token.AlphanumericIdentifierToken("d", 45)),
+                                new Token.AlphanumericIdentifierToken("e", 49)
+                            ]
+                        )
+                    )
+                )
+            ])
+        ], 1)
+    );
+
+    expect(() => { parse("signature a = sig val b:e sharing type c end;"); }).toThrow(Parser.ParserError);
+/*
+    expect(parse("signature a = sig type b = c end;")).toEqualWithType(
+        spec_tester([
+            new Modu.ValueSpecification(18,[
+                [
+                    new Token.AlphanumericIdentifierToken("a", 22),
+                    new Type.CustomType("int", [], 24)
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig type 'a b = c end;")).toEqualWithType(
+        spec_tester([
+            new Modu.ValueSpecification(18,[
+                [
+                    new Token.AlphanumericIdentifierToken("a", 22),
+                    new Type.CustomType("int", [], 24)
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig type 'a b = c and ('d, 'e) f = g end;")).toEqualWithType(
+        spec_tester([
+            new Modu.ValueSpecification(18,[
+                [
+                    new Token.AlphanumericIdentifierToken("a", 22),
+                    new Type.CustomType("int", [], 24)
+                ]
+            ])
+        ])
+    );
+
+    expect(parse("signature a = sig include a b c end;")).toEqualWithType(
+        spec_tester([
+            new Modu.ValueSpecification(18,[
+                [
+                    new Token.AlphanumericIdentifierToken("a", 22),
+                    new Type.CustomType("int", [], 24)
+                ]
+            ])
+        ])
+    );
+*/
+    //TODO sharing derive
 });
