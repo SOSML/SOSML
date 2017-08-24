@@ -769,6 +769,8 @@ export class Parser {
                 this.assertIdentifierToken(this.currentToken());
                 let tk = <IdentifierToken> this.currentToken();
                 ++this.position;
+                this.assertKeywordToken(this.currentToken(), ':');
+                ++this.position;
 
                 res.push([tk, this.parseSignatureExpression()]);
 
