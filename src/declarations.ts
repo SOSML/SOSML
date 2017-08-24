@@ -1,8 +1,8 @@
 import { Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
          Pattern, TypedExpression, Tuple, PatternExpression } from './expressions';
-import { IdentifierToken, Token } from './tokens';
+import { IdentifierToken, Token, LongIdentifierToken } from './tokens';
 import { Type, TypeVariable, FunctionType, CustomType, TypeVariableBind } from './types';
-import { State, IdentifierStatus } from './state';
+import { State, IdentifierStatus, DynamicBasis, StaticBasis } from './state';
 import { InternalInterpreterError, ElaborationError,
          EvaluationError, FeatureDisabledError, Warning } from './errors';
 import { Value, ValueConstructor, ExceptionConstructor, ExceptionValue,
@@ -324,7 +324,8 @@ export class DatatypeReplication extends Declaration {
     }
 
     elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
-        [State, Warning[], Map<string, Type>, string] {
+    [State, Warning[], Map<string, Type>, string] {
+        // TODO handle LongIdentifierToken
         let res = state.getStaticType(this.oldname.getText());
         if (res === undefined) {
             throw new ElaborationError(this.position,
@@ -335,12 +336,35 @@ export class DatatypeReplication extends Declaration {
    }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
-        let res = state.getDynamicType(this.oldname.getText());
-        if (res === undefined) {
-            throw new EvaluationError(this.position,
-                'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
+        let tp: string[] | undefined = [];
+        if (this.oldname instanceof LongIdentifierToken) {
+            let st: DynamicBasis = state.dynamicBasis;
+            for (let i = 0; i < (<LongIdentifierToken> this.oldname).qualifiers.length; ++i) {
+                let tmp: DynamicBasis | undefined;
+                if (i === 0) {
+                    tmp = state.getDynamicStructure(
+                        (<LongIdentifierToken> this.oldname).qualifiers[i].getText());
+                } else {
+                    tmp = st.getStructure(
+                        (<LongIdentifierToken> this.oldname).qualifiers[i].getText());
+                }
+                if (tmp === undefined) {
+                    throw new EvaluationError(this.position, 'Undefined module "'
+                        + (<LongIdentifierToken> this.oldname).qualifiers[i].getText() + '"');
+                }
+                st = <DynamicBasis> tmp;
+            }
+            tp = <string[]> st.getType((<LongIdentifierToken> this.oldname).id.getText());
+        } else {
+            tp = <string[]> state.getDynamicType(this.oldname.getText());
         }
-        state.setDynamicType(this.name.getText(), res);
+
+        if (tp === undefined) {
+            throw new EvaluationError(this.position, 'The datatype "'
+                + this.oldname.getText() + '" does not exist.');
+        }
+
+        state.setDynamicType(this.name.getText(), tp);
         return [state, false, undefined, []];
     }
 
@@ -450,15 +474,111 @@ export class OpenDeclaration extends Declaration {
 
     elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
         [State, Warning[], Map<string, Type>, string] {
-        // TODO Yeah, if we had structs, we could actually implement this
-        throw new InternalInterpreterError(-1,
-            'Yeah, you better wait a little before trying this again.');
+        for (let i = 0; i < this.names.length; ++i) {
+            let res: StaticBasis = state.staticBasis;
+            let tmp: StaticBasis | undefined = undefined;
+            if (this.names[i] instanceof LongIdentifierToken) {
+                /* TODO (this does not exist yet
+                let tkn = <LongIdentifierToken> this.names[i];
+                for (let j = 0; j < tkn.qualifiers.length; ++j) {
+                    if (j === 0) {
+                        tmp = state.getStaticStructure(tkn.qualifiers[j].getText());
+                    } else {
+                        tmp = res.getStructure(tkn.qualifiers[j].getText());
+                    }
+                    if (tmp === undefined) {
+                        throw new EvaluationError(this.position, 'Undefined module "'
+                            + tkn.qualifiers[j].getText() + '"');
+                    }
+                    res = <DynamicBasis> tmp;
+                }
+                tmp = res.getStructure(tkn.id.getText());
+                 */
+            } else {
+                // tmp = state.getStaticStructure(this.names[i].getText());
+            }
+            if (tmp === undefined) {
+                throw new EvaluationError(this.position,
+                    'Undefined module "' + this.names[i].getText() + '".');
+            }
+            res = <StaticBasis> tmp;
+
+            for (let v in res.typeEnvironment) {
+                if (res.typeEnvironment.hasOwnProperty(v)) {
+                    state.staticBasis.typeEnvironment[v] = res.typeEnvironment[v];
+                }
+            }
+            for (let v in res.valueEnvironment) {
+                if (res.valueEnvironment.hasOwnProperty(v)) {
+                    state.staticBasis.valueEnvironment[v] = res.valueEnvironment[v];
+                }
+            }
+                /* TODO
+            for (let v in res.structureEnvironment) {
+                if (res.structureEnvironment.hasOwnProperty(v)) {
+                    state.setStaticStructure(v, res.structureEnvironment[v]);
+                }
+            }
+            for (let v in res.signatureEnvironment) {
+                if (res.signatureEnvironment.hasOwnProperty(v)) {
+                    state.setStaticSignature(v, res.signatureEnvironment[v]);
+                }
+            } */
+        }
+        return [state, [], tyVarBnd, nextName];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
-        // TODO Yeah, if we had structs, we could actually implement this
-        throw new InternalInterpreterError(-1,
-            'Yeah, you better wait a little before trying this again.');
+        for (let i = 0; i < this.names.length; ++i) {
+            let res: DynamicBasis = state.dynamicBasis;
+            let tmp: DynamicBasis | undefined;
+            if (this.names[i] instanceof LongIdentifierToken) {
+                let tkn = <LongIdentifierToken> this.names[i];
+                for (let j = 0; j < tkn.qualifiers.length; ++j) {
+                    if (j === 0) {
+                        tmp = state.getDynamicStructure(tkn.qualifiers[j].getText());
+                    } else {
+                        tmp = res.getStructure(tkn.qualifiers[j].getText());
+                    }
+                    if (tmp === undefined) {
+                        throw new EvaluationError(this.position, 'Undefined module "'
+                            + tkn.qualifiers[j].getText() + '"');
+                    }
+                    res = <DynamicBasis> tmp;
+                }
+                tmp = res.getStructure(tkn.id.getText());
+            } else {
+                tmp = state.getDynamicStructure(this.names[i].getText());
+            }
+            if (tmp === undefined) {
+                throw new EvaluationError(this.position,
+                    'Undefined module "' + this.names[i].getText() + '".');
+            }
+            res = <DynamicBasis> tmp;
+
+            for (let v in res.typeEnvironment) {
+                if (res.typeEnvironment.hasOwnProperty(v)) {
+                    state.setDynamicType(v, res.typeEnvironment[v]);
+                }
+            }
+            for (let v in res.valueEnvironment) {
+                if (res.valueEnvironment.hasOwnProperty(v)) {
+                    state.setDynamicValue(v, res.valueEnvironment[v][0], res.valueEnvironment[v][1]);
+                }
+            }
+            for (let v in res.structureEnvironment) {
+                if (res.structureEnvironment.hasOwnProperty(v)) {
+                    state.setDynamicStructure(v, res.structureEnvironment[v]);
+                }
+            }
+            for (let v in res.signatureEnvironment) {
+                if (res.signatureEnvironment.hasOwnProperty(v)) {
+                    state.setDynamicSignature(v, res.signatureEnvironment[v]);
+                }
+            }
+            // TODO: Functors
+        }
+        return [state, false, undefined, []];
     }
 
     toString(indentation: number, oneLine: boolean): string {

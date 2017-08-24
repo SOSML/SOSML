@@ -127,7 +127,6 @@ export class SignatureIdentifier extends Expression implements Signature {
     }
 
     computeInterface(state: State): DynamicInterface {
-        // TODO move this in the state
         let st = state.dynamicBasis;
         if (this.identifier instanceof LongIdentifierToken) {
             for (let i = 0; i < (<LongIdentifierToken> this.identifier).qualifiers.length; ++i) {
@@ -153,7 +152,7 @@ export class SignatureIdentifier extends Expression implements Signature {
                 return <DynamicInterface> res;
             }
         }
-        let rs = st.getSignature(this.identifier.getText());
+        let rs = state.getDynamicSignature(this.identifier.getText());
         if (rs === undefined) {
             throw new EvaluationError(this.position, 'Undefined signature "'
                 + this.identifier.getText() + '".');
@@ -459,12 +458,12 @@ export class DatatypeReplicationSpecification extends Specification {
             }
             tp = <string[]> st.getType((<LongIdentifierToken> this.oldname).id.getText());
         } else {
-            tp = <string[]> st.getType(this.oldname.getText());
+            tp = <string[]> state.getDynamicType(this.oldname.getText());
         }
 
         if (tp === undefined) {
-            throw new EvaluationError(this.position, 'Unbound type "'
-                + this.oldname.getText() + '".');
+            throw new EvaluationError(this.position, 'The datatype "'
+                + this.oldname.getText() + '" does not exist.');
         }
 
         let vi: DynamicValueInterface = {};
