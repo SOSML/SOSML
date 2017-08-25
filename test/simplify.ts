@@ -353,7 +353,7 @@ it("dec", () => {
                  )
              ], 2)
         ], 1)
-    )
+    );
     expect(parse("fun 'a f x = 42 and g x = 42;").simplify()).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
              new Decl.ValueDeclaration(0, [new Type.TypeVariable('\'a', 4)], [
@@ -395,7 +395,7 @@ it("dec", () => {
                  )
              ], 2)
         ], 1)
-    )
+    );
     //TODO withtype
 });
 
