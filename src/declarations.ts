@@ -523,7 +523,7 @@ export class OpenDeclaration extends Declaration {
             if (this.names[i] instanceof LongIdentifierToken) {
                 tmp = state.getAndResolveDynamicStructure(<LongIdentifierToken> this.names[i]);
                 if (tmp !== undefined) {
-                    tmp = res.getStructure((<LongIdentifierToken> this.names[i]).id.getText());
+                    tmp = tmp.getStructure((<LongIdentifierToken> this.names[i]).id.getText());
                 }
             } else {
                 tmp = state.getDynamicStructure(this.names[i].getText());

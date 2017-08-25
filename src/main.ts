@@ -25,7 +25,8 @@ export function interpret(nextInstruction: string,
                           options: { [name: string]: any } = {
                               'allowLongFunctionNames': false,
                               'allowUnicodeInStrings': false,
-                              'allowSuccessorML': false
+                              'allowSuccessorML': false,
+                              'disableElaboration': false
                           }): { [name: string]: any } {
     let state = oldState.getNestedState();
 
@@ -47,6 +48,17 @@ export function interpret(nextInstruction: string,
 
     state = oldState.getNestedState();
     ast = ast.simplify();
+
+    if (options.disableElaboration === true) {
+        let tmp = ast.evaluate(oldState.getNestedState() /* , options */);
+        return {
+            'state':                tmp[0],
+            'evaluationErrored':    tmp[1],
+            'error':                tmp[2],
+            'warnings':             tmp[3]
+        };
+    }
+
     let elab = ast.elaborate(state /* , options */);
     state = elab[0];
 
