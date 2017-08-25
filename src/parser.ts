@@ -1672,7 +1672,7 @@ export class Parser {
         this.assertKeywordToken(this.currentToken(), '=');
         ++this.position;
         let str = this.parseStructureExpression();
-        let strid = new AlphanumericIdentifierToken(-1, '__farg');
+        let strid = new AlphanumericIdentifierToken('__farg', -1);
         if (sig !== undefined) {
             if (opaque) {
                 str = new OpaqueConstraint(-1, str, <Expression & Signature> sig);
