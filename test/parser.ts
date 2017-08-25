@@ -3116,7 +3116,7 @@ it("module language - structure", () => {
             new Modu.StructureDeclaration(0, [
                 new Modu.StructureBinding(10,
                     new Token.AlphanumericIdentifierToken("a",10),
-                    new Expr.LocalDeclarationExpression(14,
+                    new Modu.LocalDeclarationStructureExpression(14,
                         new Decl.SequentialDeclaration(18, [
                             new Modu.StructureDeclaration(18, [
                                 new Modu.StructureBinding(28,

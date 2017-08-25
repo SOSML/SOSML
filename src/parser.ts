@@ -522,6 +522,7 @@ export class Parser {
             ++this.position;
             if (this.checkKeywordToken(this.currentToken(), '(')) {
                 ++this.position;
+                // TODO Allow strdec here
                 let exp = this.parseStructureExpression();
                 this.assertKeywordToken(this.currentToken(), ')');
                 ++this.position;
@@ -1535,11 +1536,30 @@ export class Parser {
     parseStructureBinding(): StructureBinding {
         /*
          * strbind ::= strid = strexp
+         *             strid : sigexp = strexp
+         *             strid :> sigexp = strexp
          */
         let curTok = this.currentToken();
         this.assertIdentifierToken(this.currentToken());
         let tycon = <IdentifierToken> this.currentToken();
         ++this.position;
+        if (this.checkKeywordToken(this.currentToken(), ':')) {
+            ++this.position;
+            let sig = this.parseSignatureExpression();
+            this.assertKeywordToken(this.currentToken(), '=');
+            ++this.position;
+            let str = this.parseStructureExpression();
+            return new StructureBinding(curTok.position, tycon,
+                new TransparentConstraint(curTok.position, str, sig));
+        } else if (this.checkKeywordToken(this.currentToken(), ':>')) {
+            ++this.position;
+            let sig = this.parseSignatureExpression();
+            this.assertKeywordToken(this.currentToken(), '=');
+            ++this.position;
+            let str = this.parseStructureExpression();
+            return new StructureBinding(curTok.position, tycon,
+                new OpaqueConstraint(curTok.position, str, sig));
+        }
         this.assertKeywordToken(this.currentToken(), '=');
         ++this.position;
         return new StructureBinding(curTok.position, tycon, this.parseStructureExpression());
@@ -1587,6 +1607,10 @@ export class Parser {
     parseFunctorBinding(): FunctorBinding {
         /*
          * funbind ::= funid (tycon : sigexp) = strexp
+         *             funid (tycon : sigexp) : sigexp' = strexp
+         *             funid (tycon : sigexp) :> sigexp' = strexp
+         *             funid (spec) [: sigexp] = strexp
+         *             funid (spec) [:> sigexp] = strexp
          */
         let curTok = this.currentToken();
         this.assertIdentifierToken(this.currentToken());
@@ -1596,20 +1620,70 @@ export class Parser {
         this.assertKeywordToken(this.currentToken(), '(');
         ++this.position;
 
-        this.assertIdentifierToken(this.currentToken());
-        let tycon = <IdentifierToken> this.currentToken();
-        ++this.position;
-        this.assertKeywordToken(this.currentToken(), ':');
-        ++this.position;
-        let sigexp = this.parseSignatureExpression();
+        if (this.currentToken() instanceof IdentifierToken) {
+            let tycon = <IdentifierToken> this.currentToken();
+            ++this.position;
+            this.assertKeywordToken(this.currentToken(), ':');
+            ++this.position;
+            let sigexp = this.parseSignatureExpression();
+
+            this.assertKeywordToken(this.currentToken(), ')');
+            ++this.position;
+
+            if (this.checkKeywordToken(this.currentToken(), ':')) {
+                ++this.position;
+                let sig = this.parseSignatureExpression();
+                this.assertKeywordToken(this.currentToken(), '=');
+                ++this.position;
+                return new FunctorBinding(curTok.position, funid, tycon, sigexp,
+                    new TransparentConstraint(curTok.position, this.parseStructureExpression(), sig));
+            } else if (this.checkKeywordToken(this.currentToken(), ':>')) {
+                ++this.position;
+                let sig = this.parseSignatureExpression();
+                this.assertKeywordToken(this.currentToken(), '=');
+                ++this.position;
+                return new FunctorBinding(curTok.position, funid, tycon, sigexp,
+                    new OpaqueConstraint(curTok.position, this.parseStructureExpression(), sig));
+            }
+
+            this.assertKeywordToken(this.currentToken(), '=');
+            ++this.position;
+            return new FunctorBinding(curTok.position, funid, tycon, sigexp,
+                this.parseStructureExpression());
+        }
+
+        let spec = this.parseSpecification();
+        let specsig = new SignatureExpression(-1, spec);
 
         this.assertKeywordToken(this.currentToken(), ')');
         ++this.position;
 
+        let opaque = false;
+        let sig: (Expression & Signature) | undefined = undefined;
+        if (this.checkKeywordToken(this.currentToken(), ':')) {
+            ++this.position;
+            sig = this.parseSignatureExpression();
+        } else if (this.checkKeywordToken(this.currentToken(), ':>')) {
+            opaque = true;
+            ++this.position;
+            sig = this.parseSignatureExpression();
+        }
+
         this.assertKeywordToken(this.currentToken(), '=');
         ++this.position;
-        return new FunctorBinding(curTok.position, funid, tycon, sigexp,
-            this.parseStructureExpression());
+        let str = this.parseStructureExpression();
+        let strid = new AlphanumericIdentifierToken(-1, '__farg');
+        if (sig !== undefined) {
+            if (opaque) {
+                str = new OpaqueConstraint(-1, str, <Expression & Signature> sig);
+            } else {
+                str = new OpaqueConstraint(-1, str, <Expression & Signature> sig);
+            }
+        }
+
+        str = new LocalDeclarationStructureExpression(-1, new OpenDeclaration(-1, [strid]), str);
+
+        return new FunctorBinding(curTok.position, funid, strid, specsig, str);
     }
 
     parseFunctorBindingSeq(): FunctorBinding[] {
