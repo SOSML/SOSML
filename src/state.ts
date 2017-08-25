@@ -1,7 +1,7 @@
 import { Type } from './types';
 import { Value, ReferenceValue } from './values';
 import { Token, LongIdentifierToken } from './tokens';
-import { InternalInterpreterError } from './errors';
+import { InternalInterpreterError, EvaluationError } from './errors';
 
 export enum IdentifierStatus {
     VALUE_VARIABLE,
@@ -114,6 +114,68 @@ export class DynamicBasis {
     setSignature(name: string, signature: DynamicInterface) {
         this.signatureEnvironment[name] = signature;
     }
+
+    extend(other: DynamicBasis): DynamicBasis {
+        for (let i in other.typeEnvironment) {
+            if (other.typeEnvironment.hasOwnProperty(i)) {
+                this.typeEnvironment[i] = other.typeEnvironment[i];
+            }
+        }
+        for (let i in other.valueEnvironment) {
+            if (other.valueEnvironment.hasOwnProperty(i)) {
+                this.valueEnvironment[i] = other.valueEnvironment[i];
+            }
+        }
+        for (let i in other.structureEnvironment) {
+            if (other.structureEnvironment.hasOwnProperty(i)) {
+                this.structureEnvironment[i] = other.structureEnvironment[i];
+            }
+        }
+        for (let i in other.signatureEnvironment) {
+            if (other.signatureEnvironment.hasOwnProperty(i)) {
+                this.signatureEnvironment[i] = other.signatureEnvironment[i];
+            }
+        }
+        return this;
+    }
+
+    restrict(sig: DynamicInterface): DynamicBasis {
+        let res = new DynamicBasis({}, {}, {}, this.signatureEnvironment);
+
+        for (let i in sig.typeInterface) {
+            if (sig.typeInterface.hasOwnProperty(i)
+                && this.typeEnvironment.hasOwnProperty(i)) {
+                let tmp = new Set<string>();
+                let ntp: string[] = [];
+                for (let j = 0; j < this.typeEnvironment[i].length; ++j) {
+                    tmp = tmp.add(this.typeEnvironment[i][j]);
+                }
+                for (let j = 0; j < sig.typeInterface[i].length; ++j) {
+                    if (tmp.has(sig.typeInterface[i][j])) {
+                        ntp.push(sig.typeInterface[i][j]);
+                    }
+                }
+                res.typeEnvironment[i] = ntp;
+            }
+        }
+
+        for (let i in sig.valueInterface) {
+            if (sig.valueInterface.hasOwnProperty(i)
+                && this.valueEnvironment.hasOwnProperty(i)) {
+                res.valueEnvironment[i] = [this.valueEnvironment[i][0], sig.valueInterface[i]];
+            }
+        }
+
+        for (let i in sig.structureInterface) {
+            if (sig.structureInterface.hasOwnProperty(i)
+                && this.structureEnvironment.hasOwnProperty(i)) {
+                res.structureEnvironment[i]
+                    = this.structureEnvironment[i].restrict(sig.structureInterface[i]);
+            }
+        }
+
+        return res;
+    }
 }
 
 export class StaticBasis {
@@ -202,6 +264,20 @@ export class State {
         return res;
     }
 
+    getDynamicChanges(stopId: number): DynamicBasis {
+        if (this.id === stopId) {
+            return new DynamicBasis({}, {}, {}, {});
+        }
+        let res = new DynamicBasis({}, {}, {}, {});
+
+        if (this.parent !== undefined) {
+            res = this.parent.getDynamicChanges(stopId);
+        }
+
+        res = res.extend(this.dynamicBasis);
+        return res;
+    }
+
     getNestedState(newId: number|undefined = undefined) {
         if (newId === undefined) {
             newId = this.id + 1;
@@ -277,6 +353,26 @@ export class State {
             return this.parent.getDynamicStructure(name, idLimit);
         }
     }
+
+    getAndResolveDynamicStructure(name: LongIdentifierToken, idLimit: number = 0): DynamicBasis | undefined {
+        let res: DynamicBasis | undefined = undefined;
+        if (name.qualifiers.length === 0) {
+            throw new EvaluationError(name.position,
+                'Unqualified LongIdentifierToken are too unqualified to be useful here.');
+        } else {
+            res = this.getDynamicStructure(name.qualifiers[0].getText(), idLimit);
+        }
+
+        for (let i = 1; i < name.qualifiers.length; ++i) {
+            if (res == undefined) {
+                return res;
+            }
+            res = res.getStructure(name.qualifiers[i].getText());
+        }
+
+        return res;
+    }
+
 
     getDynamicSignature(name: string, idLimit: number = 0): DynamicInterface | undefined {
         let result = this.dynamicBasis.getSignature(name);

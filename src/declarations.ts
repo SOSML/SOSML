@@ -2,7 +2,7 @@ import { Expression, ValueIdentifier, CaseAnalysis, Lambda, Match,
          Pattern, TypedExpression, Tuple, PatternExpression } from './expressions';
 import { IdentifierToken, Token, LongIdentifierToken } from './tokens';
 import { Type, TypeVariable, FunctionType, CustomType, TypeVariableBind } from './types';
-import { State, IdentifierStatus, DynamicBasis, StaticBasis } from './state';
+import { State, IdentifierStatus, DynamicBasis, StaticBasis, TypeInformation } from './state';
 import { InternalInterpreterError, ElaborationError,
          EvaluationError, FeatureDisabledError, Warning } from './errors';
 import { Value, ValueConstructor, ExceptionConstructor, ExceptionValue,
@@ -20,7 +20,7 @@ export abstract class Declaration {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
-    toString(indentation: number, oneLine: boolean): string {
+    toString(): string {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
@@ -148,14 +148,14 @@ export class ValueDeclaration extends Declaration {
         return [state, false, undefined, warns];
     }
 
-    toString(indentation: number, oneLine: boolean): string {
+    toString(): string {
         // TODO
         let res = 'val <stuff>';
         for (let i = 0; i < this.valueBinding.length; ++i) {
             if (i > 0) {
                 res += ' and';
             }
-            res += ' ' + this.valueBinding[i].toString(indentation, oneLine);
+            res += ' ' + this.valueBinding[i];
         }
         return res += ';';
     }
@@ -198,7 +198,7 @@ export class TypeDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    toString(indentation: number, oneLine: boolean): string {
+    toString(): string {
         // TODO
         let res = 'type';
         for (let i = 0; i < this.typeBinding.length; ++i) {
@@ -291,7 +291,7 @@ export class DatatypeDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    toString(indentation: number, oneLine: boolean): string {
+    toString(): string {
         let res = 'datatype';
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
             if (i > 0) {
@@ -325,8 +325,19 @@ export class DatatypeReplication extends Declaration {
 
     elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
     [State, Warning[], Map<string, Type>, string] {
-        // TODO handle LongIdentifierToken
-        let res = state.getStaticType(this.oldname.getText());
+        let res: TypeInformation | undefined = undefined;
+
+        if (this.oldname instanceof LongIdentifierToken) {
+            /* TODO
+            let st = state.getAndResolveStaticStructure(<LongIdentifierToken> this.oldname);
+            if (st !== undefined) {
+                res = <string[]> (<StaticBasis> st).getType(
+                    (<LongIdentifierToken> this.oldname).id.getText());
+            }
+             */
+        } else {
+            res = state.getStaticType(this.oldname.getText());
+        }
         if (res === undefined) {
             throw new ElaborationError(this.position,
                 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
@@ -338,23 +349,11 @@ export class DatatypeReplication extends Declaration {
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
         let tp: string[] | undefined = [];
         if (this.oldname instanceof LongIdentifierToken) {
-            let st: DynamicBasis = state.dynamicBasis;
-            for (let i = 0; i < (<LongIdentifierToken> this.oldname).qualifiers.length; ++i) {
-                let tmp: DynamicBasis | undefined;
-                if (i === 0) {
-                    tmp = state.getDynamicStructure(
-                        (<LongIdentifierToken> this.oldname).qualifiers[i].getText());
-                } else {
-                    tmp = st.getStructure(
-                        (<LongIdentifierToken> this.oldname).qualifiers[i].getText());
-                }
-                if (tmp === undefined) {
-                    throw new EvaluationError(this.position, 'Undefined module "'
-                        + (<LongIdentifierToken> this.oldname).qualifiers[i].getText() + '"');
-                }
-                st = <DynamicBasis> tmp;
+            let st = state.getAndResolveDynamicStructure(<LongIdentifierToken> this.oldname);
+            if (st !== undefined) {
+                tp = <string[]> (<DynamicBasis> st).getType(
+                    (<LongIdentifierToken> this.oldname).id.getText());
             }
-            tp = <string[]> st.getType((<LongIdentifierToken> this.oldname).id.getText());
         } else {
             tp = <string[]> state.getDynamicType(this.oldname.getText());
         }
@@ -368,7 +367,7 @@ export class DatatypeReplication extends Declaration {
         return [state, false, undefined, []];
     }
 
-    toString(indentation: number, oneLine: boolean): string {
+    toString(): string {
         return 'datatype ' + this.name.getText() + ' = datatype ' + this.oldname.getText() + ';';
     }
 }
@@ -383,7 +382,7 @@ export class ExceptionDeclaration extends Declaration {
         return this;
     }
 
-    toString(indentation: number, oneLine: boolean): string {
+    toString(): string {
         // TODO
         return 'exception <stuff>;';
     }
@@ -423,7 +422,6 @@ export class LocalDeclaration extends Declaration {
         [State, Warning[], Map<string, Type>, string] {
         let nstate: [State, Warning[], Map<string, Type>, string]
             = [state.getNestedState(state.id), [], tyVarBnd, nextName];
-        // TODO Warnings
         let res = this.declaration.elaborate(nstate[0], tyVarBnd, nextName);
         let input = res[0].getNestedState(state.id);
         nstate = this.body.elaborate(input, res[2], res[3]);
@@ -454,9 +452,9 @@ export class LocalDeclaration extends Declaration {
         return nres;
     }
 
-    toString(indentation: number, oneLine: boolean): string {
-        let res = 'local ' + this.declaration.toString(indentation, oneLine);
-        res += ' in ' + this.body.toString(indentation, oneLine);
+    toString(): string {
+        let res = 'local ' + this.declaration;
+        res += ' in ' + this.body;
         res += ' end;';
         return res;
     }
@@ -475,24 +473,14 @@ export class OpenDeclaration extends Declaration {
     elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
         [State, Warning[], Map<string, Type>, string] {
         for (let i = 0; i < this.names.length; ++i) {
-            let res: StaticBasis = state.staticBasis;
+            let res: StaticBasis = new StaticBasis({}, {});
             let tmp: StaticBasis | undefined = undefined;
             if (this.names[i] instanceof LongIdentifierToken) {
-                /* TODO (this does not exist yet
-                let tkn = <LongIdentifierToken> this.names[i];
-                for (let j = 0; j < tkn.qualifiers.length; ++j) {
-                    if (j === 0) {
-                        tmp = state.getStaticStructure(tkn.qualifiers[j].getText());
-                    } else {
-                        tmp = res.getStructure(tkn.qualifiers[j].getText());
-                    }
-                    if (tmp === undefined) {
-                        throw new EvaluationError(this.position, 'Undefined module "'
-                            + tkn.qualifiers[j].getText() + '"');
-                    }
-                    res = <DynamicBasis> tmp;
+                /* TODO
+                tmp = state.getAndResolveStaticStructure(<LongIdentifierToken> this.names[i]);
+                if (tmp !== undefined) {
+                    tmp = res.getStructure((<LongIdentifierToken> this.names[i]).id.getText());
                 }
-                tmp = res.getStructure(tkn.id.getText());
                  */
             } else {
                 // tmp = state.getStaticStructure(this.names[i].getText());
@@ -530,23 +518,13 @@ export class OpenDeclaration extends Declaration {
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
         for (let i = 0; i < this.names.length; ++i) {
-            let res: DynamicBasis = state.dynamicBasis;
+            let res: DynamicBasis = new DynamicBasis({}, {}, {}, {});
             let tmp: DynamicBasis | undefined;
             if (this.names[i] instanceof LongIdentifierToken) {
-                let tkn = <LongIdentifierToken> this.names[i];
-                for (let j = 0; j < tkn.qualifiers.length; ++j) {
-                    if (j === 0) {
-                        tmp = state.getDynamicStructure(tkn.qualifiers[j].getText());
-                    } else {
-                        tmp = res.getStructure(tkn.qualifiers[j].getText());
-                    }
-                    if (tmp === undefined) {
-                        throw new EvaluationError(this.position, 'Undefined module "'
-                            + tkn.qualifiers[j].getText() + '"');
-                    }
-                    res = <DynamicBasis> tmp;
+                tmp = state.getAndResolveDynamicStructure(<LongIdentifierToken> this.names[i]);
+                if (tmp !== undefined) {
+                    tmp = res.getStructure((<LongIdentifierToken> this.names[i]).id.getText());
                 }
-                tmp = res.getStructure(tkn.id.getText());
             } else {
                 tmp = state.getDynamicStructure(this.names[i].getText());
             }
@@ -554,6 +532,7 @@ export class OpenDeclaration extends Declaration {
                 throw new EvaluationError(this.position,
                     'Undefined module "' + this.names[i].getText() + '".');
             }
+
             res = <DynamicBasis> tmp;
 
             for (let v in res.typeEnvironment) {
@@ -581,7 +560,7 @@ export class OpenDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    toString(indentation: number, oneLine: boolean): string {
+    toString(): string {
         let res = 'open';
         for (let i = 0; i < this.names.length; ++i) {
             res += ' ' + this.names[i].getText();
@@ -609,7 +588,7 @@ export class EmptyDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    toString(indentation: number, oneLine: boolean): string {
+    toString(): string {
         return ' ;';
     }
 }
@@ -659,13 +638,13 @@ export class SequentialDeclaration extends Declaration {
         return [state, false, undefined, warns];
     }
 
-    toString(indentation: number, oneLine: boolean): string {
+    toString(): string {
         let res = '';
         for (let i = 0; i < this.declarations.length; ++i) {
             if (i > 0) {
                 res += ' ';
             }
-            res += this.declarations[i].toString(indentation, oneLine);
+            res += this.declarations[i];
         }
         return res;
     }
@@ -754,7 +733,7 @@ export class InfixDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    toString(indentation: number, oneLine: boolean): string {
+    toString(): string {
         let res = 'infix';
         res += ' ' + this.precedence;
         for (let i = 0; i < this.operators.length; ++i) {
@@ -787,7 +766,7 @@ export class InfixRDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    toString(indentation: number, oneLine: boolean): string {
+    toString(): string {
         let res = 'infixr';
         res += ' ' + this.precedence;
         for (let i = 0; i < this.operators.length; ++i) {
@@ -820,7 +799,7 @@ export class NonfixDeclaration extends Declaration {
         return [state, false, undefined, []];
     }
 
-    toString(indentation: number, oneLine: boolean): string {
+    toString(): string {
         let res = 'nonfix';
         for (let i = 0; i < this.operators.length; ++i) {
             res += ' ' + this.operators[i].getText();
@@ -837,14 +816,14 @@ export class ValueBinding {
                 public pattern: Pattern, public expression: Expression) {
     }
 
-    toString(indentation: number, oneLine: boolean): string {
+    toString(): string {
         let res = '';
         if (this.isRecursive) {
             res += 'rec ';
         }
-        res += this.pattern.toString(indentation, oneLine);
+        res += this.pattern;
         res += ' = ';
-        return res + this.expression.toString(indentation, oneLine);
+        return res + this.expression;
     }
 
     getType(tyVarSeq: TypeVariable[], state: State, tyVarBnd: Map<string, Type>, nextName: string, isTopLevel: boolean):
@@ -962,7 +941,7 @@ export class FunctionValueBinding {
         return new ValueBinding(this.position, true, this.name, exp.simplify());
     }
 
-    toString(indentation: number, oneLine: boolean): string {
+    toString(): string {
         let res = '';
         for (let i = 0; i < this.parameters.length; ++i) {
             if (i > 0) {
@@ -970,12 +949,12 @@ export class FunctionValueBinding {
             }
             res += this.name.name.getText();
             for (let j = 0; j < this.parameters[i][0].length; ++j) {
-                res += ' ' + this.parameters[i][0][j].toString(indentation, oneLine);
+                res += ' ' + this.parameters[i][0][j];
             }
             if (this.parameters[i][1] !== undefined) {
                 res += ': ' + (<Type> this.parameters[i][1]);
             }
-            res += ' = ' + this.parameters[i][2].toString(indentation, oneLine);
+            res += ' = ' + this.parameters[i][2];
         }
         return res;
     }
@@ -1100,7 +1079,17 @@ export class ExceptionAlias implements ExceptionBinding {
     }
 
     elaborate(state: State): State {
-        let res = state.getStaticValue(this.oldname.getText());
+        let res: [Type, IdentifierStatus] | undefined = undefined;
+        if (this.oldname instanceof LongIdentifierToken) {
+            /* TODO
+            let st = state.getAndResolveStaticStructure(<LongIdentifierToken> this.oldname);
+            if (st !== undefined) {
+                res = st.getValue((<LongIdentifierToken> this.oldname).id.getText());
+            }
+            */
+        } else {
+            res = state.getStaticValue(this.oldname.getText());
+        }
         if (res === undefined) {
             throw new ElaborationError(this.position, 'Unbound value identifier "'
                 + this.oldname.getText() + '".');
@@ -1108,13 +1097,20 @@ export class ExceptionAlias implements ExceptionBinding {
             throw new ElaborationError(this.position, 'You cannot transform "'
                 + res[0] + '" into an exception.');
         }
-        state.setStaticValue(this.name.getText(), res[0].normalize(), IdentifierStatus.EXCEPTION_CONSTRUCTOR);
+        state.setStaticValue(this.name.getText(), res[0], IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         return state;
-
     }
 
     evaluate(state: State): [State, boolean, Value|undefined] {
-        let res = state.getDynamicValue(this.oldname.getText());
+        let res: [Value, IdentifierStatus] | undefined = undefined;
+        if (this.oldname instanceof LongIdentifierToken) {
+            let st = state.getAndResolveDynamicStructure(<LongIdentifierToken> this.oldname);
+            if (st !== undefined) {
+                res = st.getValue((<LongIdentifierToken> this.oldname).id.getText());
+            }
+        } else {
+            res = state.getDynamicValue(this.oldname.getText());
+        }
         if (res === undefined) {
             throw new EvaluationError(this.position, 'Unbound value identifier "'
                 + this.oldname.getText() + '".');
@@ -1126,4 +1122,3 @@ export class ExceptionAlias implements ExceptionBinding {
         return [state, false, undefined];
     }
 }
-

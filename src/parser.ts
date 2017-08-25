@@ -21,7 +21,7 @@ import { FunctorDeclaration, StructureDeclaration, SignatureDeclaration, Functor
          TypeSpecification, EqualityTypeSpecification, DatatypeSpecification,
          DatatypeReplicationSpecification, ExceptionSpecification, StructureSpecification,
          IncludeSpecification, EmptySpecification, SequentialSpecification, SharingSpecification,
-         Signature } from './modules';
+         Signature, Structure, LocalDeclarationStructureExpression } from './modules';
 import { State } from './state';
 
 export class Parser {
@@ -492,7 +492,7 @@ export class Parser {
     }
 
 
-    parseSimpleStructureExpression(): Expression {
+    parseSimpleStructureExpression(): Expression & Structure {
         /*
          * strexp ::= struct strdec end         StructureExpression(pos, dec)
          *            longstrid                 StructureIdentifier(pos, token)
@@ -515,7 +515,7 @@ export class Parser {
             let exp = this.parseStructureExpression();
             this.assertKeywordToken(this.currentToken(), 'end');
             ++this.position;
-            return new LocalDeclarationExpression(curTok.position, dec, exp);
+            return new LocalDeclarationStructureExpression(curTok.position, dec, exp);
         }
 
         if (curTok instanceof IdentifierToken) {
@@ -539,7 +539,7 @@ export class Parser {
         throw new ParserError('Expected a simple structure expression.', curTok.position);
     }
 
-    parseStructureExpression(): Expression {
+    parseStructureExpression(): Expression & Structure {
         /*
          * strexp ::= strexp : sigexp           TransparentConstraint(pos, strexp, sigexp)
          *            strexp :> sigexp          OpaqueConstraint(pos, strexp, sigexp)

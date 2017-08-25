@@ -11,7 +11,13 @@ import { Value } from './values';
 
 // Structure Expressions
 
-export class StructureExpression extends Expression {
+type MemBind = [number, Value][];
+
+export interface Structure {
+    computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind];
+}
+
+export class StructureExpression extends Expression implements Structure {
 // struct <strdec> end
     constructor(public position: number, public structureDeclaration: Declaration) {
         super();
@@ -21,12 +27,24 @@ export class StructureExpression extends Expression {
         return new StructureExpression(this.position, this.structureDeclaration.simplify());
     }
 
+    computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
+        let nstate = state.getNestedState(0).getNestedState(state.id);
+        let tmp = this.structureDeclaration.evaluate(nstate);
+        let mem = tmp[0].getMemoryChanges(0);
+
+        if (tmp[1]) {
+            return [<Value> tmp[2], tmp[3], mem];
+        }
+
+        return [tmp[0].getDynamicChanges(0), tmp[3], mem];
+    }
+
     toString(): string {
         return 'struct ' + this.structureDeclaration + ' end';
     }
 }
 
-export class StructureIdentifier extends Expression {
+export class StructureIdentifier extends Expression implements Structure {
 // longstrid
     constructor(public position: number, public identifier: Token) {
         super();
@@ -36,21 +54,51 @@ export class StructureIdentifier extends Expression {
         return this;
     }
 
+    computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
+        let res: DynamicBasis | undefined = undefined;
+        if (this.identifier instanceof LongIdentifierToken) {
+            let st = state.getAndResolveDynamicStructure(<LongIdentifierToken> this.identifier);
+
+            if (st !== undefined) {
+                res = (<DynamicBasis> st).getStructure(
+                    (<LongIdentifierToken> this.identifier).id.getText());
+            }
+        } else {
+            res = state.getDynamicStructure(this.identifier.getText());
+        }
+
+        if (res === undefined) {
+            throw new EvaluationError(this.position, 'Undefined module "'
+                + this.identifier.getText() + '".');
+        }
+        return [<DynamicBasis> res, [], []];
+    }
+
     toString(): string {
         return this.identifier.getText();
     }
 }
 
-export class TransparentConstraint extends Expression {
+export class TransparentConstraint extends Expression implements Structure {
 // strexp : sigexp
-    constructor(public position: number, public structureExpression: Expression,
+    constructor(public position: number, public structureExpression: Expression & Structure,
                 public signatureExpression: Expression & Signature) {
         super();
     }
 
     simplify(): TransparentConstraint {
-        return new TransparentConstraint(this.position, this.structureExpression.simplify(),
+        return new TransparentConstraint(this.position,
+            <Expression & Structure> this.structureExpression.simplify(),
             <Expression & Signature> this.signatureExpression.simplify());
+    }
+
+    computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
+        let tmp = this.structureExpression.computeStructure(state);
+        if (tmp[0] instanceof Value) {
+            return tmp;
+        }
+        let sig = this.signatureExpression.computeInterface(state);
+        return [(<DynamicBasis> tmp[0]).restrict(sig), tmp[1], tmp[2]];
     }
 
     toString(): string {
@@ -58,16 +106,26 @@ export class TransparentConstraint extends Expression {
     }
 }
 
-export class OpaqueConstraint extends Expression {
+export class OpaqueConstraint extends Expression implements Structure {
 // strexp :> sigexp
-    constructor(public position: number, public structureExpression: Expression,
+    constructor(public position: number, public structureExpression: Expression & Structure,
                 public signatureExpression: Expression & Signature) {
         super();
     }
 
     simplify(): OpaqueConstraint {
-        return new OpaqueConstraint(this.position, this.structureExpression.simplify(),
+        return new OpaqueConstraint(this.position,
+            <Expression & Structure> this.structureExpression.simplify(),
             <Expression & Signature> this.signatureExpression.simplify());
+    }
+
+    computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
+        let tmp = this.structureExpression.computeStructure(state);
+        if (tmp[0] instanceof Value) {
+            return tmp;
+        }
+        let sig = this.signatureExpression.computeInterface(state);
+        return [(<DynamicBasis> tmp[0]).restrict(sig), tmp[1], tmp[2]];
     }
 
     toString(): string {
@@ -75,21 +133,56 @@ export class OpaqueConstraint extends Expression {
     }
 }
 
-export class FunctorApplication extends Expression {
+export class FunctorApplication extends Expression implements Structure {
 // funid ( strexp )
     constructor(public position: number, public functorId: IdentifierToken,
-                public structureExpression: Expression ) {
+                public structureExpression: Expression & Structure) {
         super();
     }
 
     simplify(): FunctorApplication {
-        return new FunctorApplication(this.position, this.functorId, this.structureExpression.simplify());
+        return new FunctorApplication(this.position, this.functorId,
+            <Expression & Structure> this.structureExpression.simplify());
+    }
+
+    computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
+        // TODO
+        throw new Error('ニャハ');
     }
 
     toString(): string {
         return this.functorId.getText() + '( ' + this.structureExpression + ' )';
     }
 }
+
+export class LocalDeclarationStructureExpression extends Expression implements Structure {
+// let strdec in exp1; ...; expn end
+// A sequential expression exp1; ... ; expn is represented as such,
+// despite the potentially missing parentheses
+    constructor(public position: number, public declaration: Declaration,
+                public expression: Expression & Structure) { super(); }
+
+    simplify(): LocalDeclarationStructureExpression {
+        return new LocalDeclarationStructureExpression(this.position, this.declaration.simplify(),
+            <Expression & Structure> this.expression.simplify());
+    }
+
+    toString(): string {
+        return 'let ' + this.declaration + ' in ' + this.expression + ' end';
+    }
+
+    computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
+        let nstate = state.getNestedState(0).getNestedState(state.id);
+        let res = this.declaration.evaluate(nstate);
+        let membnd = res[0].getMemoryChanges(0);
+        if (res[1]) {
+            return [<Value> res[2], res[3], membnd];
+        }
+        let nres = this.expression.computeStructure(res[0]);
+        return [nres[0], res[3].concat(nres[1]), membnd.concat(nres[2])];
+    }
+}
+
 
 // Signature Expressions
 
@@ -207,8 +300,16 @@ export class StructureDeclaration extends Declaration {
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
-        // TODO
-        return [state, false, undefined, []];
+        let warns: Warning[] = [];
+        for (let i = 0; i < this.structureBinding.length; ++i) {
+            let tmp = this.structureBinding[i].evaluate(state);
+            if (tmp[1]) {
+                return tmp;
+            }
+            state = tmp[0];
+            warns = warns.concat(tmp[3]);
+        }
+        return [state, false, undefined, warns];
     }
 
     simplify(): StructureDeclaration {
@@ -278,7 +379,7 @@ export class FunctorDeclaration extends Declaration {
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
         // TODO
-        return [state, false, undefined, []];
+        return [state, false, undefined, [new Warning(this.position, 'Skipped functor evaluation.')]];
     }
 
     simplify(): FunctorDeclaration {
@@ -302,11 +403,24 @@ export class FunctorDeclaration extends Declaration {
 export class StructureBinding {
 // strid = strexp
     constructor(public position: number, public name: IdentifierToken,
-                public binding: Expression) {
+                public binding: Expression & Structure) {
     }
 
     simplify(): StructureBinding {
-        return new StructureBinding(this.position, this.name, this.binding.simplify());
+        return new StructureBinding(this.position, this.name,
+            <Expression & Structure> this.binding.simplify());
+    }
+
+    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
+        let tmp = this.binding.computeStructure(state);
+        for (let i = 0; i < tmp[2].length; ++i) {
+            state.setCell(tmp[2][i][0], tmp[2][i][1]);
+        }
+        if (tmp[0] instanceof Value) {
+            return [state, true, <Value> tmp[0], tmp[1]];
+        }
+        state.setDynamicStructure(this.name.getText(), <DynamicBasis> tmp[0]);
+        return [state, false, undefined, tmp[1]];
     }
 
     toString(): string {

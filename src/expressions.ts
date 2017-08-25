@@ -1,7 +1,8 @@
 import { TypeVariable, RecordType, Type, FunctionType, CustomType, AnyType, TypeVariableBind } from './types';
 import { Declaration, ValueBinding, ValueDeclaration } from './declarations';
 import { Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConstantToken,
-         NumericToken, WordConstantToken, CharacterConstantToken, StringConstantToken } from './tokens';
+         NumericToken, WordConstantToken, CharacterConstantToken, StringConstantToken,
+         LongIdentifierToken } from './tokens';
 import { State, IdentifierStatus } from './state';
 import { InternalInterpreterError, ElaborationError, EvaluationError, ParserError, Warning } from './errors';
 import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
@@ -28,7 +29,7 @@ export abstract class Expression {
         throw new InternalInterpreterError(this.position, 'Called "getValue" on a derived form.');
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
+    toString(): string {
         throw new InternalInterpreterError(this.position, 'I don\'t want to be printed.');
     }
 
@@ -86,7 +87,7 @@ export class Constant extends Expression implements Pattern {
 
     simplify(): Constant { return this; }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
+    toString(): string {
         return this.token.getText();
     }
 
@@ -116,7 +117,18 @@ export class ValueIdentifier extends Expression implements Pattern {
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, Type>] {
 
-        let res = state.getStaticValue(this.name.getText());
+        let res: [Type, IdentifierStatus] | undefined = undefined;
+        if (this.name instanceof LongIdentifierToken) {
+            /* TODO
+            let st = state.getAndResolveStaticStructure(<LongIdentifierToken> this.name);
+            if (st !== undefined) {
+                res = st.getValue((<LongIdentifierToken> this.name).id.getText());
+            }
+             */
+        } else {
+            res = state.getStaticValue(this.name.getText());
+        }
+
         let mps = tyVarBnd;
         let bnd = false;
         if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
@@ -176,6 +188,10 @@ export class ValueIdentifier extends Expression implements Pattern {
     }
 
     matchType(state: State, tyVarBnd: Map<string, Type>, t: Type): [[string, Type][], Type, Map<string, Type>] {
+        if (this.name instanceof LongIdentifierToken) {
+            throw new ElaborationError(this.position, 'Variable names in patterns cannot be qualified.');
+        }
+
         let res = state.getStaticValue(this.name.getText());
         if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
             return [[[this.name.getText(), t.instantiate(state, tyVarBnd)]],
@@ -196,6 +212,10 @@ export class ValueIdentifier extends Expression implements Pattern {
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
+        if (this.name instanceof LongIdentifierToken) {
+            throw new EvaluationError(this.position, 'Variable names in patterns cannot be qualified.');
+        }
+
         let res = state.getDynamicValue(this.name.getText());
         if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
             return [[this.name.getText(), v]];
@@ -208,12 +228,21 @@ export class ValueIdentifier extends Expression implements Pattern {
 
     simplify(): ValueIdentifier { return this; }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
+    toString(): string {
         return this.name.getText();
     }
 
     compute(state: State): [Value, boolean, Warning[], MemBind] {
-        let res = state.getDynamicValue(this.name.getText());
+        let res: [Value, IdentifierStatus] | undefined = undefined;
+        if (this.name instanceof LongIdentifierToken) {
+            let st = state.getAndResolveDynamicStructure(<LongIdentifierToken> this.name);
+            if (st !== undefined) {
+                res = st.getValue((<LongIdentifierToken> this.name).id.getText());
+            }
+        } else {
+            res = state.getDynamicValue(this.name.getText());
+        }
+
         if (res === undefined) {
             throw new EvaluationError(this.position, 'Unbound value identifier "'
                 + this.name.getText() + '".');
@@ -354,7 +383,7 @@ export class Record extends Expression implements Pattern {
         return new Record(this.position, this.complete, newEntries);
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
+    toString(): string {
         let result: string = '{';
         let first: boolean = true;
         for (let i = 0; i < this.entries.length; ++i) {
@@ -363,7 +392,7 @@ export class Record extends Expression implements Pattern {
             }
             first = false;
             result += this.entries[i][0] + ' = '
-                + this.entries[i][1].toString(indentation, oneLine);
+                + this.entries[i][1];
         }
         if (!this.complete) {
             if (!first) {
@@ -405,9 +434,9 @@ export class LocalDeclarationExpression extends Expression {
         return new LocalDeclarationExpression(this.position, this.declaration.simplify(), this.expression.simplify());
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
-        let res = 'let ' + this.declaration.toString(indentation, oneLine);
-        res += ' in ' + this.expression.toString(indentation, oneLine) + ' end';
+    toString(): string {
+        let res = 'let ' + this.declaration;
+        res += ' in ' + this.expression + ' end';
         return res;
     }
 
@@ -520,8 +549,8 @@ export class TypedExpression extends Expression implements Pattern {
             this.expression.simplify(), this.typeAnnotation.simplify());
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
-        let res = '( ' + this.expression.toString(indentation, oneLine);
+    toString(): string {
+        let res = '( ' + this.expression;
         res += ': ' + this.typeAnnotation;
         return res + ' )';
     }
@@ -672,9 +701,9 @@ export class FunctionApplication extends Expression implements Pattern {
         return new FunctionApplication(this.position, this.func.simplify(), this.argument.simplify());
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
-        let res = '( ' +  this.func.toString(indentation, oneLine);
-        res += ' ' + this.argument.toString(indentation, oneLine);
+    toString(): string {
+        let res = '( ' +  this.func;
+        res += ' ' + this.argument;
         return res + ' )';
     }
 
@@ -777,9 +806,9 @@ export class HandleException extends Expression {
         return new HandleException(this.position, this.expression.simplify(), this.match.simplify());
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
-        let res = '( ( ' + this.expression.toString(indentation, oneLine) + ' )';
-        res += ' handle ' + this.match.toString(indentation, oneLine) + ' )';
+    toString(): string {
+        let res = '( ( ' + this.expression + ' )';
+        res += ' handle ' + this.match + ' )';
         return res;
     }
 
@@ -838,8 +867,8 @@ export class RaiseException extends Expression {
         return new RaiseException(this.position, this.expression.simplify());
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
-        return 'raise ' + this.expression.toString(indentation, oneLine);
+    toString(): string {
+        return 'raise ' + this.expression;
     }
 
     getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
@@ -879,9 +908,9 @@ export class Lambda extends Expression {
         return new Lambda(this.position, this.match.simplify());
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
+    toString(): string {
         // TODO
-        return '( fn ' + this.match.toString(indentation, oneLine) + ' )';
+        return '( fn ' + this.match + ' )';
     }
 
     getType(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(),
@@ -918,14 +947,14 @@ export class Match {
     // pat => exp or pat => exp | match
     constructor(public position: number, public matches: [PatternExpression, Expression][]) { }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
+    toString(): string {
         let res = '';
         for (let i = 0; i < this.matches.length; ++i) {
             if (i > 0) {
                 res += ' | ';
             }
-            res += this.matches[i][0].toString(indentation, oneLine);
-            res += ' => ' + this.matches[i][1].toString(indentation, oneLine);
+            res += this.matches[i][0];
+            res += ' => ' + this.matches[i][1];
         }
         return res;
     }
@@ -1030,7 +1059,7 @@ export class Wildcard extends Expression implements Pattern {
         return this;
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
+    toString(): string {
         return '_';
     }
 }
@@ -1084,8 +1113,8 @@ export class LayeredPattern extends Expression implements Pattern {
         }
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
-        return this.identifier.getText() + ' as ' + this.pattern.toString(indentation, oneLine);
+    toString(): string {
+        return this.identifier.getText() + ' as ' + this.pattern;
     }
 }
 
@@ -1192,9 +1221,9 @@ export class Conjunction extends Expression {
             falseConstant).simplify();
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
-        return '( ' + this.leftOperand.toString(indentation, oneLine) + ' andalso '
-            + this.rightOperand.toString(indentation, oneLine) + ' )';
+    toString(): string {
+        return '( ' + this.leftOperand + ' andalso '
+            + this.rightOperand + ' )';
     }
 }
 
@@ -1206,9 +1235,9 @@ export class Disjunction extends Expression {
         return new Conditional(this.position, this.leftOperand, trueConstant, this.rightOperand).simplify();
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
-        return '( ' + this.leftOperand.toString(indentation, oneLine) + ' orelse '
-            + this.rightOperand.toString(indentation, oneLine) + ' )';
+    toString(): string {
+        return '( ' + this.leftOperand + ' orelse '
+            + this.rightOperand + ' )';
     }
 }
 
@@ -1232,13 +1261,13 @@ export class Tuple extends Expression implements Pattern {
         return new Record(this.position, true, entries);
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
+    toString(): string {
         let res = '( ';
         for (let i = 0; i < this.expressions.length; ++i) {
             if (i > 0) {
                 res += ', ';
             }
-            res += this.expressions[i].toString(indentation, oneLine);
+            res += this.expressions[i];
         }
         return res + ' )';
     }
@@ -1265,13 +1294,13 @@ export class List extends Expression implements Pattern {
         return res;
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
+    toString(): string {
         let res = '[ ';
         for (let i = 0; i < this.expressions.length; ++i) {
             if (i > 0) {
                 res += ', ';
             }
-            res += this.expressions[i].toString(indentation, oneLine);
+            res += this.expressions[i];
         }
         return res + ' ]';
     }
@@ -1292,13 +1321,13 @@ export class Sequence extends Expression {
         return res.simplify();
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
+    toString(): string {
         let res = '( ';
         for (let i = 0; i < this.expressions.length; ++i) {
             if (i > 0) {
                 res += '; ';
             }
-            res += this.expressions[i].toString(indentation, oneLine);
+            res += this.expressions[i];
         }
         return res + ' )';
     }
@@ -1314,7 +1343,7 @@ export class RecordSelector extends Expression {
             new ValueIdentifier(-1, new IdentifierToken('__rs', -1))]]));
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
+    toString(): string {
         return '#' + this.label.getText();
     }
 }
@@ -1329,10 +1358,8 @@ export class CaseAnalysis extends Expression {
             this.expression.simplify());
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
-        let res = 'case ' + this.expression.toString(indentation, oneLine);
-        res += ' of ' + this.match.toString(indentation, oneLine);
-        return res;
+    toString(): string {
+        return 'case ' + this.expression + ' of ' + this.match;
     }
 }
 
@@ -1347,11 +1374,8 @@ export class Conditional extends Expression {
         return new CaseAnalysis(this.position, this.condition, match).simplify();
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
-        let res = 'if ' + this.condition.toString(indentation, oneLine);
-        res += ' then ' + this.consequence.toString(indentation, oneLine);
-        res += ' else ' + this.alternative.toString(indentation, oneLine);
-        return res;
+    toString(): string {
+        return 'if ' + this.condition + ' then ' + this.consequence + ' else ' + this.alternative;
     }
 }
 
@@ -1375,8 +1399,7 @@ export class While extends Expression {
         return new LocalDeclarationExpression(this.position, dec, fapp).simplify();
     }
 
-    toString(indentation: number = 0, oneLine: boolean = true): string {
-        return '( while ' + this.condition.toString(indentation, oneLine)
-            + ' do ' + this.body.toString(indentation, oneLine) + ' )';
+    toString(): string {
+        return '( while ' + this.condition + ' do ' + this.body + ' )';
     }
 }
