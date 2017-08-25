@@ -3159,7 +3159,19 @@ it("module language - structure", () => {
 
     expect(parse("structure a:b = c;")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
-            new Modu.StructureDeclaration(0, [])
+            new Modu.StructureDeclaration(0, [
+                new Modu.StructureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a",10),
+                    new Modu.TransparentConstraint(10,
+                        new Modu.StructureIdentifier(16,
+                            new Token.AlphanumericIdentifierToken("c", 16)
+                        ),
+                        new Modu.SignatureIdentifier(12,
+                            new Token.AlphanumericIdentifierToken("b", 12)
+                        )
+                    )
+                )
+            ])
         ], 1);
     );
 
@@ -3183,19 +3195,77 @@ it("module language - structure", () => {
 
     expect(parse("structure a:>b = c;")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
-            new Modu.StructureDeclaration(0, [])
+            new Modu.StructureDeclaration(0, [
+                new Modu.StructureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a",10),
+                    new Modu.OpaqueConstraint(10,
+                        new Modu.StructureIdentifier(17,
+                            new Token.AlphanumericIdentifierToken("c", 17)
+                        ),
+                        new Modu.SignatureIdentifier(13,
+                            new Token.AlphanumericIdentifierToken("b", 13)
+                        )
+                    )
+                )
+            ])
         ], 1);
     );
 
     expect(parse("structure a:>b = c and d:e = f;")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
-            new Modu.StructureDeclaration(0, [])
+            new Modu.StructureDeclaration(0, [
+                new Modu.StructureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a",10),
+                    new Modu.OpaqueConstraint(10,
+                        new Modu.StructureIdentifier(17,
+                            new Token.AlphanumericIdentifierToken("c", 17)
+                        ),
+                        new Modu.SignatureIdentifier(13,
+                            new Token.AlphanumericIdentifierToken("b", 13)
+                        )
+                    )
+                ),
+                new Modu.StructureBinding(23,
+                    new Token.AlphanumericIdentifierToken("d",23),
+                    new Modu.TransparentConstraint(23,
+                        new Modu.StructureIdentifier(29,
+                            new Token.AlphanumericIdentifierToken("f", 29)
+                        ),
+                        new Modu.SignatureIdentifier(25,
+                            new Token.AlphanumericIdentifierToken("e", 25)
+                        )
+                    )
+                )
+            ])
         ], 1);
     );
 
     expect(parse("structure a:b = c and d:>e = f;")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
-            new Modu.StructureDeclaration(0, [])
+            new Modu.StructureDeclaration(0, [
+                new Modu.StructureBinding(10,
+                    new Token.AlphanumericIdentifierToken("a",10),
+                    new Modu.TransparentConstraint(10,
+                        new Modu.StructureIdentifier(16,
+                            new Token.AlphanumericIdentifierToken("c", 16)
+                        ),
+                        new Modu.SignatureIdentifier(12,
+                            new Token.AlphanumericIdentifierToken("b", 12)
+                        )
+                    )
+                ),
+                new Modu.StructureBinding(22,
+                    new Token.AlphanumericIdentifierToken("d",22),
+                    new Modu.OpaqueConstraint(22,
+                        new Modu.StructureIdentifier(29,
+                            new Token.AlphanumericIdentifierToken("f", 29)
+                        ),
+                        new Modu.SignatureIdentifier(25,
+                            new Token.AlphanumericIdentifierToken("e", 25)
+                        )
+                    )
+                )
+            ])
         ], 1);
     );
 
@@ -3370,8 +3440,9 @@ it("module language - functor", () => {
                     new Modu.SignatureIdentifier(14,
                         new Token.AlphanumericIdentifierToken("c", 14)
                     ),
-                    new Modu.StructureIdentifier(19,
-                        new Token.AlphanumericIdentifierToken("d", 19)
+                    new Modu.TransparentConstraint(8,
+                        new Modu.StructureIdentifier(21, new Token.AlphanumericIdentifierToken("d", 21)),
+                        new Modu.SignatureIdentifier(17, new Token.AlphanumericIdentifierToken("e", 17))
                     )
                 )
             ])
@@ -3387,8 +3458,9 @@ it("module language - functor", () => {
                     new Modu.SignatureIdentifier(14,
                         new Token.AlphanumericIdentifierToken("c", 14)
                     ),
-                    new Modu.StructureIdentifier(19,
-                        new Token.AlphanumericIdentifierToken("d", 19)
+                    new Modu.OpaqueConstraint(8,
+                        new Modu.StructureIdentifier(22, new Token.AlphanumericIdentifierToken("d", 22)),
+                        new Modu.SignatureIdentifier(18, new Token.AlphanumericIdentifierToken("e", 18))
                     )
                 )
             ])
@@ -3400,12 +3472,18 @@ it("module language - functor", () => {
             new Modu.FunctorDeclaration(0, [
                 new Modu.FunctorBinding(8,
                     new Token.AlphanumericIdentifierToken("a", 8),
-                    new Token.AlphanumericIdentifierToken("b", 11),
-                    new Modu.SignatureIdentifier(14,
-                        new Token.AlphanumericIdentifierToken("c", 14)
-                    ),
-                    new Modu.StructureIdentifier(19,
-                        new Token.AlphanumericIdentifierToken("d", 19)
+                    new Token.AlphanumericIdentifierToken("__farg", -1),
+                    new Modu.SignatureExpression(-1,
+                        new Modu.SequentialSpecification(11,[
+                            new Modu.ValueSpecification(11, [[
+                                new Token.AlphanumericIdentifierToken("a",15),
+                                new Type.CustomType("int", [], 17)
+                            ]])
+                        ])
+                    )
+                    new Modu.LocalDeclarationStructureExpression(-1,
+                        new Decl.OpenDeclaration(-1, [new Token.AlphanumericIdentifierToken("__farg", -1)]),
+                        new Modu.StructureIdentifier(24, new Token.AlphanumericIdentifierToken("d", 24))
                     )
                 )
             ])
