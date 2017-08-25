@@ -400,7 +400,9 @@ it("dec", () => {
 });
 
 it("strbind", () => {
-    //TODO
+    expect(parse("structure a:>b = c;")).toEqualWithType(parse("structure a:>b = c;").simplify());
+    expect(parse("structure a:b = c;")).toEqualWithType(parse("structure a:b = c;").simplify());
+    // this simplify is done while parsing
 });
 
 it("strexp", () => {
@@ -408,7 +410,12 @@ it("strexp", () => {
 });
 
 it("funbind", () => {
-    //TODO
+    expect(parse("functor a (b: c):e = d;")).toEqualWithType(parse("functor a (b: c):e = d;").simplify());
+    expect(parse("functor a (b: c):>e = d;")).toEqualWithType(parse("functor a (b: c):>e = d;").simplify());
+    expect(parse("functor a (val a:int) = d;")).toEqualWithType(parse("functor a (val a:int) = d;").simplify());
+    expect(parse("functor a (val a:int):b = d;")).toEqualWithType(parse("functor a (val a:int):b = d;").simplify());
+    expect(parse("functor a (val a:int):>b = d;")).toEqualWithType(parse("functor a (val a:int):>b = d;").simplify());
+    // this simplify is done while parsing
 });
 
 it("program", () => {
@@ -424,5 +431,13 @@ it("program", () => {
             )], 2
         )], 1)
     )
+    //TODO
+});
+
+it("spec", () => {
+    //TODO
+});
+
+it("sigexp", () => {
     //TODO
 });
