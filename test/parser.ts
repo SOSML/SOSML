@@ -3284,7 +3284,7 @@ it("module language - structure", () => {
             ])
         ], 1);
     );
-
+/*
     expect(parse("structure a = b (structure a = b);")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Modu.StructureDeclaration(0, [
@@ -3300,7 +3300,7 @@ it("module language - structure", () => {
             ])
         ], 1);
     );
-
+*/
 });
 
 it("module language - signature", () => {
@@ -3490,6 +3490,58 @@ it("module language - functor", () => {
         ], 1)
     );
 
+    expect(parse("functor a (val a:int) :b = d;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.FunctorDeclaration(0, [
+                new Modu.FunctorBinding(8,
+                    new Token.AlphanumericIdentifierToken("a", 8),
+                    new Token.AlphanumericIdentifierToken("__farg", -1),
+                    new Modu.SignatureExpression(-1,
+                        new Modu.SequentialSpecification(11,[
+                            new Modu.ValueSpecification(11, [[
+                                new Token.AlphanumericIdentifierToken("a",15),
+                                new Type.CustomType("int", [], 17)
+                            ]])
+                        ])
+                    )
+                    new Modu.LocalDeclarationStructureExpression(-1,
+                        new Decl.OpenDeclaration(-1, [new Token.AlphanumericIdentifierToken("__farg", -1)]),
+                        new Modu.TransparentConstraint(-1,
+                            new Modu.StructureIdentifier(27, new Token.AlphanumericIdentifierToken("d", 27)),
+                            new Modu.SignatureIdentifier(23, new Token.AlphanumericIdentifierToken("b", 23))
+                        )
+                    )
+                )
+            ])
+        ], 1)
+    );
+
+    expect(parse("functor a (val a:int):>b = d;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.FunctorDeclaration(0, [
+                new Modu.FunctorBinding(8,
+                    new Token.AlphanumericIdentifierToken("a", 8),
+                    new Token.AlphanumericIdentifierToken("__farg", -1),
+                    new Modu.SignatureExpression(-1,
+                        new Modu.SequentialSpecification(11,[
+                            new Modu.ValueSpecification(11, [[
+                                new Token.AlphanumericIdentifierToken("a",15),
+                                new Type.CustomType("int", [], 17)
+                            ]])
+                        ])
+                    )
+                    new Modu.LocalDeclarationStructureExpression(-1,
+                        new Decl.OpenDeclaration(-1, [new Token.AlphanumericIdentifierToken("__farg", -1)]),
+                        new Modu.OpaqueConstraint(-1,
+                            new Modu.StructureIdentifier(27, new Token.AlphanumericIdentifierToken("d", 27)),
+                            new Modu.SignatureIdentifier(23, new Token.AlphanumericIdentifierToken("b", 23))
+                        )
+                    )
+                )
+            ])
+        ], 1)
+    );
+//TODO test the and on the derive forms
 });
 
 it("module language - spec", () => {
@@ -4059,7 +4111,7 @@ it("module language - spec", () => {
     );
 
     expect(() => { parse("signature a = sig val b:e sharing type c end;"); }).toThrow(Parser.ParserError);
-/*
+
     expect(parse("signature a = sig type b = c end;")).toEqualWithType(
         spec_tester([
             new Modu.ValueSpecification(18,[
@@ -4103,6 +4155,6 @@ it("module language - spec", () => {
             ])
         ])
     );
-*/
+
     //TODO sharing derive
 });
