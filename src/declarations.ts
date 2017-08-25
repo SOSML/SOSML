@@ -473,7 +473,6 @@ export class OpenDeclaration extends Declaration {
     elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
         [State, Warning[], Map<string, Type>, string] {
         for (let i = 0; i < this.names.length; ++i) {
-            let res: StaticBasis = new StaticBasis({}, {});
             let tmp: StaticBasis | undefined = undefined;
             if (this.names[i] instanceof LongIdentifierToken) {
                 /* TODO
@@ -489,36 +488,14 @@ export class OpenDeclaration extends Declaration {
                 throw new EvaluationError(this.position,
                     'Undefined module "' + this.names[i].getText() + '".');
             }
-            res = <StaticBasis> tmp;
 
-            for (let v in res.typeEnvironment) {
-                if (res.typeEnvironment.hasOwnProperty(v)) {
-                    state.staticBasis.typeEnvironment[v] = res.typeEnvironment[v];
-                }
-            }
-            for (let v in res.valueEnvironment) {
-                if (res.valueEnvironment.hasOwnProperty(v)) {
-                    state.staticBasis.valueEnvironment[v] = res.valueEnvironment[v];
-                }
-            }
-                /* TODO
-            for (let v in res.structureEnvironment) {
-                if (res.structureEnvironment.hasOwnProperty(v)) {
-                    state.setStaticStructure(v, res.structureEnvironment[v]);
-                }
-            }
-            for (let v in res.signatureEnvironment) {
-                if (res.signatureEnvironment.hasOwnProperty(v)) {
-                    state.setStaticSignature(v, res.signatureEnvironment[v]);
-                }
-            } */
+            // state.staticBasis.extend(<StaticBasis> tmp);
         }
         return [state, [], tyVarBnd, nextName];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
         for (let i = 0; i < this.names.length; ++i) {
-            let res: DynamicBasis = new DynamicBasis({}, {}, {}, {});
             let tmp: DynamicBasis | undefined;
             if (this.names[i] instanceof LongIdentifierToken) {
                 tmp = state.getAndResolveDynamicStructure(<LongIdentifierToken> this.names[i]);
@@ -532,30 +509,7 @@ export class OpenDeclaration extends Declaration {
                 throw new EvaluationError(this.position,
                     'Undefined module "' + this.names[i].getText() + '".');
             }
-
-            res = <DynamicBasis> tmp;
-
-            for (let v in res.typeEnvironment) {
-                if (res.typeEnvironment.hasOwnProperty(v)) {
-                    state.setDynamicType(v, res.typeEnvironment[v]);
-                }
-            }
-            for (let v in res.valueEnvironment) {
-                if (res.valueEnvironment.hasOwnProperty(v)) {
-                    state.setDynamicValue(v, res.valueEnvironment[v][0], res.valueEnvironment[v][1]);
-                }
-            }
-            for (let v in res.structureEnvironment) {
-                if (res.structureEnvironment.hasOwnProperty(v)) {
-                    state.setDynamicStructure(v, res.structureEnvironment[v]);
-                }
-            }
-            for (let v in res.signatureEnvironment) {
-                if (res.signatureEnvironment.hasOwnProperty(v)) {
-                    state.setDynamicSignature(v, res.signatureEnvironment[v]);
-                }
-            }
-            // TODO: Functors
+            state.dynamicBasis.extend(<DynamicBasis> tmp);
         }
         return [state, false, undefined, []];
     }

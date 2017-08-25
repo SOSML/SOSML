@@ -477,6 +477,7 @@ let initialState: State = new State(
             // ref, :=, ! are implemented directly within evaluate.
         },
         {},
+        {},
         {}
     ),
     [ 0, {} ],

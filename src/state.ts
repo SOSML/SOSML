@@ -1,7 +1,9 @@
 import { Type } from './types';
 import { Value, ReferenceValue } from './values';
-import { Token, LongIdentifierToken } from './tokens';
+import { Token, IdentifierToken, LongIdentifierToken } from './tokens';
 import { InternalInterpreterError, EvaluationError } from './errors';
+import { Structure } from './modules';
+import { Expression } from './expressions';
 
 export enum IdentifierStatus {
     VALUE_VARIABLE,
@@ -39,6 +41,15 @@ export type DynamicStructureInterface = { [name: string]: DynamicInterface };
 
 
 export type DynamicSignatureEnvironment = { [name: string]: DynamicInterface };
+
+
+export class DynamicFunctorInformation {
+    constructor(public paramName: IdentifierToken, public param: DynamicInterface,
+                public body: Expression & Structure, public state: State) {
+    }
+}
+
+export type DynamicFunctorEnvironment = { [name: string]: DynamicFunctorInformation };
 
 
 export class DynamicInterface {
@@ -80,7 +91,8 @@ export class DynamicBasis {
     constructor(public typeEnvironment: DynamicTypeEnvironment,
                 public valueEnvironment: DynamicValueEnvironment,
                 public structureEnvironment: DynamicStructureEnvironment,
-                public signatureEnvironment: DynamicSignatureEnvironment) {
+                public signatureEnvironment: DynamicSignatureEnvironment,
+                public functorEnvironment: DynamicFunctorEnvironment) {
     }
 
     getValue(name: string): [Value, IdentifierStatus] | undefined {
@@ -99,6 +111,10 @@ export class DynamicBasis {
         return this.signatureEnvironment[name];
     }
 
+    getFunctor(name: string): DynamicFunctorInformation | undefined {
+        return this.functorEnvironment[name];
+    }
+
     setValue(name: string, value: Value, is: IdentifierStatus): void {
         this.valueEnvironment[name] = [value, is];
     }
@@ -113,6 +129,10 @@ export class DynamicBasis {
 
     setSignature(name: string, signature: DynamicInterface) {
         this.signatureEnvironment[name] = signature;
+    }
+
+    setFunctor(name: string, functor: DynamicFunctorInformation) {
+        this.functorEnvironment[name] = functor;
     }
 
     extend(other: DynamicBasis): DynamicBasis {
@@ -136,11 +156,16 @@ export class DynamicBasis {
                 this.signatureEnvironment[i] = other.signatureEnvironment[i];
             }
         }
+        for (let i in other.functorEnvironment) {
+            if (other.functorEnvironment.hasOwnProperty(i)) {
+                this.functorEnvironment[i] = other.functorEnvironment[i];
+            }
+        }
         return this;
     }
 
     restrict(sig: DynamicInterface): DynamicBasis {
-        let res = new DynamicBasis({}, {}, {}, this.signatureEnvironment);
+        let res = new DynamicBasis({}, {}, {}, this.signatureEnvironment, this.functorEnvironment);
 
         for (let i in sig.typeInterface) {
             if (sig.typeInterface.hasOwnProperty(i)
@@ -191,6 +216,19 @@ export class StaticBasis {
         return this.typeEnvironment[name];
     }
 
+    getStructure(name: string): undefined {
+        return undefined;
+    }
+
+    getSignature(name: string): undefined {
+        return undefined;
+    }
+
+    getFunctor(name: string): undefined {
+        return undefined;
+    }
+
+
     setValue(name: string, value: Type, is: IdentifierStatus): void {
         this.valueEnvironment[name] = [value, is];
     }
@@ -201,6 +239,36 @@ export class StaticBasis {
 
     setType(name: string, type: Type, constructors: string[], arity: number) {
         this.typeEnvironment[name] = new TypeInformation(type, constructors, arity);
+    }
+
+    extend(other: StaticBasis): StaticBasis {
+        for (let i in other.typeEnvironment) {
+            if (other.typeEnvironment.hasOwnProperty(i)) {
+                this.typeEnvironment[i] = other.typeEnvironment[i];
+            }
+        }
+        for (let i in other.valueEnvironment) {
+            if (other.valueEnvironment.hasOwnProperty(i)) {
+                this.valueEnvironment[i] = other.valueEnvironment[i];
+            }
+        }
+            /*
+        for (let i in other.structureEnvironment) {
+            if (other.structureEnvironment.hasOwnProperty(i)) {
+                this.structureEnvironment[i] = other.structureEnvironment[i];
+            }
+        }
+        for (let i in other.signatureEnvironment) {
+            if (other.signatureEnvironment.hasOwnProperty(i)) {
+                this.signatureEnvironment[i] = other.signatureEnvironment[i];
+            }
+        }
+        for (let i in other.functorEnvironment) {
+            if (other.functorEnvironment.hasOwnProperty(i)) {
+                this.functorEnvironment[i] = other.functorEnvironment[i];
+            }
+        } */
+        return this;
     }
 }
 
@@ -229,21 +297,7 @@ export class State {
                 public dynamicBasis: DynamicBasis,
                 public memory: Memory,
                 private infixEnvironment: InfixEnvironment = {},
-                private valueIdentifierId: { [name: string]: number } = {},
-                private declaredIdentifiers: Set<string> = new Set<string>()) {
-    }
-
-    getDefinedIdentifiers(idLimit: number = 0): Set<string> {
-        let rec = new Set<string>();
-        if (this.parent !== undefined && this.parent.id >= idLimit) {
-            rec = this.parent.getDefinedIdentifiers();
-        }
-
-        this.declaredIdentifiers.forEach((val: string) => {
-            rec.add(val);
-        });
-
-        return rec;
+                private valueIdentifierId: { [name: string]: number } = {}) {
     }
 
     getMemoryChanges(stopId: number): [number, Value][] {
@@ -266,9 +320,9 @@ export class State {
 
     getDynamicChanges(stopId: number): DynamicBasis {
         if (this.id === stopId) {
-            return new DynamicBasis({}, {}, {}, {});
+            return new DynamicBasis({}, {}, {}, {}, {});
         }
-        let res = new DynamicBasis({}, {}, {}, {});
+        let res = new DynamicBasis({}, {}, {}, {}, {});
 
         if (this.parent !== undefined) {
             res = this.parent.getDynamicChanges(stopId);
@@ -278,13 +332,28 @@ export class State {
         return res;
     }
 
+    getStaticChanges(stopId: number): StaticBasis {
+        if (this.id === stopId) {
+            return new StaticBasis({}, {});
+        }
+        let res = new StaticBasis({}, {});
+
+        if (this.parent !== undefined) {
+            res = this.parent.getStaticChanges(stopId);
+        }
+
+        res = res.extend(this.staticBasis);
+        return res;
+    }
+
+
     getNestedState(newId: number|undefined = undefined) {
         if (newId === undefined) {
             newId = this.id + 1;
         }
         let res = new State(<number> newId, this,
             new StaticBasis({}, {}),
-            new DynamicBasis({}, {}, {}, {}),
+            new DynamicBasis({}, {}, {}, {}, {}),
             [this.memory[0], {}]);
         return res;
     }
@@ -383,6 +452,15 @@ export class State {
         }
     }
 
+    getDynamicFunctor(name: string, idLimit: number = 0): DynamicFunctorInformation | undefined {
+        let result = this.dynamicBasis.getFunctor(name);
+        if (result !== undefined || this.parent === undefined || this.parent.id < idLimit) {
+            return result;
+        } else {
+            return this.parent.getDynamicFunctor(name, idLimit);
+        }
+    }
+
     getInfixStatus(id: Token, idLimit: number = 0): InfixStatus {
         if (id.isVid() || id instanceof LongIdentifierToken ) {
             if (this.infixEnvironment.hasOwnProperty(id.getText()) || !this.parent
@@ -461,7 +539,6 @@ export class State {
     setDynamicValue(name: string, value: Value, is: IdentifierStatus, atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
             this.dynamicBasis.setValue(name, value, is);
-            this.declaredIdentifiers.add(name);
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
@@ -472,7 +549,6 @@ export class State {
     setDynamicType(name: string, constructors: string[], atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
             this.dynamicBasis.setType(name, constructors);
-            this.declaredIdentifiers.add(name);
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
@@ -483,7 +559,6 @@ export class State {
     setDynamicStructure(name: string, structure: DynamicBasis, atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
             this.dynamicBasis.setStructure(name, structure);
-            this.declaredIdentifiers.add(name);
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
@@ -494,13 +569,23 @@ export class State {
     setDynamicSignature(name: string, signature: DynamicInterface, atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
             this.dynamicBasis.setSignature(name, signature);
-            this.declaredIdentifiers.add(name);
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
             this.parent.setDynamicSignature(name, signature, atId);
         }
     }
+
+    setDynamicFunctor(name: string, functor: DynamicFunctorInformation, atId: number|undefined = undefined) {
+        if (atId === undefined || atId === this.id) {
+            this.dynamicBasis.setFunctor(name, functor);
+        } else if (atId > this.id || this.parent === undefined) {
+            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+        } else {
+            this.parent.setDynamicFunctor(name, functor, atId);
+        }
+    }
+
 
 
     setInfixStatus(id: Token, precedence: number,

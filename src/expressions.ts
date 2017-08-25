@@ -926,16 +926,7 @@ export class Lambda extends Expression {
         // (Local declarations may change the past, so we must record that, too.
         let nstate = getInitialState().getNestedState(state.id);
 
-        state.getDefinedIdentifiers().forEach((val: string) => {
-            let value = state.getDynamicValue(val);
-            let type = state.getDynamicType(val);
-            if (value !== undefined) {
-                nstate.setDynamicValue(val, value[0], value[1]);
-            }
-            if (type !== undefined) {
-                nstate.setDynamicType(val, type);
-            }
-        });
+        nstate.dynamicBasis = state.getDynamicChanges(-1);
 
         return [new FunctionValue(nstate, [], this.match), false, [], []];
     }
