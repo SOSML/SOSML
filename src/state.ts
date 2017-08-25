@@ -433,7 +433,7 @@ export class State {
         }
 
         for (let i = 1; i < name.qualifiers.length; ++i) {
-            if (res == undefined) {
+            if (res === undefined) {
                 return res;
             }
             res = res.getStructure(name.qualifiers[i].getText());

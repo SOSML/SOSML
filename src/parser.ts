@@ -1632,18 +1632,18 @@ export class Parser {
 
             if (this.checkKeywordToken(this.currentToken(), ':')) {
                 ++this.position;
-                let sig = this.parseSignatureExpression();
+                let sg = this.parseSignatureExpression();
                 this.assertKeywordToken(this.currentToken(), '=');
                 ++this.position;
                 return new FunctorBinding(curTok.position, funid, tycon, sigexp,
-                    new TransparentConstraint(curTok.position, this.parseStructureExpression(), sig));
+                    new TransparentConstraint(curTok.position, this.parseStructureExpression(), sg));
             } else if (this.checkKeywordToken(this.currentToken(), ':>')) {
                 ++this.position;
-                let sig = this.parseSignatureExpression();
+                let sg = this.parseSignatureExpression();
                 this.assertKeywordToken(this.currentToken(), '=');
                 ++this.position;
                 return new FunctorBinding(curTok.position, funid, tycon, sigexp,
-                    new OpaqueConstraint(curTok.position, this.parseStructureExpression(), sig));
+                    new OpaqueConstraint(curTok.position, this.parseStructureExpression(), sg));
             }
 
             this.assertKeywordToken(this.currentToken(), '=');
@@ -1677,7 +1677,7 @@ export class Parser {
             if (opaque) {
                 str = new OpaqueConstraint(-1, str, <Expression & Signature> sig);
             } else {
-                str = new OpaqueConstraint(-1, str, <Expression & Signature> sig);
+                str = new TransparentConstraint(-1, str, <Expression & Signature> sig);
             }
         }
 

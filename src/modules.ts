@@ -3,9 +3,10 @@ import { Declaration } from './declarations';
 import { IdentifierToken, Token, LongIdentifierToken } from './tokens';
 import { Type, TypeVariable } from './types';
 import { State, DynamicInterface, DynamicStructureInterface, DynamicValueInterface,
-         DynamicTypeInterface, IdentifierStatus, DynamicBasis } from './state';
+         DynamicTypeInterface, IdentifierStatus, DynamicBasis, DynamicFunctorInformation } from './state';
 import { Warning, EvaluationError } from './errors';
 import { Value } from './values';
+import { getInitialState } from './initialState';
 
 // Module Expressions
 
@@ -146,8 +147,27 @@ export class FunctorApplication extends Expression implements Structure {
     }
 
     computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
-        // TODO
-        throw new Error('ニャハ');
+        let fun = state.getDynamicFunctor(this.functorId.getText());
+
+        if (fun === undefined) {
+            throw new EvaluationError(this.position,
+                'Undefined functor "' + this.functorId.getText() + '".');
+        }
+
+        let res = this.structureExpression.computeStructure(state);
+
+        if (res[0] instanceof Value) {
+            return res;
+        }
+
+        let nstate = fun.state.getNestedState(fun.state.id);
+        for (let i = 0; i < res[2].length; ++i) {
+            nstate.setCell(res[2][i][0], res[2][i][1]);
+        }
+        nstate.setDynamicStructure(fun.paramName.getText(),
+            (<DynamicBasis> res[0]).restrict(fun.param));
+        let nres = fun.body.computeStructure(nstate);
+        return [nres[0], res[1].concat(nres[1]), res[2].concat(nres[2])];
     }
 
     toString(): string {
@@ -378,8 +398,10 @@ export class FunctorDeclaration extends Declaration {
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
-        // TODO
-        return [state, false, undefined, [new Warning(this.position, 'Skipped functor evaluation.')]];
+        for (let i = 0; i < this.functorBinding.length; ++i) {
+            state = this.functorBinding[i].evaluate(state);
+        }
+        return [state, false, undefined, []];
     }
 
     simplify(): FunctorDeclaration {
@@ -454,12 +476,24 @@ export class FunctorBinding {
     constructor(public position: number, public name: IdentifierToken,
                 public signatureName: IdentifierToken,
                 public signatureBinding: Expression & Signature,
-                public binding: Expression) {
+                public binding: Expression & Structure) {
     }
 
     simplify(): FunctorBinding {
         return new FunctorBinding(this.position, this.name, this.signatureName,
-            <Expression & Signature> this.signatureBinding.simplify(), this.binding.simplify());
+            <Expression & Signature> this.signatureBinding.simplify(),
+            <Expression & Structure> this.binding.simplify());
+    }
+
+    evaluate(state: State): State {
+        let inter = this.signatureBinding.computeInterface(state);
+        let nstate = getInitialState().getNestedState(state.id);
+        nstate.dynamicBasis = state.getDynamicChanges(-1);
+
+        state.setDynamicFunctor(this.name.getText(),
+            new DynamicFunctorInformation(this.signatureName, inter, this.binding, nstate));
+
+        return state;
     }
 
     toString(): string {
