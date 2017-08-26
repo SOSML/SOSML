@@ -39,8 +39,12 @@ export type DynamicStructureEnvironment = { [name: string]: DynamicBasis };
 
 export type DynamicStructureInterface = { [name: string]: DynamicInterface };
 
+export type StaticStructureEnvironment = { [name: string]: StaticBasis };
+
 
 export type DynamicSignatureEnvironment = { [name: string]: DynamicInterface };
+
+export type StaticSignatureEnvironment = { [name: string]: any };
 
 
 export class DynamicFunctorInformation {
@@ -50,6 +54,8 @@ export class DynamicFunctorInformation {
 }
 
 export type DynamicFunctorEnvironment = { [name: string]: DynamicFunctorInformation };
+
+export type StaticFunctorEnvironment = { [name: string]: any };
 
 
 export class DynamicInterface {
@@ -205,7 +211,10 @@ export class DynamicBasis {
 
 export class StaticBasis {
     constructor(public typeEnvironment: StaticTypeEnvironment,
-                public valueEnvironment: StaticValueEnvironment) {
+                public valueEnvironment: StaticValueEnvironment,
+                public structureEnvironment: StaticStructureEnvironment,
+                public signatureEnvironment: StaticSignatureEnvironment,
+                public functorEnvironment: StaticFunctorEnvironment) {
     }
 
     getValue(name: string): [Type, IdentifierStatus] | undefined {
@@ -217,15 +226,15 @@ export class StaticBasis {
     }
 
     getStructure(name: string): undefined {
-        return undefined;
+        return this.structureEnvironment[name];
     }
 
     getSignature(name: string): undefined {
-        return undefined;
+        return this.signatureEnvironment[name];
     }
 
     getFunctor(name: string): undefined {
-        return undefined;
+        return this.functorEnvironment[name];
     }
 
 
@@ -241,6 +250,18 @@ export class StaticBasis {
         this.typeEnvironment[name] = new TypeInformation(type, constructors, arity);
     }
 
+    setStructure(name: string, structure: StaticBasis) {
+        this.structureEnvironment[name] = structure;
+    }
+
+    setSignature(name: string, signature: StaticInterface) {
+        this.signatureEnvironment[name] = signature;
+    }
+
+    setFunctor(name: string, functor: StaticFunctorInformation) {
+        this.functorEnvironment[name] = functor;
+    }
+
     extend(other: StaticBasis): StaticBasis {
         for (let i in other.typeEnvironment) {
             if (other.typeEnvironment.hasOwnProperty(i)) {
@@ -252,7 +273,6 @@ export class StaticBasis {
                 this.valueEnvironment[i] = other.valueEnvironment[i];
             }
         }
-            /*
         for (let i in other.structureEnvironment) {
             if (other.structureEnvironment.hasOwnProperty(i)) {
                 this.structureEnvironment[i] = other.structureEnvironment[i];
@@ -267,7 +287,7 @@ export class StaticBasis {
             if (other.functorEnvironment.hasOwnProperty(i)) {
                 this.functorEnvironment[i] = other.functorEnvironment[i];
             }
-        } */
+        }
         return this;
     }
 }
@@ -334,9 +354,9 @@ export class State {
 
     getStaticChanges(stopId: number): StaticBasis {
         if (this.id === stopId) {
-            return new StaticBasis({}, {});
+            return new StaticBasis({}, {}, {}, {}, {});
         }
-        let res = new StaticBasis({}, {});
+        let res = new StaticBasis({}, {}, {}, {}, {});
 
         if (this.parent !== undefined) {
             res = this.parent.getStaticChanges(stopId);
@@ -352,7 +372,7 @@ export class State {
             newId = this.id + 1;
         }
         let res = new State(<number> newId, this,
-            new StaticBasis({}, {}),
+            new StaticBasis({}, {}, {}, {}, {}),
             new DynamicBasis({}, {}, {}, {}, {}),
             [this.memory[0], {}]);
         return res;
