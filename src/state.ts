@@ -225,7 +225,7 @@ export class StaticBasis {
         return this.typeEnvironment[name];
     }
 
-    getStructure(name: string): undefined {
+    getStructure(name: string): StaticBasis | undefined {
         return this.structureEnvironment[name];
     }
 
@@ -254,11 +254,11 @@ export class StaticBasis {
         this.structureEnvironment[name] = structure;
     }
 
-    setSignature(name: string, signature: StaticInterface) {
+    setSignature(name: string, signature: any) {
         this.signatureEnvironment[name] = signature;
     }
 
-    setFunctor(name: string, functor: StaticFunctorInformation) {
+    setFunctor(name: string, functor: any) {
         this.functorEnvironment[name] = functor;
     }
 
@@ -293,6 +293,7 @@ export class StaticBasis {
 }
 
 export type Memory = [number, {[address: number]: Value}];
+export type FreeTypeVariableInformation = [number, Map<string, [Type, boolean]>];
 
 export class State {
     static allowsRebind(name: string): boolean {
@@ -316,6 +317,8 @@ export class State {
                 public staticBasis: StaticBasis,
                 public dynamicBasis: DynamicBasis,
                 public memory: Memory,
+                public freeTypeVariables: FreeTypeVariableInformation
+                    = [0, new Map<string, [Type, boolean]>()],
                 private infixEnvironment: InfixEnvironment = {},
                 private valueIdentifierId: { [name: string]: number } = {}) {
     }
@@ -374,7 +377,8 @@ export class State {
         let res = new State(<number> newId, this,
             new StaticBasis({}, {}, {}, {}, {}),
             new DynamicBasis({}, {}, {}, {}, {}),
-            [this.memory[0], {}]);
+            [this.memory[0], {}],
+            [this.freeTypeVariables[0], new Map<string, [Type, boolean]>()]);
         return res;
     }
 
@@ -387,6 +391,25 @@ export class State {
             return (<State> this.parent).getCell(address);
         }
     }
+
+    getTypeVariableBinds(idLimit: number = 0): FreeTypeVariableInformation {
+        let result = this.freeTypeVariables;
+        if (this.parent === undefined || this.parent.id < idLimit) {
+            let ret = new Map<string, [Type, boolean]>();
+            result[1].forEach((val: [Type, boolean], key: string) => {
+                ret[1].set(key, val);
+            });
+
+            return [result[0], ret];
+        } else {
+            let tmp = this.parent.getTypeVariableBinds(idLimit);
+            result[1].forEach((val: [Type, boolean], key: string) => {
+                tmp[1].set(key, val);
+            });
+            return [Math.max(result[0], tmp[0]), tmp[1]];
+        }
+    }
+
 
     // Gets an identifier's type. The value  intermediate  determines whether to return intermediate results
     getStaticValue(name: string, idLimit: number = 0): [Type, IdentifierStatus] | undefined {

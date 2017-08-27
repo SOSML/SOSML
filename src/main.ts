@@ -105,6 +105,8 @@ export function interpret(nextInstruction: string,
                     }
                 }
             }
+
+            curState.freeTypeVariables = state.getTypeVariableBinds(curState.id);
         }
         if (state.parent === undefined) {
             break;

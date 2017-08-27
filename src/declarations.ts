@@ -10,8 +10,9 @@ import { Value, ValueConstructor, ExceptionConstructor, ExceptionValue,
 
 export abstract class Declaration {
     id: number;
-    elaborate(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(), nextName: string = '\'t0'):
-        [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State,
+              tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
+              nextName: string = '\'t0'): [State, Warning[], Map<string, [Type, boolean]>, string] {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
@@ -48,8 +49,8 @@ export class ValueDeclaration extends Declaration {
         return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd, this.id);
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
-        [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [State, Warning[], Map<string, [Type, boolean]>, string] {
         let result: [string, Type][] = [];
         let isTopLevel = (tyVarBnd === undefined || tyVarBnd.size === 0);
 
@@ -178,8 +179,8 @@ export class TypeDeclaration extends Declaration {
         return new TypeDeclaration(this.position, bnds, this.id);
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
-        [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [State, Warning[], Map<string, [Type, boolean]>, string] {
         for (let i = 0; i < this.typeBinding.length; ++i) {
             state.setStaticType(this.typeBinding[i].name.getText(),
                 new FunctionType(new CustomType(this.typeBinding[i].name.getText(),
@@ -253,8 +254,8 @@ export class DatatypeDeclaration extends Declaration {
         /* } */
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
-        [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [State, Warning[], Map<string, [Type, boolean]>, string] {
         // I'm assuming the withtype is empty
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
             let res = this.datatypeBinding[i].getType(state);
@@ -323,8 +324,8 @@ export class DatatypeReplication extends Declaration {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
-    [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    [State, Warning[], Map<string, [Type, boolean]>, string] {
         let res: TypeInformation | undefined = undefined;
 
         if (this.oldname instanceof LongIdentifierToken) {
@@ -387,8 +388,8 @@ export class ExceptionDeclaration extends Declaration {
         return 'exception <stuff>;';
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
-        [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [State, Warning[], Map<string, [Type, boolean]>, string] {
         for (let i = 0; i < this.bindings.length; ++i) {
             state = this.bindings[i].elaborate(state);
         }
@@ -418,9 +419,9 @@ export class LocalDeclaration extends Declaration {
         return new LocalDeclaration(this.position, this.declaration.simplify(), this.body.simplify(), this.id);
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
-        [State, Warning[], Map<string, Type>, string] {
-        let nstate: [State, Warning[], Map<string, Type>, string]
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [State, Warning[], Map<string, [Type, boolean]>, string] {
+        let nstate: [State, Warning[], Map<string, [Type, boolean]>, string]
             = [state.getNestedState(state.id), [], tyVarBnd, nextName];
         let res = this.declaration.elaborate(nstate[0], tyVarBnd, nextName);
         let input = res[0].getNestedState(state.id);
@@ -470,8 +471,8 @@ export class OpenDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
-        [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [State, Warning[], Map<string, [Type, boolean]>, string] {
         for (let i = 0; i < this.names.length; ++i) {
             let tmp: StaticBasis | undefined = undefined;
             if (this.names[i] instanceof LongIdentifierToken) {
@@ -533,8 +534,8 @@ export class EmptyDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
-        [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [State, Warning[], Map<string, [Type, boolean]>, string] {
         return [state, [], tyVarBnd, nextName];
     }
 
@@ -561,8 +562,8 @@ export class SequentialDeclaration extends Declaration {
         return new SequentialDeclaration(this.position, decls, this.id);
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
-        [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [State, Warning[], Map<string, [Type, boolean]>, string] {
         let warns: Warning[] = [];
         let bnds = tyVarBnd;
         let str = nextName;
@@ -675,8 +676,8 @@ export class InfixDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
-        [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [State, Warning[], Map<string, [Type, boolean]>, string] {
         return [state, [], tyVarBnd, nextName];
     }
 
@@ -708,8 +709,8 @@ export class InfixRDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
-        [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [State, Warning[], Map<string, [Type, boolean]>, string] {
         return [state, [], tyVarBnd, nextName];
     }
 
@@ -741,8 +742,8 @@ export class NonfixDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type>, nextName: string):
-        [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [State, Warning[], Map<string, [Type, boolean]>, string] {
         return [state, [], tyVarBnd, nextName];
     }
 
@@ -780,8 +781,9 @@ export class ValueBinding {
         return res + this.expression;
     }
 
-    getType(tyVarSeq: TypeVariable[], state: State, tyVarBnd: Map<string, Type>, nextName: string, isTopLevel: boolean):
-    [[string, Type][], Warning[], Map<string, Type>, string] {
+    getType(tyVarSeq: TypeVariable[], state: State, tyVarBnd: Map<string, [Type, boolean]>,
+            nextName: string, isTopLevel: boolean):
+            [[string, Type][], Warning[], Map<string, [Type, boolean]>, string] {
         let nstate = state.getNestedState(state.id);
         let tp = this.expression.getType(nstate, tyVarBnd, nextName);
         let res = this.pattern.matchType(nstate, tp[4], tp[0]);
@@ -803,27 +805,27 @@ export class ValueBinding {
             ntys.push(<TypeVariable> nt);
         }
 
+        let valuePoly = !this.isRecursive && !this.expression.isSafe();
 
         for (let i = 0; i < res[0].length; ++i) {
             res[0][i][1] = res[0][i][1].instantiate(state, res[2]);
             let tv = res[0][i][1].getTypeVariables();
+            let free = res[0][i][1].getTypeVariables(true);
             for (let j = ntys.length - 1; j >= 0; --j) {
                 if (tv.has(ntys[j].name)) {
                     res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1]);
+                    (<TypeVariableBind> res[0][i][1]).isFree = free.has(ntys[j].name);
                 }
             }
-            if (isTopLevel) {
-                // Toplevel so bind all remaining tyvars
-                ntys = [];
-                res[0][i][1].getTypeVariables().forEach((val: string) => {
-                    ntys.push(new TypeVariable(val));
-                });
-                for (let j = ntys.length - 1; j >= 0; --j) {
-                    res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1]);
-                }
+            ntys = [];
+            res[0][i][1].getTypeVariables().forEach((val: string) => {
+                ntys.push(new TypeVariable(val));
+            });
+            for (let j = ntys.length - 1; j >= 0; --j) {
+                res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1]);
+                (<TypeVariableBind> res[0][i][1]).isFree = valuePoly || free.has(ntys[j].name);
             }
         }
-
 
         return [res[0], tp[1], res[2], tp[2]];
     }
@@ -944,7 +946,7 @@ export class DatatypeBinding {
             if (this.type[i][1] !== undefined) {
                 numArg = 1;
                 tp = new FunctionType((<Type> this.type[i][1]).instantiate(
-                    nstate, new Map<string, Type>()), tp);
+                    nstate, new Map<string, [Type, boolean]>()), tp);
             }
             // TODO ID
             // let id = state.getValueIdentifierId(this.type[i][0].getText());
@@ -988,7 +990,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
 
     elaborate(state: State): State {
         if (this.type !== undefined) {
-            let tp = this.type.simplify().instantiate(state, new Map<string, Type>());
+            let tp = this.type.simplify().instantiate(state, new Map<string, [Type, boolean]>());
             let tyvars: string[] = [];
             tp.getTypeVariables().forEach((val: string) => {
                 tyvars.push(val);

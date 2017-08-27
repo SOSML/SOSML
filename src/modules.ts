@@ -313,8 +313,8 @@ export class StructureDeclaration extends Declaration {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(), nextName: string = '\'t0'):
-    [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
+              nextName: string = '\'t0'): [State, Warning[], Map<string, [Type, boolean]>, string] {
         // TODO
         return [state, [new Warning(this.position, 'Skipped elaborating structure.\n')], tyVarBnd, nextName];
     }
@@ -355,8 +355,8 @@ export class SignatureDeclaration extends Declaration {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(), nextName: string = '\'t0'):
-    [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
+              nextName: string = '\'t0'): [State, Warning[], Map<string, [Type, boolean]>, string] {
         // TODO
         return [state, [new Warning(this.position, 'Skipped elaborating signature.\n')], tyVarBnd, nextName];
     }
@@ -391,8 +391,8 @@ export class FunctorDeclaration extends Declaration {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, Type> = new Map<string, Type>(), nextName: string = '\'t0'):
-    [State, Warning[], Map<string, Type>, string] {
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
+              nextName: string = '\'t0'): [State, Warning[], Map<string, [Type, boolean]>, string] {
         // TODO
         return [state, [new Warning(this.position, 'Skipped elaborating functor.\n')], tyVarBnd, nextName];
     }

@@ -114,7 +114,10 @@ let initialState: State = new State(
                             IdentifierStatus.VALUE_CONSTRUCTOR],
             '!':        [new TypeVariableBind('\'a', new FunctionType(new CustomType('ref', [typeVar]), typeVar)),
                             IdentifierStatus.VALUE_VARIABLE]
-        }
+        },
+        { },
+        { },
+        { }
     ),
     new DynamicBasis(
         {
@@ -481,6 +484,7 @@ let initialState: State = new State(
         {}
     ),
     [ 0, {} ],
+    [ 0, new Map<string, [Type, boolean]>() ],
     {
         'div': new InfixStatus(true, 7, false),
         'mod': new InfixStatus(true, 7, false),
