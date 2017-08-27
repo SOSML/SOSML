@@ -155,15 +155,17 @@ export class ValueIdentifier extends Expression implements Pattern {
 
         let vars = new Set<string>();
         let frees = new Set<string>();
+        let repl = new Map<string, string>();
         while (res[0] instanceof TypeVariableBind) {
-            vars = vars.add((<TypeVariableBind> res[0]).name);
             if ((<TypeVariableBind> res[0]).isFree) {
                 frees = frees.add((<TypeVariableBind> res[0]).name);
+                repl.set((<TypeVariableBind> res[0]).name, (<TypeVariableBind> res[0]).name);
+            } else {
+                vars = vars.add((<TypeVariableBind> res[0]).name);
             }
             res[0] = (<TypeVariableBind> res[0]).type;
         }
 
-        let repl = new Map<string, string>();
         let nwvar: string[] = [];
 
         vars.forEach((val: string) => {

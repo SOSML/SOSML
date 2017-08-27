@@ -16,6 +16,7 @@ let AST = instance.lexParse(..code..);
 import { State } from './state';
 import { getInitialState } from './initialState';
 import { addStdLib } from './stdlib';
+import { Type } from './types';
 import { Token, IdentifierToken, LongIdentifierToken } from './tokens';
 import * as Lexer from './lexer';
 import * as Parser from './parser';
@@ -59,7 +60,7 @@ export function interpret(nextInstruction: string,
         };
     }
 
-    let elab = ast.elaborate(state /* , options */);
+    let elab = ast.elaborate(state, new Map<string, [Type, boolean]>(), '\'t0', true);
     state = elab[0];
 
     // Use a fresh state to be able to piece types and values together
@@ -82,6 +83,8 @@ export function interpret(nextInstruction: string,
 
     while (curState.id > oldState.id) {
         if (curState.dynamicBasis !== undefined) {
+            curState.freeTypeVariables = state.getTypeVariableBinds(curState.id);
+
             // For every new bound value, try to find its type
             for (let i in curState.dynamicBasis.valueEnvironment) {
                 if (Object.prototype.hasOwnProperty.call(
@@ -89,7 +92,9 @@ export function interpret(nextInstruction: string,
 
                     let tp = state.getStaticValue(i, curState.id);
                     if (tp !== undefined) {
-                        curState.setStaticValue(i, tp[0].normalize(), tp[1]);
+                        let norm = tp[0].normalize(curState.freeTypeVariables[0])
+                        curState.freeTypeVariables[0] = norm[1];
+                        curState.setStaticValue(i, norm[0], tp[1]);
                     }
                 }
             }
@@ -105,8 +110,6 @@ export function interpret(nextInstruction: string,
                     }
                 }
             }
-
-            curState.freeTypeVariables = state.getTypeVariableBinds(curState.id);
         }
         if (state.parent === undefined) {
             break;

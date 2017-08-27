@@ -397,7 +397,7 @@ export class State {
         if (this.parent === undefined || this.parent.id < idLimit) {
             let ret = new Map<string, [Type, boolean]>();
             result[1].forEach((val: [Type, boolean], key: string) => {
-                ret[1].set(key, val);
+                ret.set(key, val);
             });
 
             return [result[0], ret];

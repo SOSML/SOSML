@@ -33,6 +33,11 @@ export abstract class Type {
         return this.simplify().replaceTypeVariables(replacements, free);
     }
 
+    // Mark all type variables as free
+    makeFree(): Type {
+        return this;
+    }
+
     simplify(): Type {
         return this;
     }
@@ -41,9 +46,12 @@ export abstract class Type {
         return false;
     }
 
-    normalize(): Type {
+    // Normalizes a type. Free type variables need to get new names **across** different decls.
+    normalize(nextFree: number = 0): [Type, number] {
         let orderedVars = this.getOrderedTypeVariables();
+        let freeVars = this.getTypeVariables(true);
         let replacements = new Map<string, string>();
+        let rcnt = 0;
 
         for (let v of orderedVars) {
             if (replacements.has(v)) {
@@ -51,7 +59,10 @@ export abstract class Type {
             }
 
             let nextVar = '';
-            let cnt = replacements.size + 1;
+            let cnt = ++rcnt;
+            if (freeVars.has(v)) {
+                cnt = ++nextFree;
+            }
             if (cnt <= 26) {
                 nextVar = String.fromCharCode('a'.charCodeAt(0) + cnt - 1);
             } else {
@@ -67,12 +78,19 @@ export abstract class Type {
                 newVar += '\'';
             }
 
+            if (freeVars.has(v)) {
+                newVar += '~';
+            }
             newVar += nextVar;
+
+            if (freeVars.has(v)) {
+                newVar = newVar.toUpperCase();
+            }
 
             replacements.set(v, newVar);
         }
 
-        return this.replaceTypeVariables(replacements);
+        return [this.replaceTypeVariables(replacements), nextFree];
     }
 }
 
@@ -120,6 +138,12 @@ export class TypeVariableBind extends Type {
     constructor(public name: string, public type: Type, public domain: Type[] = []) {
         super();
         this.isFree = false;
+    }
+
+    makeFree(): Type {
+        let res = new TypeVariableBind(this.name, this.type.makeFree(), this.domain);
+        res.isFree = true;
+        return res;
     }
 
     toString(): string {
@@ -182,12 +206,13 @@ export class TypeVariableBind extends Type {
         let res = new Set<string>();
 
         rec.forEach((val: string) => {
-            if (!free && (this.isFree || val !== this.name)) {
-                res.add(val);
-            } else if (free && this.isFree) {
+            if (val !== this.name || free === this.isFree) {
                 res.add(val);
             }
         });
+        if (free && this.isFree && !res.has(this.name)) {
+            res.add(this.name);
+        }
         return res;
     }
 
@@ -228,6 +253,12 @@ export class TypeVariable extends Type {
         this.isFree = false;
     }
 
+    makeFree(): Type {
+        let res = new TypeVariable(this.name, this.position);
+        res.isFree = true;
+        return res;
+    }
+
     toString(): string {
         return this.name;
     }
@@ -264,13 +295,32 @@ export class TypeVariable extends Type {
                 // TODO equality checks
                 if (ths.name === oth.name) {
                     return [ths, tyVarBnd];
-                } else if (ths.name < oth.name) {
-                    // TODO Check that we really don't need to create a new TypeVariable
-                    return [ths, tyVarBnd.set(oth.name, [ths, oth.isFree])];
                 } else {
-                    return [ths, tyVarBnd.set(ths.name, [oth, ths.isFree])];
+                    let nvar = '\'';
+                    if (ths.name < oth.name) {
+                        nvar += ths.name.replace('\'', '') + '&' + oth.name.replace('\'', '');
+                    } else {
+                        nvar += oth.name.replace('\'', '') + '&' + ths.name.replace('\'', '');
+                    }
+                    if (ths.admitsEquality(state) || oth.admitsEquality(state)) {
+                        nvar = '\'' + nvar;
+                    }
+                    let result = new TypeVariable(nvar);
+                    result.isFree = ths.isFree || oth.isFree;
+                    tyVarBnd = tyVarBnd.set(ths.name, [result, ths.isFree]);
+                    tyVarBnd = tyVarBnd.set(oth.name, [result, oth.isFree]);
+                    return [result, tyVarBnd];
                 }
             } else {
+                let otv = oth.getTypeVariables();
+                if (otv.has((<TypeVariable> ths).name)) {
+                    throw new ElaborationError(-1,
+                        'Type clash. An expression of type "' + (<TypeVariable> ths).name
+                        + '" cannot have type "' + oth + '" because of circularity.');
+                }
+                if (ths.isFree) {
+                    oth = oth.makeFree();
+                }
                 if (ths.admitsEquality(state) && !oth.admitsEquality(state)) {
                     let nt = oth.makeEqType(state, tyVarBnd);
                     if (!nt[0].admitsEquality(state)) {
@@ -280,7 +330,7 @@ export class TypeVariable extends Type {
                         tyVarBnd = nt[1];
                     }
                 }
-                return [oth, tyVarBnd.set(ths.name, [oth, this.isFree])];
+                return [oth, tyVarBnd.set(ths.name, [oth, ths.isFree])];
             }
         } else {
             return ths.merge(state, tyVarBnd, other);
@@ -346,6 +396,14 @@ export class RecordType extends Type {
     constructor(public elements: Map<string, Type>, public complete: boolean = true,
                 public position: number = 0) {
         super();
+    }
+
+    makeFree(): Type {
+        let newElements: Map<string, Type> = new Map<string, Type>();
+        this.elements.forEach((type: Type, key: string) => {
+            newElements.set(key, type.makeFree());
+        });
+        return new RecordType(newElements, this.complete, this.position);
     }
 
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
@@ -549,6 +607,10 @@ export class FunctionType extends Type {
         super();
     }
 
+    makeFree(): Type {
+        return new FunctionType(this.parameterType.makeFree(), this.returnType.makeFree());
+    }
+
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
         return new FunctionType(this.parameterType.instantiate(state, tyVarBnd, seen),
             this.returnType.instantiate(state, tyVarBnd, seen), this.position);
@@ -635,6 +697,14 @@ export class CustomType extends Type {
                 public typeArguments: Type[] = [],
                 public position: number = 0) {
         super();
+    }
+
+    makeFree(): Type {
+        let res: Type[] = [];
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            res.push(this.typeArguments[i].makeFree());
+        }
+        return new CustomType(this.name, res, this.position);
     }
 
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
