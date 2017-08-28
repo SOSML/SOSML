@@ -85,7 +85,7 @@ export class ValueDeclaration extends Declaration {
             state.setStaticValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
         }
 
-        for (let l = 0; l < 2; ++l) {
+        for (let l = 0; l < 1; ++l) {
             for (let j = i; j < this.valueBinding.length; ++j) {
                 let val = this.valueBinding[i].getType(this.typeVariableSequence, state, bnds, nextName, isTopLevel);
                 warns = warns.concat(val[1]);
@@ -565,7 +565,7 @@ export class SequentialDeclaration extends Declaration {
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         let warns: Warning[] = [];
-        let bnds = tyVarBnd;
+            let bnds = tyVarBnd;
         if (isTopLevel) {
             bnds = new Map<string, [Type, boolean]>();
             state.getTypeVariableBinds()[1].forEach((val: [Type, boolean], key: string) => {
@@ -575,13 +575,13 @@ export class SequentialDeclaration extends Declaration {
         let str = nextName;
         for (let i = 0; i < this.declarations.length; ++i) {
             let res = this.declarations[i].elaborate(
-                state.getNestedState(this.declarations[i].id), tyVarBnd, str);
+                state.getNestedState(this.declarations[i].id), bnds, str, isTopLevel);
             state = res[0];
             warns = warns.concat(res[1]);
             bnds = res[2];
 
             let nbnds = new Map<string, [Type, boolean]>();
-            if (!isTopLevel) {
+            if (isTopLevel) {
                 nbnds = tyVarBnd;
             }
 
@@ -818,6 +818,14 @@ export class ValueBinding {
         let tp = this.expression.getType(nstate, tyVarBnd, nextName);
         let res = this.pattern.matchType(nstate, tp[4], tp[0]);
 
+        let noBind = new Set<string>;
+        res[2].forEach((val: [Type, boolean], key: string) => {
+            noBind.add(key);
+            val[0].getTypeVariables().forEach((v: string) => {
+                noBind.add(v);
+            });
+        });
+
         if (res === undefined) {
             throw new ElaborationError(this.position,
                 'Type clash. An expression of type "' + tp[0]
@@ -849,7 +857,9 @@ export class ValueBinding {
             }
             ntys = [];
             res[0][i][1].getTypeVariables().forEach((val: string) => {
-                ntys.push(new TypeVariable(val));
+                if (isTopLevel || !noBind.has(val)) {
+                    ntys.push(new TypeVariable(val));
+                }
             });
             for (let j = ntys.length - 1; j >= 0; --j) {
                 res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1]);

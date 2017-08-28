@@ -296,20 +296,24 @@ export class TypeVariable extends Type {
                 if (ths.name === oth.name) {
                     return [ths, tyVarBnd];
                 } else {
-                    let nvar = '\'';
+                    let repl = new Map<string, string>();
+                    let rs = ths;
                     if (ths.name < oth.name) {
-                        nvar += ths.name.replace('\'', '') + '&' + oth.name.replace('\'', '');
+                        repl.set(oth.name, ths.name);
                     } else {
-                        nvar += oth.name.replace('\'', '') + '&' + ths.name.replace('\'', '');
+                        repl.set(ths.name, oth.name);
+                        rs = oth;
                     }
-                    if (ths.admitsEquality(state) || oth.admitsEquality(state)) {
-                        nvar = '\'' + nvar;
+                    let nvb = new Map<string, [Type, boolean]>();
+                    tyVarBnd.forEach((val: [Type, boolean], key: string) => {
+                        nvb = nvb.set(key, [val[0].replaceTypeVariables(repl), val[1]]);
+                    });
+                    if (ths.name < oth.name) {
+                        nvb.set(oth.name, [ths, oth.isFree]);
+                    } else {
+                        nvb.set(ths.name, [oth, ths.isFree]);
                     }
-                    let result = new TypeVariable(nvar);
-                    result.isFree = ths.isFree || oth.isFree;
-                    tyVarBnd = tyVarBnd.set(ths.name, [result, ths.isFree]);
-                    tyVarBnd = tyVarBnd.set(oth.name, [result, oth.isFree]);
-                    return [result, tyVarBnd];
+                    return [rs, nvb];
                 }
             } else {
                 let otv = oth.getTypeVariables();
@@ -668,10 +672,10 @@ export class FunctionType extends Type {
     toString(): string {
         if (this.parameterType instanceof FunctionType) {
             return '(' + this.parameterType + ')'
-                + ' -> ' + this.returnType;
+                + ' → ' + this.returnType;
         } else {
             return this.parameterType
-                + ' -> ' + this.returnType;
+                + ' → ' + this.returnType;
         }
     }
 

@@ -481,22 +481,21 @@ export class LocalDeclarationExpression extends Expression {
         });
 
         let nvbnd = new Map<string, [Type, boolean]>();
-        tyVarBnd.forEach((val: [Type, boolean], key: string) => {
-            nvbnd = nvbnd.set(key, val);
-        });
-
-        let res = this.declaration.elaborate(nstate, nvbnd, nextName);
-        nextName = res[3];
-
         let chg: [string, [Type, boolean]][] = [];
         tyVarBnd.forEach((val: [Type, boolean], key: string) => {
+            nvbnd = nvbnd.set(key, val);
             if (key[1] === '*' && key[2] === '*') {
                 chg.push([key, val]);
             }
         });
 
+        let res = this.declaration.elaborate(nstate, nvbnd, nextName);
+
+        nextName = res[3];
+
         for (let i = 0; i < chg.length; ++i) {
-            if ((<[Type, boolean]> tyVarBnd.get(chg[i][0]))[0].equals(res[2].get(chg[i][0]))) {
+            if ((<[Type, boolean]> tyVarBnd.get(chg[i][0]))[0].equals(
+                (<[Type, boolean]> res[2].get(chg[i][0]))[0])) {
                 // Make sure we're not using some type of some rebound identifier
                 let tmp = chg[i][1][0].merge(nstate, tyVarBnd,
                     chg[i][1][0].instantiate(nstate, res[2]));
@@ -563,7 +562,8 @@ export class TypedExpression extends Expression implements Pattern {
         let tp = this.expression.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
 
         try {
-            let tmp = tp[0].merge(state, tyVarBnd, this.typeAnnotation.instantiate(state, tyVarBnd));
+            let ann = this.typeAnnotation.instantiate(state, tyVarBnd);
+            let tmp = tp[0].merge(state, tyVarBnd, ann);
             return [tmp[0], tp[1], tp[2], tp[3], tmp[1]];
         } catch (e) {
             if (!(e instanceof Array)) {
@@ -718,11 +718,8 @@ export class FunctionApplication extends Expression implements Pattern {
 
                 let tp = (<FunctionType> f[0]).parameterType.merge(state, f[4], arg[0]);
 
-                // console.log(this.constructor.name + ' 3 ' + this);
-                // console.log(f[4]);
-
                 return [(<FunctionType> f[0]).returnType.instantiate(state, tp[1]),
-                    f[1].concat(arg[1]), arg[2], arg[3], f[4]];
+                    f[1].concat(arg[1]), arg[2], arg[3], tp[1]];
             } catch (e) {
                 if (!(e instanceof Array)) {
                     throw e;
@@ -1031,6 +1028,7 @@ export class Match {
             });
             let r1 = this.matches[i][0].getType(state, bnds, nextName, tyVars, true);
 
+
             warns = warns.concat(r1[1]);
 
             let r2 = this.matches[i][1].getType(state, r1[4], r1[2], r1[3], forceRebind);
@@ -1050,7 +1048,7 @@ export class Match {
                     'Match rules disagree on type:\n' + e[0] + ' ("' + e[1]
                     + '" vs. "' + e[2] + '")');
             }
-            restp = restp.instantiate(state, bnds);
+            restp = restp.instantiate(state, r2[4]);
             bnds.forEach((val: [Type, boolean], key: string) => {
                 if (key[1] !== '*' || key[2] !== '*') {
                     nmap = nmap.set(key, val);

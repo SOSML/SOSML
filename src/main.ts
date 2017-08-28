@@ -92,7 +92,7 @@ export function interpret(nextInstruction: string,
 
                     let tp = state.getStaticValue(i, curState.id);
                     if (tp !== undefined) {
-                        let norm = tp[0].normalize(curState.freeTypeVariables[0])
+                        let norm = tp[0].normalize(curState.freeTypeVariables[0]);
                         curState.freeTypeVariables[0] = norm[1];
                         curState.setStaticValue(i, norm[0], tp[1]);
                     }
