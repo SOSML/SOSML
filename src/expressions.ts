@@ -1159,8 +1159,38 @@ export class LayeredPattern extends Expression implements Pattern {
             throw new InternalInterpreterError(this.position,
                 'Layered patterns are far too layered to have a type.');
         }
-        // TODO
-        throw new Error('ニャハハハハハ～');
+
+        let valid = new ValueIdentifier(-1, this.identifier);
+        let gtp = valid.getType(state, tyVarBnd, nextName, tyVars, true);
+        let tp = gtp[0];
+
+        if (this.typeAnnotation !== undefined) {
+            try {
+                let mg = tp.merge(state, gtp[4], <Type> this.typeAnnotation);
+                tyVarBnd = mg[1];
+                tp = mg[0];
+            } catch (e) {
+                if (!(e instanceof Array)) {
+                    throw e;
+                }
+                throw new ElaborationError(this.position, 'Wrong type annotation:\n' + e[0]);
+            }
+        }
+
+        let argtp = this.pattern.getType(state, tyVarBnd, gtp[2], gtp[3], true);
+
+        try {
+            let mg = tp.merge(state, argtp[4], argtp[0]);
+            tyVarBnd = mg[1];
+            tp = mg[0];
+        } catch (e) {
+            if (!(e instanceof Array)) {
+                throw e;
+            }
+            throw new ElaborationError(this.position, 'Wrong type annotation:\n' + e[0]);
+        }
+
+        return [tp, gtp[1].concat(argtp[1]), argtp[2], argtp[3], tyVarBnd];
     }
 
     compute(state: State): [Value, boolean, Warning[], MemBind] {
@@ -1170,8 +1200,22 @@ export class LayeredPattern extends Expression implements Pattern {
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>]  {
-        // TODO
-        throw new Error('ニャハハハハハ～');
+        let tp = t;
+        if (this.typeAnnotation !== undefined) {
+            try {
+                let mg = t.merge(state, tyVarBnd, <Type> this.typeAnnotation);
+                tyVarBnd = mg[1];
+                tp = mg[0];
+            } catch (e) {
+                if (!(e instanceof Array)) {
+                    throw e;
+                }
+                throw new ElaborationError(this.position, 'Wrong type annotation:\n' + e[0]);
+            }
+        }
+        let res = (<PatternExpression> this.pattern).matchType(state, tyVarBnd, tp);
+        let result: [string, Type][] = [[this.identifier.getText(), tp]];
+        return [result.concat(res[0]), t, res[2]];
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -1180,10 +1224,7 @@ export class LayeredPattern extends Expression implements Pattern {
             return res;
         }
         let result: [string, Value][] = [[this.identifier.getText(), v]];
-        for (let i = 0; i < (<[string, Value][]> res).length; ++i) {
-            result.push((<[string, Value][]> res)[i]);
-        }
-        return result;
+        return result.concat(res);
     }
 
     simplify(): LayeredPattern {
