@@ -4,7 +4,7 @@ import { IdentifierToken, Token, LongIdentifierToken } from './tokens';
 import { Type, TypeVariable } from './types';
 import { State, DynamicInterface, DynamicStructureInterface, DynamicValueInterface, StaticBasis,
          DynamicTypeInterface, IdentifierStatus, DynamicBasis, DynamicFunctorInformation } from './state';
-import { Warning, EvaluationError } from './errors';
+import { Warning, EvaluationError, ElaborationError } from './errors';
 import { Value } from './values';
 import { getInitialState } from './initialState';
 
@@ -66,7 +66,23 @@ export class StructureIdentifier extends Expression implements Structure {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        throw new Error('ニャ－');
+        let res: StaticBasis | undefined = undefined;
+        if (this.identifier instanceof LongIdentifierToken) {
+            let st = state.getAndResolveStaticStructure(<LongIdentifierToken> this.identifier);
+
+            if (st !== undefined) {
+                res = (<StaticBasis> st).getStructure(
+                    (<LongIdentifierToken> this.identifier).id.getText());
+            }
+        } else {
+            res = state.getStaticStructure(this.identifier.getText());
+        }
+
+        if (res === undefined) {
+            throw new ElaborationError(this.position, 'Undefined module "'
+                + this.identifier.getText() + '".');
+        }
+        return [res, [], tyVarBnd, nextName];
     }
 
     computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {

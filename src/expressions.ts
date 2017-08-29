@@ -1127,7 +1127,18 @@ export class Wildcard extends Expression implements Pattern {
             nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
-        return [new AnyType(), [], nextName, tyVars, tyVarBnd];
+
+        let cur = (+nextName.substring(2)) + 1;
+        let nm = '';
+        for (; ; ++cur) {
+            nextName = '\'' + nextName[1] + cur;
+            if (!tyVars.has(nextName) && !tyVarBnd.has(nextName)
+                && state.getStaticValue(nextName) === undefined) {
+                nm = nextName;
+                return [new TypeVariable(nm), [], nm, tyVars.add(nm), tyVarBnd];
+            }
+        }
+
     }
 
     compute(state: State): [Value, boolean, Warning[], MemBind] {
