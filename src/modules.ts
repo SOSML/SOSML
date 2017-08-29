@@ -2,7 +2,7 @@ import { Expression } from './expressions';
 import { Declaration } from './declarations';
 import { IdentifierToken, Token, LongIdentifierToken } from './tokens';
 import { Type, TypeVariable } from './types';
-import { State, DynamicInterface, DynamicStructureInterface, DynamicValueInterface,
+import { State, DynamicInterface, DynamicStructureInterface, DynamicValueInterface, StaticBasis,
          DynamicTypeInterface, IdentifierStatus, DynamicBasis, DynamicFunctorInformation } from './state';
 import { Warning, EvaluationError } from './errors';
 import { Value } from './values';
@@ -16,6 +16,8 @@ type MemBind = [number, Value][];
 
 export interface Structure {
     computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind];
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string];
 }
 
 export class StructureExpression extends Expression implements Structure {
@@ -26,6 +28,13 @@ export class StructureExpression extends Expression implements Structure {
 
     simplify(): StructureExpression {
         return new StructureExpression(this.position, this.structureDeclaration.simplify());
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        let nstate = state.getNestedState(0).getNestedState(state.id);
+        let tmp = this.structureDeclaration.elaborate(nstate, tyVarBnd, nextName, true);
+        return [tmp[0].getStaticChanges(0), tmp[1], tmp[2], tmp[3]];
     }
 
     computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
@@ -53,6 +62,11 @@ export class StructureIdentifier extends Expression implements Structure {
 
     simplify(): StructureIdentifier {
         return this;
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        throw new Error('ニャ－');
     }
 
     computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
@@ -93,6 +107,11 @@ export class TransparentConstraint extends Expression implements Structure {
             <Expression & Signature> this.signatureExpression.simplify());
     }
 
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        throw new Error('ニャ－');
+    }
+
     computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
         let tmp = this.structureExpression.computeStructure(state);
         if (tmp[0] instanceof Value) {
@@ -120,6 +139,11 @@ export class OpaqueConstraint extends Expression implements Structure {
             <Expression & Signature> this.signatureExpression.simplify());
     }
 
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        throw new Error('ニャ－');
+    }
+
     computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
         let tmp = this.structureExpression.computeStructure(state);
         if (tmp[0] instanceof Value) {
@@ -144,6 +168,11 @@ export class FunctorApplication extends Expression implements Structure {
     simplify(): FunctorApplication {
         return new FunctorApplication(this.position, this.functorId,
             <Expression & Structure> this.structureExpression.simplify());
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        throw new Error('ニャ－');
     }
 
     computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
@@ -185,6 +214,11 @@ export class LocalDeclarationStructureExpression extends Expression implements S
     simplify(): LocalDeclarationStructureExpression {
         return new LocalDeclarationStructureExpression(this.position, this.declaration.simplify(),
             <Expression & Structure> this.expression.simplify());
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        throw new Error('ニャ－');
     }
 
     toString(): string {
@@ -313,10 +347,17 @@ export class StructureDeclaration extends Declaration {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-              nextName: string = '\'t0'): [State, Warning[], Map<string, [Type, boolean]>, string] {
-        // TODO
-        return [state, [new Warning(this.position, 'Skipped elaborating structure.\n')], tyVarBnd, nextName];
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
+        [State, Warning[], Map<string, [Type, boolean]>, string] {
+        let warns: Warning[] = [];
+        for (let i = 0; i < this.structureBinding.length; ++i) {
+            let tmp = this.structureBinding[i].elaborate(state, tyVarBnd, nextName);
+            state = tmp[0];
+            warns = warns.concat(tmp[1]);
+            tyVarBnd = tmp[2];
+            nextName = tmp[3];
+        }
+        return [state, warns, tyVarBnd, nextName];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
@@ -431,6 +472,13 @@ export class StructureBinding {
     simplify(): StructureBinding {
         return new StructureBinding(this.position, this.name,
             <Expression & Structure> this.binding.simplify());
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [State, Warning[], Map<string, [Type, boolean]>, string] {
+        let tmp = this.binding.elaborate(state, tyVarBnd, nextName);
+        state.setStaticStructure(this.name.getText(), tmp[0]);
+        return [state, tmp[1], tmp[2], tmp[3]];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {

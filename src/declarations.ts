@@ -329,13 +329,11 @@ export class DatatypeReplication extends Declaration {
         let res: TypeInformation | undefined = undefined;
 
         if (this.oldname instanceof LongIdentifierToken) {
-            /* TODO
             let st = state.getAndResolveStaticStructure(<LongIdentifierToken> this.oldname);
             if (st !== undefined) {
-                res = <string[]> (<StaticBasis> st).getType(
+                res = (<StaticBasis> st).getType(
                     (<LongIdentifierToken> this.oldname).id.getText());
             }
-             */
         } else {
             res = state.getStaticType(this.oldname.getText());
         }
@@ -476,21 +474,19 @@ export class OpenDeclaration extends Declaration {
         for (let i = 0; i < this.names.length; ++i) {
             let tmp: StaticBasis | undefined = undefined;
             if (this.names[i] instanceof LongIdentifierToken) {
-                /* TODO
                 tmp = state.getAndResolveStaticStructure(<LongIdentifierToken> this.names[i]);
                 if (tmp !== undefined) {
-                    tmp = res.getStructure((<LongIdentifierToken> this.names[i]).id.getText());
+                    tmp = tmp.getStructure((<LongIdentifierToken> this.names[i]).id.getText());
                 }
-                 */
             } else {
-                // tmp = state.getStaticStructure(this.names[i].getText());
+                tmp = state.getStaticStructure(this.names[i].getText());
             }
             if (tmp === undefined) {
                 throw new EvaluationError(this.position,
                     'Undefined module "' + this.names[i].getText() + '".');
             }
 
-            // state.staticBasis.extend(<StaticBasis> tmp);
+            state.staticBasis.extend(<StaticBasis> tmp);
         }
         return [state, [], tyVarBnd, nextName];
     }
@@ -855,8 +851,6 @@ export class ValueBinding {
 
         for (let i = 0; i < res[0].length; ++i) {
             res[0][i][1] = res[0][i][1].instantiate(state, res[2]);
-            //           console.log(res[2]);
-            // console.log(res[0][i][1] + ' ' + i );
             let tv = res[0][i][1].getTypeVariables();
             let free = res[0][i][1].getTypeVariables(true);
             for (let j = ntys.length - 1; j >= 0; --j) {
@@ -1091,12 +1085,10 @@ export class ExceptionAlias implements ExceptionBinding {
     elaborate(state: State): State {
         let res: [Type, IdentifierStatus] | undefined = undefined;
         if (this.oldname instanceof LongIdentifierToken) {
-            /* TODO
             let st = state.getAndResolveStaticStructure(<LongIdentifierToken> this.oldname);
             if (st !== undefined) {
                 res = st.getValue((<LongIdentifierToken> this.oldname).id.getText());
             }
-            */
         } else {
             res = state.getStaticValue(this.oldname.getText());
         }

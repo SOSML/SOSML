@@ -108,6 +108,19 @@ export function interpret(nextInstruction: string,
                     }
                 }
             }
+
+            // For every new bound structure, try to find its type
+            for (let i in curState.dynamicBasis.structureEnvironment) {
+                if (Object.prototype.hasOwnProperty.call(
+                    curState.dynamicBasis.structureEnvironment, i)) {
+
+                    let tp = state.getStaticStructure(i, curState.id);
+                    if (tp !== undefined) {
+                        curState.setStaticStructure(i, tp);
+                    }
+                }
+            }
+
         }
         if (state.parent === undefined) {
             break;

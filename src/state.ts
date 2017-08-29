@@ -433,6 +433,35 @@ export class State {
         }
     }
 
+    getStaticStructure(name: string, idLimit: number = 0): StaticBasis | undefined {
+        let result = this.staticBasis.getStructure(name);
+        if (result !== undefined || this.parent === undefined || this.parent.id < idLimit) {
+            return result;
+        } else {
+            return this.parent.getStaticStructure(name, idLimit);
+        }
+    }
+
+    getAndResolveStaticStructure(name: LongIdentifierToken, idLimit: number = 0): StaticBasis | undefined {
+        let res: StaticBasis | undefined = undefined;
+        if (name.qualifiers.length === 0) {
+            throw new EvaluationError(name.position,
+                'Unqualified LongIdentifierToken are too unqualified to be useful here.');
+        } else {
+            res = this.getStaticStructure(name.qualifiers[0].getText(), idLimit);
+        }
+
+        for (let i = 1; i < name.qualifiers.length; ++i) {
+            if (res === undefined) {
+                return res;
+            }
+            res = res.getStructure(name.qualifiers[i].getText());
+        }
+
+        return res;
+    }
+
+
     getDynamicValue(name: string, idLimit: number = 0): [Value, IdentifierStatus] | undefined {
         let result = this.dynamicBasis.getValue(name);
         if (result !== undefined || this.parent === undefined || this.parent.id < idLimit) {
@@ -576,6 +605,16 @@ export class State {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
             (<State> this.parent).setStaticType(name, type, constructors, arity, atId);
+        }
+    }
+
+    setStaticStructure(name: string, structure: StaticBasis, atId: number|undefined = undefined) {
+        if (atId === undefined || atId === this.id) {
+            this.staticBasis.setStructure(name, structure);
+        } else if (atId > this.id || this.parent === undefined) {
+            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+        } else {
+            this.parent.setStaticStructure(name, structure, atId);
         }
     }
 

@@ -1,5 +1,6 @@
 import { ElaborationError } from './errors';
 import { State } from './state';
+import { LongIdentifierToken } from './tokens';
 
 export abstract class Type {
     abstract toString(): string;
@@ -706,7 +707,8 @@ export class FunctionType extends Type {
 export class CustomType extends Type {
     constructor(public name: string,
                 public typeArguments: Type[] = [],
-                public position: number = 0) {
+                public position: number = 0,
+                public qualifiedName: LongIdentifierToken | undefined = undefined) {
         super();
     }
 
@@ -715,11 +717,19 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].makeFree());
         }
-        return new CustomType(this.name, res, this.position);
+        return new CustomType(this.name, res, this.position, this.qualifiedName);
     }
 
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
         let tp = state.getStaticType(this.name);
+        if (this.qualifiedName !== undefined) {
+            let rsv = state.getAndResolveStaticStructure(this.qualifiedName);
+            if (rsv !== undefined) {
+                tp = rsv.getType(this.name);
+            } else {
+                tp = undefined;
+            }
+        }
         if (tp !== undefined && tp.type instanceof FunctionType) {
             try {
                 let mt = this.merge(state, tyVarBnd,  (<FunctionType> tp.type).parameterType, true);
@@ -741,7 +751,7 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].instantiate(state, tyVarBnd, seen));
         }
-        return new CustomType(this.name, res, this.position);
+        return new CustomType(this.name, res, this.position, this.qualifiedName);
     }
 
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type,
@@ -773,7 +783,8 @@ export class CustomType extends Type {
                 tybnd = tmp[1];
             }
 
-            return [new CustomType((<CustomType> ths).name, res, this.position), tybnd];
+            return [new CustomType((<CustomType> ths).name, res, this.position, this.qualifiedName),
+                tybnd];
         }
 
         // Merging didn't work
@@ -789,7 +800,7 @@ export class CustomType extends Type {
             res.push(tmp[0]);
             tyVarBnd = tmp[1];
         }
-        return [new CustomType(this.name, res, this.position), tyVarBnd];
+        return [new CustomType(this.name, res, this.position, this.qualifiedName), tyVarBnd];
     }
 
     getTypeVariables(free: boolean = false): Set<string> {
@@ -819,7 +830,7 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             rt.push(this.typeArguments[i].replaceTypeVariables(replacements, free));
         }
-        return new CustomType(this.name, rt, this.position);
+        return new CustomType(this.name, rt, this.position, this.qualifiedName);
     }
 
     admitsEquality(state: State): boolean {
@@ -859,7 +870,7 @@ export class CustomType extends Type {
         for (let i: number = 0; i < this.typeArguments.length; ++i) {
             args.push(this.typeArguments[i].simplify());
         }
-        return new CustomType(this.name, args, this.position);
+        return new CustomType(this.name, args, this.position, this.qualifiedName);
     }
 
     equals(other: any): boolean {

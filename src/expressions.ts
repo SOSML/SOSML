@@ -126,12 +126,20 @@ export class ValueIdentifier extends Expression implements Pattern {
 
         let res: [Type, IdentifierStatus] | undefined = undefined;
         if (this.name instanceof LongIdentifierToken) {
-            /* TODO
             let st = state.getAndResolveStaticStructure(<LongIdentifierToken> this.name);
             if (st !== undefined) {
                 res = st.getValue((<LongIdentifierToken> this.name).id.getText());
+                if (res !== undefined) {
+                    if (res[1] === IdentifierStatus.VALUE_CONSTRUCTOR) {
+                        if (res[0] instanceof FunctionType) {
+                            (<CustomType> (<FunctionType> res[0]).returnType).qualifiedName
+                                = <LongIdentifierToken> this.name;
+                        } else if (res[0] instanceof CustomType) {
+                            (<CustomType> res[0]).qualifiedName = <LongIdentifierToken> this.name;
+                        }
+                    }
+                }
             }
-             */
         } else {
             res = state.getStaticValue(this.name.getText());
         }
