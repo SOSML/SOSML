@@ -3284,7 +3284,7 @@ it("module language - structure", () => {
             ])
         ], 1);
     );
-/*
+
     expect(parse("structure a = b (structure a = b);")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Modu.StructureDeclaration(0, [
@@ -3300,7 +3300,7 @@ it("module language - structure", () => {
             ])
         ], 1);
     );
-*/
+
 });
 
 it("module language - signature", () => {
