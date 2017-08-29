@@ -85,7 +85,7 @@ export class ValueDeclaration extends Declaration {
             state.setStaticValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
         }
 
-        for (let l = 0; l < 1; ++l) {
+        for (let l = 0; l < 2; ++l) {
             for (let j = i; j < this.valueBinding.length; ++j) {
                 let val = this.valueBinding[i].getType(this.typeVariableSequence, state, bnds, nextName, isTopLevel);
                 warns = warns.concat(val[1]);
@@ -565,15 +565,15 @@ export class SequentialDeclaration extends Declaration {
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         let warns: Warning[] = [];
-            let bnds = tyVarBnd;
-        if (isTopLevel) {
-            bnds = new Map<string, [Type, boolean]>();
-            state.getTypeVariableBinds()[1].forEach((val: [Type, boolean], key: string) => {
-                bnds = bnds.set(key, val);
-            });
-        }
+        let bnds = tyVarBnd;
         let str = nextName;
         for (let i = 0; i < this.declarations.length; ++i) {
+            if (isTopLevel) {
+                bnds = new Map<string, [Type, boolean]>();
+                state.getTypeVariableBinds()[1].forEach((val: [Type, boolean], key: string) => {
+                    bnds = bnds.set(key, val);
+                });
+            }
             let res = this.declarations[i].elaborate(
                 state.getNestedState(this.declarations[i].id), bnds, str, isTopLevel);
             state = res[0];
@@ -818,7 +818,7 @@ export class ValueBinding {
         let tp = this.expression.getType(nstate, tyVarBnd, nextName);
         let res = this.pattern.matchType(nstate, tp[4], tp[0]);
 
-        let noBind = new Set<string>;
+        let noBind = new Set<string>();
         res[2].forEach((val: [Type, boolean], key: string) => {
             noBind.add(key);
             val[0].getTypeVariables().forEach((v: string) => {
@@ -843,10 +843,12 @@ export class ValueBinding {
             ntys.push(<TypeVariable> nt);
         }
 
-        let valuePoly = !this.isRecursive && !this.expression.isSafe();
+        let valuePoly = !this.isRecursive && !this.expression.isSafe(state);
 
         for (let i = 0; i < res[0].length; ++i) {
             res[0][i][1] = res[0][i][1].instantiate(state, res[2]);
+            //           console.log(res[2]);
+            // console.log(res[0][i][1] + ' ' + i );
             let tv = res[0][i][1].getTypeVariables();
             let free = res[0][i][1].getTypeVariables(true);
             for (let j = ntys.length - 1; j >= 0; --j) {
@@ -988,6 +990,10 @@ export class DatatypeBinding {
                 tp = new FunctionType((<Type> this.type[i][1]).instantiate(
                     nstate, new Map<string, [Type, boolean]>()), tp);
             }
+
+            tp.getTypeVariables().forEach((val: string) => {
+                tp = new TypeVariableBind(val, tp);
+            });
             // TODO ID
             // let id = state.getValueIdentifierId(this.type[i][0].getText());
             // state.incrementValueIdentifierId(this.type[i][0].getText());

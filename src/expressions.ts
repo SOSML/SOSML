@@ -30,7 +30,7 @@ export abstract class Expression {
     }
 
     // Returns whether the expression could do nasty stuff (value polymorphism ...)
-    isSafe(): boolean {
+    isSafe(state: State): boolean {
         return true;
     }
 
@@ -288,9 +288,9 @@ export class Record extends Expression implements Pattern {
         }
     }
 
-    isSafe(): boolean {
+    isSafe(state: State): boolean {
         for (let i = 0; i < this.entries.length; ++i) {
-            if (!this.entries[i][1].isSafe()) {
+            if (!this.entries[i][1].isSafe(state)) {
                 return false;
             }
         }
@@ -463,8 +463,8 @@ export class LocalDeclarationExpression extends Expression {
         return res;
     }
 
-    isSafe(): boolean {
-        return this.expression.isSafe();
+    isSafe(state: State): boolean {
+        return this.expression.isSafe(state);
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
@@ -480,19 +480,33 @@ export class LocalDeclarationExpression extends Expression {
             }
         });
 
+            /*
         let nvbnd = new Map<string, [Type, boolean]>();
-        let chg: [string, [Type, boolean]][] = [];
+        let names = new Set<string>();
         tyVarBnd.forEach((val: [Type, boolean], key: string) => {
             nvbnd = nvbnd.set(key, val);
             if (key[1] === '*' && key[2] === '*') {
-                chg.push([key, val]);
+                names.add(key);
+                val[0].getTypeVariables().forEach((v: string) => {
+                    names.add(v);
+                });
             }
+
         });
 
-        let res = this.declaration.elaborate(nstate, nvbnd, nextName);
+             */
+        let res = this.declaration.elaborate(nstate, tyVarBnd, nextName);
 
         nextName = res[3];
 
+            // console.log(res[2]);
+            // console.log(tyVarBnd);
+        let nbnds = new Map<string, [Type, boolean]>();
+        tyVarBnd.forEach((val: [Type, boolean], key: string) => {
+            nbnds = nbnds.set(key, [val[0].instantiate(res[0], res[2]), val[1]]);
+        });
+            //        console.log(nbnds);
+            /*
         for (let i = 0; i < chg.length; ++i) {
             if ((<[Type, boolean]> tyVarBnd.get(chg[i][0]))[0].equals(
                 (<[Type, boolean]> res[2].get(chg[i][0]))[0])) {
@@ -502,8 +516,12 @@ export class LocalDeclarationExpression extends Expression {
                 tyVarBnd = tmp[1];
             }
         }
+                */
 
-        let r2 = this.expression.getType(res[0], tyVarBnd, nextName, tyVars, forceRebind);
+        let r2 = this.expression.getType(res[0], res[2], nextName, tyVars, forceRebind);
+
+
+ //        console.log('HERE' + r2[0]);
 
         return [r2[0], res[1].concat(r2[1]), r2[2], r2[3], r2[4]];
     }
@@ -525,8 +543,8 @@ export class TypedExpression extends Expression implements Pattern {
     constructor(public position: number, public expression: Expression,
                 public typeAnnotation: Type) { super(); }
 
-    isSafe(): boolean {
-        return this.expression.isSafe();
+    isSafe(state: State): boolean {
+        return this.expression.isSafe(state);
     }
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
@@ -600,8 +618,15 @@ export class FunctionApplication extends Expression implements Pattern {
                 public func: Expression,
                 public argument: Expression|PatternExpression) { super(); }
 
-    isSafe(): boolean {
-        return false;
+    isSafe(state: State): boolean {
+        if (!(this.func instanceof ValueIdentifier)) {
+            return false;
+        }
+        let f = state.getStaticValue((<ValueIdentifier> this.func).name.getText());
+        if (f === undefined) {
+            return false;
+        }
+        return f[1] !== IdentifierStatus.VALUE_VARIABLE;
     }
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
@@ -621,6 +646,14 @@ export class FunctionApplication extends Expression implements Pattern {
             throw new ElaborationError(this.position,
                 'Unbound value Identifier "' + (<ValueIdentifier> this.func).name.getText() + '".');
         }
+
+                /*
+        let tmp = this.func.getType(state, tyVarBnd, '\'p0');
+        ti[0] = tmp[0];
+        tyVarBnd = tmp[4];
+        console.log(ti[0] + '');
+        console.log(tmp[4]);
+                 */
 
         if (!(ti[0] instanceof FunctionType) || !(t instanceof CustomType)) {
             // TODO Better message
@@ -841,8 +874,8 @@ export class HandleException extends Expression {
         super();
     }
 
-    isSafe(): boolean {
-        return this.expression.isSafe();
+    isSafe(state: State): boolean {
+        return this.expression.isSafe(state);
     }
 
     simplify(): HandleException {
@@ -910,8 +943,8 @@ export class RaiseException extends Expression {
         return new RaiseException(this.position, this.expression.simplify());
     }
 
-    isSafe(): boolean {
-        return this.expression.isSafe();
+    isSafe(state: State): boolean {
+        return this.expression.isSafe(state);
     }
 
     toString(): string {
