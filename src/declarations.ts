@@ -602,6 +602,14 @@ export class SequentialDeclaration extends Declaration {
             bnds = nbnds;
             if (isTopLevel) {
                 state.freeTypeVariables[1] = nbnds;
+                for (let v in state.staticBasis.valueEnvironment) {
+                    if (state.staticBasis.valueEnvironment.hasOwnProperty(v)) {
+                        let tp = <[Type, IdentifierStatus]> state.staticBasis.valueEnvironment[v];
+                        let norm = tp[0].normalize(state.freeTypeVariables[0]);
+                        state.freeTypeVariables[0] = norm[1];
+                        state.setStaticValue(v, norm[0], tp[1]);
+                    }
+                }
             }
             str = res[3];
         }
