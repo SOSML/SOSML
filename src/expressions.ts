@@ -172,8 +172,8 @@ export class ValueIdentifier extends Expression implements Pattern {
             let cur = (+nextName.substring(2)) + 1;
             let nm = '';
             for (; ; ++cur) {
-                nextName = '\'t' + cur;
-                if (!vars.has(nextName) && !tyVars.has(nextName)
+                nextName = '\'' + nextName[1] + cur;
+                if (!vars.has(nextName) && !tyVars.has(nextName) && !tyVarBnd.has(nextName)
                     && state.getStaticValue(nextName) === undefined) {
                     if (val[1] === '\'') {
                         nm = '\'' + nextName;
@@ -205,10 +205,22 @@ export class ValueIdentifier extends Expression implements Pattern {
         }
 
         let res = state.getStaticValue(this.name.getText());
+
         if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
             return [[[this.name.getText(), t.instantiate(state, tyVarBnd)]],
                 t.instantiate(state, tyVarBnd), tyVarBnd];
         }
+
+        let tmp = this.getType(state, tyVarBnd, '\'g0');
+        tmp[3].forEach((val: string) => {
+            let nname = '\'p' + val.substring(2);
+            if (val[1] === '\'') {
+                nname = '\'\'p' + val.substring(3);
+            }
+            tmp[4] = tmp[4].set(val, [new TypeVariable(nname), false]);
+        });
+        res[0] = tmp[0];
+        tyVarBnd = tmp[4];
 
         try {
             let rt = t.merge(state, tyVarBnd, res[0]);
@@ -499,13 +511,10 @@ export class LocalDeclarationExpression extends Expression {
 
         nextName = res[3];
 
-            // console.log(res[2]);
-            // console.log(tyVarBnd);
         let nbnds = new Map<string, [Type, boolean]>();
         tyVarBnd.forEach((val: [Type, boolean], key: string) => {
             nbnds = nbnds.set(key, [val[0].instantiate(res[0], res[2]), val[1]]);
         });
-            //        console.log(nbnds);
             /*
         for (let i = 0; i < chg.length; ++i) {
             if ((<[Type, boolean]> tyVarBnd.get(chg[i][0]))[0].equals(
@@ -519,10 +528,6 @@ export class LocalDeclarationExpression extends Expression {
                 */
 
         let r2 = this.expression.getType(res[0], res[2], nextName, tyVars, forceRebind);
-
-
- //        console.log('HERE' + r2[0]);
-
         return [r2[0], res[1].concat(r2[1]), r2[2], r2[3], r2[4]];
     }
 
@@ -632,43 +637,53 @@ export class FunctionApplication extends Expression implements Pattern {
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>] {
 
+            /*
         if (t instanceof FunctionType) {
             throw new ElaborationError(this.position,
                 'You simply cannot match function values.');
-        }
+        } */
         if (!(this.func instanceof ValueIdentifier)) {
             // TODO Better message
             throw new ElaborationError(this.position, 'Elaboration failed. 1');
         }
 
+        // TODO Long identifier
         let ti = state.getStaticValue((<ValueIdentifier> this.func).name.getText());
         if (ti === undefined || ti[1] === IdentifierStatus.VALUE_VARIABLE) {
             throw new ElaborationError(this.position,
                 'Unbound value Identifier "' + (<ValueIdentifier> this.func).name.getText() + '".');
         }
 
-                /*
-        let tmp = this.func.getType(state, tyVarBnd, '\'p0');
+        let tmp = this.func.getType(state, tyVarBnd, '\'g0');
+        tmp[3].forEach((val: string) => {
+            let nname = '\'p' + val.substring(2);
+            if (val[1] === '\'') {
+                nname = '\'\'p' + val.substring(3);
+            }
+            tmp[4] = tmp[4].set(val, [new TypeVariable(nname), false]);
+        });
         ti[0] = tmp[0];
         tyVarBnd = tmp[4];
-        console.log(ti[0] + '');
-        console.log(tmp[4]);
-                 */
 
-        if (!(ti[0] instanceof FunctionType) || !(t instanceof CustomType)) {
+        if (!(ti[0] instanceof FunctionType)) {
             // TODO Better message
             throw new ElaborationError(this.position, 'Elaboration failed. 2');
         }
 
-        let res = (<PatternExpression> this.argument).matchType(state, tyVarBnd,
-            (<FunctionType> ti[0]).parameterType);
+        try {
+            let ft = <FunctionType> ti[0];
+            let mg = ft.returnType.merge(state, tyVarBnd, t);
 
-        if (!res[1].equals((<FunctionType> ti[0]).parameterType)) {
+            let res = (<PatternExpression> this.argument).matchType(state, mg[1],
+                ft.parameterType.instantiate(state, mg[1]));
+            return [res[0], mg[0], res[2]];
+        } catch (e) {
+            if (!(e instanceof Array)) {
+                throw e;
+            }
             // TODO Better message
-            throw new ElaborationError(this.position, 'Elaboration failed. 4');
+            throw new ElaborationError(this.position, 'Merge failed:\n' + e[0]);
         }
-
-        return [res[0], (<FunctionType> ti[0]).returnType, res[2]];
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -744,13 +759,7 @@ export class FunctionApplication extends Expression implements Pattern {
 
         if (f[0] instanceof FunctionType) {
             try {
-                // console.log(this.constructor.name + ' 2 ' + this);
-                // console.log('Merging ' + f[0] + ' and ' + arg[0]);
-                // console.log(f[4]);
-
-
                 let tp = (<FunctionType> f[0]).parameterType.merge(state, f[4], arg[0]);
-
                 return [(<FunctionType> f[0]).returnType.instantiate(state, tp[1]),
                     f[1].concat(arg[1]), arg[2], arg[3], tp[1]];
             } catch (e) {
@@ -989,7 +998,6 @@ export class Lambda extends Expression {
     }
 
     toString(): string {
-        // TODO
         return '( fn ' + this.match + ' )';
     }
 

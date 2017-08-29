@@ -7,30 +7,31 @@ export abstract class Type {
 
     // Constructs types with type variables instantiated as much as possible
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
-        return this.simplify().instantiate(state, tyVarBnd, seen);
+        throw new ElaborationError(-1,
+            'I mustn\'t run away. I mustn\'t run away. I mustn\'t run away.');
     }
 
     // Merge this type with the other type. This operation is commutative
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type): [Type, Map<string, [Type, boolean]>] {
-        return this.simplify().merge(state, tyVarBnd, other);
+        throw new ElaborationError(-1, 'I don\'t know anything.');
     }
 
     makeEqType(state: State, tyVarBnd: Map<string, [Type, boolean]>): [Type, Map<string, [Type, boolean]>] {
-        return this.simplify().makeEqType(state, tyVarBnd);
+        throw new ElaborationError(-1, 'Yeaaah.');
     }
 
     // Return all (free) type variables
     getTypeVariables(free: boolean = false): Set<string> {
-        return this.simplify().getTypeVariables(free);
+        throw new ElaborationError(-1, 'This is wrong.\nI said with a posed look.');
     }
 
     // Get all type variables in order (they may appear more than once)
     getOrderedTypeVariables(): string[] {
-        return this.simplify().getOrderedTypeVariables();
+        throw new ElaborationError(-1, 'You seem well today.\nDid something nice happen?');
     }
 
     replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
-        return this.simplify().replaceTypeVariables(replacements, free);
+        throw new ElaborationError(-1, 'あんたバカ?');
     }
 
     // Mark all type variables as free
@@ -138,6 +139,12 @@ export class TypeVariableBind extends Type {
     constructor(public name: string, public type: Type, public domain: Type[] = []) {
         super();
         this.isFree = false;
+    }
+
+    simplify(): TypeVariableBind {
+        let res = new TypeVariableBind(this.name, this.type.simplify(), this.domain);
+        res.isFree = this.isFree;
+        return res;
     }
 
     makeFree(): Type {
