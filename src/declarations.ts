@@ -12,7 +12,7 @@ export abstract class Declaration {
     id: number;
     elaborate(state: State,
               tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-              nextName: string = '\'t0', isTopLevel: boolean = false):
+              nextName: string = '\'*t0', isTopLevel: boolean = false):
                 [State, Warning[], Map<string, [Type, boolean]>, string] {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }

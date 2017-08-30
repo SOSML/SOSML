@@ -1,9 +1,10 @@
 import { Expression } from './expressions';
 import { Declaration } from './declarations';
 import { IdentifierToken, Token, LongIdentifierToken } from './tokens';
-import { Type, TypeVariable } from './types';
+import { Type, TypeVariable, CustomType, TypeVariableBind, FunctionType } from './types';
 import { State, DynamicInterface, DynamicStructureInterface, DynamicValueInterface, StaticBasis,
-         DynamicTypeInterface, IdentifierStatus, DynamicBasis, DynamicFunctorInformation } from './state';
+         DynamicTypeInterface, IdentifierStatus, DynamicBasis, DynamicFunctorInformation,
+         TypeInformation } from './state';
 import { Warning, EvaluationError, ElaborationError } from './errors';
 import { Value } from './values';
 import { getInitialState } from './initialState';
@@ -157,7 +158,119 @@ export class OpaqueConstraint extends Expression implements Structure {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        throw new Error('ニャ－');
+
+        let str = this.structureExpression.elaborate(state, tyVarBnd, nextName);
+        let sig = this.signatureExpression.elaborate(state, str[2], str[3]);
+
+        let res = new StaticBasis({}, {}, {}, {}, {});
+
+        let nstate = state.getNestedState(state.id);
+        nstate.staticBasis = str[0];
+        let nstate2 = state.getNestedState(state.id);
+        nstate2.staticBasis = sig[0];
+
+        for (let i in sig[0].typeEnvironment) {
+            if (sig[0].typeEnvironment.hasOwnProperty(i)) {
+                if (!str[0].typeEnvironment.hasOwnProperty(i)) {
+                    throw new ElaborationError(this.position,
+                        'Signature mismatch: Unimplemented type "' + i + '".');
+                }
+                let sg = <TypeInformation> sig[0].typeEnvironment[i];
+                let st = <TypeInformation> str[0].typeEnvironment[i];
+
+                if (sg.arity !== st.arity) {
+                    throw new ElaborationError(this.position,
+                        'Signature mismatch: Implementation of type "' + i
+                        + '" has the wrong arity.');
+                }
+
+                try {
+                    let sgtp = <CustomType> sg.type;
+                    let tp = sgtp.merge(nstate, tyVarBnd, (<FunctionType> st.type).parameterType);
+                    // We need to create a new type here because of reference stuff
+                    sgtp = new CustomType(sgtp.name, sgtp.typeArguments, sgtp.position,
+                        sgtp.qualifiedName, true);
+
+                    res.setType(i, sgtp, [], sg.arity, sg.allowsEquality);
+                    tyVarBnd = tp[1];
+                } catch (e) {
+                    if (!(e instanceof Array)) {
+                        throw e;
+                    }
+                    throw new ElaborationError(this.position,
+                        'Signature mismatch: Wrong implementation of type "' + i + '": ' + e[0]);
+                }
+            }
+        }
+
+        for (let i in sig[0].valueEnvironment) {
+            if (sig[0].valueEnvironment.hasOwnProperty(i)) {
+                if (!str[0].valueEnvironment.hasOwnProperty(i)) {
+                    throw new ElaborationError(this.position,
+                        'Signature mismatch: Unimplemented value "' + i + '".');
+                }
+                let sg = <[Type, IdentifierStatus]> sig[0].valueEnvironment[i];
+                let st = <[Type, IdentifierStatus]> str[0].valueEnvironment[i];
+
+                let repl = new Map<string, string>();
+                let vsg = sg[0].getTypeVariables();
+                let vst = st[0].getTypeVariables();
+                while (st[0] instanceof TypeVariableBind) {
+                    while (true) {
+                        let cur = +nextName.substring(3);
+                        let nname = '\'' + nextName[1] + nextName[2] + (cur + 1);
+                        nextName = nname;
+
+                        if (!tyVarBnd.has(nname) && !vsg.has(nname) && !vst.has(nname)) {
+                            if ((<TypeVariableBind> st[0]).name[1] === '\'') {
+                                nname = '\'' + nname;
+                            }
+                            repl = repl.set((<TypeVariableBind> st[0]).name, nname);
+                            break;
+                        }
+
+                    }
+                    st[0] = (<TypeVariableBind> st[0]).type;
+                }
+                st[0] = st[0].replaceTypeVariables(repl);
+
+                let nsg = sg[0];
+                while (nsg instanceof TypeVariableBind) {
+                    while (true) {
+                        let cur = +nextName.substring(3);
+                        let nname = '\'' + nextName[1] + nextName[2] + (cur + 1);
+                        nextName = nname;
+
+                        if (!tyVarBnd.has(nname) && !vsg.has(nname) && !vst.has(nname)) {
+                            if ((<TypeVariableBind> nsg).name[1] === '\'') {
+                                nname = '\'' + nname;
+                            }
+                            repl = repl.set((<TypeVariableBind> nsg).name, nname);
+                            break;
+                        }
+
+                    }
+                    nsg = (<TypeVariableBind> nsg).type;
+                }
+                nsg = nsg.replaceTypeVariables(repl);
+
+                try {
+                    nsg.merge(nstate, tyVarBnd, st[0]);
+                    res.setValue(i, sg[0].instantiate(nstate2, tyVarBnd),
+                        IdentifierStatus.VALUE_VARIABLE);
+                } catch (e) {
+                    if (!(e instanceof Array)) {
+                        throw e;
+                    }
+                    throw new ElaborationError(this.position,
+                        'Signature mismatch: Wrong implementation of type "' + i + '": ' + e[0]);
+                }
+            }
+        }
+
+        // TODO Structs
+
+        return [res, [], tyVarBnd, nextName];
     }
 
     computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
@@ -258,6 +371,8 @@ export class LocalDeclarationStructureExpression extends Expression implements S
 
 export interface Signature {
     computeInterface(state: State): DynamicInterface;
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string];
 }
 
 export class SignatureExpression extends Expression implements Signature {
@@ -268,6 +383,11 @@ export class SignatureExpression extends Expression implements Signature {
 
     simplify(): SignatureExpression {
         return this;
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        return this.specification.elaborate(state, tyVarBnd, nextName);
     }
 
     computeInterface(state: State): DynamicInterface {
@@ -289,39 +409,46 @@ export class SignatureIdentifier extends Expression implements Signature {
         return this;
     }
 
-    computeInterface(state: State): DynamicInterface {
-        let st = state.dynamicBasis;
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        let res: StaticBasis | undefined = undefined;
         if (this.identifier instanceof LongIdentifierToken) {
-            for (let i = 0; i < (<LongIdentifierToken> this.identifier).qualifiers.length; ++i) {
-                let tmp: DynamicBasis | undefined;
-                if (i === 0) {
-                    tmp = state.getDynamicStructure(
-                        (<LongIdentifierToken> this.identifier).qualifiers[i].getText());
-                } else {
-                    tmp = st.getStructure(
-                        (<LongIdentifierToken> this.identifier).qualifiers[i].getText());
-                }
-                if (tmp === undefined) {
-                    throw new EvaluationError(this.position, 'Undefined module "'
-                        + (<LongIdentifierToken> this.identifier).qualifiers[i].getText() + '"');
-                }
-                st = <DynamicBasis> tmp;
+            let st = state.getAndResolveStaticStructure(<LongIdentifierToken> this.identifier);
+
+            if (st !== undefined) {
+                res = (<StaticBasis> st).getSignature(
+                    (<LongIdentifierToken> this.identifier).id.getText());
             }
-            let res = st.getSignature((<LongIdentifierToken> this.identifier).id.getText());
-            if (res === undefined) {
-                throw new EvaluationError(this.position, 'Undefined signature "'
-                    + this.identifier.getText() + '".');
-            } else {
-                return <DynamicInterface> res;
-            }
+        } else {
+            res = state.getStaticSignature(this.identifier.getText());
         }
-        let rs = state.getDynamicSignature(this.identifier.getText());
-        if (rs === undefined) {
+
+        if (res === undefined) {
             throw new EvaluationError(this.position, 'Undefined signature "'
                 + this.identifier.getText() + '".');
-        } else {
-            return <DynamicInterface> rs;
         }
+        return [<StaticBasis> res, [], tyVarBnd, nextName];
+
+    }
+
+    computeInterface(state: State): DynamicInterface {
+        let res: DynamicInterface | undefined = undefined;
+        if (this.identifier instanceof LongIdentifierToken) {
+            let st = state.getAndResolveDynamicStructure(<LongIdentifierToken> this.identifier);
+
+            if (st !== undefined) {
+                res = (<DynamicBasis> st).getSignature(
+                    (<LongIdentifierToken> this.identifier).id.getText());
+            }
+        } else {
+            res = state.getDynamicSignature(this.identifier.getText());
+        }
+
+        if (res === undefined) {
+            throw new EvaluationError(this.position, 'Undefined signature "'
+                + this.identifier.getText() + '".');
+        }
+        return <DynamicInterface> res;
     }
 
     toString(): string {
@@ -340,6 +467,12 @@ export class TypeRealisation extends Expression implements Signature {
     simplify(): TypeRealisation {
         return new TypeRealisation(this.position, <Expression & Signature> this.signatureExpression.simplify(),
             this.tyvarseq, this.name, this.type.simplify());
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        // TODO
+        throw new Error('ニャ－');
     }
 
     computeInterface(state: State): DynamicInterface {
@@ -413,9 +546,16 @@ export class SignatureDeclaration extends Declaration {
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-              nextName: string = '\'t0'): [State, Warning[], Map<string, [Type, boolean]>, string] {
-        // TODO
-        return [state, [new Warning(this.position, 'Skipped elaborating signature.\n')], tyVarBnd, nextName];
+              nextName: string = '\'*t0'): [State, Warning[], Map<string, [Type, boolean]>, string] {
+        let warns: Warning[] = [];
+        for (let i = 0; i < this.signatureBinding.length; ++i) {
+            let tmp = this.signatureBinding[i].elaborate(state, tyVarBnd, nextName);
+            state = tmp[0];
+            warns = warns.concat(tmp[1]);
+            tyVarBnd = tmp[2];
+            nextName = tmp[3];
+        }
+        return [state, warns, tyVarBnd, nextName];
     }
 
     evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
@@ -449,7 +589,7 @@ export class FunctorDeclaration extends Declaration {
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-              nextName: string = '\'t0'): [State, Warning[], Map<string, [Type, boolean]>, string] {
+              nextName: string = '\'*t0'): [State, Warning[], Map<string, [Type, boolean]>, string] {
         // TODO
         return [state, [new Warning(this.position, 'Skipped elaborating functor.\n')], tyVarBnd, nextName];
     }
@@ -525,6 +665,13 @@ export class SignatureBinding {
             <Expression & Signature> this.binding.simplify());
     }
 
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [State, Warning[], Map<string, [Type, boolean]>, string] {
+        let res = this.binding.elaborate(state, tyVarBnd, nextName);
+        state.setStaticSignature(this.name.getText(), res[0]);
+        return [state, res[1], res[2], res[3]];
+    }
+
     evaluate(state: State): State {
         state.setDynamicSignature(this.name.getText(), this.binding.computeInterface(state));
         return state;
@@ -571,6 +718,8 @@ export class FunctorBinding {
 // Specifications
 
 export abstract class Specification {
+    abstract elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string];
     abstract computeInterface(state: State): DynamicInterface;
 }
 
@@ -578,6 +727,22 @@ export class ValueSpecification extends Specification {
 // val valdesc
     constructor(public position: number, public valueDescription: [IdentifierToken, Type][]) {
         super();
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        let res = new StaticBasis({}, {}, {}, {}, {});
+        for (let i = 0; i < this.valueDescription.length; ++i) {
+            let tp = this.valueDescription[i][1].instantiate(state, tyVarBnd);
+            let tyv = tp.getTypeVariables();
+
+            tyv.forEach((val: string) => {
+                tp = new TypeVariableBind(val, tp);
+            });
+
+            res.setValue(this.valueDescription[i][0].getText(), tp, IdentifierStatus.VALUE_VARIABLE);
+        }
+        return [res, [], tyVarBnd, nextName];
     }
 
     computeInterface(state: State): DynamicInterface {
@@ -595,6 +760,17 @@ export class TypeSpecification extends Specification {
         super();
     }
 
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        let res = new StaticBasis({}, {}, {}, {}, {});
+        for (let i = 0; i < this.typeDescription.length; ++i) {
+            res.setType(this.typeDescription[i][1].getText(),
+                new CustomType(this.typeDescription[i][1].getText(), this.typeDescription[i][0]),
+                [], this.typeDescription[i][0].length);
+        }
+        return [res, [], tyVarBnd, nextName];
+    }
+
     computeInterface(state: State): DynamicInterface {
         let res: DynamicTypeInterface = {};
         for (let i = 0; i < this.typeDescription.length; ++i) {
@@ -608,6 +784,17 @@ export class EqualityTypeSpecification extends Specification {
 // eqtype [tyvarseq tycon][]
     constructor(public position: number, public typeDescription: [TypeVariable[], IdentifierToken][]) {
         super();
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        let res = new StaticBasis({}, {}, {}, {}, {});
+        for (let i = 0; i < this.typeDescription.length; ++i) {
+            res.setType(this.typeDescription[i][1].getText(),
+                new CustomType(this.typeDescription[i][1].getText(), this.typeDescription[i][0]),
+                [], this.typeDescription[i][0].length, true);
+        }
+        return [res, [], tyVarBnd, nextName];
     }
 
     computeInterface(state: State): DynamicInterface {
@@ -624,6 +811,12 @@ export class DatatypeSpecification extends Specification {
     constructor(public position: number, public datatypeDescription: [TypeVariable[],
         IdentifierToken, [IdentifierToken, Type|undefined][]][]) {
         super();
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        // TODO
+        throw new Error('ニャ－');
     }
 
     computeInterface(state: State): DynamicInterface {
@@ -649,28 +842,21 @@ export class DatatypeReplicationSpecification extends Specification {
         super();
     }
 
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
     computeInterface(state: State): DynamicInterface {
-        let st = state.dynamicBasis;
-        let tp: string[] | undefined = [];
+        let tp: string[] | undefined = undefined;
         if (this.oldname instanceof LongIdentifierToken) {
-            for (let i = 0; i < (<LongIdentifierToken> this.oldname).qualifiers.length; ++i) {
-                let tmp: DynamicBasis | undefined;
-                if (i === 0) {
-                    tmp = state.getDynamicStructure(
-                        (<LongIdentifierToken> this.oldname).qualifiers[i].getText());
-                } else {
-                    tmp = st.getStructure(
-                        (<LongIdentifierToken> this.oldname).qualifiers[i].getText());
-                }
-                if (tmp === undefined) {
-                    throw new EvaluationError(this.position, 'Undefined module "'
-                        + (<LongIdentifierToken> this.oldname).qualifiers[i].getText() + '"');
-                }
-                st = <DynamicBasis> tmp;
+            let tmp = state.getAndResolveDynamicStructure(this.oldname);
+            if (tmp !== undefined) {
+                tp = tmp.getType((<LongIdentifierToken> this.oldname).id.getText());
             }
-            tp = <string[]> st.getType((<LongIdentifierToken> this.oldname).id.getText());
         } else {
-            tp = <string[]> state.getDynamicType(this.oldname.getText());
+            tp = state.getDynamicType(this.oldname.getText());
         }
 
         if (tp === undefined) {
@@ -694,6 +880,12 @@ export class ExceptionSpecification extends Specification {
         super();
     }
 
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        // TODO
+        throw new Error('ニャ－');
+    }
+
     computeInterface(state: State): DynamicInterface {
         let res: DynamicValueInterface = {};
         for (let i = 0; i < this.exceptionDescription.length; ++i) {
@@ -707,6 +899,12 @@ export class StructureSpecification extends Specification {
 // structure [strid: sigexp][]
     constructor(public position: number, public structureDescription: [IdentifierToken, Expression & Signature][]) {
         super();
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        // TODO
+        throw new Error('ニャ－');
     }
 
     computeInterface(state: State): DynamicInterface {
@@ -724,6 +922,11 @@ export class IncludeSpecification extends Specification {
         super();
     }
 
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        return this.expression.elaborate(state, tyVarBnd, nextName);
+    }
+
     computeInterface(state: State): DynamicInterface {
         return this.expression.computeInterface(state);
     }
@@ -735,6 +938,11 @@ export class EmptySpecification extends Specification {
         super();
     }
 
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        return [new StaticBasis({}, {}, {}, {}, {}), [], tyVarBnd, nextName];
+    }
+
     computeInterface(state: State): DynamicInterface {
         return new DynamicInterface({}, {}, {});
     }
@@ -744,6 +952,23 @@ export class SequentialSpecification extends Specification {
 // spec[]
     constructor(public position: number, public specifications: Specification[]) {
         super();
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        let res = new StaticBasis({}, {}, {}, {}, {});
+        let warns: Warning[] = [];
+        let nstate = state;
+        for (let i = 0; i < this.specifications.length; ++i) {
+            let tmp = this.specifications[i].elaborate(nstate, tyVarBnd, nextName);
+            res = res.extend(tmp[0]);
+            warns = warns.concat(tmp[1]);
+            tyVarBnd = tmp[2];
+            nextName = tmp[3];
+            nstate = nstate.getNestedState(nstate.id);
+            nstate.staticBasis = tmp[0];
+        }
+        return [res, warns, tyVarBnd, nextName];
     }
 
     computeInterface(state: State): DynamicInterface {
@@ -760,6 +985,12 @@ export class SharingSpecification extends Specification {
     constructor(public position: number, public specification: Specification,
                 public typeNames: Token[]) {
         super();
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        // TODO
+        throw new Error('ニャ－');
     }
 
     computeInterface(state: State): DynamicInterface {

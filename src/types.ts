@@ -35,6 +35,10 @@ export abstract class Type {
         throw new ElaborationError(-1, 'あんたバカ?');
     }
 
+    qualify(state: State, qualifiers: LongIdentifierToken): Type {
+        return this;
+    }
+
     // Mark all type variables as free
     makeFree(): Type {
         return this;
@@ -42,6 +46,14 @@ export abstract class Type {
 
     simplify(): Type {
         return this;
+    }
+
+    isOpaque(): boolean {
+        return false;
+    }
+
+    getOpaqueName(): string {
+        return 'undefined';
     }
 
     admitsEquality(state: State): boolean {
@@ -151,6 +163,27 @@ export class TypeVariableBind extends Type {
     makeFree(): Type {
         let res = new TypeVariableBind(this.name, this.type.makeFree(), this.domain);
         res.isFree = true;
+        return res;
+    }
+
+    qualify(state: State, qualifiers: LongIdentifierToken): Type {
+        let res = new TypeVariableBind(this.name, this.type.qualify(state, qualifiers), this.domain);
+        res.isFree = this.isFree;
+        return res;
+    }
+
+    isOpaque(): boolean {
+        return this.type.isOpaque();
+    }
+
+    getOpaqueName(): string {
+        return this.type.getOpaqueName();
+    }
+
+    instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>) {
+        let res = new TypeVariableBind(this.name,
+            this.type.instantiate(state, tyVarBnd), this.domain);
+        res.isFree = this.isFree;
         return res;
     }
 
@@ -426,10 +459,21 @@ export class RecordType extends Type {
         return new RecordType(newElements, this.complete, this.position);
     }
 
+    qualify(state: State, qualifiers: LongIdentifierToken): Type {
+        let newElements: Map<string, Type> = new Map<string, Type>();
+        this.elements.forEach((type: Type, key: string) => {
+            newElements.set(key, type.qualify(state, qualifiers));
+        });
+        return new RecordType(newElements, this.complete, this.position);
+    }
+
+
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type): [Type, Map<string, [Type, boolean]>] {
         if (other instanceof TypeVariable || other instanceof AnyType) {
             return other.merge(state, tyVarBnd, this);
         }
+
+        other = other.instantiate(state, tyVarBnd);
 
         if (other instanceof RecordType) {
             if (!this.complete && other.complete) {
@@ -456,7 +500,7 @@ export class RecordType extends Type {
 
             if (other.complete) {
                 this.elements.forEach((val: Type, key: string) => {
-                    if (!other.elements.has(key)) {
+                    if (!(<RecordType> other).elements.has(key)) {
                         throw ['Records don\'t agree on members ("' + key
                             + '" occurs only once.)', this.instantiate(state, tybnd),
                             other.instantiate(state, tybnd)];
@@ -468,9 +512,9 @@ export class RecordType extends Type {
         }
 
         // Merging didn't work
-        throw ['Cannot merge "RecordType" and "' + other.constructor.name + '".',
-            this.instantiate(state, tyVarBnd),
-            other.instantiate(state, tyVarBnd)];
+        throw ['Cannot merge "' + this.instantiate(state, tyVarBnd) + '" and "'
+            + other.instantiate(state, tyVarBnd) + '".', this.constructor.name,
+            other.constructor.name];
     }
 
     makeEqType(state: State, tyVarBnd: Map<string, [Type, boolean]>): [Type, Map<string, [Type, boolean]>] {
@@ -628,6 +672,11 @@ export class FunctionType extends Type {
             this.returnType.instantiate(state, tyVarBnd, seen), this.position);
     }
 
+    qualify(state: State, qualifiers: LongIdentifierToken): Type {
+        return new FunctionType(this.parameterType.qualify(state, qualifiers),
+            this.returnType.qualify(state, qualifiers), this.position);
+    }
+
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type): [Type, Map<string, [Type, boolean]>] {
         if (other instanceof TypeVariable || other instanceof AnyType) {
             return other.merge(state, tyVarBnd, this);
@@ -640,9 +689,9 @@ export class FunctionType extends Type {
         }
 
         // Merging didn't work
-        throw ['Cannot merge "FunctionType" and "' + other.constructor.name + '".',
-            this.instantiate(state, tyVarBnd),
-            other.instantiate(state, tyVarBnd)];
+        throw ['Cannot merge "' + this.instantiate(state, tyVarBnd) + '" and "'
+            + other.instantiate(state, tyVarBnd) + '".', this.constructor.name,
+            other.constructor.name];
     }
 
     makeEqType(state: State, tyVarBnd: Map<string, [Type, boolean]>): [Type, Map<string, [Type, boolean]>] {
@@ -708,8 +757,21 @@ export class CustomType extends Type {
     constructor(public name: string,
                 public typeArguments: Type[] = [],
                 public position: number = 0,
-                public qualifiedName: LongIdentifierToken | undefined = undefined) {
+                public qualifiedName: LongIdentifierToken | undefined = undefined,
+                public opaque: boolean = false) {
         super();
+    }
+
+    isOpaque(): boolean {
+        return this.opaque;
+    }
+
+    getOpaqueName(): string {
+        if (this.isOpaque) {
+            return this.name;
+        } else {
+            return 'undefined';
+        }
     }
 
     makeFree(): Type {
@@ -717,7 +779,21 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].makeFree());
         }
-        return new CustomType(this.name, res, this.position, this.qualifiedName);
+        return new CustomType(this.name, res, this.position, this.qualifiedName, this.opaque);
+    }
+
+    qualify(state: State, qualifiers: LongIdentifierToken): Type {
+        let res: Type[] = [];
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            res.push(this.typeArguments[i].qualify(state, qualifiers));
+        }
+        let rs = new CustomType(this.name, res, this.position, this.qualifiedName, this.opaque);
+
+        let tp = state.getStaticType(this.name);
+        if (tp !== undefined) {
+            rs.qualifiedName = qualifiers;
+        }
+        return rs;
     }
 
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
@@ -730,7 +806,7 @@ export class CustomType extends Type {
                 tp = undefined;
             }
         }
-        if (tp !== undefined && tp.type instanceof FunctionType) {
+        if (tp !== undefined && tp.type instanceof FunctionType && !this.opaque) {
             try {
                 let mt = this.merge(state, tyVarBnd,  (<FunctionType> tp.type).parameterType, true);
                 return (<FunctionType> tp.type).returnType.instantiate(state, mt[1], seen);
@@ -745,13 +821,15 @@ export class CustomType extends Type {
             }
         } else if (tp === undefined) {
             throw new ElaborationError(-1, 'Unbound type "' + this.name + '".');
+        } else if (tp !== undefined && tp.type instanceof CustomType && (<CustomType> tp.type).opaque) {
+            this.opaque = true;
         }
 
         let res: Type[] = [];
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].instantiate(state, tyVarBnd, seen));
         }
-        return new CustomType(this.name, res, this.position, this.qualifiedName);
+        return new CustomType(this.name, res, this.position, this.qualifiedName, this.opaque);
     }
 
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type,
@@ -774,23 +852,47 @@ export class CustomType extends Type {
 
         if (oth instanceof CustomType && (<CustomType> ths).name === (<CustomType> oth).name
             && (<CustomType> ths).typeArguments.length === (<CustomType> oth).typeArguments.length) {
-            let res: Type[] = [];
-            let tybnd = tyVarBnd;
 
-            for (let i = 0; i < (<CustomType> ths).typeArguments.length; ++i) {
-                let tmp = (<CustomType> ths).typeArguments[i].merge(state, tybnd, oth.typeArguments[i]);
-                res.push(tmp[0]);
-                tybnd = tmp[1];
+            let ok = !(this.qualifiedName !== undefined
+                && (<CustomType> oth).qualifiedName === undefined
+                || this.qualifiedName === undefined
+                && (<CustomType> oth).qualifiedName !== undefined);
+
+            if (this.qualifiedName !== undefined) {
+                if ((<LongIdentifierToken> this.qualifiedName).qualifiers.length
+                    === (<LongIdentifierToken> (<CustomType> oth).qualifiedName).qualifiers.length) {
+                    for (let i = 0; i < (<LongIdentifierToken> this.qualifiedName).qualifiers.length; ++i) {
+                        if ((<LongIdentifierToken> this.qualifiedName).qualifiers[i].getText()
+                            !== (<LongIdentifierToken> (<CustomType> oth).qualifiedName).qualifiers[i].getText()) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                } else {
+                    ok = false;
+                }
             }
 
-            return [new CustomType((<CustomType> ths).name, res, this.position, this.qualifiedName),
-                tybnd];
+            if (ok) {
+                let res: Type[] = [];
+                let tybnd = tyVarBnd;
+
+                for (let i = 0; i < (<CustomType> ths).typeArguments.length; ++i) {
+                    let tmp = (<CustomType> ths).typeArguments[i].merge(state,
+                        tybnd, oth.typeArguments[i]);
+                    res.push(tmp[0]);
+                    tybnd = tmp[1];
+                }
+
+                return [new CustomType((<CustomType> ths).name, res, this.position,
+                    this.qualifiedName, this.opaque), tybnd];
+            }
         }
 
         // Merging didn't work
-        throw ['Cannot merge "CustomType" and "' + other.constructor.name + '".',
-            this.instantiate(state, tyVarBnd),
-            other.instantiate(state, tyVarBnd)];
+        throw ['Cannot merge "' + this.instantiate(state, tyVarBnd) + '" and "'
+            + other.instantiate(state, tyVarBnd) + '".', this.constructor.name,
+            other.constructor.name];
     }
 
     makeEqType(state: State, tyVarBnd: Map<string, [Type, boolean]>): [Type, Map<string, [Type, boolean]>] {
@@ -800,7 +902,7 @@ export class CustomType extends Type {
             res.push(tmp[0]);
             tyVarBnd = tmp[1];
         }
-        return [new CustomType(this.name, res, this.position, this.qualifiedName), tyVarBnd];
+        return [new CustomType(this.name, res, this.position, this.qualifiedName, this.opaque), tyVarBnd];
     }
 
     getTypeVariables(free: boolean = false): Set<string> {
@@ -830,7 +932,7 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             rt.push(this.typeArguments[i].replaceTypeVariables(replacements, free));
         }
-        return new CustomType(this.name, rt, this.position, this.qualifiedName);
+        return new CustomType(this.name, rt, this.position, this.qualifiedName, this.opaque);
     }
 
     admitsEquality(state: State): boolean {
@@ -861,6 +963,11 @@ export class CustomType extends Type {
         if (this.typeArguments.length > 0) {
             result += ' ';
         }
+        if (this.qualifiedName !== undefined) {
+            for (let i = 0; i < this.qualifiedName.qualifiers.length; ++i) {
+                result += this.qualifiedName.qualifiers[i].getText() + '.';
+            }
+        }
         result += this.name;
         return result;
     }
@@ -870,7 +977,7 @@ export class CustomType extends Type {
         for (let i: number = 0; i < this.typeArguments.length; ++i) {
             args.push(this.typeArguments[i].simplify());
         }
-        return new CustomType(this.name, args, this.position, this.qualifiedName);
+        return new CustomType(this.name, args, this.position, this.qualifiedName, this.opaque);
     }
 
     equals(other: any): boolean {

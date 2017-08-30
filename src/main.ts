@@ -60,7 +60,7 @@ export function interpret(nextInstruction: string,
         };
     }
 
-    let elab = ast.elaborate(state, new Map<string, [Type, boolean]>(), '\'t0', true);
+    let elab = ast.elaborate(state, new Map<string, [Type, boolean]>(), '\'*t0', true);
     state = elab[0];
 
     // Use a fresh state to be able to piece types and values together
@@ -120,6 +120,19 @@ export function interpret(nextInstruction: string,
                     }
                 }
             }
+
+            // For every new bound signature, try to find its type
+            for (let i in curState.dynamicBasis.signatureEnvironment) {
+                if (Object.prototype.hasOwnProperty.call(
+                    curState.dynamicBasis.signatureEnvironment, i)) {
+
+                    let tp = state.getStaticSignature(i, curState.id);
+                    if (tp !== undefined) {
+                        curState.setStaticSignature(i, tp);
+                    }
+                }
+            }
+
 
         }
         if (state.parent === undefined) {

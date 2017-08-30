@@ -17,7 +17,7 @@ export abstract class Expression {
 
     getType(state: State,
             tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-            nextName: string            = '\'t0',
+            nextName: string            = '\'*t0',
             tyVars: Set<string>         = new Set<string>(),
             forceRebind: boolean       = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
@@ -72,7 +72,7 @@ export class Constant extends Expression implements Pattern {
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
 
@@ -120,7 +120,7 @@ export class ValueIdentifier extends Expression implements Pattern {
     constructor(public position: number, public name: Token) { super(); }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
 
@@ -130,14 +130,8 @@ export class ValueIdentifier extends Expression implements Pattern {
             if (st !== undefined) {
                 res = st.getValue((<LongIdentifierToken> this.name).id.getText());
                 if (res !== undefined) {
-                    if (res[1] === IdentifierStatus.VALUE_CONSTRUCTOR) {
-                        if (res[0] instanceof FunctionType) {
-                            (<CustomType> (<FunctionType> res[0]).returnType).qualifiedName
-                                = <LongIdentifierToken> this.name;
-                        } else if (res[0] instanceof CustomType) {
-                            (<CustomType> res[0]).qualifiedName = <LongIdentifierToken> this.name;
-                        }
-                    }
+                    let nst = new State(0, undefined, st, state.dynamicBasis, [0, {}]);
+                    res[0] = res[0].qualify(nst, this.name);
                 }
             }
         } else {
@@ -177,10 +171,10 @@ export class ValueIdentifier extends Expression implements Pattern {
         let nwvar: string[] = [];
 
         vars.forEach((val: string) => {
-            let cur = (+nextName.substring(2)) + 1;
+            let cur = (+nextName.substring(3)) + 1;
             let nm = '';
             for (; ; ++cur) {
-                nextName = '\'' + nextName[1] + cur;
+                nextName = '\'' + nextName[1] + nextName[2] + cur;
                 if (!vars.has(nextName) && !tyVars.has(nextName) && !tyVarBnd.has(nextName)
                     && state.getStaticValue(nextName) === undefined) {
                     if (val[1] === '\'') {
@@ -219,11 +213,11 @@ export class ValueIdentifier extends Expression implements Pattern {
                 t.instantiate(state, tyVarBnd), tyVarBnd];
         }
 
-        let tmp = this.getType(state, tyVarBnd, '\'g0');
+        let tmp = this.getType(state, tyVarBnd, '\'*g0');
         tmp[3].forEach((val: string) => {
-            let nname = '\'p' + val.substring(2);
+            let nname = '\'*p' + val.substring(3);
             if (val[1] === '\'') {
-                nname = '\'\'p' + val.substring(3);
+                nname = '\'\'*p' + val.substring(4);
             }
             tmp[4] = tmp[4].set(val, [new TypeVariable(nname), false]);
         });
@@ -239,7 +233,7 @@ export class ValueIdentifier extends Expression implements Pattern {
             }
             throw new ElaborationError(this.position,
                 'Type clash: "' + t + '" vs. "'
-                + res[0] + '":\n' + e[0]);
+                + res[0] + '": ' + e[0]);
         }
     }
 
@@ -391,7 +385,7 @@ export class Record extends Expression implements Pattern {
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
 
@@ -488,7 +482,7 @@ export class LocalDeclarationExpression extends Expression {
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
 
@@ -577,7 +571,7 @@ export class TypedExpression extends Expression implements Pattern {
             throw new ElaborationError(this.position,
                 'The annotated type "' + this.typeAnnotation
                 + '" does not match the expression\'s type "'
-                + tp[1] + '":\n' + e[0]);
+                + tp[1] + '": ' + e[0]);
         }
     }
 
@@ -586,7 +580,7 @@ export class TypedExpression extends Expression implements Pattern {
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
 
@@ -602,9 +596,7 @@ export class TypedExpression extends Expression implements Pattern {
             }
             throw new ElaborationError(this.position,
                 'The specified type "' + this.typeAnnotation
-                + '" does not match the annotated expression\'s type "'
-                + tp[0] + '":\n' + e[0] + ' ("' + e[1] + '" vs. "'
-                + e[2] + '")');
+                + '" does not match the annotated expression\'s type "' + tp[0] + '": ' + e[0]);
         }
     }
 
@@ -690,7 +682,7 @@ export class FunctionApplication extends Expression implements Pattern {
                 throw e;
             }
             // TODO Better message
-            throw new ElaborationError(this.position, 'Merge failed:\n' + e[0]);
+            throw new ElaborationError(this.position, 'Merge failed: ' + e[0]);
         }
     }
 
@@ -737,7 +729,7 @@ export class FunctionApplication extends Expression implements Pattern {
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
 
@@ -776,8 +768,7 @@ export class FunctionApplication extends Expression implements Pattern {
                 }
                 throw new ElaborationError(this.position,
                     'Do not feed functions of type "' + f[0]
-                    + '" an argument of type "' + arg[0] + '":\n'
-                    + e[0] + ' ("' + e[1] + '" vs. "' + e[2] + '")');
+                    + '" an argument of type "' + arg[0] + '": ' + e[0]);
             }
         } else {
             throw new ElaborationError(this.func.position,
@@ -906,7 +897,7 @@ export class HandleException extends Expression {
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
 
@@ -929,7 +920,7 @@ export class HandleException extends Expression {
             }
             throw new ElaborationError(this.expression.position,
                 'The "handle" cannot change the type of the expression from "'
-                + etp[0] + '" to "' + rt + '":\n' + e[0]);
+                + etp[0] + '" to "' + rt + '": ' + e[0]);
         }
     }
 
@@ -969,7 +960,7 @@ export class RaiseException extends Expression {
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
 
@@ -982,7 +973,7 @@ export class RaiseException extends Expression {
                 throw e;
             }
             throw new ElaborationError(this.expression.position,
-                'Raising anything but exceptions will only raise exceptions:\n' + e[0]);
+                'Raising anything but exceptions will only raise exceptions: ' + e[0]);
         }
     }
 
@@ -1010,7 +1001,7 @@ export class Lambda extends Expression {
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
         return this.match.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
@@ -1062,7 +1053,7 @@ export class Match {
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false):
     [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
 
@@ -1093,9 +1084,7 @@ export class Match {
                 if (!(e instanceof Array)) {
                     throw e;
                 }
-                throw new ElaborationError(this.position,
-                    'Match rules disagree on type:\n' + e[0] + ' ("' + e[1]
-                    + '" vs. "' + e[2] + '")');
+                throw new ElaborationError(this.position, 'Match rules disagree on type: ' + e[0]);
             }
             restp = restp.instantiate(state, r2[4]);
             bnds.forEach((val: [Type, boolean], key: string) => {
@@ -1124,14 +1113,14 @@ export class Wildcard extends Expression implements Pattern {
     constructor(public position: number) { super(); }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
 
-        let cur = (+nextName.substring(2)) + 1;
+        let cur = (+nextName.substring(3)) + 1;
         let nm = '';
         for (; ; ++cur) {
-            nextName = '\'' + nextName[1] + cur;
+            nextName = '\'' + nextName[1] + nextName[2] + cur;
             if (!tyVars.has(nextName) && !tyVarBnd.has(nextName)
                 && state.getStaticValue(nextName) === undefined) {
                 nm = nextName;
@@ -1171,7 +1160,7 @@ export class LayeredPattern extends Expression implements Pattern {
                 public pattern: Expression|PatternExpression) { super(); }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-            nextName: string = '\'t0', tyVars: Set<string> = new Set<string>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
         if (!forceRebind) {
@@ -1192,7 +1181,7 @@ export class LayeredPattern extends Expression implements Pattern {
                 if (!(e instanceof Array)) {
                     throw e;
                 }
-                throw new ElaborationError(this.position, 'Wrong type annotation:\n' + e[0]);
+                throw new ElaborationError(this.position, 'Wrong type annotation: ' + e[0]);
             }
         }
 
@@ -1206,7 +1195,7 @@ export class LayeredPattern extends Expression implements Pattern {
             if (!(e instanceof Array)) {
                 throw e;
             }
-            throw new ElaborationError(this.position, 'Wrong type annotation:\n' + e[0]);
+            throw new ElaborationError(this.position, 'Wrong type annotation: ' + e[0]);
         }
 
         return [tp, gtp[1].concat(argtp[1]), argtp[2], argtp[3], tyVarBnd];
@@ -1229,7 +1218,7 @@ export class LayeredPattern extends Expression implements Pattern {
                 if (!(e instanceof Array)) {
                     throw e;
                 }
-                throw new ElaborationError(this.position, 'Wrong type annotation:\n' + e[0]);
+                throw new ElaborationError(this.position, 'Wrong type annotation: ' + e[0]);
             }
         }
         let res = (<PatternExpression> this.pattern).matchType(state, tyVarBnd, tp);
