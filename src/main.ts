@@ -16,6 +16,7 @@ let AST = instance.lexParse(..code..);
 import { State } from './state';
 import { getInitialState } from './initialState';
 import { addStdLib } from './stdlib';
+import { Type } from './types';
 import { Token, IdentifierToken, LongIdentifierToken } from './tokens';
 import * as Lexer from './lexer';
 import * as Parser from './parser';
@@ -24,7 +25,9 @@ export function interpret(nextInstruction: string,
                           oldState: State = getInitialState(),
                           options: { [name: string]: any } = {
                               'allowLongFunctionNames': false,
-                              'allowUnicodeInStrings': false
+                              'allowUnicodeInStrings': false,
+                              'allowSuccessorML': false,
+                              'disableElaboration': false
                           }): { [name: string]: any } {
     let state = oldState.getNestedState();
 
@@ -46,7 +49,18 @@ export function interpret(nextInstruction: string,
 
     state = oldState.getNestedState();
     ast = ast.simplify();
-    let elab = ast.elaborate(state /* , options */);
+
+    if (options.disableElaboration === true) {
+        let tmp = ast.evaluate(oldState.getNestedState() /* , options */);
+        return {
+            'state':                tmp[0],
+            'evaluationErrored':    tmp[1],
+            'error':                tmp[2],
+            'warnings':             tmp[3]
+        };
+    }
+
+    let elab = ast.elaborate(state, new Map<string, [Type, boolean]>(), '\'*t0', true);
     state = elab[0];
 
     // Use a fresh state to be able to piece types and values together
@@ -69,6 +83,8 @@ export function interpret(nextInstruction: string,
 
     while (curState.id > oldState.id) {
         if (curState.dynamicBasis !== undefined) {
+            curState.freeTypeVariables = state.getTypeVariableBinds(curState.id);
+
             // For every new bound value, try to find its type
             for (let i in curState.dynamicBasis.valueEnvironment) {
                 if (Object.prototype.hasOwnProperty.call(
@@ -76,7 +92,7 @@ export function interpret(nextInstruction: string,
 
                     let tp = state.getStaticValue(i, curState.id);
                     if (tp !== undefined) {
-                        curState.setStaticValue(i, tp[0].normalize(), tp[1]);
+                        curState.setStaticValue(i, tp[0], tp[1]);
                     }
                 }
             }
@@ -92,6 +108,32 @@ export function interpret(nextInstruction: string,
                     }
                 }
             }
+
+            // For every new bound structure, try to find its type
+            for (let i in curState.dynamicBasis.structureEnvironment) {
+                if (Object.prototype.hasOwnProperty.call(
+                    curState.dynamicBasis.structureEnvironment, i)) {
+
+                    let tp = state.getStaticStructure(i, curState.id);
+                    if (tp !== undefined) {
+                        curState.setStaticStructure(i, tp);
+                    }
+                }
+            }
+
+            // For every new bound signature, try to find its type
+            for (let i in curState.dynamicBasis.signatureEnvironment) {
+                if (Object.prototype.hasOwnProperty.call(
+                    curState.dynamicBasis.signatureEnvironment, i)) {
+
+                    let tp = state.getStaticSignature(i, curState.id);
+                    if (tp !== undefined) {
+                        curState.setStaticSignature(i, tp);
+                    }
+                }
+            }
+
+
         }
         if (state.parent === undefined) {
             break;
