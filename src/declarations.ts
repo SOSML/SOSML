@@ -258,7 +258,7 @@ export class DatatypeDeclaration extends Declaration {
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         // I'm assuming the withtype is empty
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
-            let res = this.datatypeBinding[i].getType(state);
+            let res = this.datatypeBinding[i].getType(state, isTopLevel);
 
             for (let j = 0; j < res[0].length; ++j) {
                 if (!State.allowsRebind(res[0][j][0])) {
@@ -394,7 +394,7 @@ export class ExceptionDeclaration extends Declaration {
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         for (let i = 0; i < this.bindings.length; ++i) {
-            state = this.bindings[i].elaborate(state);
+            state = this.bindings[i].elaborate(state, isTopLevel);
         }
         return [state, [], tyVarBnd, nextName];
     }
@@ -985,7 +985,7 @@ export class DatatypeBinding {
                 public name: IdentifierToken, public type: [IdentifierToken, Type | undefined][]) {
     }
 
-    getType(state: State): [[string, Type][], Type, [string, string[]]] {
+    getType(state: State, isTopLevel: boolean): [[string, Type][], Type, [string, string[]]] {
         let connames: string[] = [];
         let ve: [string, Type][] = [];
         let nstate = state.getNestedState(state.id);
@@ -1000,9 +1000,24 @@ export class DatatypeBinding {
                     nstate, new Map<string, [Type, boolean]>()), tp);
             }
 
+            let tvs = new Set<string>();
+            for (let j = 0; j < this.typeVariableSequence.length; ++j) {
+                tvs = tvs.add(this.typeVariableSequence[j].name);
+            }
+            let ungar: string[] = [];
+
             tp.getTypeVariables().forEach((val: string) => {
-                tp = new TypeVariableBind(val, tp);
+                if (!tvs.has(val)) {
+                    ungar.push(val);
+                } else {
+                    tp = new TypeVariableBind(val, tp);
+                }
             });
+
+            if (ungar.length > 0) {
+                throw ElaborationError.getUnguarded(this.position, ungar);
+            }
+
             // TODO ID
             // let id = state.getValueIdentifierId(this.type[i][0].getText());
             // state.incrementValueIdentifierId(this.type[i][0].getText());
@@ -1033,7 +1048,7 @@ export class DatatypeBinding {
 
 export interface ExceptionBinding {
     evaluate(state: State): [State, boolean, Value|undefined];
-    elaborate(state: State): State;
+    elaborate(state: State, isTopLevel: boolean): State;
 }
 
 export class DirectExceptionBinding implements ExceptionBinding {
@@ -1043,17 +1058,16 @@ export class DirectExceptionBinding implements ExceptionBinding {
                 public type: Type | undefined) {
     }
 
-    elaborate(state: State): State {
+    elaborate(state: State, isTopLevel: boolean): State {
         if (this.type !== undefined) {
             let tp = this.type.simplify().instantiate(state, new Map<string, [Type, boolean]>());
             let tyvars: string[] = [];
             tp.getTypeVariables().forEach((val: string) => {
                 tyvars.push(val);
             });
-            // TODO Only do this if we're at top level
-            // if (tyvars.length > 0) {
-            //    throw ElaborationError.getUnguarded(this.position, tyvars);
-            // }
+            if (isTopLevel && tyvars.length > 0) {
+                throw ElaborationError.getUnguarded(this.position, tyvars);
+            }
 
             state.setStaticValue(this.name.getText(),
                 new FunctionType(tp, new CustomType('exn')).normalize()[0],
@@ -1089,7 +1103,7 @@ export class ExceptionAlias implements ExceptionBinding {
     constructor(public position: number, public name: IdentifierToken, public oldname: Token) {
     }
 
-    elaborate(state: State): State {
+    elaborate(state: State, isTopLevel: boolean): State {
         let res: [Type, IdentifierStatus] | undefined = undefined;
         if (this.oldname instanceof LongIdentifierToken) {
             let st = state.getAndResolveStaticStructure(<LongIdentifierToken> this.oldname);

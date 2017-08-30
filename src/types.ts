@@ -808,21 +808,21 @@ export class CustomType extends Type {
         }
         if (tp !== undefined && tp.type instanceof FunctionType && !this.opaque) {
             try {
-                let mt = this.merge(state, tyVarBnd,  (<FunctionType> tp.type).parameterType, true);
+                let mt = this.merge(state, tyVarBnd, (<FunctionType> tp.type).parameterType, true);
                 return (<FunctionType> tp.type).returnType.instantiate(state, mt[1], seen);
             } catch (e) {
                 if (!(e instanceof Array)) {
                     throw e;
                 }
-                throw new ElaborationError(-1,
-                    'Instantiating "' + this + '" failed:\n'
-                    + 'Cannot merge "' + e[1] + '" and "' + e[2]
-                    + '" (' + e[0] + ').');
+                throw new ElaborationError(-1, 'Instantiating "' + this + '" failed: ' + e[0]);
             }
         } else if (tp === undefined) {
             throw new ElaborationError(-1, 'Unbound type "' + this.name + '".');
         } else if (tp !== undefined && tp.type instanceof CustomType && (<CustomType> tp.type).opaque) {
             this.opaque = true;
+        } else if (tp !== undefined && ((!(tp.type instanceof CustomType))
+            || this.typeArguments.length !== (<CustomType> tp.type).typeArguments.length)) {
+            throw new ElaborationError(this.position, 'Arity mismatch.');
         }
 
         let res: Type[] = [];
@@ -849,20 +849,21 @@ export class CustomType extends Type {
             }
             oth = other.instantiate(state, tyVarBnd);
         }
+        let ths2 = <CustomType> ths;
 
-        if (oth instanceof CustomType && (<CustomType> ths).name === (<CustomType> oth).name
-            && (<CustomType> ths).typeArguments.length === (<CustomType> oth).typeArguments.length) {
+        if (oth instanceof CustomType && ths2.name === (<CustomType> oth).name
+            && ths2.typeArguments.length === (<CustomType> oth).typeArguments.length) {
 
-            let ok = !(this.qualifiedName !== undefined
+            let ok = !(ths2.qualifiedName !== undefined
                 && (<CustomType> oth).qualifiedName === undefined
-                || this.qualifiedName === undefined
+                || ths2.qualifiedName === undefined
                 && (<CustomType> oth).qualifiedName !== undefined);
 
-            if (this.qualifiedName !== undefined) {
-                if ((<LongIdentifierToken> this.qualifiedName).qualifiers.length
+            if (ths2.qualifiedName !== undefined) {
+                if ((<LongIdentifierToken> ths2.qualifiedName).qualifiers.length
                     === (<LongIdentifierToken> (<CustomType> oth).qualifiedName).qualifiers.length) {
-                    for (let i = 0; i < (<LongIdentifierToken> this.qualifiedName).qualifiers.length; ++i) {
-                        if ((<LongIdentifierToken> this.qualifiedName).qualifiers[i].getText()
+                    for (let i = 0; i < (<LongIdentifierToken> ths2.qualifiedName).qualifiers.length; ++i) {
+                        if ((<LongIdentifierToken> ths2.qualifiedName).qualifiers[i].getText()
                             !== (<LongIdentifierToken> (<CustomType> oth).qualifiedName).qualifiers[i].getText()) {
                             ok = false;
                             break;
@@ -884,8 +885,8 @@ export class CustomType extends Type {
                     tybnd = tmp[1];
                 }
 
-                return [new CustomType((<CustomType> ths).name, res, this.position,
-                    this.qualifiedName, this.opaque), tybnd];
+                return [new CustomType(ths2.name, res, ths2.position, ths2.qualifiedName,
+                    ths2.opaque), tybnd];
             }
         }
 
