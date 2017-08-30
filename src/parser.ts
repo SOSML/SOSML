@@ -1851,9 +1851,14 @@ export class Parser {
                 ++this.position;
                 let nw = this.currentToken();
                 this.assertIdentifierToken(nw);
-                this.position += 2;
+                ++this.position;
+                this.assertKeywordToken(this.currentToken(), '=');
+                ++this.position;
+                this.assertKeywordToken(this.currentToken(), 'datatype');
+                ++this.position;
                 let old = this.currentToken();
                 this.assertIdentifierOrLongToken(old);
+                ++this.position;
                 return new DatatypeReplication(curTok.position, <IdentifierToken> nw,
                                                <IdentifierToken|LongIdentifierToken> old, curId);
             } else {

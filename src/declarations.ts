@@ -341,7 +341,12 @@ export class DatatypeReplication extends Declaration {
             throw new ElaborationError(this.position,
                 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
         }
-        state.setStaticType(this.name.getText(), res.type, res.constructors, res.arity);
+
+        let tp = res.type.instantiate(state, tyVarBnd);
+
+        state.setStaticType(this.name.getText(), new FunctionType(new CustomType(this.name.getText(),
+            (<CustomType> tp).typeArguments, 0, (this.oldname instanceof LongIdentifierToken)
+            ? this.oldname : undefined), tp), [], res.arity);
         return [state, [], tyVarBnd, nextName];
    }
 
