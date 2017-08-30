@@ -853,15 +853,17 @@ export class ValueBinding {
             res[0][i][1] = res[0][i][1].instantiate(state, res[2]);
             let tv = res[0][i][1].getTypeVariables();
             let free = res[0][i][1].getTypeVariables(true);
+            let done = new Set<string>();
             for (let j = ntys.length - 1; j >= 0; --j) {
                 if (tv.has(ntys[j].name)) {
                     res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1]);
                     (<TypeVariableBind> res[0][i][1]).isFree = free.has(ntys[j].name);
+                    done.add(ntys[j].name);
                 }
             }
             ntys = [];
             res[0][i][1].getTypeVariables().forEach((val: string) => {
-                if (isTopLevel || !noBind.has(val)) {
+                if ((isTopLevel || !noBind.has(val)) && !done.has(val)) {
                     ntys.push(new TypeVariable(val));
                 }
             });
