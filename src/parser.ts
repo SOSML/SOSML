@@ -9,18 +9,26 @@ import { Token, KeywordToken, IdentifierToken, ConstantToken,
          TypeVariableToken, LongIdentifierToken, IntegerConstantToken,
          AlphanumericIdentifierToken, NumericToken } from './tokens';
 import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
-         FunctionValueBinding, FunctionDeclaration, TypeDeclaration,
+         FunctionValueBinding, FunctionDeclaration, TypeDeclaration, Evaluation,
          DatatypeReplication, DatatypeDeclaration, SequentialDeclaration,
          DatatypeBinding, TypeBinding, AbstypeDeclaration, LocalDeclaration,
          ExceptionBinding, DirectExceptionBinding, ExceptionAlias, NonfixDeclaration,
          ExceptionDeclaration, OpenDeclaration, InfixDeclaration, InfixRDeclaration } from './declarations';
+import { FunctorDeclaration, StructureDeclaration, SignatureDeclaration, FunctorBinding,
+         StructureBinding, SignatureBinding, StructureExpression, OpaqueConstraint,
+         TransparentConstraint, FunctorApplication, StructureIdentifier, TypeRealisation,
+         Specification, SignatureIdentifier, SignatureExpression, ValueSpecification,
+         TypeSpecification, EqualityTypeSpecification, DatatypeSpecification,
+         DatatypeReplicationSpecification, ExceptionSpecification, StructureSpecification,
+         IncludeSpecification, EmptySpecification, SequentialSpecification, SharingSpecification,
+         Signature, Structure, LocalDeclarationStructureExpression } from './modules';
 import { State } from './state';
 
 export class Parser {
     private position: number = 0; // position of the next not yet parsed token
 
     constructor(private tokens: Token[], private state: State, private currentId: number,
-  /* private */ options: { [name: string]: any }) {
+                private options: { [name: string]: any }) {
         if (this.state === undefined) {
             throw new InternalInterpreterError(-1, 'What are you, stupid? Hurry up and give me ' +
                 'a state already!');
@@ -157,10 +165,19 @@ export class Parser {
                 if (this.checkKeywordToken(nextCurTok, ',') && !isSequence) {
                     ++this.position;
                     isTuple = true;
+                    results.push(this.parseExpression());
+                    continue;
                 } else if (this.checkKeywordToken(nextCurTok, ';') && !isTuple) {
                     ++this.position;
                     isSequence = true;
-                } else if (this.checkKeywordToken(nextCurTok, ')')) {
+
+                    if (!this.options.allowSuccessorML
+                        || !this.checkKeywordToken(this.currentToken(), ')')) {
+                        results.push(this.parseExpression());
+                        continue;
+                    }
+                }
+                if (this.checkKeywordToken(nextCurTok, ')')) {
                     ++this.position;
                     if (results.length === 1) {
                         return results[0];
@@ -375,9 +392,14 @@ export class Parser {
             this.assertKeywordToken(this.currentToken(), 'then');
             ++this.position;
             let cons = this.parseExpression();
-            this.assertKeywordToken(this.currentToken(), 'else');
-            ++this.position;
-            return new Conditional(curTok.position, cond, cons, this.parseExpression());
+            if (this.options.allowSuccessorML
+                && !this.checkKeywordToken(this.currentToken(), 'else')) {
+                return new Conditional(curTok.position, cond, cons, new Tuple(-1, []));
+            } else {
+                this.assertKeywordToken(this.currentToken(), 'else');
+                ++this.position;
+                return new Conditional(curTok.position, cond, cons, this.parseExpression());
+            }
         } else if (this.checkKeywordToken(curTok, 'case')) {
             ++this.position;
             let cond = this.parseExpression();
@@ -469,11 +491,368 @@ export class Parser {
         return exp;
     }
 
+
+    parseSimpleStructureExpression(): Expression & Structure {
+        /*
+         * strexp ::= struct strdec end         StructureExpression(pos, dec)
+         *            longstrid                 StructureIdentifier(pos, token)
+         *            funid ( strexp )          FunctorApplication(pos, funid, exp)
+         *            let strdec in strexp end  LocalDeclarationExpression(pos, dec, exp)
+         */
+        let curTok = this.currentToken();
+
+        if (this.checkKeywordToken(curTok, 'struct')) {
+            ++this.position;
+            let dec = this.parseDeclaration(false, true);
+            this.assertKeywordToken(this.currentToken(), 'end');
+            ++this.position;
+            return new StructureExpression(curTok.position, dec);
+        } else if (this.checkKeywordToken(curTok, 'let')) {
+            ++this.position;
+            let dec = this.parseDeclaration(false, true);
+            this.assertKeywordToken(this.currentToken(), 'in');
+            ++this.position;
+            let exp = this.parseStructureExpression();
+            this.assertKeywordToken(this.currentToken(), 'end');
+            ++this.position;
+            return new LocalDeclarationStructureExpression(curTok.position, dec, exp);
+        }
+
+        if (curTok instanceof IdentifierToken) {
+            ++this.position;
+            if (this.checkKeywordToken(this.currentToken(), '(')) {
+                ++this.position;
+                // TODO Allow strdec here
+                let exp = this.parseStructureExpression();
+                this.assertKeywordToken(this.currentToken(), ')');
+                ++this.position;
+                return new FunctorApplication(curTok.position, <IdentifierToken> curTok, exp);
+            } else {
+                --this.position;
+            }
+        }
+
+        if (this.checkIdentifierOrLongToken(curTok)) {
+            ++this.position;
+            return new StructureIdentifier(curTok.position, curTok);
+        }
+
+        throw new ParserError('Expected a simple structure expression.', curTok.position);
+    }
+
+    parseStructureExpression(): Expression & Structure {
+        /*
+         * strexp ::= strexp : sigexp           TransparentConstraint(pos, strexp, sigexp)
+         *            strexp :> sigexp          OpaqueConstraint(pos, strexp, sigexp)
+         */
+
+        let curTok = this.currentToken();
+
+        let exp = this.parseSimpleStructureExpression();
+
+        while (true) {
+            if (this.checkKeywordToken(this.currentToken(), ':')) {
+                ++this.position;
+                exp = new TransparentConstraint(curTok.position, exp, this.parseSignatureExpression());
+            } else if (this.checkKeywordToken(this.currentToken(), ':>')) {
+                ++this.position;
+                exp = new OpaqueConstraint(curTok.position, exp, this.parseSignatureExpression());
+            } else {
+                break;
+            }
+        }
+        return exp;
+    }
+
+    parseSimpleSignatureExpression(): Expression & Signature {
+        /*
+         * sigexp ::= sig spec end              SignatureExpression
+         *            sigid                     SignatureIdentifier
+         */
+        let curTok = this.currentToken();
+
+        if (this.checkKeywordToken(curTok, 'sig')) {
+            ++this.position;
+            let spec = this.parseSpecification();
+            this.assertKeywordToken(this.currentToken(), 'end');
+            ++this.position;
+            return new SignatureExpression(curTok.position, spec);
+        }
+
+        if (curTok instanceof IdentifierToken) {
+            ++this.position;
+            return new SignatureIdentifier(curTok.position, <IdentifierToken> curTok);
+        }
+
+        throw new ParserError('Expected a simple signature expression.', curTok.position);
+    }
+
+    parseSignatureExpression(): Expression & Signature {
+        /*
+         * sigexp ::= sigexp where type tyvarseq longtycon = ty TypeRealisation(pos, exp, tyvar, ty)
+         */
+        let curTok = this.currentToken();
+
+        let sig = this.parseSimpleSignatureExpression();
+
+        while (this.checkKeywordToken(this.currentToken(), 'where')) {
+            ++this.position;
+            this.assertKeywordToken(this.currentToken(), 'type');
+            ++this.position;
+            let tyvarseq = <TypeVariable[]> this.parseTypeVarSequence();
+            this.assertIdentifierOrLongToken(this.currentToken());
+            let token = this.currentToken();
+            ++this.position;
+            this.assertKeywordToken(this.currentToken(), '=');
+            ++this.position;
+            sig = new TypeRealisation(curTok.position, sig, tyvarseq, token, this.parseType());
+        }
+        return sig;
+    }
+
+    parseSimpleSpecification(): Specification {
+        /*
+         * spec ::= val vid : ty <and valdesc>          ValueSpecification(pos, [Token, Type][])
+         *          type tyvarseq tycon <and tydesc>    TypeSpecification(pos, [tyvar, tycon][])
+         *          eqtype tyvarseq tycon <and tydesc>  EqualityTypeSpecification(ps, [tyva, tycn][])
+         *          datatype datdesc
+         *          datatype tycon = datatype longtycon
+         *          exception exdesc
+         *          structure strdesc
+         *          include sigexp
+         *
+         */
+        let curTok = this.currentToken();
+
+        if (this.checkKeywordToken(curTok, 'val')) {
+            ++this.position;
+            let res: [IdentifierToken, Type][] = [];
+
+            while (true) {
+                this.assertIdentifierOrLongToken(this.currentToken());
+                let tkn = <IdentifierToken> this.currentToken();
+                ++this.position;
+                this.assertKeywordToken(this.currentToken(), ':');
+                ++this.position;
+
+                res.push([tkn, this.parseType()]);
+
+                if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                    ++this.position;
+                    continue;
+                }
+                break;
+            }
+            return new ValueSpecification(curTok.position, res);
+
+        } else if (this.checkKeywordToken(curTok, 'type')) {
+            ++this.position;
+            let res: [TypeVariable[], IdentifierToken][] = [];
+            while (true) {
+                let tyvar = <TypeVariable[]> this.parseTypeVarSequence();
+                this.assertIdentifierToken(this.currentToken());
+                res.push([tyvar, <IdentifierToken> this.currentToken()]);
+                ++this.position;
+                if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                    ++this.position;
+                    continue;
+                }
+                break;
+            }
+            return new TypeSpecification(curTok.position, res);
+
+        } else if (this.checkKeywordToken(curTok, 'eqtype')) {
+            ++this.position;
+            let res: [TypeVariable[], IdentifierToken][] = [];
+            while (true) {
+                let tyvar = <TypeVariable[]> this.parseTypeVarSequence();
+                this.assertIdentifierToken(this.currentToken());
+                res.push([tyvar, <IdentifierToken> this.currentToken()]);
+                ++this.position;
+                if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                    ++this.position;
+                    continue;
+                }
+                break;
+            }
+            return new EqualityTypeSpecification(curTok.position, res);
+
+        } else if (this.checkKeywordToken(curTok, 'datatype')) {
+            ++this.position;
+
+            if (this.position + 2 < this.tokens.length &&
+                this.checkKeywordToken(this.tokens[this.position + 2], 'datatype')) {
+                this.assertIdentifierToken(this.currentToken());
+                let tk = <IdentifierToken> this.currentToken();
+                ++this.position;
+                this.assertKeywordToken(this.currentToken(), '=');
+                ++this.position;
+                this.assertKeywordToken(this.currentToken(), 'datatype');
+                ++this.position;
+                this.assertIdentifierOrLongToken(this.currentToken());
+                let on = this.currentToken();
+                ++this.position;
+                return new DatatypeReplicationSpecification(curTok.position, tk, on);
+            }
+
+            // Yeah I know that this stuff is ugly
+            let res: [TypeVariable[], IdentifierToken, [IdentifierToken, Type|undefined][]][] = [];
+
+            while (true) {
+                let tyvar = <TypeVariable[]> this.parseTypeVarSequence();
+                this.assertIdentifierToken(this.currentToken());
+                let tk = <IdentifierToken> this.currentToken();
+                ++this.position;
+                this.assertKeywordToken(this.currentToken(), '=');
+                ++this.position;
+
+                let cons: [IdentifierToken, Type|undefined][] = [];
+                while (true) {
+                    this.assertIdentifierToken(this.currentToken());
+                    let cn = <IdentifierToken> this.currentToken();
+                    ++this.position;
+                    let tp: Type | undefined = undefined;
+
+                    if (this.checkKeywordToken(this.currentToken(), 'of')) {
+                        ++this.position;
+                        tp = this.parseType();
+                    }
+                    cons.push([cn, tp]);
+
+                    if (this.checkKeywordToken(this.currentToken(), '|')) {
+                        ++this.position;
+                        continue;
+                    }
+                    break;
+                }
+
+                res.push([tyvar, tk, cons]);
+
+                if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                    ++this.position;
+                    continue;
+                }
+                break;
+            }
+
+            return new DatatypeSpecification(curTok.position, res);
+        } else if (this.checkKeywordToken(curTok, 'exception')) {
+            ++this.position;
+            let res: [IdentifierToken, Type|undefined][] = [];
+
+            while (true) {
+                this.assertIdentifierToken(this.currentToken());
+                let tk = <IdentifierToken> this.currentToken();
+                ++this.position;
+
+                let tp: Type | undefined = undefined;
+
+                if (this.checkKeywordToken(this.currentToken(), 'of')) {
+                    ++this.position;
+                    tp = this.parseType();
+                }
+
+                res.push([tk, tp]);
+
+                if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                    ++this.position;
+                    continue;
+                }
+                break;
+            }
+            return new ExceptionSpecification(curTok.position, res);
+
+        } else if (this.checkKeywordToken(curTok, 'structure')) {
+            ++this.position;
+            let res: [IdentifierToken, Expression & Signature][] = [];
+
+            while (true) {
+                this.assertIdentifierToken(this.currentToken());
+                let tk = <IdentifierToken> this.currentToken();
+                ++this.position;
+                this.assertKeywordToken(this.currentToken(), ':');
+                ++this.position;
+
+                res.push([tk, this.parseSignatureExpression()]);
+
+                if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                    ++this.position;
+                    continue;
+                }
+                break;
+            }
+
+            return new StructureSpecification(curTok.position, res);
+        } else if (this.checkKeywordToken(curTok, 'include')) {
+            ++this.position;
+            return new IncludeSpecification(curTok.position, this.parseSignatureExpression());
+        }
+
+        return new EmptySpecification(curTok.position);
+    }
+
+    parseSequentialSpecification(): Specification {
+        /*
+         * spec ::= spec <;> spec       SequentialSpecification(pos, Spec[])
+         */
+        let curTok = this.currentToken();
+        let res: Specification[] = [];
+
+        while (true) {
+            let cur = this.parseSimpleSpecification();
+
+            if (cur instanceof EmptySpecification) {
+                break;
+            }
+
+            res.push(cur);
+
+            if (this.checkKeywordToken(this.currentToken(), ';')) {
+                ++this.position;
+            }
+        }
+        return new SequentialSpecification(curTok.position, res);
+    }
+
+    parseSpecification(): Specification {
+        /*
+         * spec ::= spec sharing type longtycon = ... = longtycon
+         */
+        let curTok = this.currentToken();
+        let spec = this.parseSequentialSpecification();
+
+        while (this.checkKeywordToken(this.currentToken(), 'sharing')) {
+            ++this.position;
+            this.assertKeywordToken(this.currentToken(), 'type');
+            ++this.position;
+            this.assertIdentifierOrLongToken(this.currentToken());
+            let tkn: Token[] = [this.currentToken()];
+            ++this.position;
+            while (this.checkKeywordToken(this.currentToken(), '=')) {
+                ++this.position;
+                this.assertIdentifierOrLongToken(this.currentToken());
+                tkn.push(this.currentToken());
+                ++this.position;
+            }
+
+            if (tkn.length < 2) {
+                throw new ParserError('A "sharing" expression requires at least 2 type names.',
+                    curTok.position);
+            }
+            spec = new SharingSpecification(curTok.position, spec, tkn);
+        }
+
+        return spec;
+    }
+
     parseMatch(): Match {
         /*
          * match ::= pat => exp [| match]       Match(pos, [Pattern, Expression][])
          */
         let curTok = this.currentToken();
+        if (this.options.allowSuccessorML && this.checkKeywordToken(this.currentToken(), '|')) {
+            ++this.position;
+        }
         let res: [PatternExpression, Expression][] = [];
         while (true) {
             let pat = this.parsePattern();
@@ -959,7 +1338,7 @@ export class Parser {
                     || (!((<FunctionApplication> pat).func instanceof ValueIdentifier))) {
                     throw new ParserError('If you start a function declaration with a "(",'
                         + ' some infix expression should follow. But you gave me "'
-                        + pat.toString() + '" (' + pat.constructor.name + ').', pat.position);
+                        + pat + '" (' + pat.constructor.name + ').', pat.position);
                 }
                 nm = <ValueIdentifier> (<FunctionApplication> pat).func;
                 args.push(<PatternExpression> (<FunctionApplication> pat).argument);
@@ -989,7 +1368,7 @@ export class Parser {
 
                             throwIfError = true;
                             throw new ParserError('Cute little infix identifiers such as "' +
-                                pat.toString() + '" sure should play somewhere else.', pat.position);
+                                pat + '" sure should play somewhere else.', pat.position);
                         }
 
                         args.push(pat);
@@ -1154,6 +1533,172 @@ export class Parser {
         return datbinds;
     }
 
+    parseStructureBinding(): StructureBinding {
+        /*
+         * strbind ::= strid = strexp
+         *             strid : sigexp = strexp
+         *             strid :> sigexp = strexp
+         */
+        let curTok = this.currentToken();
+        this.assertIdentifierToken(this.currentToken());
+        let tycon = <IdentifierToken> this.currentToken();
+        ++this.position;
+        if (this.checkKeywordToken(this.currentToken(), ':')) {
+            ++this.position;
+            let sig = this.parseSignatureExpression();
+            this.assertKeywordToken(this.currentToken(), '=');
+            ++this.position;
+            let str = this.parseStructureExpression();
+            return new StructureBinding(curTok.position, tycon,
+                new TransparentConstraint(curTok.position, str, sig));
+        } else if (this.checkKeywordToken(this.currentToken(), ':>')) {
+            ++this.position;
+            let sig = this.parseSignatureExpression();
+            this.assertKeywordToken(this.currentToken(), '=');
+            ++this.position;
+            let str = this.parseStructureExpression();
+            return new StructureBinding(curTok.position, tycon,
+                new OpaqueConstraint(curTok.position, str, sig));
+        }
+        this.assertKeywordToken(this.currentToken(), '=');
+        ++this.position;
+        return new StructureBinding(curTok.position, tycon, this.parseStructureExpression());
+    }
+
+    parseStructureBindingSeq(): StructureBinding[] {
+        let strbinds: StructureBinding[] = [];
+        while (true) {
+            strbinds.push(this.parseStructureBinding());
+            if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                ++this.position;
+            } else {
+                break;
+            }
+        }
+        return strbinds;
+    }
+
+    parseSignatureBinding(): SignatureBinding {
+        /*
+         * sigbind ::= sigid = sigexp
+         */
+        let curTok = this.currentToken();
+        this.assertIdentifierToken(this.currentToken());
+        let tycon = <IdentifierToken> this.currentToken();
+        ++this.position;
+        this.assertKeywordToken(this.currentToken(), '=');
+        ++this.position;
+        return new SignatureBinding(curTok.position, tycon, this.parseSignatureExpression());
+    }
+
+    parseSignatureBindingSeq(): SignatureBinding[] {
+        let sigbinds: SignatureBinding[] = [];
+        while (true) {
+            sigbinds.push(this.parseSignatureBinding());
+            if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                ++this.position;
+            } else {
+                break;
+            }
+        }
+        return sigbinds;
+    }
+
+    parseFunctorBinding(): FunctorBinding {
+        /*
+         * funbind ::= funid (tycon : sigexp) = strexp
+         *             funid (tycon : sigexp) : sigexp' = strexp
+         *             funid (tycon : sigexp) :> sigexp' = strexp
+         *             funid (spec) [: sigexp] = strexp
+         *             funid (spec) [:> sigexp] = strexp
+         */
+        let curTok = this.currentToken();
+        this.assertIdentifierToken(this.currentToken());
+        let funid = <IdentifierToken> this.currentToken();
+        ++this.position;
+
+        this.assertKeywordToken(this.currentToken(), '(');
+        ++this.position;
+
+        if (this.currentToken() instanceof IdentifierToken) {
+            let tycon = <IdentifierToken> this.currentToken();
+            ++this.position;
+            this.assertKeywordToken(this.currentToken(), ':');
+            ++this.position;
+            let sigexp = this.parseSignatureExpression();
+
+            this.assertKeywordToken(this.currentToken(), ')');
+            ++this.position;
+
+            if (this.checkKeywordToken(this.currentToken(), ':')) {
+                ++this.position;
+                let sg = this.parseSignatureExpression();
+                this.assertKeywordToken(this.currentToken(), '=');
+                ++this.position;
+                return new FunctorBinding(curTok.position, funid, tycon, sigexp,
+                    new TransparentConstraint(curTok.position, this.parseStructureExpression(), sg));
+            } else if (this.checkKeywordToken(this.currentToken(), ':>')) {
+                ++this.position;
+                let sg = this.parseSignatureExpression();
+                this.assertKeywordToken(this.currentToken(), '=');
+                ++this.position;
+                return new FunctorBinding(curTok.position, funid, tycon, sigexp,
+                    new OpaqueConstraint(curTok.position, this.parseStructureExpression(), sg));
+            }
+
+            this.assertKeywordToken(this.currentToken(), '=');
+            ++this.position;
+            return new FunctorBinding(curTok.position, funid, tycon, sigexp,
+                this.parseStructureExpression());
+        }
+
+        let spec = this.parseSpecification();
+        let specsig = new SignatureExpression(-1, spec);
+
+        this.assertKeywordToken(this.currentToken(), ')');
+        ++this.position;
+
+        let opaque = false;
+        let sig: (Expression & Signature) | undefined = undefined;
+        if (this.checkKeywordToken(this.currentToken(), ':')) {
+            ++this.position;
+            sig = this.parseSignatureExpression();
+        } else if (this.checkKeywordToken(this.currentToken(), ':>')) {
+            opaque = true;
+            ++this.position;
+            sig = this.parseSignatureExpression();
+        }
+
+        this.assertKeywordToken(this.currentToken(), '=');
+        ++this.position;
+        let str = this.parseStructureExpression();
+        let strid = new AlphanumericIdentifierToken('__farg', -1);
+        if (sig !== undefined) {
+            if (opaque) {
+                str = new OpaqueConstraint(-1, str, <Expression & Signature> sig);
+            } else {
+                str = new TransparentConstraint(-1, str, <Expression & Signature> sig);
+            }
+        }
+
+        str = new LocalDeclarationStructureExpression(-1, new OpenDeclaration(-1, [strid]), str);
+
+        return new FunctorBinding(curTok.position, funid, strid, specsig, str);
+    }
+
+    parseFunctorBindingSeq(): FunctorBinding[] {
+        let funbinds: FunctorBinding[] = [];
+        while (true) {
+            funbinds.push(this.parseFunctorBinding());
+            if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                ++this.position;
+            } else {
+                break;
+            }
+        }
+        return funbinds;
+    }
+
     parseTypeVarSequence(allowFail: boolean = false): TypeVariable[] | undefined {
         /*
          * ε                    []
@@ -1194,7 +1739,7 @@ export class Parser {
         return res;
     }
 
-    parseDeclaration(topLevel: boolean = false): Declaration {
+    parseDeclaration(topLevel: boolean = false, strDec: boolean = false): Declaration {
         /*
          * dec ::= dec [;] dec                          SequentialDeclaration(pos, Declaration[])
          */
@@ -1202,7 +1747,7 @@ export class Parser {
         let curTok = this.currentToken();
         let curId = this.currentId++;
         while (this.position < this.tokens.length) {
-            let cur = this.parseSimpleDeclaration(topLevel);
+            let cur = this.parseSimpleDeclaration(topLevel, strDec);
             if (cur instanceof EmptyDeclaration) {
                 if (this.position >= this.tokens.length
                     || this.checkKeywordToken(this.currentToken(), 'in')
@@ -1219,7 +1764,7 @@ export class Parser {
         return new SequentialDeclaration(curTok.position, res, curId);
     }
 
-    parseSimpleDeclaration(topLevel: boolean = false): Declaration {
+    parseSimpleDeclaration(topLevel: boolean = false, strDec: boolean = false): Declaration {
         /*
          * dec ::= val tyvarseq valbind                 ValueDeclaration(pos, tyvarseq, ValueBinding[])
          *         fun tyvarseq fvalbind                FunctionDeclaration(pos, tyvarseq, FunctionValueBinding[])
@@ -1234,6 +1779,13 @@ export class Parser {
          *         infix [d] vid1 … vidn                InfixDeclaration(pos, ValueIdentifier[], d=0)
          *         infixr [d] vid1 … vidn               InfixRDeclaration(pos, ValueIdentifier[], d=0)
          *         nonfix vid1 … vidn                   NonfixDeclaration(pos, ValueIdentifier[])
+         *
+         *         structure strbind                    StructureDeclaration(pos, StrBind[])
+         *         signature sigbind                    SignatureDeclaration(pos, SigBind[])
+         *         functor funbind                      FunctorDeclaration(pos, FunBind[])
+         *
+         *         do exp                               Evaluation(pos, exp) [succML]
+         *
          *         (empty)                              EmptyDeclaration()
          *         exp                                  val it = exp
          */
@@ -1353,10 +1905,10 @@ export class Parser {
             let nstate = this.state;
             this.state = this.state.getNestedState(this.state.id);
 
-            let dec: Declaration = this.parseDeclaration();
+            let dec: Declaration = this.parseDeclaration(false, strDec);
             this.assertKeywordToken(this.currentToken(), 'in');
             ++this.position;
-            let dec2: Declaration = this.parseDeclaration();
+            let dec2: Declaration = this.parseDeclaration(false, strDec);
             this.assertKeywordToken(this.currentToken(), 'end');
             ++this.position;
 
@@ -1441,6 +1993,32 @@ export class Parser {
             return resdec;
         }
 
+        if (this.options.allowSuccessorML && this.checkKeywordToken(curTok, 'do')) {
+            ++this.position;
+            return new Evaluation(curTok.position, this.parseExpression());
+        }
+
+        if (this.options.allowStructuresAnywhere === true || strDec) {
+            if (this.checkKeywordToken(curTok, 'structure')) {
+                ++this.position;
+                return new StructureDeclaration(curTok.position, this.parseStructureBindingSeq());
+            }
+        }
+
+        if (this.options.allowSignaturesAnywhere === true || topLevel) {
+            if (this.checkKeywordToken(curTok, 'signature')) {
+                ++this.position;
+                return new SignatureDeclaration(curTok.position, this.parseSignatureBindingSeq());
+            }
+        }
+
+        if (this.options.allowFunctorsAnywhere === true || topLevel) {
+            if (this.checkKeywordToken(curTok, 'functor')) {
+                ++this.position;
+                return new FunctorDeclaration(curTok.position, this.parseFunctorBindingSeq());
+            }
+        }
+
         if (this.checkKeywordToken(curTok, ';')) {
             ++this.position;
             return new EmptyDeclaration(curId);
@@ -1467,7 +2045,7 @@ export class Parser {
     }
 }
 
-export function parse(tokens: Token[], state: State, options: {[name: string]: any}): Declaration {
+export function parse(tokens: Token[], state: State, options: {[name: string]: any} = {}): Declaration {
     let p: Parser = new Parser(tokens, state, state.id, options);
-    return p.parseDeclaration(true);
+    return p.parseDeclaration(true, true);
 }

@@ -208,11 +208,6 @@ function addRealLib(state: State): State {
 }
 
 let code = `
-fun ! (a : \'a ref): \'a = ! a;
-fun op := ((a, b) : (\'a ref * \'a)): unit = a := b;
-fun ref (a : \'a): \'a ref = ref a;
-
-
 exception Domain;
 exception Empty;
 exception Subscript;
@@ -299,13 +294,17 @@ fun Char.isLower c  = #"a" <= c andalso c <= #"z";
 fun Char.isUpper c  = #"A" <= c andalso c <= #"Z";
 fun Char.isDigit c  = #"0" <= c andalso c <= #"9";
 fun Char.isAlpha c  = Char.isLower c orelse Char.isUpper c;
+
+fun ! (a : \'A ref): \'A = ! a;
+fun op := ((a, b) : (\'A ref * \'A)): unit = a := b;
+fun ref (a : \'A): \'A ref = ref a;
 `;
 
 export function addStdLib(state: State, options: {[name: string]: any }): State {
-    state = Interpreter.interpret(code, state, options).state;
     state = addMathLib(state);
     state = addCharLib(state);
     state = addRealLib(state);
+    state = Interpreter.interpret(code, state, options).state;
 
     return state;
 }

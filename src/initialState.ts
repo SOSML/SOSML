@@ -114,7 +114,10 @@ let initialState: State = new State(
                             IdentifierStatus.VALUE_CONSTRUCTOR],
             '!':        [new TypeVariableBind('\'a', new FunctionType(new CustomType('ref', [typeVar]), typeVar)),
                             IdentifierStatus.VALUE_VARIABLE]
-        }
+        },
+        { },
+        { },
+        { }
     ),
     new DynamicBasis(
         {
@@ -475,9 +478,13 @@ let initialState: State = new State(
                 return [new RecordValue(), false, warns];
             }), IdentifierStatus.VALUE_VARIABLE]
             // ref, :=, ! are implemented directly within evaluate.
-        }
+        },
+        {},
+        {},
+        {}
     ),
     [ 0, {} ],
+    [ 0, new Map<string, [Type, boolean]>() ],
     {
         'div': new InfixStatus(true, 7, false),
         'mod': new InfixStatus(true, 7, false),
