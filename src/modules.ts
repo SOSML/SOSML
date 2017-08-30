@@ -126,7 +126,115 @@ export class TransparentConstraint extends Expression implements Structure {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        throw new Error('ニャ－');
+        let str = this.structureExpression.elaborate(state, tyVarBnd, nextName);
+        let sig = this.signatureExpression.elaborate(state, str[2], str[3]);
+
+        let res = new StaticBasis({}, {}, {}, {}, {});
+
+        let nstate = state.getNestedState(state.id);
+        nstate.staticBasis = str[0];
+        let nstate2 = state.getNestedState(state.id);
+        nstate2.staticBasis = sig[0];
+
+        for (let i in sig[0].typeEnvironment) {
+            if (sig[0].typeEnvironment.hasOwnProperty(i)) {
+                if (!str[0].typeEnvironment.hasOwnProperty(i)) {
+                    throw new ElaborationError(this.position,
+                        'Signature mismatch: Unimplemented type "' + i + '".');
+                }
+                let sg = <TypeInformation> sig[0].typeEnvironment[i];
+                let st = <TypeInformation> str[0].typeEnvironment[i];
+
+                if (sg.arity !== st.arity) {
+                    throw new ElaborationError(this.position,
+                        'Signature mismatch: Implementation of type "' + i
+                        + '" has the wrong arity.');
+                }
+
+                try {
+                    let sgtp = <CustomType> sg.type;
+                    let tp = sgtp.merge(nstate, tyVarBnd, (<FunctionType> st.type).parameterType);
+
+                    res.setType(i, sgtp.instantiate(nstate, tp[1]), [], sg.arity, sg.allowsEquality);
+                    tyVarBnd = tp[1];
+                } catch (e) {
+                    if (!(e instanceof Array)) {
+                        throw e;
+                    }
+                    throw new ElaborationError(this.position,
+                        'Signature mismatch: Wrong implementation of type "' + i + '": ' + e[0]);
+                }
+            }
+        }
+
+        for (let i in sig[0].valueEnvironment) {
+            if (sig[0].valueEnvironment.hasOwnProperty(i)) {
+                if (!str[0].valueEnvironment.hasOwnProperty(i)) {
+                    throw new ElaborationError(this.position,
+                        'Signature mismatch: Unimplemented value "' + i + '".');
+                }
+                let sg = <[Type, IdentifierStatus]> sig[0].valueEnvironment[i];
+                let st = <[Type, IdentifierStatus]> str[0].valueEnvironment[i];
+
+                let repl = new Map<string, string>();
+                let vsg = sg[0].getTypeVariables();
+                let vst = st[0].getTypeVariables();
+                while (st[0] instanceof TypeVariableBind) {
+                    while (true) {
+                        let cur = +nextName.substring(3);
+                        let nname = '\'' + nextName[1] + nextName[2] + (cur + 1);
+                        nextName = nname;
+
+                        if (!tyVarBnd.has(nname) && !vsg.has(nname) && !vst.has(nname)) {
+                            if ((<TypeVariableBind> st[0]).name[1] === '\'') {
+                                nname = '\'' + nname;
+                            }
+                            repl = repl.set((<TypeVariableBind> st[0]).name, nname);
+                            break;
+                        }
+
+                    }
+                    st[0] = (<TypeVariableBind> st[0]).type;
+                }
+                st[0] = st[0].replaceTypeVariables(repl);
+
+                let nsg = sg[0];
+                while (nsg instanceof TypeVariableBind) {
+                    while (true) {
+                        let cur = +nextName.substring(3);
+                        let nname = '\'' + nextName[1] + nextName[2] + (cur + 1);
+                        nextName = nname;
+
+                        if (!tyVarBnd.has(nname) && !vsg.has(nname) && !vst.has(nname)) {
+                            if ((<TypeVariableBind> nsg).name[1] === '\'') {
+                                nname = '\'' + nname;
+                            }
+                            repl = repl.set((<TypeVariableBind> nsg).name, nname);
+                            break;
+                        }
+
+                    }
+                    nsg = (<TypeVariableBind> nsg).type;
+                }
+                nsg = nsg.replaceTypeVariables(repl);
+
+                try {
+                    let mg = nsg.merge(nstate, tyVarBnd, st[0]);
+                    res.setValue(i, sg[0].instantiate(nstate, mg[1]),
+                        IdentifierStatus.VALUE_VARIABLE);
+                } catch (e) {
+                    if (!(e instanceof Array)) {
+                        throw e;
+                    }
+                    throw new ElaborationError(this.position,
+                        'Signature mismatch: Wrong implementation of type "' + i + '": ' + e[0]);
+                }
+            }
+        }
+
+        // TODO Structs, Functors?
+
+        return [res, [], tyVarBnd, nextName];
     }
 
     computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
@@ -268,7 +376,7 @@ export class OpaqueConstraint extends Expression implements Structure {
             }
         }
 
-        // TODO Structs
+        // TODO Structs, Functors?
 
         return [res, [], tyVarBnd, nextName];
     }
@@ -347,7 +455,24 @@ export class LocalDeclarationStructureExpression extends Expression implements S
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        throw new Error('ニャ－');
+        let nstate = state.getNestedState(state.id);
+        tyVarBnd.forEach((val: [Type, boolean], key: string) => {
+            if (key[1] === '*' && key[2] === '*') {
+                nstate.setStaticValue(key.substring(3),
+                    val[0].instantiate(state, tyVarBnd), IdentifierStatus.VALUE_VARIABLE);
+            }
+        });
+
+        let res = this.declaration.elaborate(nstate, tyVarBnd, nextName);
+        nextName = res[3];
+
+        let nbnds = new Map<string, [Type, boolean]>();
+        tyVarBnd.forEach((val: [Type, boolean], key: string) => {
+            nbnds = nbnds.set(key, [val[0].instantiate(res[0], res[2]), val[1]]);
+        });
+
+        let r2 = this.expression.elaborate(res[0], res[2], nextName);
+        return [r2[0], res[1].concat(r2[1]), r2[2], r2[3]];
     }
 
     toString(): string {
