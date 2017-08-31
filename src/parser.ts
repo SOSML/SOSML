@@ -189,8 +189,8 @@ export class Parser {
                         }
                     }
                 } else {
-                    throw new ParserError('Expected ",", ";" or ")" but got \"' +
-                        nextCurTok.getText() + '\".', nextCurTok.position);
+                    throw new IncompleteError(nextCurTok.position,
+                        'Expected ",", ";" or ")" but got \"' + nextCurTok.getText() + '\".');
                 }
                 results.push(this.parseExpression());
             }
