@@ -85,7 +85,19 @@ export class ValueDeclaration extends Declaration {
             state.setStaticValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
         }
 
-        for (let l = 0; l < 2; ++l) {
+        let wcp = warns;
+        let bcp = new Map<string, [Type, boolean]>();
+        bnds.forEach((val: [Type, boolean], key: string) => {
+            bcp = bcp.set(key, val);
+        });
+        let ncp = nextName;
+        for (let l = 0; l < 3; ++l) {
+            warns = wcp;
+            bnds = new Map<string, [Type, boolean]>();
+            bcp.forEach((val: [Type, boolean], key: string) => {
+                bnds = bnds.set(key, val);
+            });
+            nextName = ncp;
             for (let j = i; j < this.valueBinding.length; ++j) {
                 let val = this.valueBinding[i].getType(this.typeVariableSequence, state, bnds, nextName, isTopLevel);
                 warns = warns.concat(val[1]);

@@ -1080,6 +1080,7 @@ export class Match {
 
             try {
                 [restp, bnds] = restp.merge(state, r2[4], rtp);
+                restp = restp.instantiate(state, bnds);
             } catch (e) {
                 if (!(e instanceof Array)) {
                     throw e;
