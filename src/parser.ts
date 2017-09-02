@@ -1294,7 +1294,12 @@ export class Parser {
                 return ty;
             }
             ++this.position;
-            ty = new CustomType(nextTok.getText(), [ty], curTok.position);
+            if (nextTok instanceof LongIdentifierToken) {
+                ty = new CustomType((<LongIdentifierToken> nextTok).id.getText(), [ty],
+                    curTok.position, nextTok);
+            } else {
+                ty = new CustomType(nextTok.getText(), [ty], curTok.position);
+            }
             continue;
         }
         return ty;

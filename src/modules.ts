@@ -276,6 +276,7 @@ export class OpaqueConstraint extends Expression implements Structure {
         nstate.staticBasis = str[0];
         let nstate2 = state.getNestedState(state.id);
         nstate2.staticBasis = sig[0];
+        nstate2 = nstate2.getNestedState(state.id);
 
         for (let i in sig[0].typeEnvironment) {
             if (sig[0].typeEnvironment.hasOwnProperty(i)) {
@@ -300,6 +301,8 @@ export class OpaqueConstraint extends Expression implements Structure {
                         sgtp.qualifiedName, true);
 
                     res.setType(i, sgtp, [], sg.arity, sg.allowsEquality);
+                    nstate2.staticBasis.setType(i, sgtp, [], sg.arity, sg.allowsEquality);
+
                     tyVarBnd = tp[1];
                 } catch (e) {
                     if (!(e instanceof Array)) {
@@ -323,24 +326,25 @@ export class OpaqueConstraint extends Expression implements Structure {
                 let repl = new Map<string, string>();
                 let vsg = sg[0].getTypeVariables();
                 let vst = st[0].getTypeVariables();
-                while (st[0] instanceof TypeVariableBind) {
+                let nst = st[0];
+                while (nst instanceof TypeVariableBind) {
                     while (true) {
                         let cur = +nextName.substring(3);
                         let nname = '\'' + nextName[1] + nextName[2] + (cur + 1);
                         nextName = nname;
 
                         if (!tyVarBnd.has(nname) && !vsg.has(nname) && !vst.has(nname)) {
-                            if ((<TypeVariableBind> st[0]).name[1] === '\'') {
+                            if ((<TypeVariableBind> nst).name[1] === '\'') {
                                 nname = '\'' + nname;
                             }
-                            repl = repl.set((<TypeVariableBind> st[0]).name, nname);
+                            repl = repl.set((<TypeVariableBind> nst).name, nname);
                             break;
                         }
 
                     }
-                    st[0] = (<TypeVariableBind> st[0]).type;
+                    nst = (<TypeVariableBind> nst).type;
                 }
-                st[0] = st[0].replaceTypeVariables(repl);
+                nst = nst.replaceTypeVariables(repl);
 
                 let nsg = sg[0];
                 while (nsg instanceof TypeVariableBind) {
@@ -363,7 +367,7 @@ export class OpaqueConstraint extends Expression implements Structure {
                 nsg = nsg.replaceTypeVariables(repl);
 
                 try {
-                    nsg.merge(nstate, tyVarBnd, st[0]);
+                    nsg.merge(nstate, tyVarBnd, nst);
                     res.setValue(i, sg[0].instantiate(nstate2, tyVarBnd),
                         IdentifierStatus.VALUE_VARIABLE);
                 } catch (e) {

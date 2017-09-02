@@ -806,7 +806,7 @@ export class CustomType extends Type {
                 tp = undefined;
             }
         }
-        if (tp !== undefined && tp.type instanceof FunctionType && !this.opaque) {
+        if (tp !== undefined && tp.type instanceof FunctionType) {
             try {
                 let mt = this.merge(state, tyVarBnd, (<FunctionType> tp.type).parameterType, true);
                 return (<FunctionType> tp.type).returnType.instantiate(state, mt[1], seen);
@@ -818,11 +818,12 @@ export class CustomType extends Type {
             }
         } else if (tp === undefined) {
             throw new ElaborationError(-1, 'Unbound type "' + this.name + '".');
-        } else if (tp !== undefined && tp.type instanceof CustomType && (<CustomType> tp.type).opaque) {
+        } else if (tp !== undefined && tp.type.isOpaque()) {
             this.opaque = true;
         } else if (tp !== undefined && ((!(tp.type instanceof CustomType))
             || this.typeArguments.length !== (<CustomType> tp.type).typeArguments.length)) {
-            throw new ElaborationError(this.position, 'Arity mismatch.');
+            throw new ElaborationError(this.position, 'Arity mismatch: '
+                + this + ' vs ' + tp.type + '.');
         }
 
         let res: Type[] = [];
@@ -877,7 +878,6 @@ export class CustomType extends Type {
             if (ok) {
                 let res: Type[] = [];
                 let tybnd = tyVarBnd;
-
                 for (let i = 0; i < (<CustomType> ths).typeArguments.length; ++i) {
                     let tmp = (<CustomType> ths).typeArguments[i].merge(state,
                         tybnd, oth.typeArguments[i]);
