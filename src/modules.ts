@@ -862,7 +862,7 @@ export class ValueSpecification extends Specification {
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let res = new StaticBasis({}, {}, {}, {}, {});
         for (let i = 0; i < this.valueDescription.length; ++i) {
-            let tp = this.valueDescription[i][1].instantiate(state, tyVarBnd);
+            let tp = this.valueDescription[i][1].simplify().instantiate(state, tyVarBnd);
             let tyv = tp.getTypeVariables();
 
             tyv.forEach((val: string) => {
