@@ -603,8 +603,11 @@ export class Parser {
         let curTok = this.currentToken();
 
         let sig = this.parseSimpleSignatureExpression();
+        let first = true;
 
-        while (this.checkKeywordToken(this.currentToken(), 'where')) {
+        while (this.checkKeywordToken(this.currentToken(), 'where')
+            || (!first && this.checkKeywordToken(this.currentToken(), 'and'))) {
+            first = false;
             ++this.position;
             this.assertKeywordToken(this.currentToken(), 'type');
             ++this.position;
