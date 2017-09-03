@@ -290,6 +290,7 @@ structure List = struct
       | foldl f e (x::xr) = foldl f (f(x, e)) xr;
 end;
 open List;
+infixr 5 @;
 
 structure List = struct
     open List;
