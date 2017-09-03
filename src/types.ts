@@ -959,7 +959,8 @@ export class CustomType extends Type {
             result += this.typeArguments[i];
         }
         if (this.typeArguments.length > 1
-            || (this.typeArguments.length === 1 && this.typeArguments[0] instanceof FunctionType)) {
+            || (this.typeArguments.length === 1 && (this.typeArguments[0] instanceof FunctionType
+            || this.typeArguments[0] instanceof RecordType))) {
             result += ')';
         }
         if (this.typeArguments.length > 0) {
