@@ -189,8 +189,8 @@ export class Parser {
                         }
                     }
                 } else {
-                    throw new ParserError('Expected ",", ";" or ")" but got \"' +
-                        nextCurTok.getText() + '\".', nextCurTok.position);
+                    throw new IncompleteError(nextCurTok.position,
+                        'Expected ",", ";" or ")" but got \"' + nextCurTok.getText() + '\".');
                 }
                 results.push(this.parseExpression());
             }
@@ -1294,7 +1294,12 @@ export class Parser {
                 return ty;
             }
             ++this.position;
-            ty = new CustomType(nextTok.getText(), [ty], curTok.position);
+            if (nextTok instanceof LongIdentifierToken) {
+                ty = new CustomType((<LongIdentifierToken> nextTok).id.getText(), [ty],
+                    curTok.position, nextTok);
+            } else {
+                ty = new CustomType(nextTok.getText(), [ty], curTok.position);
+            }
             continue;
         }
         return ty;
@@ -1851,9 +1856,14 @@ export class Parser {
                 ++this.position;
                 let nw = this.currentToken();
                 this.assertIdentifierToken(nw);
-                this.position += 2;
+                ++this.position;
+                this.assertKeywordToken(this.currentToken(), '=');
+                ++this.position;
+                this.assertKeywordToken(this.currentToken(), 'datatype');
+                ++this.position;
                 let old = this.currentToken();
                 this.assertIdentifierOrLongToken(old);
+                ++this.position;
                 return new DatatypeReplication(curTok.position, <IdentifierToken> nw,
                                                <IdentifierToken|LongIdentifierToken> old, curId);
             } else {

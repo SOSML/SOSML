@@ -161,3 +161,41 @@ it("exception shadowing", () => {
         }]
     ]);
 });
+
+it("signature", () => {
+    run_test([
+        ['signature a = sig end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['structure b : a = struct end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['structure ba : a = struct val x = 1; end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['structure bb : a = struct fun f x = 29 end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['structure c :> a = struct end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['structure ca :> a = struct val x = 1; end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['structure cb :> a = struct fun f x = 29 end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['ba.x;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ],
+        ['bb.f;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ],
+        ['ca.x;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ],
+        ['cb.f;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ],
+    ]);
+});
