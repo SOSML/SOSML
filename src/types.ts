@@ -948,7 +948,8 @@ export class CustomType extends Type {
     toString(): string {
         let result: string = '';
         if (this.typeArguments.length > 1
-            || (this.typeArguments.length === 1 && this.typeArguments[0] instanceof FunctionType)) {
+            || (this.typeArguments.length === 1 && (this.typeArguments[0] instanceof FunctionType
+            || this.typeArguments[0] instanceof RecordType))) {
             result += '(';
         }
         for (let i = 0; i < this.typeArguments.length; ++i) {
