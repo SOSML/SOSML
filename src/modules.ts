@@ -1055,17 +1055,30 @@ export class StructureSpecification extends Specification {
 
 export class IncludeSpecification extends Specification {
 // include sigexp
-    constructor(public position: number, public expression: Expression & Signature) {
+    constructor(public position: number, public expression: (Expression & Signature)[]) {
         super();
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        return this.expression.elaborate(state, tyVarBnd, nextName);
+        let res = new StaticBasis({}, {}, {}, {}, {});
+        let warns: Warning[] = [];
+        for (let i = 0; i < this.expression.length; ++i) {
+            let tmp = this.expression[i].elaborate(state, tyVarBnd, nextName);
+            res = res.extend(tmp[0]);
+            warns = warns.concat(tmp[1]);
+            tyVarBnd = tmp[2];
+            nextName = tmp[3];
+        }
+        return [res, warns, tyVarBnd, nextName];
     }
 
     computeInterface(state: State): DynamicInterface {
-        return this.expression.computeInterface(state);
+        let res = new DynamicInterface({}, {}, {});
+        for (let i = 0; i < this.expression.length; ++i) {
+            res = res.extend(this.expression[i].computeInterface(state));
+        }
+        return res;
     }
 }
 

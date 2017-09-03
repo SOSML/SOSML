@@ -522,11 +522,20 @@ export class Parser {
             ++this.position;
             if (this.checkKeywordToken(this.currentToken(), '(')) {
                 ++this.position;
-                // TODO Allow strdec here
-                let exp = this.parseStructureExpression();
-                this.assertKeywordToken(this.currentToken(), ')');
-                ++this.position;
-                return new FunctorApplication(curTok.position, <IdentifierToken> curTok, exp);
+                let oldPos = this.position;
+                try {
+                    let exp = this.parseStructureExpression();
+                    this.assertKeywordToken(this.currentToken(), ')');
+                    ++this.position;
+                    return new FunctorApplication(curTok.position, <IdentifierToken> curTok, exp);
+                } catch (e) {
+                    this.position = oldPos;
+                    let dec = this.parseDeclaration(false, true);
+                    this.assertKeywordToken(this.currentToken(), ')');
+                    ++this.position;
+                    return new FunctorApplication(curTok.position, <IdentifierToken> curTok,
+                        new StructureExpression(curTok.position, dec));
+                }
             } else {
                 --this.position;
             }
@@ -785,7 +794,17 @@ export class Parser {
             return new StructureSpecification(curTok.position, res);
         } else if (this.checkKeywordToken(curTok, 'include')) {
             ++this.position;
-            return new IncludeSpecification(curTok.position, this.parseSignatureExpression());
+            let incs: (Expression & Signature)[] = [];
+            let oldPos = this.position;
+            try {
+                while (true) {
+                    incs.push(this.parseSignatureExpression());
+                    oldPos = this.position;
+                }
+            } catch (e) {
+                this.position = oldPos;
+            }
+            return new IncludeSpecification(curTok.position, incs);
         }
 
         return new EmptySpecification(curTok.position);
@@ -1756,7 +1775,8 @@ export class Parser {
             if (cur instanceof EmptyDeclaration) {
                 if (this.position >= this.tokens.length
                     || this.checkKeywordToken(this.currentToken(), 'in')
-                    || this.checkKeywordToken(this.currentToken(), 'end')) {
+                    || this.checkKeywordToken(this.currentToken(), 'end')
+                    || this.checkKeywordToken(this.currentToken(), ')')) {
                     break;
                 }
                 continue;
@@ -2033,7 +2053,8 @@ export class Parser {
             ++this.position;
             return new EmptyDeclaration(curId);
         } else if (this.checkKeywordToken(curTok, 'in')
-                || this.checkKeywordToken(curTok, 'end')) {
+                || this.checkKeywordToken(curTok, 'end')
+                || this.checkKeywordToken(curTok, ')')) {
             return new EmptyDeclaration(curId);
         }
 
@@ -2044,7 +2065,8 @@ export class Parser {
             this.assertKeywordToken(this.currentToken(), ';');
             return new ValueDeclaration(curTok.position, [], [valbnd], curId);
         }
-        throw new ParserError('Expected a declaration.', curTok.position);
+        throw new ParserError('Expected a declaration, found "' + curTok.getText() + '".',
+            curTok.position);
     }
 
     private currentToken(): Token {
