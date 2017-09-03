@@ -153,9 +153,13 @@ export class TransparentConstraint extends Expression implements Structure {
 
                 try {
                     let sgtp = <CustomType> sg.type;
-                    let tp = sgtp.merge(nstate, tyVarBnd, (<FunctionType> st.type).parameterType);
+                    let sttp = st.type;
+                    if (st.type instanceof FunctionType) {
+                        sttp = (<FunctionType> st.type).parameterType;
+                    }
+                    let tp = sgtp.merge(nstate, tyVarBnd, sttp);
 
-                    res.setType(i, sgtp.instantiate(nstate, tp[1]), [], sg.arity, sg.allowsEquality);
+                    res.setType(i, st.type.instantiate(nstate2, tp[1]), [], sg.arity, sg.allowsEquality);
                     tyVarBnd = tp[1];
                 } catch (e) {
                     if (!(e instanceof Array)) {
@@ -295,7 +299,11 @@ export class OpaqueConstraint extends Expression implements Structure {
 
                 try {
                     let sgtp = <CustomType> sg.type;
-                    let tp = sgtp.merge(nstate, tyVarBnd, (<FunctionType> st.type).parameterType);
+                    let sttp = st.type;
+                    if (st.type instanceof FunctionType) {
+                        sttp = (<FunctionType> st.type).parameterType;
+                    }
+                    let tp = sgtp.merge(nstate, tyVarBnd, sttp);
                     // We need to create a new type here because of reference stuff
                     sgtp = new CustomType(sgtp.name, sgtp.typeArguments, sgtp.position,
                         sgtp.qualifiedName, true);
