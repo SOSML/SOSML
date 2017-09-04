@@ -608,7 +608,7 @@ export class SequentialDeclaration extends Declaration {
                             + key + '" has been instantiated to "' + ntp[0] + '".\n'));
                     }
                     nbnds = nbnds.set(key, [ntp[0], true]);
-                } else if (tyVarBnd.has(key)) {
+                } else if (! isTopLevel) {
                     nbnds = nbnds.set(key, [val[0].instantiate(state, res[2]), false]);
                 }
             });
