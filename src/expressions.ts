@@ -168,6 +168,9 @@ export class ValueIdentifier extends Expression implements Pattern {
             res[0] = (<TypeVariableBind> res[0]).type;
         }
 
+        // force generating another new name
+        vars = vars.add('*');
+
         let nwvar: string[] = [];
 
         vars.forEach((val: string) => {
@@ -494,30 +497,49 @@ export class LocalDeclarationExpression extends Expression {
             }
         });
 
-            /*
         let nvbnd = new Map<string, [Type, boolean]>();
-        let names = new Set<string>();
         tyVarBnd.forEach((val: [Type, boolean], key: string) => {
             nvbnd = nvbnd.set(key, val);
+        });
+
+        let res = this.declaration.elaborate(nstate, nvbnd, nextName);
+
+            /*
+        nextName = res[3];
+        let names = new Set<string>();
+        tyVarBnd.forEach((val: [Type, boolean], key: string) => {
             if (key[1] === '*' && key[2] === '*') {
                 names.add(key);
-                val[0].getTypeVariables().forEach((v: string) => {
-                    names.add(v);
-                });
             }
-
         });
-
-             */
-        let res = this.declaration.elaborate(nstate, tyVarBnd, nextName);
-
-        nextName = res[3];
-
+        console.log(res[2]);
+        while (true) {
+            let change = false;
+            let nnames = new Set<string>();
+            names.forEach((val: string) => {
+                if (res[2].has(val)) {
+                    res[2].get(val)[0].instantiate(nstate, res[2]).getTypeVariables().forEach((v: string) => {
+                        if (!names.has(v)) {
+                            change = true;
+                            nnames.add(v);
+                            console.log(v);
+                        }
+                    });
+                }
+            });
+            nnames.forEach((val: string) => {
+                names.add(val);
+            });
+            if (!change) {
+                break;
+            }
+        }
         let nbnds = new Map<string, [Type, boolean]>();
-        tyVarBnd.forEach((val: [Type, boolean], key: string) => {
-            nbnds = nbnds.set(key, [val[0].instantiate(res[0], res[2]), val[1]]);
+        res[2].forEach((val: [Type, boolean], key: string) => {
+            //            if (names.has(key)) {
+                nbnds = nbnds.set(key, [val[0].instantiate(res[0], res[2]), val[1]]);
+                // }
         });
-            /*
         for (let i = 0; i < chg.length; ++i) {
             if ((<[Type, boolean]> tyVarBnd.get(chg[i][0]))[0].equals(
                 (<[Type, boolean]> res[2].get(chg[i][0]))[0])) {
@@ -529,7 +551,7 @@ export class LocalDeclarationExpression extends Expression {
         }
                 */
 
-        let r2 = this.expression.getType(res[0], res[2], nextName, tyVars, forceRebind);
+        let r2 = this.expression.getType(res[0], res[2], res[3], tyVars, forceRebind);
         return [r2[0], res[1].concat(r2[1]), r2[2], r2[3], r2[4]];
     }
 
@@ -741,7 +763,6 @@ export class FunctionApplication extends Expression implements Pattern {
         });
 
         f[0] = f[0].instantiate(state, tyVarBnd);
-
 
         if (f[0] instanceof TypeVariable) {
             let tva = new TypeVariable((<TypeVariable> f[0]).name + '*a');

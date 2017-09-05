@@ -855,12 +855,9 @@ export class CustomType extends Type {
         if (oth instanceof CustomType && ths2.name === (<CustomType> oth).name
             && ths2.typeArguments.length === (<CustomType> oth).typeArguments.length) {
 
-            let ok = !(ths2.qualifiedName !== undefined
-                && (<CustomType> oth).qualifiedName === undefined
-                || ths2.qualifiedName === undefined
-                && (<CustomType> oth).qualifiedName !== undefined);
+            let ok = true;
 
-            if (ths2.qualifiedName !== undefined) {
+            if (ths2.qualifiedName !== undefined && (<CustomType> oth).qualifiedName !== undefined) {
                 if ((<LongIdentifierToken> ths2.qualifiedName).qualifiers.length
                     === (<LongIdentifierToken> (<CustomType> oth).qualifiedName).qualifiers.length) {
                     for (let i = 0; i < (<LongIdentifierToken> ths2.qualifiedName).qualifiers.length; ++i) {
@@ -948,7 +945,8 @@ export class CustomType extends Type {
     toString(): string {
         let result: string = '';
         if (this.typeArguments.length > 1
-            || (this.typeArguments.length === 1 && this.typeArguments[0] instanceof FunctionType)) {
+            || (this.typeArguments.length === 1 && (this.typeArguments[0] instanceof FunctionType
+            || this.typeArguments[0] instanceof RecordType))) {
             result += '(';
         }
         for (let i = 0; i < this.typeArguments.length; ++i) {
@@ -958,7 +956,8 @@ export class CustomType extends Type {
             result += this.typeArguments[i];
         }
         if (this.typeArguments.length > 1
-            || (this.typeArguments.length === 1 && this.typeArguments[0] instanceof FunctionType)) {
+            || (this.typeArguments.length === 1 && (this.typeArguments[0] instanceof FunctionType
+            || this.typeArguments[0] instanceof RecordType))) {
             result += ')';
         }
         if (this.typeArguments.length > 0) {

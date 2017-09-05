@@ -1,4 +1,4 @@
-import { State, IdentifierStatus } from './state';
+import { State, IdentifierStatus, DynamicBasis, StaticBasis } from './state';
 import { FunctionType, CustomType, TupleType } from './types';
 import { CharValue, Real, Integer, PredefinedFunction, Value, RecordValue,
          ExceptionConstructor } from './values';
@@ -14,7 +14,10 @@ let charType = new CustomType('char');
 
 
 function addMathLib(state: State): State {
-    state.setDynamicValue('Math.sqrt', new PredefinedFunction('Math.sqrt', (val: Value) => {
+    let dres = new DynamicBasis({}, {}, {}, {}, {});
+    let sres = new StaticBasis({}, {}, {}, {}, {});
+
+    dres.setValue('sqrt', new PredefinedFunction('sqrt', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             if (value < 0) {
@@ -25,9 +28,9 @@ function addMathLib(state: State): State {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Math.sqrt', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('sqrt', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('Math.sin', new PredefinedFunction('Math.sin', (val: Value) => {
+    dres.setValue('sin', new PredefinedFunction('sin', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.sin(value)), false, []];
@@ -35,9 +38,9 @@ function addMathLib(state: State): State {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Math.sin', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('sin', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('Math.cos', new PredefinedFunction('Math.cos', (val: Value) => {
+    dres.setValue('cos', new PredefinedFunction('cos', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.cos(value)), false, []];
@@ -45,9 +48,9 @@ function addMathLib(state: State): State {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Math.cos', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('cos', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('Math.asin', new PredefinedFunction('Math.asin', (val: Value) => {
+    dres.setValue('asin', new PredefinedFunction('asin', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.asin(value)), false, []];
@@ -55,9 +58,9 @@ function addMathLib(state: State): State {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Math.asin', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('asin', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('Math.acos', new PredefinedFunction('Math.acos', (val: Value) => {
+    dres.setValue('acos', new PredefinedFunction('acos', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.acos(value)), false, []];
@@ -65,9 +68,9 @@ function addMathLib(state: State): State {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Math.acos', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('acos', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('Math.exp', new PredefinedFunction('Math.exp', (val: Value) => {
+    dres.setValue('exp', new PredefinedFunction('exp', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.exp(value)), false, []];
@@ -75,9 +78,9 @@ function addMathLib(state: State): State {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Math.exp', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('exp', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('Math.pow', new PredefinedFunction('Math.sin', (val: Value) => {
+    dres.setValue('pow', new PredefinedFunction('pow', (val: Value) => {
         if (val instanceof RecordValue) {
             let val1 = (<RecordValue> val).getValue('1');
             let val2 = (<RecordValue> val).getValue('2');
@@ -92,10 +95,10 @@ function addMathLib(state: State): State {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Math.pow', new FunctionType(new TupleType([realType, realType]), realType).simplify(),
+    sres.setValue('pow', new FunctionType(new TupleType([realType, realType]), realType).simplify(),
         IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('Math.ln', new PredefinedFunction('Math.ln', (val: Value) => {
+    dres.setValue('ln', new PredefinedFunction('ln', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.log(value)), false, []];
@@ -103,9 +106,9 @@ function addMathLib(state: State): State {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Math.ln', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('ln', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('Math.log10', new PredefinedFunction('Math.log10', (val: Value) => {
+    dres.setValue('log10', new PredefinedFunction('log10', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.log10(value)), false, []];
@@ -113,13 +116,16 @@ function addMathLib(state: State): State {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Math.log10', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('log10', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('Math.pi', new Real(3.14159265359), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Math.pi', realType, IdentifierStatus.VALUE_VARIABLE);
+    dres.setValue('pi', new Real(3.14159265359), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('pi', realType, IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('Math.e', new Real(2.71828182846), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Math.e', realType, IdentifierStatus.VALUE_VARIABLE);
+    dres.setValue('e', new Real(2.71828182846), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('e', realType, IdentifierStatus.VALUE_VARIABLE);
+
+    state.setDynamicStructure('Math', dres);
+    state.setStaticStructure('Math', sres);
 
     return state;
 }
@@ -152,7 +158,10 @@ function addCharLib(state: State): State {
 }
 
 function addRealLib(state: State): State {
-    state.setDynamicValue('Real.fromInt', new PredefinedFunction('Real.fromInt', (val: Value) => {
+    let dres = new DynamicBasis({}, {}, {}, {}, {});
+    let sres = new StaticBasis({}, {}, {}, {}, {});
+
+    dres.setValue('fromInt', new PredefinedFunction('fromInt', (val: Value) => {
         if (val instanceof Integer) {
             let value = (<Integer> val).value;
             return [new Real(value), false, []];
@@ -160,9 +169,9 @@ function addRealLib(state: State): State {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Real.fromInt', new FunctionType(intType, realType), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('fromInt', new FunctionType(intType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('Real.round', new PredefinedFunction('Real.round', (val: Value) => {
+    dres.setValue('round', new PredefinedFunction('round', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             let integer = new Integer(Math.round(value));
@@ -174,9 +183,9 @@ function addRealLib(state: State): State {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Real.round', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('round', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('Real.floor', new PredefinedFunction('Real.floor', (val: Value) => {
+    dres.setValue('floor', new PredefinedFunction('floor', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             let integer = new Integer(Math.floor(value));
@@ -188,9 +197,9 @@ function addRealLib(state: State): State {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Real.floor', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('floor', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('Real.ceil', new PredefinedFunction('Real.ceil', (val: Value) => {
+    dres.setValue('ceil', new PredefinedFunction('ceil', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             let integer = new Integer(Math.round(value));
@@ -202,98 +211,131 @@ function addRealLib(state: State): State {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
-    state.setStaticValue('Real.ceil', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('ceil', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
+
+    state.setDynamicStructure('Real', dres);
+    state.setStaticStructure('Real', sres);
 
     return state;
 }
 
 let code = `
 exception Domain;
-exception Empty;
-exception Subscript;
 exception Size;
 exception Chr;
+exception Subscript;
 
 fun o (f,g) x = f (g x);
 infix 3 o;
 
 datatype order = LESS | EQUAL | GREATER;
 
-fun Int.compare (x, y: int) = if x<y then LESS else if x>y then GREATER else EQUAL;
-fun Real.compare (x, y: real) = if x<y then LESS else if x>y then GREATER else EQUAL;
+structure Real = struct
+    open Real;
+    fun compare (x, y: real) = if x < y then LESS else if x > y then GREATER else EQUAL;
+end
 
-exception Option.Option;
-datatype 'a option = NONE | SOME of 'a;
-fun valOf (SOME x) = x
-  | valOf NONE = raise Option.Option;
-fun isSome NONE = false
-  | isSome (SOME _) = true;
+structure Option = struct
+    exception Option;
 
-val Int.minInt = SOME ~1073741824;
-val Int.maxInt = SOME 1073741823;
-fun Int.max (x, y) = if x < y then y else x : int;
+    datatype 'a option = NONE | SOME of 'a;
+
+    fun valOf (SOME x) = x
+      | valOf NONE = raise Option;
+
+    fun isSome NONE = false
+      | isSome (SOME _) = true;
+end;
+open Option;
+
+structure Int = struct
+    fun compare (x, y: int) = if x < y then LESS else if x > y then GREATER else EQUAL;
+
+    val minInt = SOME ~1073741824;
+    val maxInt = SOME 1073741823;
+    fun max (x, y) = if x < y then y else x : int;
+end
 
 fun not true = false | not false = true;
 
-fun hd nil = raise Empty
-| hd (x::xr) = x;
-fun tl nil = raise Empty
-| tl (x::xr) = xr;
-fun null nil = true
-| null (x::xr) = false;
+structure List = struct
+    exception Empty;
 
-fun map f nil = nil
-  | map f (x::xr) = (f x) :: (map f xr);
+    fun hd nil = raise Empty
+      | hd (x::xr) = x;
 
-fun @ (nil,ys) = ys
-| @((x::xr),ys) = x:: @(xr,ys);
+    fun tl nil = raise Empty
+      | tl (x::xr) = xr;
+
+    fun null nil = true
+      | null (x::xr) = false;
+
+    fun map f nil = nil
+      | map f (x::xr) = (f x) :: (map f xr);
+
+    infixr 5 @;
+    fun [] @ ys = ys
+      | (x::xr) @ ys = x :: (xr @ ys);
+
+    fun length nil = 0
+      | length (x::xr) = 1 + length xr;
+
+    fun rev nil = nil
+      | rev (x::xr) = rev xr @ [x];
+
+    fun foldr f e []      = e
+      | foldr f e (x::xr) = f(x, foldr f e xr);
+
+    fun foldl f e []      = e
+      | foldl f e (x::xr) = foldl f (f(x, e)) xr;
+end;
+open List;
 infixr 5 @;
 
-fun length nil = 0
-  | length (x::xr) = 1 + length xr;
+structure List = struct
+    open List;
 
-fun rev nil = nil
-  | rev (x::xr) = rev xr @ [x];
+    fun concat nil = nil
+      | concat (x::xr) = x @ concat xr;
 
-fun List.concat nil = nil
-  | List.concat (x::xr) = x @ List.concat xr;
+    fun tabulate (n, f) = let
+        fun h i = if i < n then f i :: h (i + 1) else []
+    in
+        if n < 0 then raise Size else h 0
+    end;
 
-fun foldr f e []      = e
-  | foldr f e (x::xr) = f(x, foldr f e xr);
+    fun exists p []      = false
+      | exists p (x::xr) = p x orelse exists p xr;
 
-fun foldl f e []      = e
-  | foldl f e (x::xr) = foldl f (f(x, e)) xr;
+    fun all p []      = true
+      | all p (x::xr) = p x andalso all p xr;
 
-fun List.tabulate (n, f) =
-  let fun h i = if i<n then f i :: h (i+1) else []
-  in if n<0 then raise Size else h 0 end;
+    fun filter p []      = []
+      | filter p (x::xr) = if p x then x :: filter p xr else filter p xr;
 
-fun List.exists p []      = false
-  | List.exists p (x::xr) = p x orelse List.exists p xr;
+    fun collate (compare : 'a * 'a -> order) p = case p of
+        (nil, _::_)     => LESS
+      | (nil, nil)      => EQUAL
+      | (_::_, nil)     => GREATER
+      | (x::xr, y::yr)  => case compare (x, y) of
+             EQUAL  => collate compare (xr, yr)
+           | s      => s;
 
-fun List.all p []      = true
-  | List.all p (x::xr) = p x andalso List.all p xr;
+    fun nth (xs, n) = let
+        fun h []      _ = raise Subscript
+          | h (x::xr) n = if n = 0 then x else h xr (n - 1)
+    in
+        if n < 0 then raise Subscript else h xs n
+    end;
+end;
 
-fun List.filter p []      = []
-  | List.filter p (x::xr) = if p x then x :: List.filter p xr else List.filter p xr;
-
-fun List.collate (compare : 'a * 'a -> order) p = case p of
-    (nil, _::_) => LESS
-  | (nil, nil) => EQUAL
-  | (_::_, nil) => GREATER
-  | (x::xr, y::yr) => case compare(x,y) of
-         EQUAL => List.collate compare (xr,yr)
-       | s => s;
-
-fun List.nth (xs, n) =
-    let fun h []      _ = raise Subscript
-      | h (x::xr) n = if n=0 then x else h xr (n-1)
-    in if n<0 then raise Subscript else h xs n end;
-
-fun Char.isLower c  = #"a" <= c andalso c <= #"z";
-fun Char.isUpper c  = #"A" <= c andalso c <= #"Z";
-fun Char.isDigit c  = #"0" <= c andalso c <= #"9";
-fun Char.isAlpha c  = Char.isLower c orelse Char.isUpper c;
+structure Char = struct
+    (* open Char; *)
+    fun isLower c  = #"a" <= c andalso c <= #"z";
+    fun isUpper c  = #"A" <= c andalso c <= #"Z";
+    fun isDigit c  = #"0" <= c andalso c <= #"9";
+    fun isAlpha c  = isLower c orelse isUpper c;
+end;
 
 fun ! (a : \'A ref): \'A = ! a;
 fun op := ((a, b) : (\'A ref * \'A)): unit = a := b;

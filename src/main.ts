@@ -17,14 +17,12 @@ import { State } from './state';
 import { getInitialState } from './initialState';
 import { addStdLib } from './stdlib';
 import { Type } from './types';
-import { Token, IdentifierToken, LongIdentifierToken } from './tokens';
 import * as Lexer from './lexer';
 import * as Parser from './parser';
 
 export function interpret(nextInstruction: string,
                           oldState: State = getInitialState(),
                           options: { [name: string]: any } = {
-                              'allowLongFunctionNames': false,
                               'allowUnicodeInStrings': false,
                               'allowSuccessorML': false,
                               'disableElaboration': false
@@ -32,18 +30,6 @@ export function interpret(nextInstruction: string,
     let state = oldState.getNestedState();
 
     let tkn = Lexer.lex(nextInstruction, options);
-
-    if (options.allowLongFunctionNames) {
-        let newTkn: Token[] = [];
-        for (let t of tkn) {
-            if (t instanceof LongIdentifierToken) {
-                newTkn.push(new IdentifierToken(t.getText(), t.position));
-            } else {
-                newTkn.push(t);
-            }
-        }
-        tkn = newTkn;
-    }
 
     let ast = Parser.parse(tkn, state, options);
 
@@ -154,9 +140,7 @@ export function interpret(nextInstruction: string,
 
 export function getFirstState(withStdLib: boolean): State {
     if (withStdLib) {
-        return addStdLib(getInitialState(), {
-            'allowLongFunctionNames': true
-        });
+        return addStdLib(getInitialState(), {});
     }
     return getInitialState();
 }

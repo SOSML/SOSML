@@ -153,9 +153,13 @@ export class TransparentConstraint extends Expression implements Structure {
 
                 try {
                     let sgtp = <CustomType> sg.type;
-                    let tp = sgtp.merge(nstate, tyVarBnd, (<FunctionType> st.type).parameterType);
+                    let sttp = st.type;
+                    if (st.type instanceof FunctionType) {
+                        sttp = (<FunctionType> st.type).parameterType;
+                    }
+                    let tp = sgtp.merge(nstate, tyVarBnd, sttp);
 
-                    res.setType(i, sgtp.instantiate(nstate, tp[1]), [], sg.arity, sg.allowsEquality);
+                    res.setType(i, st.type.instantiate(nstate2, tp[1]), [], sg.arity, sg.allowsEquality);
                     tyVarBnd = tp[1];
                 } catch (e) {
                     if (!(e instanceof Array)) {
@@ -295,7 +299,11 @@ export class OpaqueConstraint extends Expression implements Structure {
 
                 try {
                     let sgtp = <CustomType> sg.type;
-                    let tp = sgtp.merge(nstate, tyVarBnd, (<FunctionType> st.type).parameterType);
+                    let sttp = st.type;
+                    if (st.type instanceof FunctionType) {
+                        sttp = (<FunctionType> st.type).parameterType;
+                    }
+                    let tp = sgtp.merge(nstate, tyVarBnd, sttp);
                     // We need to create a new type here because of reference stuff
                     sgtp = new CustomType(sgtp.name, sgtp.typeArguments, sgtp.position,
                         sgtp.qualifiedName, true);
@@ -1047,17 +1055,30 @@ export class StructureSpecification extends Specification {
 
 export class IncludeSpecification extends Specification {
 // include sigexp
-    constructor(public position: number, public expression: Expression & Signature) {
+    constructor(public position: number, public expression: (Expression & Signature)[]) {
         super();
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        return this.expression.elaborate(state, tyVarBnd, nextName);
+        let res = new StaticBasis({}, {}, {}, {}, {});
+        let warns: Warning[] = [];
+        for (let i = 0; i < this.expression.length; ++i) {
+            let tmp = this.expression[i].elaborate(state, tyVarBnd, nextName);
+            res = res.extend(tmp[0]);
+            warns = warns.concat(tmp[1]);
+            tyVarBnd = tmp[2];
+            nextName = tmp[3];
+        }
+        return [res, warns, tyVarBnd, nextName];
     }
 
     computeInterface(state: State): DynamicInterface {
-        return this.expression.computeInterface(state);
+        let res = new DynamicInterface({}, {}, {});
+        for (let i = 0; i < this.expression.length; ++i) {
+            res = res.extend(this.expression[i].computeInterface(state));
+        }
+        return res;
     }
 }
 
