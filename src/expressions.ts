@@ -235,8 +235,8 @@ export class ValueIdentifier extends Expression implements Pattern {
                 throw e;
             }
             throw new ElaborationError(this.position,
-                'Type clash: "' + t + '" vs. "'
-                + res[0] + '": ' + e[0]);
+                'Type clash: "' + t.normalize()[0] + '" vs. "'
+                + res[0].normalize()[0] + '": ' + e[0]);
         }
     }
 
@@ -593,7 +593,7 @@ export class TypedExpression extends Expression implements Pattern {
             throw new ElaborationError(this.position,
                 'The annotated type "' + this.typeAnnotation
                 + '" does not match the expression\'s type "'
-                + tp[1] + '": ' + e[0]);
+                + tp[1].normalize()[0] + '": ' + e[0]);
         }
     }
 
@@ -618,7 +618,8 @@ export class TypedExpression extends Expression implements Pattern {
             }
             throw new ElaborationError(this.position,
                 'The specified type "' + this.typeAnnotation
-                + '" does not match the annotated expression\'s type "' + tp[0] + '": ' + e[0]);
+                + '" does not match the annotated expression\'s type "'
+                + tp[0].normalize()[0] + '": ' + e[0]);
         }
     }
 
@@ -788,13 +789,13 @@ export class FunctionApplication extends Expression implements Pattern {
                     throw e;
                 }
                 throw new ElaborationError(this.position,
-                    'Do not feed functions of type "' + f[0]
-                    + '" an argument of type "' + arg[0] + '": ' + e[0]);
+                    'Type clash. Functions of type "' + f[0].normalize()[0]
+                    + '" cannot take an argument of type "' + arg[0].normalize()[0] + '": ' + e[0]);
             }
         } else {
             throw new ElaborationError(this.func.position,
                 '"' + this.func + '" of type "'
-                + f[0] + '" is not a function.');
+                + f[0].normalize()[0] + '" is not a function.');
         }
     }
 
@@ -927,7 +928,7 @@ export class HandleException extends Expression {
             || !(<FunctionType> mtp[0]).parameterType.equals(new CustomType('exn'))) {
             throw new ElaborationError(this.match.position,
                 'You can only handle things of type "exn" and not "'
-                + (<FunctionType> mtp[0]).parameterType + '".');
+                + (<FunctionType> mtp[0]).parameterType.normalize()[0] + '".');
         }
         let rt = (<FunctionType> mtp[0]).returnType;
         let etp = this.expression.getType(state, mtp[4], mtp[2], mtp[3], forceRebind);
@@ -941,7 +942,7 @@ export class HandleException extends Expression {
             }
             throw new ElaborationError(this.expression.position,
                 'The "handle" cannot change the type of the expression from "'
-                + etp[0] + '" to "' + rt + '": ' + e[0]);
+                + etp[0].normalize()[0] + '" to "' + rt.normalize()[0] + '": ' + e[0]);
         }
     }
 
