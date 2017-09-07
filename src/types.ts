@@ -758,7 +758,8 @@ export class CustomType extends Type {
                 public typeArguments: Type[] = [],
                 public position: number = 0,
                 public qualifiedName: LongIdentifierToken | undefined = undefined,
-                public opaque: boolean = false) {
+                public opaque: boolean = false,
+                public id = 0) {
         super();
     }
 
@@ -779,7 +780,8 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].makeFree());
         }
-        return new CustomType(this.name, res, this.position, this.qualifiedName, this.opaque);
+        return new CustomType(this.name, res, this.position,
+            this.qualifiedName, this.opaque, this.id);
     }
 
     qualify(state: State, qualifiers: LongIdentifierToken): Type {
@@ -787,7 +789,8 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].qualify(state, qualifiers));
         }
-        let rs = new CustomType(this.name, res, this.position, this.qualifiedName, this.opaque);
+        let rs = new CustomType(this.name, res, this.position,
+            this.qualifiedName, this.opaque, this.id);
 
         let tp = state.getStaticType(this.name);
         if (tp !== undefined) {
@@ -830,7 +833,8 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].instantiate(state, tyVarBnd, seen));
         }
-        return new CustomType(this.name, res, this.position, this.qualifiedName, this.opaque);
+        return new CustomType(this.name, res, this.position,
+            this.qualifiedName, this.opaque, this.id);
     }
 
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type,
@@ -853,7 +857,8 @@ export class CustomType extends Type {
         let ths2 = <CustomType> ths;
 
         if (oth instanceof CustomType && ths2.name === (<CustomType> oth).name
-            && ths2.typeArguments.length === (<CustomType> oth).typeArguments.length) {
+            && ths2.typeArguments.length === (<CustomType> oth).typeArguments.length
+            && ths2.id === (<CustomType> oth).id) {
 
             let ok = true;
 
@@ -883,7 +888,7 @@ export class CustomType extends Type {
                 }
 
                 return [new CustomType(ths2.name, res, ths2.position, ths2.qualifiedName,
-                    ths2.opaque), tybnd];
+                    ths2.opaque, ths2.id), tybnd];
             }
         }
 
@@ -900,7 +905,8 @@ export class CustomType extends Type {
             res.push(tmp[0]);
             tyVarBnd = tmp[1];
         }
-        return [new CustomType(this.name, res, this.position, this.qualifiedName, this.opaque), tyVarBnd];
+        return [new CustomType(this.name, res, this.position,
+            this.qualifiedName, this.opaque, this.id), tyVarBnd];
     }
 
     getTypeVariables(free: boolean = false): Set<string> {
@@ -930,7 +936,8 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             rt.push(this.typeArguments[i].replaceTypeVariables(replacements, free));
         }
-        return new CustomType(this.name, rt, this.position, this.qualifiedName, this.opaque);
+        return new CustomType(this.name, rt, this.position,
+            this.qualifiedName, this.opaque, this.id);
     }
 
     admitsEquality(state: State): boolean {
@@ -969,6 +976,9 @@ export class CustomType extends Type {
             }
         }
         result += this.name;
+        if (this.id > 0) {
+            result += '/' + this.id;
+        }
         return result;
     }
 
@@ -977,14 +987,15 @@ export class CustomType extends Type {
         for (let i: number = 0; i < this.typeArguments.length; ++i) {
             args.push(this.typeArguments[i].simplify());
         }
-        return new CustomType(this.name, args, this.position, this.qualifiedName, this.opaque);
+        return new CustomType(this.name, args, this.position,
+            this.qualifiedName, this.opaque, this.id);
     }
 
     equals(other: any): boolean {
         if (other instanceof AnyType) {
             return true;
         }
-        if (!(other instanceof CustomType) || this.name !== other.name) {
+        if (!(other instanceof CustomType) || this.name !== other.name || this.id !== other.id) {
             return false;
         }
         for (let i: number = 0; i < this.typeArguments.length; ++i) {

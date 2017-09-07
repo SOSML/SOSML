@@ -287,8 +287,9 @@ export class DatatypeDeclaration extends Declaration {
                 }
                 state.setStaticValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
             }
-            // TODO id
-            state.setStaticType(res[2][0], res[1], res[2][1], this.datatypeBinding[i].typeVariableSequence.length);
+            state.setStaticType(res[2][0], res[1], res[2][1],
+                this.datatypeBinding[i].typeVariableSequence.length);
+            state.incrementValueIdentifierId(res[2][0]);
         }
 
         return [state, [], tyVarBnd, nextName];
@@ -306,8 +307,8 @@ export class DatatypeDeclaration extends Declaration {
                 }
                 state.setDynamicValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
             }
-            // TODO id
             state.setDynamicType(res[1][0], res[1][1]);
+            state.incrementValueIdentifierId(res[1][0]);
         }
         return [state, false, undefined, []];
     }
@@ -1009,7 +1010,11 @@ export class DatatypeBinding {
         let connames: string[] = [];
         let ve: [string, Type][] = [];
         let nstate = state.getNestedState(state.id);
-        let restp = new CustomType(this.name.getText(), this.typeVariableSequence);
+
+        let id = state.getValueIdentifierId(this.name.getText());
+
+        let restp = new CustomType(this.name.getText(), this.typeVariableSequence,
+            -1, undefined, false, id);
         nstate.setStaticType(this.name.getText(), restp, [], this.typeVariableSequence.length);
         for (let i = 0; i < this.type.length; ++i) {
             let numArg: number = 0;
