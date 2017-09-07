@@ -14,11 +14,11 @@ export abstract class Type {
 
     // Merge this type with the other type. This operation is commutative
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type): [Type, Map<string, [Type, boolean]>] {
-        throw new ElaborationError(-1, 'I don\'t know anything.');
+        throw new ElaborationError(-1, 'I don\'t know anything. But you know everything.');
     }
 
     makeEqType(state: State, tyVarBnd: Map<string, [Type, boolean]>): [Type, Map<string, [Type, boolean]>] {
-        throw new ElaborationError(-1, 'Yeaaah.');
+        throw new ElaborationError(-1, 'I don\'t know everything. I just know what I know.');
     }
 
     // Return all (free) type variables

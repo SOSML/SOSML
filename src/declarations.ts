@@ -91,7 +91,7 @@ export class ValueDeclaration extends Declaration {
             bcp = bcp.set(key, val);
         });
         let ncp = nextName;
-        for (let l = 0; l < 3; ++l) {
+        for (let l = 0; l < 4; ++l) {
             warns = wcp;
             bnds = new Map<string, [Type, boolean]>();
             bcp.forEach((val: [Type, boolean], key: string) => {
@@ -104,6 +104,14 @@ export class ValueDeclaration extends Declaration {
                 bnds = val[2];
                 nextName = val[3];
                 for (let k = 0; k < val[0].length; ++k) {
+                    if (l === 3) {
+                        // TODO find a better way to check for circularity
+                        let oldtp = state.getStaticValue(val[0][k][0]);
+                        if (oldtp === undefined || !oldtp[0].normalize()[0].equals(val[0][k][1].normalize()[0])) {
+                            throw new ElaborationError(this.position,
+                                'You done goofed. Too much circularity.');
+                        }
+                    }
                     state.setStaticValue(val[0][k][0], val[0][k][1], IdentifierStatus.VALUE_VARIABLE);
                 }
             }
