@@ -131,7 +131,7 @@ export class ValueIdentifier extends Expression implements Pattern {
                 res = st.getValue((<LongIdentifierToken> this.name).id.getText());
                 if (res !== undefined) {
                     let nst = new State(0, undefined, st, state.dynamicBasis, [0, {}]);
-                    res[0] = res[0].qualify(nst, this.name);
+                    res = [res[0].qualify(nst, this.name), res[1]];
                 }
             }
         } else {
