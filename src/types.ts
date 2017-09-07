@@ -855,9 +855,12 @@ export class CustomType extends Type {
         if (oth instanceof CustomType && ths2.name === (<CustomType> oth).name
             && ths2.typeArguments.length === (<CustomType> oth).typeArguments.length) {
 
-            let ok = true;
+            let ok = !(ths2.qualifiedName !== undefined
+                && (<CustomType> oth).qualifiedName === undefined
+                || ths2.qualifiedName === undefined
+                && (<CustomType> oth).qualifiedName !== undefined);
 
-            if (ths2.qualifiedName !== undefined && (<CustomType> oth).qualifiedName !== undefined) {
+            if (ths2.qualifiedName !== undefined) {
                 if ((<LongIdentifierToken> ths2.qualifiedName).qualifiers.length
                     === (<LongIdentifierToken> (<CustomType> oth).qualifiedName).qualifiers.length) {
                     for (let i = 0; i < (<LongIdentifierToken> ths2.qualifiedName).qualifiers.length; ++i) {
