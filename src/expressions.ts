@@ -763,7 +763,7 @@ export class FunctionApplication extends Expression implements Pattern {
             f[4] = f[4].set(key, val);
         });
 
-        f[0] = f[0].instantiate(state, tyVarBnd);
+        f[0] = f[0].instantiate(state, f[4]);
 
         if (f[0] instanceof TypeVariable) {
             let tva = new TypeVariable((<TypeVariable> f[0]).name + '*a');
@@ -1109,10 +1109,10 @@ export class Match {
                 }
                 throw new ElaborationError(this.position, 'Match rules disagree on type: ' + e[0]);
             }
-            restp = restp.instantiate(state, r2[4]);
+            restp = restp.instantiate(state, bnds);
             bnds.forEach((val: [Type, boolean], key: string) => {
                 if (key[1] !== '*' || key[2] !== '*') {
-                    nmap = nmap.set(key, val);
+                    nmap = nmap.set(key, [val[0].instantiate(state, bnds), val[1]]);
                 }
             });
             bnds = nmap;

@@ -883,7 +883,7 @@ export class ValueBinding {
             for (let j = ntys.length - 1; j >= 0; --j) {
                 if (tv.has(ntys[j].name)) {
                     res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1]);
-                    (<TypeVariableBind> res[0][i][1]).isFree = free.has(ntys[j].name);
+                    (<TypeVariableBind> res[0][i][1]).isFree = valuePoly || free.has(ntys[j].name);
                     done.add(ntys[j].name);
                 }
             }
