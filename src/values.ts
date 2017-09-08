@@ -210,7 +210,8 @@ export class Integer extends Value {
     }
 
     toString(state: State|undefined): string {
-        return '' + this.value;
+        let str = '' + this.value;
+        return str.replace(/-/, '~');
     }
 
     compareTo(val: Value) {
@@ -250,7 +251,7 @@ export class Real extends Value {
         if (str.search(/\./) === -1) {
             str += '.0';
         }
-        return str;
+        return str.replace(/-/, '~');
     }
 
     compareTo(val: Value) {
@@ -302,7 +303,7 @@ export class RecordValue extends Value {
     }
 
     toString(state: State|undefined): string {
-        let isTuple = true;
+        let isTuple = this.entries.size !== 1;
         for (let i = 1; i <= this.entries.size; ++i) {
             if (!this.entries.has('' + i)) {
                 isTuple = false;
