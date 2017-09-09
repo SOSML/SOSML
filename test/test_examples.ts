@@ -1110,7 +1110,6 @@ fun f (x:int) : int = if x<y then 1 else x*f(x-1);
 val y = 1;
 fun f (x:int) : int = if x<y then 1 else x*f(x-1);
      */
-    //TODO test types
     run_test([
         ['fun f (x:int) : int = if x<y then 1 else x*f(x-1);', (x) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
         }],
@@ -2736,7 +2735,13 @@ all (fn x => x>0) [1, ~2, 3];
         ['fun minus5 xs = map (fn x => x-5) xs;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('minus5')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('minus5')).toEqualWithType(TODO);
+            expect(state.getStaticValue('minus5')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.CustomType('list',[new Type.CustomType('int')]),
+                    new Type.CustomType('list',[new Type.CustomType('int')])
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['minus5 [3, 6, 99, 72];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -2883,7 +2888,13 @@ fun foldr f s nil = s
         ['fun sum xs = foldl op+ 0 xs;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('sum')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('sum')).toEqualWithType(TODO);
+            expect(state.getStaticValue('sum')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.CustomType('list', [new Type.CustomType('int')]),
+                    new Type.CustomType('int')
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['sum [4,3,6,2,8];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -3067,7 +3078,18 @@ fun test [] = 0
         ['fun test [] = 0 | test [(x,y)] = x+y | test [(x,5), (7,y)] = x*y | test (_::_::ps) = test ps;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('test')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('test')).toEqualWithType(TODO);
+            expect(state.getStaticValue('test')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.CustomType('list', [
+                        new Type.RecordType(new Map([
+                            ['1', new Type.CustomType('int')],
+                            ['2', new Type.CustomType('int')]
+                        ]))
+                    ]),
+                    new Type.CustomType('int')
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }]
     ]);
 });
@@ -3207,7 +3229,16 @@ fun or (x:bool) = fn (y:bool) =>
         ['fun or false false = false | or _ _ = true;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('or')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('or')).toEqualWithType(TODO);
+            expect(state.getStaticValue('or')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.CustomType('bool'),
+                    new Type.FunctionType(
+                        new Type.CustomType('bool'),
+                        new Type.CustomType('bool')
+                    ),
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['fun or x y = case (x,y) of (false, false) => false | ( _ , _ ) => true;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
