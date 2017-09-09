@@ -36,7 +36,7 @@ Correctly lexing, parsing, elaborating and interpreting any SML core language pr
   * [x] `ref`, `!`, and `:=`
   * [x] _something_ structure related
   * [x] _something_ signature related
-  * [x] _something_ functor related
+  * [ ] _anything_ functor related
 * Supported standard library constructs
   * Math library `Math.sqrt`, `Math.sin`, `Math.cos`, `Math.asin`, `Math.acos`, `Math.exp`, `Math.pow`,
     `Math.ln`, `Math.log10`, `Math.pi`, and `Math.e`
