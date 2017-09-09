@@ -99,7 +99,7 @@ export class ValueDeclaration extends Declaration {
             });
             nextName = ncp;
             for (let j = i; j < this.valueBinding.length; ++j) {
-                let val = this.valueBinding[i].getType(this.typeVariableSequence, state, bnds, nextName, isTopLevel);
+                let val = this.valueBinding[j].getType(this.typeVariableSequence, state, bnds, nextName, isTopLevel);
                 warns = warns.concat(val[1]);
                 bnds = val[2];
                 nextName = val[3];

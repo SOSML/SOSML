@@ -8,7 +8,7 @@ import { InternalInterpreterError, ElaborationError, EvaluationError, ParserErro
 import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
          ExceptionValue, ConstructedValue, ReferenceValue } from './values';
-import { getInitialState } from './initialState.ts';
+import { getInitialState } from './initialState';
 
 type MemBind = [number, Value][];
 
@@ -403,6 +403,7 @@ export class Record extends Expression implements Pattern {
                     'Label "' + name + '" occurs more than once in the same record.');
             }
             let tmp = exp.getType(state, bnds, nextName, tyVars, forceRebind);
+
             warns = warns.concat(tmp[1]);
             nextName = tmp[2];
             tyVars = tmp[3];
@@ -609,8 +610,8 @@ export class TypedExpression extends Expression implements Pattern {
         let tp = this.expression.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
 
         try {
-            let ann = this.typeAnnotation.instantiate(state, tyVarBnd);
-            let tmp = tp[0].merge(state, tyVarBnd, ann);
+            let ann = this.typeAnnotation.instantiate(state, tp[4]);
+            let tmp = tp[0].merge(state, tp[4], ann);
             return [tmp[0], tp[1], tp[2], tp[3], tmp[1]];
         } catch (e) {
             if (!(e instanceof Array)) {
