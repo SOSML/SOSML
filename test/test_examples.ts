@@ -3910,32 +3910,53 @@ fun area (Circle r) = Math.pi*r*r
 area (Square 3.0);
 area (Triangle(6.0, 6.0, Math.sqrt 72.0));
      */
-    //TODO test types
     run_test([
         ['datatype shape = Circle of real | Square of real | Triangle of real * real * real;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('Circle')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('Circle')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('real', [], 27)
+                    new Type.CustomType('real', [], 27),
                     new Type.CustomType('shape', [], -1)
                 ),
-                State.IdentifierStatus.VALUE_VARIABLE
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Square')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('Square')).toEqualWithType(TODO);
+            expect(state.getStaticValue('Square')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.CustomType('real', [], 44),
+                    new Type.CustomType('shape', [], -1)
+                ),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
             expect(state.getDynamicValue('Triangle')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('Triangle')).toEqualWithType(TODO);
+            expect(state.getStaticValue('Triangle')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.RecordType(new Map([
+                        ['1', new Type.CustomType('real', [], 63)],
+                        ['2', new Type.CustomType('real', [], 70)],
+                        ['3', new Type.CustomType('real', [], 77)]
+                    ]), true, 68),
+                    new Type.CustomType('shape', [], -1)
+                ),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
         }],
         ['Circle 4.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.ConstructedValue('Circle', new Val.Real(4)));
-            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+            expect(state.getStaticValue('it')).toEqualWithType([
+                new Type.CustomType('shape', [], -1),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['Square 3.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.ConstructedValue('Square', new Val.Real(3)));
-            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+            expect(state.getStaticValue('it')).toEqualWithType([
+                new Type.CustomType('shape', [], -1),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['Triangle (4.0, 3.0, 5.0);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -3946,22 +3967,31 @@ area (Triangle(6.0, 6.0, Math.sqrt 72.0));
                     ['3', new Val.Real(5)]
                 ]))
             ));
-            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+            expect(state.getStaticValue('it')).toEqualWithType([
+                new Type.CustomType('shape', [], -1),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['fun area (Circle r) = Math.pi*r*r | area (Square a) = a*a | area (Triangle(a,b,c)) = let val s = (a+b+c)/2.0 in Math.sqrt(s*(s-a)*(s-b)*(s-c)) end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('area')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('area')).toEqualWithType(TODO);
+            expect(state.getStaticValue('area')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.CustomType('shape', [], -1),
+                    new Type.CustomType('real')
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['area (Square 3.0);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Real(9));
-            //expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('real'), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('real'), 0]);
         }],
         ['area (Triangle(6.0, 6.0, Math.sqrt 72.0));', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Real(17.99999999999999));
-            //expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('real'), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('real'), 0]);
         }],
     ]);
 });
@@ -3988,29 +4018,56 @@ datatype order = LESS | EQUAL | GREATER;
         ['datatype day = Monday | Tuesday | Wednesday | Thursday | Friday | Saturday | Sunday;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('Monday')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('Monday')).toEqualWithType(TODO);
+            expect(state.getStaticValue('Monday')).toEqualWithType([
+                new Type.CustomType('day', [], -1),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
             expect(state.getDynamicValue('Tuesday')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('Tuesday')).toEqualWithType(TODO);
+            expect(state.getStaticValue('Tuesday')).toEqualWithType([
+                new Type.CustomType('day', [], -1),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
             expect(state.getDynamicValue('Wednesday')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('Wednesday')).toEqualWithType(TODO);
+            expect(state.getStaticValue('Wednesday')).toEqualWithType([
+                new Type.CustomType('day', [], -1),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
             expect(state.getDynamicValue('Thursday')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('Thursday')).toEqualWithType(TODO);
+            expect(state.getStaticValue('Thursday')).toEqualWithType([
+                new Type.CustomType('day', [], -1),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
             expect(state.getDynamicValue('Friday')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('Friday')).toEqualWithType(TODO);
+            expect(state.getStaticValue('Friday')).toEqualWithType([
+                new Type.CustomType('day', [], -1),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
             expect(state.getDynamicValue('Saturday')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('Saturday')).toEqualWithType(TODO);
+            expect(state.getStaticValue('Saturday')).toEqualWithType([
+                new Type.CustomType('day', [], -1),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
             expect(state.getDynamicValue('Sunday')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('Sunday')).toEqualWithType(TODO);
+            expect(state.getStaticValue('Sunday')).toEqualWithType([
+                new Type.CustomType('day', [], -1),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
         }],
         ['fun weekend Saturday = true | weekend Sunday = true | weekend _ = false;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('weekend')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('weekend')).toEqualWithType(TODO);
+            expect(state.getStaticValue('weekend')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.CustomType('day', [], -1),
+                    new Type.CustomType('bool')
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['weekend Saturday;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.BoolValue(true));
-            //expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('bool'), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('bool'), 0]);
         }],
         ['map weekend [Monday, Wednesday, Friday, Saturday, Sunday];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -4021,7 +4078,7 @@ datatype order = LESS | EQUAL | GREATER;
                 new Val.BoolValue(true),
                 new Val.BoolValue(true)
             ]));
-            //expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('real'), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('list', [new Type.CustomType('bool')]), 0]);
         }]
     ]);
 });
@@ -4049,19 +4106,71 @@ fun mirror (Point(x,y)) = Point(x,~y);
         ['datatype object = Circle of point * real | Triangle of point * point * point;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('Circle')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('Circle')).toEqualWithType(TODO);
+            expect(state.getStaticValue('Circle')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.RecordType(new Map([
+                        ['1', new Type.RecordType(new Map([
+                            ['1', new Type.CustomType('real', [], 13)],
+                            ['2', new Type.CustomType('real', [], 20)]
+                        ]), true, 18)],
+                        ['2', new Type.CustomType('real', [], 36)]
+                    ]), true, 34),
+                    new Type.CustomType('object', [], -1)
+                ),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
             expect(state.getDynamicValue('Triangle')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('Triangle')).toEqualWithType(TODO);
+            expect(state.getStaticValue('Triangle')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.RecordType(new Map([
+                        ['1', new Type.RecordType(new Map([
+                            ['1', new Type.CustomType('real', [], 13)],
+                            ['2', new Type.CustomType('real', [], 20)]
+                        ]), true, 18)],
+                        ['2', new Type.RecordType(new Map([
+                            ['1', new Type.CustomType('real', [], 13)],
+                            ['2', new Type.CustomType('real', [], 20)]
+                        ]), true, 18)],
+                        ['3', new Type.RecordType(new Map([
+                            ['1', new Type.CustomType('real', [], 13)],
+                            ['2', new Type.CustomType('real', [], 20)]
+                        ]), true, 18)]
+                    ]), true, 61),
+                    new Type.CustomType('object', [], -1)
+                ),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
         }],
         ['fun mirror ((x,y):point) = (x,~y);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('mirror')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('mirror')).toEqualWithType(TODO);
+            expect(state.getStaticValue('mirror')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.RecordType(new Map([
+                        ['1', new Type.CustomType('real', [], 13)],
+                        ['2', new Type.CustomType('real', [], 20)]
+                    ]), true, ),
+                    new Type.RecordType(new Map([
+                        ['1', new Type.CustomType('real', [], 13)],
+                        ['2', new Type.CustomType('real', [], 20)]
+                    ]), true, )
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['datatype point = Point of real * real;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('Point')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('Point')).toEqualWithType(TODO);
+            expect(state.getStaticValue('Point')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.RecordType(new Map([
+                        ['1', new Type.CustomType('real', [], 26)],
+                        ['2', new Type.CustomType('real', [], 33)]
+                    ]), true, 31),
+                    new Type.CustomType('point', [], -1)
+                ),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
         }],
         ['Point (2.0, 3.0);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -4069,12 +4178,21 @@ fun mirror (Point(x,y)) = Point(x,~y);
                 ['1', new Val.Real(2)],
                 ['2', new Val.Real(3)]
             ])), 0));
-            //expect(state.getStaticValue('it')).toEqualWithType(TODO);
+            expect(state.getStaticValue('it')).toEqualWithType([
+                new Type.CustomType('point', [], -1),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['fun mirror (Point(x,y)) = Point(x,~y);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('mirror')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('mirror')).toEqualWithType(TODO);
+            expect(state.getStaticValue('mirror')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.CustomType('point', [], -1),
+                    new Type.CustomType('point', [], -1)
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }]
     ]);
 });
@@ -4095,13 +4213,43 @@ val e = M(A(M(C 2, V "x"), V "y"), A(V "x", C 3));
         ['datatype exp = C of int | V of var | A of exp * exp | M of exp * exp;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('C')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('C')).toEqualWithType(TODO);
+            expect(state.getStaticValue('C')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.CustomType('int', [], 20),
+                    new Type.CustomType('exp', [], -1)
+                ),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
             expect(state.getDynamicValue('V')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('V')).toEqualWithType(TODO);
+            expect(state.getStaticValue('V')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.CustomType('string', [], 11),
+                    new Type.CustomType('exp', [], -1)
+                ),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
             expect(state.getDynamicValue('A')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('A')).toEqualWithType(TODO);
+            expect(state.getStaticValue('A')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.RecordType(new Map([
+                        ['1', new Type.CustomType('exp', [], 42)],
+                        ['2', new Type.CustomType('exp', [], 48)]
+                    ]), true, 46),
+                    new Type.CustomType('exp', [], -1)
+                ),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
             expect(state.getDynamicValue('M')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('M')).toEqualWithType(TODO);
+            expect(state.getStaticValue('M')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.RecordType(new Map([
+                        ['1', new Type.CustomType('exp', [], 59)],
+                        ['2', new Type.CustomType('exp', [], 65)]
+                    ]), true, 63),
+                    new Type.CustomType('exp', [], -1)
+                ),
+                State.IdentifierStatus.VALUE_CONSTRUCTOR
+            ]);
         }],
         ['val e = M(A(M(C 2, V "x"), V "y"), A(V "x", C 3));', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -4128,7 +4276,10 @@ val e = M(A(M(C 2, V "x"), V "y"), A(V "x", C 3));
                     0)],
                 ])), 0)]
             ])), 0));
-            //expect(state.getStaticValue('e')).toEqualWithType(TODO);
+            expect(state.getStaticValue('e')).toEqualWithType([
+                new Type.CustomType('exp', [], -1),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }]
     ]);
 });
