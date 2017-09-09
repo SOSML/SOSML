@@ -758,7 +758,7 @@ export class CustomType extends Type {
                 public position: number = 0,
                 public qualifiedName: LongIdentifierToken | undefined = undefined,
                 public opaque: boolean = false,
-                public id = 0) {
+                public id: number = 0) {
         super();
     }
 
