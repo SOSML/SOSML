@@ -1619,14 +1619,14 @@ gauss 10;
                     new Type.FunctionType(
                         new Type.CustomType('int', [], 15),
                         new Type.FunctionType(
-                            new Type.TypeVariable('\'a', 23),
+                            new Type.TypeVariable('\'a', ),
                             new Type.FunctionType(
                                 new Type.FunctionType(
-                                    new Type.TypeVariable('\'a', 30),
-                                    new Type.TypeVariable('\'a', 34),
+                                    new Type.TypeVariable('\'a', ),
+                                    new Type.TypeVariable('\'a', ),
                                     32
                                 ),
-                                new Type.TypeVariable('\'a', 23)
+                                new Type.TypeVariable('\'a', )
                             )
                         )
                     )
@@ -1705,11 +1705,11 @@ project2 (1,true);
                         new Type.FunctionType(
                             new Type.RecordType(
                                 new Map([
-                                    ['1', new Type.TypeVariable('\'a', 24)],
-                                    ['2', new Type.TypeVariable('\'b', 30)]
+                                    ['1', new Type.TypeVariable('\'a', )],
+                                    ['2', new Type.TypeVariable('\'b', )]
                                 ])
                             ),
-                            new Type.TypeVariable('\'b', 30)
+                            new Type.TypeVariable('\'b', )
                         )
                     )
                 ),
@@ -1746,8 +1746,8 @@ val x = id(id 3, id 5.0);
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.TypeVariable('\'a', 13),
-                        new Type.TypeVariable('\'a', 13)
+                        new Type.TypeVariable('\'a', ),
+                        new Type.TypeVariable('\'a', )
                     )
                 ),
             0]);
