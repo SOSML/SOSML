@@ -1,6 +1,7 @@
-import { ElaborationError } from './errors';
+import { ElaborationError, Warning } from './errors';
 import { State } from './state';
 import { LongIdentifierToken } from './tokens';
+import { Pattern, Expression } from './expressions';
 
 export abstract class Type {
     abstract toString(): string;
@@ -37,6 +38,11 @@ export abstract class Type {
 
     qualify(state: State, qualifiers: LongIdentifierToken): Type {
         return this;
+    }
+
+    checkExhaustiveness(state: State, position: number, match: [Pattern & Expression, Expression][]): Warning[] {
+        // TODO
+        return [];
     }
 
     // Mark all type variables as free
@@ -114,6 +120,11 @@ export class AnyType extends Type {
         super();
     }
 
+    checkExhaustiveness(state: State, position: number, match: [Pattern & Expression, Expression][]): Warning[] {
+        // TODO
+        return [];
+    }
+
     toString(): string {
         return 'any';
     }
@@ -152,6 +163,11 @@ export class TypeVariableBind extends Type {
     constructor(public name: string, public type: Type, public domain: Type[] = []) {
         super();
         this.isFree = false;
+    }
+
+    checkExhaustiveness(state: State, position: number, match: [Pattern & Expression, Expression][]): Warning[] {
+        // TODO
+        return [];
     }
 
     simplify(): TypeVariableBind {
@@ -292,6 +308,11 @@ export class TypeVariable extends Type {
     constructor(public name: string, public position: number = 0) {
         super();
         this.isFree = false;
+    }
+
+    checkExhaustiveness(state: State, position: number, match: [Pattern & Expression, Expression][]): Warning[] {
+        // TODO
+        return [];
     }
 
     makeFree(): Type {
@@ -441,6 +462,11 @@ export class RecordType extends Type {
     constructor(public elements: Map<string, Type>, public complete: boolean = true,
                 public position: number = 0) {
         super();
+    }
+
+    checkExhaustiveness(state: State, position: number, match: [Pattern & Expression, Expression][]): Warning[] {
+        // TODO
+        return [];
     }
 
     makeFree(): Type {
@@ -662,6 +688,11 @@ export class FunctionType extends Type {
         super();
     }
 
+    checkExhaustiveness(state: State, position: number, match: [Pattern & Expression, Expression][]): Warning[] {
+        // TODO
+        return [];
+    }
+
     makeFree(): Type {
         return new FunctionType(this.parameterType.makeFree(), this.returnType.makeFree());
     }
@@ -760,6 +791,11 @@ export class CustomType extends Type {
                 public opaque: boolean = false,
                 public id: number = 0) {
         super();
+    }
+
+    checkExhaustiveness(state: State, position: number, match: [Pattern & Expression, Expression][]): Warning[] {
+        // TODO
+        return [];
     }
 
     isOpaque(): boolean {

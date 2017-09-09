@@ -462,18 +462,18 @@ let initialState: State = new State(
             'print':        [new PredefinedFunction('print', (val: Value) => {
                 let warns: Warning[] = [];
                 if (val instanceof StringValue) {
-                    warns.push(new Warning(-1, (<StringValue> val).value));
+                    warns.push(new Warning(-2, (<StringValue> val).value));
                 } else {
-                    warns.push(new Warning(-1, val.toString(undefined)));
+                    warns.push(new Warning(-2, val.toString(undefined)));
                 }
                 return [new RecordValue(), false, warns];
             }), IdentifierStatus.VALUE_VARIABLE],
             'printLn':        [new PredefinedFunction('printLn', (val: Value) => {
                 let warns: Warning[] = [];
                 if (val instanceof StringValue) {
-                    warns.push(new Warning(-1, (<StringValue> val).value + '\n'));
+                    warns.push(new Warning(-2, (<StringValue> val).value + '\n'));
                 } else {
-                    warns.push(new Warning(-1, val.toString(undefined) + '\n'));
+                    warns.push(new Warning(-2, val.toString(undefined) + '\n'));
                 }
                 return [new RecordValue(), false, warns];
             }), IdentifierStatus.VALUE_VARIABLE]
