@@ -320,10 +320,28 @@ export class State {
                 public freeTypeVariables: FreeTypeVariableInformation
                     = [0, new Map<string, [Type, boolean]>()],
                 private infixEnvironment: InfixEnvironment = {},
-                private valueIdentifierId: { [name: string]: number } = {}) {
+                public valueIdentifierId: { [name: string]: number } = {}) {
     }
 
-    getMemoryChanges(stopId: number): [number, Value][] {
+    getIdChanges(stopId: number): { [name: string]: number } {
+        if (this.id === stopId) {
+            return {};
+        }
+        let res: { [name: string]: number } = {};
+
+        if (this.parent !== undefined) {
+            res = this.parent.getIdChanges(stopId);
+        }
+
+        for (let i in this.valueIdentifierId) {
+            if (this.valueIdentifierId.hasOwnProperty(i)) {
+                res[i] = this.valueIdentifierId[i];
+            }
+        }
+        return res;
+   }
+
+   getMemoryChanges(stopId: number): [number, Value][] {
         if (this.id === stopId) {
             return [];
         }

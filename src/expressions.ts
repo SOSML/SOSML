@@ -11,6 +11,7 @@ import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
 import { getInitialState } from './initialState';
 
 type MemBind = [number, Value][];
+type IdCnt = { [name: string]: number };
 
 export abstract class Expression {
     position: number;
@@ -20,12 +21,12 @@ export abstract class Expression {
             nextName: string            = '\'*t0',
             tyVars: Set<string>         = new Set<string>(),
             forceRebind: boolean       = false)
-        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
         throw new InternalInterpreterError(this.position, 'Called "getType" on a derived form.');
     }
 
     // Computes the value of an expression, returns [computed value, is thrown exception]
-    compute(state: State): [Value, boolean, Warning[], MemBind] {
+    compute(state: State): [Value, boolean, Warning[], MemBind, IdCnt] {
         throw new InternalInterpreterError(this.position, 'Called "getValue" on a derived form.');
     }
 
@@ -74,18 +75,23 @@ export class Constant extends Expression implements Pattern {
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
-        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         if (this.token instanceof IntegerConstantToken || this.token instanceof NumericToken) {
-            return [new CustomType('int'), [], nextName, tyVars, tyVarBnd];
+            return [new CustomType('int'), [], nextName, tyVars, tyVarBnd,
+                state.valueIdentifierId];
         } else if (this.token instanceof RealConstantToken) {
-            return [new CustomType('real'), [], nextName, tyVars, tyVarBnd];
+            return [new CustomType('real'), [], nextName, tyVars, tyVarBnd,
+                state.valueIdentifierId];
         } else if (this.token instanceof WordConstantToken) {
-            return [new CustomType('word'), [], nextName, tyVars, tyVarBnd];
+            return [new CustomType('word'), [], nextName, tyVars, tyVarBnd,
+                state.valueIdentifierId];
         } else if (this.token instanceof CharacterConstantToken) {
-            return [new CustomType('char'), [], nextName, tyVars, tyVarBnd];
+            return [new CustomType('char'), [], nextName, tyVars, tyVarBnd,
+                state.valueIdentifierId];
         } else if (this.token instanceof StringConstantToken) {
-            return [new CustomType('string'), [], nextName, tyVars, tyVarBnd];
+            return [new CustomType('string'), [], nextName, tyVars, tyVarBnd,
+                state.valueIdentifierId];
         } else {
             throw new InternalInterpreterError(this.token.position,
                 '"' + this + '" does not seem to be a valid constant.');
@@ -98,18 +104,22 @@ export class Constant extends Expression implements Pattern {
         return this.token.getText();
     }
 
-    compute(state: State): [Value, boolean, Warning[], MemBind] {
+    compute(state: State): [Value, boolean, Warning[], MemBind, IdCnt] {
         if (this.token instanceof IntegerConstantToken || this.token instanceof NumericToken) {
             return [new Integer((<IntegerConstantToken | NumericToken> this.token).value),
-                false, [], []];
+                false, [], [], state.valueIdentifierId];
         } else if (this.token instanceof RealConstantToken) {
-            return [new Real((<RealConstantToken> this.token).value), false, [], []];
+            return [new Real((<RealConstantToken> this.token).value),
+                false, [], [], state.valueIdentifierId];
         } else if (this.token instanceof WordConstantToken) {
-            return [new Word((<WordConstantToken> this.token).value), false, [], []];
+            return [new Word((<WordConstantToken> this.token).value),
+                false, [], [], state.valueIdentifierId];
         } else if (this.token instanceof CharacterConstantToken) {
-            return [new CharValue((<CharacterConstantToken> this.token).value), false, [], []];
+            return [new CharValue((<CharacterConstantToken> this.token).value),
+                false, [], [], state.valueIdentifierId];
         } else if (this.token instanceof StringConstantToken) {
-            return [new StringValue((<StringConstantToken> this.token).value), false, [], []];
+            return [new StringValue((<StringConstantToken> this.token).value),
+                false, [], [], state.valueIdentifierId];
         }
         throw new EvaluationError(this.token.position, 'You sure that this is a constant?');
     }
@@ -122,7 +132,7 @@ export class ValueIdentifier extends Expression implements Pattern {
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
-        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         let res: [Type, IdentifierStatus] | undefined = undefined;
         if (this.name instanceof LongIdentifierToken) {
@@ -148,7 +158,7 @@ export class ValueIdentifier extends Expression implements Pattern {
             } else if (tyVarBnd.has(tv.name)) {
                 let tmp = (<[Type, boolean]> tyVarBnd.get(tv.name))[0].instantiate(
                     state, mps);
-                return [tmp, [], nextName, tyVars, mps];
+                return [tmp, [], nextName, tyVars, mps, state.valueIdentifierId];
             } else if (res === undefined) {
                 throw new ElaborationError(this.position, 'Unbound value identifier "'
                     + this.name.getText() + '".');
@@ -200,7 +210,7 @@ export class ValueIdentifier extends Expression implements Pattern {
         if (bnd) {
             mps = mps.set('\'**' + this.name.getText(), [r2, false]);
         }
-        return [r2, [], nextName, tyVars, mps];
+        return [r2, [], nextName, tyVars, mps, state.valueIdentifierId];
     }
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
@@ -261,7 +271,7 @@ export class ValueIdentifier extends Expression implements Pattern {
         return this.name.getText();
     }
 
-    compute(state: State): [Value, boolean, Warning[], MemBind] {
+    compute(state: State): [Value, boolean, Warning[], MemBind, IdCnt] {
         let res: [Value, IdentifierStatus] | undefined = undefined;
         if (this.name instanceof LongIdentifierToken) {
             let st = state.getAndResolveDynamicStructure(<LongIdentifierToken> this.name);
@@ -279,14 +289,16 @@ export class ValueIdentifier extends Expression implements Pattern {
 
         if (res[1] === IdentifierStatus.VALUE_CONSTRUCTOR
             && (<ValueConstructor> res[0]).numArgs === 0) {
-            return [(<ValueConstructor> res[0]).construct(), false, [], []];
+            return [(<ValueConstructor> res[0]).construct(),
+                false, [], [], state.valueIdentifierId];
         }
         if (res[1] === IdentifierStatus.EXCEPTION_CONSTRUCTOR
             && (<ExceptionConstructor> res[0]).numArgs === 0) {
-            return [(<ExceptionConstructor> res[0]).construct(), false, [], []];
+            return [(<ExceptionConstructor> res[0]).construct(),
+                false, [], [], state.valueIdentifierId];
         }
 
-        return [res[0], false, [], []];
+        return [res[0], false, [], [], state.valueIdentifierId];
     }
 }
 
@@ -390,7 +402,7 @@ export class Record extends Expression implements Pattern {
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
-        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         let e: Map<string, Type> = new Map<string, Type>();
         let warns: Warning[] = [];
@@ -410,9 +422,10 @@ export class Record extends Expression implements Pattern {
             tmp[4].forEach((val: [Type, boolean], key: string) => {
                 bnds = bnds.set(key, val);
             });
+            state.valueIdentifierId = tmp[5];
             e = e.set(name, tmp[0]);
         }
-        return [new RecordType(e, this.complete), warns, nextName, tyVars, bnds];
+        return [new RecordType(e, this.complete), warns, nextName, tyVars, bnds, state.valueIdentifierId];
     }
 
     simplify(): Record {
@@ -444,7 +457,7 @@ export class Record extends Expression implements Pattern {
         return result + '}';
     }
 
-    compute(state: State): [Value, boolean, Warning[], MemBind] {
+    compute(state: State): [Value, boolean, Warning[], MemBind, IdCnt] {
         let nentr = new Map<string, Value>();
         let warns: Warning[] = [];
         let membnd: MemBind = [];
@@ -452,16 +465,17 @@ export class Record extends Expression implements Pattern {
             let res = this.entries[i][1].compute(state);
             warns = warns.concat(res[2]);
             membnd = membnd.concat(res[3]);
+            state.valueIdentifierId = res[4];
             for (let j = 0; j < res[3].length; ++j) {
                 state.setCell(res[3][j][0], res[3][j][1]);
             }
             if (res[1]) {
                 // Computing some expression failed
-                return [res[0], true, warns, membnd];
+                return [res[0], true, warns, membnd, state.valueIdentifierId];
             }
             nentr = nentr.set(this.entries[i][0], res[0]);
         }
-        return [new RecordValue(nentr), false, warns, membnd];
+        return [new RecordValue(nentr), false, warns, membnd, state.valueIdentifierId];
     }
 }
 
@@ -488,7 +502,7 @@ export class LocalDeclarationExpression extends Expression {
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
-        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         let nstate = state.getNestedState(state.id);
         tyVarBnd.forEach((val: [Type, boolean], key: string) => {
@@ -553,18 +567,18 @@ export class LocalDeclarationExpression extends Expression {
                 */
 
         let r2 = this.expression.getType(res[0], res[2], res[3], tyVars, forceRebind);
-        return [r2[0], res[1].concat(r2[1]), r2[2], r2[3], r2[4]];
+        return [r2[0], res[1].concat(r2[1]), r2[2], r2[3], r2[4], r2[5]];
     }
 
-    compute(state: State): [Value, boolean, Warning[], MemBind] {
+    compute(state: State): [Value, boolean, Warning[], MemBind, IdCnt] {
         let nstate = state.getNestedState(0).getNestedState(state.id);
         let res = this.declaration.evaluate(nstate);
         let membnd = res[0].getMemoryChanges(0);
         if (res[1]) {
-            return [<Value> res[2], true, res[3], membnd];
+            return [<Value> res[2], true, res[3], membnd, res[0].valueIdentifierId];
         }
         let nres = this.expression.compute(res[0]);
-        return [nres[0], nres[1], res[3].concat(nres[2]), membnd.concat(nres[3])];
+        return [nres[0], nres[1], res[3].concat(nres[2]), membnd.concat(nres[3]), nres[4]];
     }
 }
 
@@ -605,14 +619,14 @@ export class TypedExpression extends Expression implements Pattern {
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
-        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         let tp = this.expression.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
 
         try {
             let ann = this.typeAnnotation.instantiate(state, tp[4]);
             let tmp = tp[0].merge(state, tp[4], ann);
-            return [tmp[0], tp[1], tp[2], tp[3], tmp[1]];
+            return [tmp[0], tp[1], tp[2], tp[3], tmp[1], tp[5]];
         } catch (e) {
             if (!(e instanceof Array)) {
                 throw e;
@@ -635,7 +649,7 @@ export class TypedExpression extends Expression implements Pattern {
         return res + ' )';
     }
 
-    compute(state: State): [Value, boolean, Warning[], MemBind] {
+    compute(state: State): [Value, boolean, Warning[], MemBind, IdCnt] {
         return this.expression.compute(state);
     }
 }
@@ -755,9 +769,10 @@ export class FunctionApplication extends Expression implements Pattern {
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
-        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         let f = this.func.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
+        state.valueIdentifierId = f[5];
         let arg = this.argument.getType(state, f[4], f[2], f[3], forceRebind);
 
         arg[4].forEach((val: [Type, boolean], key: string) => {
@@ -784,7 +799,7 @@ export class FunctionApplication extends Expression implements Pattern {
             try {
                 let tp = (<FunctionType> f[0]).parameterType.merge(state, f[4], arg[0]);
                 return [(<FunctionType> f[0]).returnType.instantiate(state, tp[1]),
-                    f[1].concat(arg[1]), arg[2], arg[3], tp[1]];
+                    f[1].concat(arg[1]), arg[2], arg[3], tp[1], arg[5]];
             } catch (e) {
                 if (!(e instanceof Array)) {
                     throw e;
@@ -810,12 +825,12 @@ export class FunctionApplication extends Expression implements Pattern {
         return res + ' )';
     }
 
-    compute(state: State): [Value, boolean, Warning[], MemBind] {
+    compute(state: State): [Value, boolean, Warning[], MemBind, IdCnt] {
         if (this.func instanceof ValueIdentifier) {
             if (this.func.name.getText() === 'ref') {
                 let aVal = this.argument.compute(state);
                 if (aVal[1]) {
-                    return [aVal[0], true, aVal[2], aVal[3]];
+                    return [aVal[0], true, aVal[2], aVal[3], aVal[4]];
                 }
                 for (let i = 0; i < aVal[3].length; ++i) {
                     state.setCell(aVal[3][i][0], aVal[3][i][1]);
@@ -823,11 +838,11 @@ export class FunctionApplication extends Expression implements Pattern {
                 let res: ReferenceValue = state.setNewCell(aVal[0]);
                 aVal[3].push([res.address, aVal[0]]);
 
-                return [res, false, aVal[2], aVal[3]];
+                return [res, false, aVal[2], aVal[3], aVal[4]];
             } else if (this.func.name.getText() === ':=') {
                 let aVal = this.argument.compute(state);
                 if (aVal[1]) {
-                    return [aVal[0], true, aVal[2], aVal[3]];
+                    return [aVal[0], true, aVal[2], aVal[3], aVal[4]];
                 }
                 for (let i = 0; i < aVal[3].length; ++i) {
                     state.setCell(aVal[3][i][0], aVal[3][i][1]);
@@ -839,11 +854,11 @@ export class FunctionApplication extends Expression implements Pattern {
                 }
                 aVal[3].push([(<ReferenceValue> (<RecordValue> aVal[0]).getValue('1')).address,
                     (<RecordValue> aVal[0]).getValue('2')]);
-                return [new RecordValue(), false, aVal[2], aVal[3]];
+                return [new RecordValue(), false, aVal[2], aVal[3], aVal[4]];
             } else if (this.func.name.getText() === '!') {
                 let aVal = this.argument.compute(state);
                 if (aVal[1]) {
-                    return [aVal[0], true, aVal[2], aVal[3]];
+                    return [aVal[0], true, aVal[2], aVal[3], aVal[4]];
                 }
                 for (let i = 0; i < aVal[3].length; ++i) {
                     state.setCell(aVal[3][i][0], aVal[3][i][1]);
@@ -852,7 +867,7 @@ export class FunctionApplication extends Expression implements Pattern {
                     throw new EvaluationError(this.position,
                         'You cannot dereference "' + this.argument + '".');
                 }
-                return [<Value> state.getCell((<ReferenceValue> aVal[0]).address), false, aVal[2], aVal[3]];
+                return [<Value> state.getCell((<ReferenceValue> aVal[0]).address), false, aVal[2], aVal[3], aVal[4]];
             }
         }
 
@@ -865,12 +880,13 @@ export class FunctionApplication extends Expression implements Pattern {
         for (let i = 0; i < funcVal[3].length; ++i) {
             state.setCell(funcVal[3][i][0], funcVal[3][i][1]);
         }
+        state.valueIdentifierId = funcVal[4];
 
         let argVal = this.argument.compute(state);
         let warns = funcVal[2].concat(argVal[2]);
         let membnd = funcVal[3].concat(argVal[3]);
         if (argVal[1]) {
-            return [argVal[0], true, warns, membnd];
+            return [argVal[0], true, warns, membnd, argVal[4]];
         }
         if (funcVal[0] instanceof FunctionValue) {
             for (let i = 0; i < argVal[3].length; ++i) {
@@ -885,14 +901,14 @@ export class FunctionApplication extends Expression implements Pattern {
             }
 
             let res = (<FunctionValue> funcVal[0]).compute(argVal[0], nmem);
-            return [res[0], res[1], warns.concat(res[2]), membnd.concat(res[3])];
+            return [res[0], res[1], warns.concat(res[2]), membnd.concat(res[3]), argVal[4]];
         } else if (funcVal[0] instanceof ValueConstructor) {
-            return [(<ValueConstructor> funcVal[0]).construct(argVal[0]), false, warns, membnd];
+            return [(<ValueConstructor> funcVal[0]).construct(argVal[0]), false, warns, membnd, argVal[4]];
         } else if (funcVal[0] instanceof ExceptionConstructor) {
-            return [(<ExceptionConstructor> funcVal[0]).construct(argVal[0]), false, warns, membnd];
+            return [(<ExceptionConstructor> funcVal[0]).construct(argVal[0]), false, warns, membnd, argVal[4]];
         } else if (funcVal[0] instanceof PredefinedFunction) {
             let res = (<PredefinedFunction> funcVal[0]).apply(argVal[0]);
-            return [res[0], res[1], warns.concat(res[2]), membnd];
+            return [res[0], res[1], warns.concat(res[2]), membnd, argVal[4]];
         }
         throw new EvaluationError(this.position, 'Cannot evaluate the function "'
             + this.func + '" (' + funcVal[0].constructor.name + ').');
@@ -914,15 +930,15 @@ export class HandleException extends Expression {
     }
 
     toString(): string {
-        let res = '( ( ' + this.expression + ' )';
-        res += ' handle ' + this.match + ' )';
+        let res = '( ' + this.expression + ' )';
+        res += ' handle ' + this.match;
         return res;
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
-        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         let mtp = this.match.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
         if ((!(mtp[0] instanceof FunctionType))
@@ -932,11 +948,12 @@ export class HandleException extends Expression {
                 + (<FunctionType> mtp[0]).parameterType.normalize()[0] + '".');
         }
         let rt = (<FunctionType> mtp[0]).returnType;
+        state.valueIdentifierId = mtp[5];
         let etp = this.expression.getType(state, mtp[4], mtp[2], mtp[3], forceRebind);
 
         try {
             let res = rt.merge(state, etp[4], etp[0]);
-            return [res[0], mtp[1].concat(etp[1]), etp[2], etp[3], res[1]];
+            return [res[0], mtp[1].concat(etp[1]), etp[2], etp[3], res[1], etp[5]];
         } catch (e) {
             if (!(e instanceof Array)) {
                 throw e;
@@ -947,20 +964,22 @@ export class HandleException extends Expression {
         }
     }
 
-    compute(state: State): [Value, boolean, Warning[], MemBind] {
+    compute(state: State): [Value, boolean, Warning[], MemBind, IdCnt] {
         let res = this.expression.compute(state);
         if (res[1]) {
             for (let i = 0; i < res[3].length; ++i) {
                 state.setCell(res[3][i][0], res[3][i][1]);
             }
+            state.valueIdentifierId = res[4];
 
             let next = this.match.compute(state, res[0]);
             if (!next[1] || !next[0].equals(new ExceptionValue('Match', undefined, 0))) {
                 // Exception got handled
-                return [next[0], next[1], res[2].concat(next[2]), res[3].concat(next[3])];
+                return [next[0], next[1], res[2].concat(next[2]), res[3].concat(next[3]), next[4]];
             }
             res[2] = res[2].concat(next[2]);
             res[3] = res[3].concat(next[3]);
+            res[4] = next[4];
         }
         return res;
     }
@@ -985,12 +1004,12 @@ export class RaiseException extends Expression {
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
-        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         let res = this.expression.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
         try {
             let mg = res[0].merge(state, tyVarBnd, new CustomType('exn'));
-            return [new AnyType(), res[1], res[2], res[3], mg[1]];
+            return [new AnyType(), res[1], res[2], res[3], mg[1], res[5]];
         } catch (e) {
             if (!(e instanceof Array)) {
                 throw e;
@@ -1000,14 +1019,14 @@ export class RaiseException extends Expression {
         }
     }
 
-    compute(state: State): [Value, boolean, Warning[], MemBind] {
+    compute(state: State): [Value, boolean, Warning[], MemBind, IdCnt] {
         let res = this.expression.compute(state);
         if (!(res[0] instanceof ExceptionValue)) {
             throw new EvaluationError(this.position,
                 'Cannot "raise" value of type "' + res.constructor.name
                 + '" (type must be "exn").');
         }
-        return [res[0], true, res[2], res[3]];
+        return [res[0], true, res[2], res[3], res[4]];
     }
 }
 
@@ -1026,11 +1045,11 @@ export class Lambda extends Expression {
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
-        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
         return this.match.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
     }
 
-    compute(state: State): [Value, boolean, Warning[], MemBind] {
+    compute(state: State): [Value, boolean, Warning[], MemBind, IdCnt] {
         // We need to ensure that the function value receives a capture
         // of the current state, and that that capture stays that way
         // (Local declarations may change the past, so we must record that, too.
@@ -1038,7 +1057,7 @@ export class Lambda extends Expression {
 
         nstate.dynamicBasis = state.getDynamicChanges(-1);
 
-        return [new FunctionValue(nstate, [], this.match), false, [], []];
+        return [new FunctionValue(nstate, [], this.match), false, [], [], state.valueIdentifierId];
     }
 }
 
@@ -1060,7 +1079,7 @@ export class Match {
         return res;
     }
 
-    compute(state: State, value: Value): [Value, boolean, Warning[], MemBind] {
+    compute(state: State, value: Value): [Value, boolean, Warning[], MemBind, IdCnt] {
         for (let i = 0; i < this.matches.length; ++i) {
             let nstate = state.getNestedState(state.id);
 
@@ -1072,13 +1091,13 @@ export class Match {
                 return this.matches[i][1].compute(nstate);
             }
         }
-        return [new ExceptionValue('Match', undefined, 0), true, [], []];
+        return [new ExceptionValue('Match', undefined, 0), true, [], [], state.valueIdentifierId];
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false):
-    [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
+    [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         let restp: Type = new FunctionType(new AnyType(), new AnyType());
         let warns: Warning[] = [];
@@ -1090,12 +1109,11 @@ export class Match {
                 nmap = nmap.set(key, val);
             });
             let r1 = this.matches[i][0].getType(state, bnds, nextName, tyVars, true);
-
-
+            state.valueIdentifierId = r1[5];
             warns = warns.concat(r1[1]);
-
             let r2 = this.matches[i][1].getType(state, r1[4], r1[2], r1[3], forceRebind);
             warns = warns.concat(r2[1]);
+            state.valueIdentifierId = r2[5];
             nextName = r2[2];
             tyVars = r2[3];
 
@@ -1118,7 +1136,7 @@ export class Match {
             });
             bnds = nmap;
         }
-        return [restp, warns, nextName, tyVars, bnds];
+        return [restp, warns, nextName, tyVars, bnds, state.valueIdentifierId];
     }
 
     simplify(): Match {
@@ -1139,7 +1157,7 @@ export class Wildcard extends Expression implements Pattern {
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
-        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         let cur = (+nextName.substring(3)) + 1;
         let nm = '';
@@ -1148,13 +1166,13 @@ export class Wildcard extends Expression implements Pattern {
             if (!tyVars.has(nextName) && !tyVarBnd.has(nextName)
                 && state.getStaticValue(nextName) === undefined) {
                 nm = nextName;
-                return [new TypeVariable(nm), [], nm, tyVars.add(nm), tyVarBnd];
+                return [new TypeVariable(nm), [], nm, tyVars.add(nm), tyVarBnd, state.valueIdentifierId];
             }
         }
 
     }
 
-    compute(state: State): [Value, boolean, Warning[], MemBind] {
+    compute(state: State): [Value, boolean, Warning[], MemBind, IdCnt] {
         throw new InternalInterpreterError(this.position,
             'Wildcards are far too wild to have a value.');
     }
@@ -1186,7 +1204,7 @@ export class LayeredPattern extends Expression implements Pattern {
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
-        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>] {
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
         if (!forceRebind) {
             throw new InternalInterpreterError(this.position,
                 'Layered patterns are far too layered to have a type.');
@@ -1222,10 +1240,10 @@ export class LayeredPattern extends Expression implements Pattern {
             throw new ElaborationError(this.position, 'Wrong type annotation: ' + e[0]);
         }
 
-        return [tp, gtp[1].concat(argtp[1]), argtp[2], argtp[3], tyVarBnd];
+        return [tp, gtp[1].concat(argtp[1]), argtp[2], argtp[3], tyVarBnd, state.valueIdentifierId];
     }
 
-    compute(state: State): [Value, boolean, Warning[], MemBind] {
+    compute(state: State): [Value, boolean, Warning[], MemBind, IdCnt] {
         throw new InternalInterpreterError(this.position,
             'Layered patterns are far too layered to have a value.');
     }

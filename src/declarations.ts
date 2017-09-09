@@ -8,6 +8,7 @@ import { InternalInterpreterError, ElaborationError,
 import { Value, ValueConstructor, ExceptionConstructor, ExceptionValue,
          FunctionValue } from './values';
 
+type IdCnt = { [name: string]: number };
 export abstract class Declaration {
     id: number;
     elaborate(state: State,
@@ -75,6 +76,7 @@ export class ValueDeclaration extends Declaration {
             warns = warns.concat(val[1]);
             bnds = val[2];
             nextName = val[3];
+            state.valueIdentifierId = val[4];
 
             for (let j = 0; j < (<[string, Type][]> val[0]).length; ++j) {
                 result.push((<[string, Type][]> val[0])[j]);
@@ -91,6 +93,7 @@ export class ValueDeclaration extends Declaration {
             bcp = bcp.set(key, val);
         });
         let ncp = nextName;
+        let ids = state.valueIdentifierId;
         for (let l = 0; l < 4; ++l) {
             warns = wcp;
             bnds = new Map<string, [Type, boolean]>();
@@ -98,11 +101,13 @@ export class ValueDeclaration extends Declaration {
                 bnds = bnds.set(key, val);
             });
             nextName = ncp;
+            state.valueIdentifierId = ids;
             for (let j = i; j < this.valueBinding.length; ++j) {
                 let val = this.valueBinding[j].getType(this.typeVariableSequence, state, bnds, nextName, isTopLevel);
                 warns = warns.concat(val[1]);
                 bnds = val[2];
                 nextName = val[3];
+                state.valueIdentifierId = val[4];
                 for (let k = 0; k < val[0].length; ++k) {
                     if (l === 3) {
                         // TODO find a better way to check for circularity
@@ -132,6 +137,7 @@ export class ValueDeclaration extends Declaration {
             }
             let val = this.valueBinding[i].compute(state);
             warns = warns.concat(val[2]);
+            state.valueIdentifierId = val[4];
             for (let j = 0; j < val[3].length; ++j) {
                 state.setCell(val[3][j][0], val[3][j][1]);
             }
@@ -446,8 +452,9 @@ export class LocalDeclaration extends Declaration {
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         let nstate: [State, Warning[], Map<string, [Type, boolean]>, string]
-            = [state.getNestedState(state.id), [], tyVarBnd, nextName];
+            = [state.getNestedState(0).getNestedState(state.id), [], tyVarBnd, nextName];
         let res = this.declaration.elaborate(nstate[0], tyVarBnd, nextName);
+        state.valueIdentifierId = res[0].getIdChanges(0);
         let input = res[0].getNestedState(state.id);
         nstate = this.body.elaborate(input, res[2], res[3], isTopLevel);
         // Forget all local definitions
@@ -459,6 +466,7 @@ export class LocalDeclaration extends Declaration {
         let nstate = state.getNestedState(0).getNestedState(state.id);
         let res = this.declaration.evaluate(nstate);
         let membnd = res[0].getMemoryChanges(0);
+        state.valueIdentifierId = res[0].getIdChanges(0);
 
         for (let i = 0; i < membnd.length; ++i) {
             state.setCell(membnd[i][0], membnd[i][1]);
@@ -843,7 +851,7 @@ export class ValueBinding {
 
     getType(tyVarSeq: TypeVariable[], state: State, tyVarBnd: Map<string, [Type, boolean]>,
             nextName: string, isTopLevel: boolean):
-            [[string, Type][], Warning[], Map<string, [Type, boolean]>, string] {
+            [[string, Type][], Warning[], Map<string, [Type, boolean]>, string, IdCnt] {
         let nstate = state.getNestedState(state.id);
         let tp = this.expression.getType(nstate, tyVarBnd, nextName);
         let res = this.pattern.matchType(nstate, tp[4], tp[0]);
@@ -899,16 +907,16 @@ export class ValueBinding {
             }
         }
 
-        return [res[0], tp[1], res[2], tp[2]];
+        return [res[0], tp[1], res[2], tp[2], tp[5]];
     }
 
     // Returns [ VE | undef, Excep | undef, Warning[]]
-    compute(state: State): [[string, Value][] | undefined, Value | undefined, Warning[], [number, Value][]] {
+    compute(state: State): [[string, Value][] | undefined, Value | undefined, Warning[], [number, Value][], IdCnt] {
         let v = this.expression.compute(state);
         if (v[1]) {
-            return [undefined, v[0], v[2], v[3]];
+            return [undefined, v[0], v[2], v[3], v[4]];
         }
-        return [this.pattern.matches(state, v[0]), undefined, v[2], v[3]];
+        return [this.pattern.matches(state, v[0]), undefined, v[2], v[3], v[4]];
     }
 }
 
@@ -1012,6 +1020,7 @@ export class DatatypeBinding {
         let nstate = state.getNestedState(state.id);
 
         let id = state.getValueIdentifierId(this.name.getText());
+        nstate.incrementValueIdentifierId(this.name.getText());
 
         let restp = new CustomType(this.name.getText(), this.typeVariableSequence,
             -1, undefined, false, id);
@@ -1045,7 +1054,6 @@ export class DatatypeBinding {
 
             // TODO ID
             // let id = state.getValueIdentifierId(this.type[i][0].getText());
-            // state.incrementValueIdentifierId(this.type[i][0].getText());
             ve.push([this.type[i][0].getText(), tp]);
             connames.push(this.type[i][0].getText());
         }
