@@ -310,8 +310,8 @@ export class TypeVariable extends Type {
         }
         if (seen.has(this.name)) {
             throw new ElaborationError(-1,
-                'Type clash. An expression of type "' + this.name
-                + '" cannot have type "' + (<[Type, boolean]> tyVarBnd.get(this.name))[0]
+                'Type clash. An expression of type "' + this.name.normalize()[0]
+                + '" cannot have type "' + (<[Type, boolean]> tyVarBnd.get(this.name))[0].normalize()[0]
                 + '" because of circularity.');
         }
         let nsen = new Set<string>();
@@ -360,8 +360,8 @@ export class TypeVariable extends Type {
                 let otv = oth.getTypeVariables();
                 if (otv.has((<TypeVariable> ths).name)) {
                     throw new ElaborationError(-1,
-                        'Type clash. An expression of type "' + (<TypeVariable> ths).name
-                        + '" cannot have type "' + oth + '" because of circularity.');
+                        'Type clash. An expression of type "' + (<TypeVariable> ths).name.normalize()[0]
+                        + '" cannot have type "' + oth.normalize()[0] + '" because of circularity.');
                 }
                 if (ths.isFree) {
                     oth = oth.makeFree();
@@ -369,7 +369,7 @@ export class TypeVariable extends Type {
                 if (ths.admitsEquality(state) && !oth.admitsEquality(state)) {
                     let nt = oth.makeEqType(state, tyVarBnd);
                     if (!nt[0].admitsEquality(state)) {
-                        throw ['Type "' + oth + '" does not admit equality.', ths, oth];
+                        throw ['Type "' + oth.normalize()[0] + '" does not admit equality.', ths, oth];
                     } else {
                         oth = nt[0];
                         tyVarBnd = nt[1];
@@ -512,8 +512,8 @@ export class RecordType extends Type {
         }
 
         // Merging didn't work
-        throw ['Cannot merge "' + this.instantiate(state, tyVarBnd) + '" and "'
-            + other.instantiate(state, tyVarBnd) + '".', this.constructor.name,
+        throw ['Cannot merge "' + this.instantiate(state, tyVarBnd).normalize()[0] + '" and "'
+            + other.instantiate(state, tyVarBnd).normalize()[0] + '".', this.constructor.name,
             other.constructor.name];
     }
 
@@ -575,7 +575,7 @@ export class RecordType extends Type {
     }
 
     toString(): string {
-        let isTuple = true;
+        let isTuple = this.elements.size !== 1;
         for (let i = 1; i <= this.elements.size; ++i) {
             if (!this.elements.has('' + i)) {
                 isTuple = false;
@@ -601,7 +601,6 @@ export class RecordType extends Type {
             return res + '';
         }
 
-        // TODO: print as Tuple if possible
         let result: string = '{';
         let first: boolean = true;
         this.elements.forEach((type: Type, key: string) => {
@@ -689,8 +688,8 @@ export class FunctionType extends Type {
         }
 
         // Merging didn't work
-        throw ['Cannot merge "' + this.instantiate(state, tyVarBnd) + '" and "'
-            + other.instantiate(state, tyVarBnd) + '".', this.constructor.name,
+        throw ['Cannot merge "' + this.instantiate(state, tyVarBnd).normalize()[0] + '" and "'
+            + other.instantiate(state, tyVarBnd).normalize()[0] + '".', this.constructor.name,
             other.constructor.name];
     }
 
@@ -759,7 +758,7 @@ export class CustomType extends Type {
                 public position: number = 0,
                 public qualifiedName: LongIdentifierToken | undefined = undefined,
                 public opaque: boolean = false,
-                public id = 0) {
+                public id: number = 0) {
         super();
     }
 
@@ -817,7 +816,8 @@ export class CustomType extends Type {
                 if (!(e instanceof Array)) {
                     throw e;
                 }
-                throw new ElaborationError(-1, 'Instantiating "' + this + '" failed: ' + e[0]);
+                throw new ElaborationError(-1, 'Instantiating "' + this.normalize()[0]
+                    + '" failed: ' + e[0]);
             }
         } else if (tp === undefined) {
             throw new ElaborationError(-1, 'Unbound type "' + this.name + '".');
@@ -826,7 +826,7 @@ export class CustomType extends Type {
         } else if (tp !== undefined && ((!(tp.type instanceof CustomType))
             || this.typeArguments.length !== (<CustomType> tp.type).typeArguments.length)) {
             throw new ElaborationError(this.position, 'Arity mismatch: '
-                + this + ' vs ' + tp.type + '.');
+                + this.normalize()[0] + ' vs ' + tp.type.normalize()[0] + '.');
         }
 
         let res: Type[] = [];
@@ -893,8 +893,8 @@ export class CustomType extends Type {
         }
 
         // Merging didn't work
-        throw ['Cannot merge "' + this.instantiate(state, tyVarBnd) + '" and "'
-            + other.instantiate(state, tyVarBnd) + '".', this.constructor.name,
+        throw ['Cannot merge "' + this.instantiate(state, tyVarBnd).normalize()[0] + '" and "'
+            + other.instantiate(state, tyVarBnd).normalize()[0] + '".', this.constructor.name,
             other.constructor.name];
     }
 
