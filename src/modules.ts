@@ -5,7 +5,7 @@ import { Type, TypeVariable, CustomType, TypeVariableBind, FunctionType } from '
 import { State, DynamicInterface, DynamicStructureInterface, DynamicValueInterface, StaticBasis,
          DynamicTypeInterface, IdentifierStatus, DynamicBasis, DynamicFunctorInformation,
          TypeInformation } from './state';
-import { Warning, EvaluationError, ElaborationError } from './errors';
+import { Warning, EvaluationError, ElaborationError, InternalInterpreterError } from './errors';
 import { Value } from './values';
 import { getInitialState } from './initialState';
 
@@ -519,7 +519,7 @@ export class SignatureExpression extends Expression implements Signature {
     }
 
     simplify(): SignatureExpression {
-        return this;
+        return new SignatureExpression(this.position, this.specification.simplify());
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
@@ -858,6 +858,10 @@ export abstract class Specification {
     abstract elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string];
     abstract computeInterface(state: State): DynamicInterface;
+
+    simplify(): Specification {
+        return this;
+    }
 }
 
 export class ValueSpecification extends Specification {
@@ -1051,6 +1055,15 @@ export class StructureSpecification extends Specification {
         }
         return new DynamicInterface({}, {}, res);
     }
+
+    simplify(): StructureSpecification {
+        let res: [IdentifierToken, Expression & Signature][] = [];
+        for (let i = 0; i < this.structureDescription.length; ++i) {
+            res.push([this.structureDescription[i][0],
+                <Expression & Signature> this.structureDescription[i][1].simplify()]);
+        }
+        return new StructureSpecification(this.position, res);
+    }
 }
 
 export class IncludeSpecification extends Specification {
@@ -1079,6 +1092,14 @@ export class IncludeSpecification extends Specification {
             res = res.extend(this.expression[i].computeInterface(state));
         }
         return res;
+    }
+
+    simplify(): IncludeSpecification {
+        let res: (Expression & Signature)[] = [];
+        for (let i = 0; i < this.expression.length; ++i) {
+            res.push(<Expression & Signature> this.expression[i].simplify());
+        }
+        return new IncludeSpecification(this.position, res);
     }
 }
 
@@ -1128,6 +1149,14 @@ export class SequentialSpecification extends Specification {
         }
         return res;
     }
+
+    simplify(): SequentialSpecification {
+        let res: Specification[] = [];
+        for (let i = 0; i < this.specifications.length; ++i) {
+            res.push(this.specifications[i].simplify());
+        }
+        return new SequentialSpecification(this.position, res);
+    }
 }
 
 export class SharingSpecification extends Specification {
@@ -1145,5 +1174,36 @@ export class SharingSpecification extends Specification {
 
     computeInterface(state: State): DynamicInterface {
         return this.specification.computeInterface(state);
+    }
+}
+
+// Derived forms
+export class TypeAliasSpecification extends Specification {
+// type tyvarseq tycon = ty and ... and tyvarseq tycon = ty
+    constructor(public position: number, public alias: [TypeVariable[], IdentifierToken, Type][]) {
+        super();
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        throw new InternalInterpreterError(this.position, 'And you don\'t seem to understand…');
+    }
+
+    computeInterface(state: State): DynamicInterface {
+        throw new InternalInterpreterError(this.position, 'Being an interpreter is suffering.');
+    }
+
+    simplify(): Specification {
+        let tpspc: [TypeVariable[], IdentifierToken][] = [];
+        for (let i = 0; i < this.alias.length; ++i) {
+            tpspc.push([this.alias[i][0], this.alias[i][1]]);
+        }
+        let sg: Expression & Signature = new SignatureExpression(-1, new TypeSpecification(-1, tpspc));
+
+        for (let i = 0; i < this.alias.length; ++i) {
+            sg = new TypeRealisation(-1, sg, this.alias[i][0], this.alias[i][1], this.alias[i][2]);
+        }
+
+        return new IncludeSpecification(-1, [sg]).simplify();
     }
 }

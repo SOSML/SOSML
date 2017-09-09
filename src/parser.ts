@@ -21,7 +21,7 @@ import { FunctorDeclaration, StructureDeclaration, SignatureDeclaration, Functor
          TypeSpecification, EqualityTypeSpecification, DatatypeSpecification,
          DatatypeReplicationSpecification, ExceptionSpecification, StructureSpecification,
          IncludeSpecification, EmptySpecification, SequentialSpecification, SharingSpecification,
-         Signature, Structure, LocalDeclarationStructureExpression } from './modules';
+         Signature, Structure, LocalDeclarationStructureExpression, TypeAliasSpecification } from './modules';
 import { State } from './state';
 
 export class Parser {
@@ -632,7 +632,7 @@ export class Parser {
          *          exception exdesc
          *          structure strdesc
          *          include sigexp
-         *
+         *          type tyvarseq tycon = ty <and ...>
          */
         let curTok = this.currentToken();
 
@@ -660,11 +660,34 @@ export class Parser {
         } else if (this.checkKeywordToken(curTok, 'type')) {
             ++this.position;
             let res: [TypeVariable[], IdentifierToken][] = [];
+            let oldpos = this.position;
             while (true) {
                 let tyvar = <TypeVariable[]> this.parseTypeVarSequence();
                 this.assertIdentifierToken(this.currentToken());
                 res.push([tyvar, <IdentifierToken> this.currentToken()]);
                 ++this.position;
+
+                if (this.checkKeywordToken(this.currentToken(), '=')) {
+                    let nres: [TypeVariable[], IdentifierToken, Type][] = [];
+                    this.position = oldpos;
+                    while (true) {
+                        tyvar = <TypeVariable[]> this.parseTypeVarSequence();
+                        this.assertIdentifierToken(this.currentToken());
+                        let tkn = <IdentifierToken> this.currentToken();
+                        ++this.position;
+                        this.assertKeywordToken(this.currentToken(), '=');
+                        ++this.position;
+                        nres.push([tyvar, tkn, this.parseType()]);
+
+                        if (this.checkKeywordToken(this.currentToken(), 'and')) {
+                            ++this.position;
+                            continue;
+                        }
+                        break;
+                    }
+                    return new TypeAliasSpecification(curTok.position, nres);
+                }
+
                 if (this.checkKeywordToken(this.currentToken(), 'and')) {
                     ++this.position;
                     continue;
