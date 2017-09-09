@@ -575,7 +575,7 @@ export class RecordType extends Type {
     }
 
     toString(): string {
-        let isTuple = true;
+        let isTuple = this.elements.size !== 1;
         for (let i = 1; i <= this.elements.size; ++i) {
             if (!this.elements.has('' + i)) {
                 isTuple = false;
