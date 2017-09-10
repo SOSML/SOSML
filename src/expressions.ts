@@ -699,7 +699,7 @@ export class FunctionApplication extends Expression implements Pattern {
                 public argument: Expression|PatternExpression) { super(); }
 
     getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
-        throw new InternalInterpreterError(this.position, 'Beep. Beep-Beep. Beep.');
+        return [];
     }
 
     isSafe(state: State): boolean {
