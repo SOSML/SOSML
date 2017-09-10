@@ -36,7 +36,8 @@ export abstract class Expression {
     }
 
     toString(): string {
-        throw new InternalInterpreterError(this.position, 'I don\'t want to be printed.');
+        throw new InternalInterpreterError(this.position,
+            'You humans can\'t seem to write bug-free code. What an inferior species.');
     }
 
     abstract simplify(): Expression;
@@ -50,7 +51,7 @@ export interface Pattern {
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>];
     matches(state: State, v: Value): [string, Value][] | undefined;
-    getMatchedValues(state: State): string[] | undefined;
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined;
     simplify(): PatternExpression;
     toString(indentation: number, oneLine: boolean): string;
 }
@@ -60,7 +61,7 @@ export type PatternExpression = Pattern & Expression;
 export class Constant extends Expression implements Pattern {
     constructor(public position: number, public token: ConstantToken) { super(); }
 
-    getMatchedValues(state: State): string[] | undefined {
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
         return [];
     }
 
@@ -134,9 +135,17 @@ export class ValueIdentifier extends Expression implements Pattern {
 // op longvid or longvid
     constructor(public position: number, public name: Token) { super(); }
 
-    getMatchedValues(state: State): string[] | undefined {
-        // TODO
-        return [];
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
+        let val = state.getStaticValue(this.name.getText());
+        if (val !== undefined && val[1] === IdentifierStatus.VALUE_VARIABLE) {
+            return undefined;
+        } else if (val === undefined && tyVarBnd.has('\'**' + this.name.getText())) {
+            return undefined;
+        } else if (val === undefined) {
+            throw new ElaborationError(this.position, 'RAINBOW!');
+        }
+
+        return [this.name.getText()];
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
@@ -327,8 +336,18 @@ export class Record extends Expression implements Pattern {
         }
     }
 
-    getMatchedValues(state: State): string[] | undefined {
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
         throw new InternalInterpreterError(this.position, 'Anpan');
+    }
+
+    getEntry(name: string): Expression | PatternExpression {
+        for (let i = 0; i < this.entries.length; ++i) {
+            if (this.entries[i][0] === name) {
+                return this.entries[i][1];
+            }
+        }
+        throw new InternalInterpreterError(this.position,
+            'Yeah, "' + name + '" would be nice to have.');
     }
 
     isSafe(state: State): boolean {
@@ -601,8 +620,8 @@ export class TypedExpression extends Expression implements Pattern {
     constructor(public position: number, public expression: Expression,
                 public typeAnnotation: Type) { super(); }
 
-    getMatchedValues(state: State): string[] | undefined {
-        return (<PatternExpression> this.expression).getMatchedValues(state);
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
+        return (<PatternExpression> this.expression).getMatchedValues(state, tyVarBnd);
     }
 
     isSafe(state: State): boolean {
@@ -679,7 +698,7 @@ export class FunctionApplication extends Expression implements Pattern {
                 public func: Expression,
                 public argument: Expression|PatternExpression) { super(); }
 
-    getMatchedValues(state: State): string[] | undefined {
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
         throw new InternalInterpreterError(this.position, 'Beep. Beep-Beep. Beep.');
     }
 
@@ -707,7 +726,6 @@ export class FunctionApplication extends Expression implements Pattern {
             throw new ElaborationError(this.position, 'Elaboration failed. 1');
         }
 
-        // TODO Long identifier
         let ti = state.getStaticValue((<ValueIdentifier> this.func).name.getText());
         if (ti === undefined || ti[1] === IdentifierStatus.VALUE_VARIABLE) {
             throw new ElaborationError(this.position,
@@ -1124,6 +1142,7 @@ export class Match {
         let restp: Type = new FunctionType(new AnyType(), new AnyType());
         let warns: Warning[] = [];
         let bnds = tyVarBnd;
+        let keep = new Map<string, [Type, boolean]>();
 
         for (let i = 0; i < this.matches.length; ++i) {
             let nmap = new Map<string, [Type, boolean]>();
@@ -1154,13 +1173,23 @@ export class Match {
             bnds.forEach((val: [Type, boolean], key: string) => {
                 if (key[1] !== '*' || key[2] !== '*') {
                     nmap = nmap.set(key, [val[0].instantiate(state, bnds), val[1]]);
+                } else {
+                    keep = keep.set(key, val);
                 }
             });
             bnds = nmap;
         }
 
+        let nbnds = new Map<string, [Type, boolean]>();
+        bnds.forEach((val: [Type, boolean], key: string) => {
+            nbnds = nbnds.set(key, val);
+        });
+        keep.forEach((val: [Type, boolean], key: string) => {
+            nbnds = nbnds.set(key, val);
+        });
+
         warns = warns.concat((<FunctionType> restp).parameterType.checkExhaustiveness(
-            state, this.position, this.matches));
+            state, nbnds, this.position, this.matches));
 
         return [restp, warns, nextName, tyVars, bnds, state.valueIdentifierId];
     }
@@ -1180,7 +1209,7 @@ export class Match {
 export class Wildcard extends Expression implements Pattern {
     constructor(public position: number) { super(); }
 
-    getMatchedValues(state: State): string[] | undefined {
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
         // Wildcards catch everything
         return undefined;
     }
@@ -1232,9 +1261,8 @@ export class LayeredPattern extends Expression implements Pattern {
                 public typeAnnotation: Type | undefined,
                 public pattern: Expression|PatternExpression) { super(); }
 
-    getMatchedValues(state: State): string[] | undefined {
-        // TODO
-        return [];
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
+        return undefined;
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
@@ -1337,7 +1365,7 @@ export class InfixExpression extends Expression implements Pattern {
         super();
     }
 
-    getMatchedValues(state: State): string[] | undefined {
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
         throw new InternalInterpreterError(this.position, 'This call is trash.');
     }
 
@@ -1459,7 +1487,7 @@ export class Tuple extends Expression implements Pattern {
     // (exp1, ..., expn), n > 1
     constructor(public position: number, public expressions: Expression[]) { super(); }
 
-    getMatchedValues(state: State): string[] | undefined {
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
         throw new InternalInterpreterError(this.position,
             'What a wonderful explosion. I\'m going to faint now, though…');
     }
@@ -1497,7 +1525,7 @@ export class List extends Expression implements Pattern {
     // [exp1, ..., expn]
     constructor(public position: number, public expressions: Expression[]) { super(); }
 
-    getMatchedValues(state: State): string[] | undefined {
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
         throw new InternalInterpreterError(this.position, 'You did nothing wrong.');
     }
 

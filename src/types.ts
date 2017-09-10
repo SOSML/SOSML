@@ -1,7 +1,7 @@
 import { ElaborationError, Warning } from './errors';
 import { State } from './state';
 import { LongIdentifierToken } from './tokens';
-import { Pattern, Expression } from './expressions';
+import { Pattern, Expression, ValueIdentifier, Record, LayeredPattern, Wildcard } from './expressions';
 
 export abstract class Type {
     abstract toString(): string;
@@ -40,8 +40,12 @@ export abstract class Type {
         return this;
     }
 
-    checkExhaustiveness(state: State, position: number, match: [Pattern & Expression, Expression][]): Warning[] {
-        // TODO
+    checkExhaustiveness(state: State, tyVarBnd: Map<string, [Type, boolean]>, position: number, match:
+        [Pattern & Expression, Expression][]): Warning[] {
+        if (match.length > 1) {
+            return [new Warning(match[1][0].position,
+                'Some cases are unused in this match.')];
+        }
         return [];
     }
 
@@ -120,11 +124,6 @@ export class AnyType extends Type {
         super();
     }
 
-    checkExhaustiveness(state: State, position: number, match: [Pattern & Expression, Expression][]): Warning[] {
-        // TODO
-        return [];
-    }
-
     toString(): string {
         return 'any';
     }
@@ -163,11 +162,6 @@ export class TypeVariableBind extends Type {
     constructor(public name: string, public type: Type, public domain: Type[] = []) {
         super();
         this.isFree = false;
-    }
-
-    checkExhaustiveness(state: State, position: number, match: [Pattern & Expression, Expression][]): Warning[] {
-        // TODO
-        return [];
     }
 
     simplify(): TypeVariableBind {
@@ -308,11 +302,6 @@ export class TypeVariable extends Type {
     constructor(public name: string, public position: number = 0) {
         super();
         this.isFree = false;
-    }
-
-    checkExhaustiveness(state: State, position: number, match: [Pattern & Expression, Expression][]): Warning[] {
-        // TODO
-        return [];
     }
 
     makeFree(): Type {
@@ -464,9 +453,60 @@ export class RecordType extends Type {
         super();
     }
 
-    checkExhaustiveness(state: State, position: number, match: [Pattern & Expression, Expression][]): Warning[] {
-        // TODO
-        return [];
+    checkExhaustiveness(state: State, tyVarBnd: Map<string, [Type, boolean]>, position: number, match:
+        [Pattern & Expression, Expression][]): Warning[] {
+
+        // Split every match pattern and do the checks for each of them
+        let res: Warning[] = [];
+
+        this.elements.forEach((val: Type, key: string) => {
+            let cmt: [Pattern & Expression, Expression][] = [];
+            for (let i = 0; i < match.length; ++i) {
+                if (match[i][0] instanceof ValueIdentifier || match[i][0] instanceof Wildcard
+                    || match[i][0] instanceof LayeredPattern) {
+                    cmt.push(match[i]);
+                } else if (match[i][0] instanceof Record) {
+                    cmt.push([<Pattern & Expression> (<Record> match[i][0]).getEntry(key),
+                        match[i][1]]);
+                }
+            }
+            let tmp = val.checkExhaustiveness(state, tyVarBnd, position, cmt);
+            for (let w of tmp) {
+                if (!w.message.includes('Some cases are unused in this match.')) {
+                    res.push(new Warning(w.position, 'Element "' + key + '": ' + w.message));
+                }
+            }
+        });
+        for (let i = 0; i < match.length; ++i) {
+            let fnsh = false;
+
+            if (match[i][0] instanceof Record) {
+                fnsh = true;
+                this.elements.forEach((val: Type, key: string) => {
+                    let tmp = val.checkExhaustiveness(state, tyVarBnd, position,
+                        [[<Pattern&Expression> (<Record> match[i][0]).getEntry(key), match[i][1]],
+                        [<Pattern&Expression> (<Record> match[i][0]).getEntry(key), match[i][1]]]);
+                    let found = false;
+                    for (let w of tmp) {
+                        if (w.message.includes('Some cases are unused in this match.')) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    fnsh = fnsh && found;
+                });
+            }
+
+            if (fnsh || ((match[i][0] instanceof ValueIdentifier || match[i][0] instanceof Wildcard
+                || match[i][0] instanceof LayeredPattern)
+                && match[i][0].getMatchedValues(state, tyVarBnd) === undefined
+                && i !== match.length - 1)) {
+                res.push(new Warning(position, 'Some cases are unused in this match.\n'));
+                break;
+            }
+        }
+
+        return res;
     }
 
     makeFree(): Type {
@@ -688,11 +728,6 @@ export class FunctionType extends Type {
         super();
     }
 
-    checkExhaustiveness(state: State, position: number, match: [Pattern & Expression, Expression][]): Warning[] {
-        // TODO
-        return [];
-    }
-
     makeFree(): Type {
         return new FunctionType(this.parameterType.makeFree(), this.returnType.makeFree());
     }
@@ -793,8 +828,68 @@ export class CustomType extends Type {
         super();
     }
 
-    checkExhaustiveness(state: State, position: number, match: [Pattern & Expression, Expression][]): Warning[] {
-        // TODO
+    checkExhaustiveness(state: State, tyVarBnd: Map<string, [Type, boolean]>, position: number, match:
+        [Pattern & Expression, Expression][]): Warning[] {
+
+        let tp = state.getStaticType(this.name);
+        if (tp === undefined) {
+            throw new ElaborationError(position, 'Mi…sa…Mi…sa…ka…MisakaMisakaMisakaMisaka');
+        }
+        let found = new Map<string, boolean>();
+        for (let i = 0; i < tp.constructors.length; ++i) {
+            found = found.set(tp.constructors[i], false);
+        }
+
+        let needCatchAll = tp.constructors.length === 0;
+        let hasCatchAll = false;
+
+        for (let i = 0; i < match.length; ++i) {
+            if (hasCatchAll) {
+                return [new Warning(match[i][0].position,
+                    'Some cases are unused in this match.')];
+            }
+            let tmp = match[i][0].getMatchedValues(state, tyVarBnd);
+            if (tmp === undefined) {
+                hasCatchAll = true;
+                continue;
+            }
+            for (let j of tmp) {
+                if (found.has(j)) {
+                    found = found.set(j, true);
+                }
+            }
+        }
+
+        let ok = !needCatchAll || hasCatchAll;
+        let missing: string[] = [];
+        found.forEach((val: boolean, key: string) => {
+            if (!val) {
+                missing.push(key);
+                ok = false;
+            }
+        });
+
+        if (!ok) {
+            let res = '';
+            for (let i = 0; i < missing.length; ++i) {
+                if (i > 0) {
+                    res += ', ';
+                }
+                res += '"' + missing[i] + '"';
+            }
+            if (missing.length > 1) {
+                res = ' (Constructors ' + res + ' have no match rule.)\n';
+            } else if (missing.length > 0) {
+                res = ' (Constructor ' + res + ' has no match rule.)\n';
+            } else {
+                res = '\n';
+            }
+
+            if (!hasCatchAll) {
+                return [new Warning(position, 'Pattern matching is non-exhaustive.' + res)];
+            }
+        }
+
         return [];
     }
 
