@@ -137,12 +137,24 @@ export class ValueIdentifier extends Expression implements Pattern {
 
     getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
         let val = state.getStaticValue(this.name.getText());
+        if (this.name instanceof LongIdentifierToken) {
+            let reslv = state.getAndResolveStaticStructure(this.name);
+            if (reslv !== undefined) {
+                val = reslv.getValue(this.name.id.getText());
+            } else {
+                val = undefined;
+            }
+        }
         if (val !== undefined && val[1] === IdentifierStatus.VALUE_VARIABLE) {
             return undefined;
         } else if (val === undefined && tyVarBnd.has('\'**' + this.name.getText())) {
             return undefined;
         } else if (val === undefined) {
             throw new ElaborationError(this.position, 'RAINBOW!');
+        }
+
+        if (this.name instanceof LongIdentifierToken) {
+            return [this.name.id.getText()];
         }
 
         return [this.name.getText()];

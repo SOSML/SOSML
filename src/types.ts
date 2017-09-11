@@ -1,5 +1,5 @@
 import { ElaborationError, Warning } from './errors';
-import { State } from './state';
+import { State, StaticBasis, DynamicBasis } from './state';
 import { LongIdentifierToken } from './tokens';
 import { Pattern, Expression, ValueIdentifier, Record, LayeredPattern, Wildcard,
          FunctionApplication } from './expressions';
@@ -832,6 +832,14 @@ export class CustomType extends Type {
         [Pattern & Expression, Expression][]): Warning[] {
 
         let tp = state.getStaticType(this.name);
+        if (this.qualifiedName !== undefined) {
+            let reslv = state.getAndResolveStaticStructure(this.qualifiedName);
+            if (reslv !== undefined) {
+                tp = reslv.getType(this.name);
+            } else {
+                tp = undefined;
+            }
+        }
         if (tp === undefined) {
             throw new ElaborationError(position, 'Mi…sa…Mi…sa…ka…MisakaMisakaMisakaMisaka');
         }
@@ -852,6 +860,11 @@ export class CustomType extends Type {
             }
             if (match[i][0] instanceof FunctionApplication) {
                 let cn = (<ValueIdentifier> (<FunctionApplication> match[i][0]).func).name.getText();
+                if (((<ValueIdentifier> (<FunctionApplication> match[i][0]).func).name)
+                    instanceof LongIdentifierToken) {
+                    cn = (<LongIdentifierToken> (<ValueIdentifier> (<FunctionApplication>
+                        match[i][0]).func).name).id.getText();
+                }
 
                 let old: [Pattern & Expression, Expression][] = [];
                 if (needExtraWork.has(cn)) {
@@ -877,6 +890,15 @@ export class CustomType extends Type {
         let result: Warning[] = [];
         needExtraWork.forEach((val: [Pattern & Expression, Expression][], key: string) => {
             let cinf = state.getStaticValue(key);
+            let reslv: StaticBasis | undefined = undefined;
+            if (this.qualifiedName !== undefined) {
+                reslv = state.getAndResolveStaticStructure(this.qualifiedName);
+                if (reslv !== undefined) {
+                    cinf = reslv.getValue(key);
+                } else {
+                    cinf = undefined;
+                }
+            }
             if (cinf === undefined || cinf[1] === 0) {
                 throw new ElaborationError(position, 'Unacceptable.');
             }
@@ -884,15 +906,17 @@ export class CustomType extends Type {
             while (ctp instanceof TypeVariableBind) {
                 ctp = (<TypeVariableBind> ctp).type;
             }
+            if (this.qualifiedName !== undefined) {
+                ctp = ctp.qualify(new State(0, undefined, <StaticBasis> reslv,
+                    new DynamicBasis({}, {}, {}, {}, {}), [0, {}]), this.qualifiedName);
+            }
             if (!(ctp instanceof FunctionType)) {
                 throw new ElaborationError(position, 'Unacceptable.');
             }
+
             let rt = ctp.returnType.merge(state, new Map<string, [Type, boolean]>(), this);
-            ctp = ctp.instantiate(state, rt[1]);
-            if (!(ctp instanceof FunctionType)) {
-                throw new ElaborationError(position, 'Unacceptable.');
-            }
-            let tmp = ctp.parameterType.checkExhaustiveness(state, tyVarBnd, position, val);
+            ctp = ctp.parameterType.instantiate(state, rt[1]);
+            let tmp = ctp.checkExhaustiveness(state, tyVarBnd, position, val);
 
             let bad = false;
             for (let e of tmp) {
