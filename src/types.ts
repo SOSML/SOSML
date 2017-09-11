@@ -1,7 +1,8 @@
 import { ElaborationError, Warning } from './errors';
 import { State } from './state';
 import { LongIdentifierToken } from './tokens';
-import { Pattern, Expression, ValueIdentifier, Record, LayeredPattern, Wildcard } from './expressions';
+import { Pattern, Expression, ValueIdentifier, Record, LayeredPattern, Wildcard,
+         FunctionApplication } from './expressions';
 
 export abstract class Type {
     abstract toString(): string;
@@ -481,7 +482,7 @@ export class RecordType extends Type {
             let fnsh = false;
 
             if (match[i][0] instanceof Record) {
-                fnsh = true;
+                fnsh = i < match.length - 1;
                 this.elements.forEach((val: Type, key: string) => {
                     let tmp = val.checkExhaustiveness(state, tyVarBnd, position,
                         [[<Pattern&Expression> (<Record> match[i][0]).getEntry(key), match[i][1]],
@@ -817,7 +818,6 @@ export class FunctionType extends Type {
 
 // A custom defined type similar to "list" or "option".
 // May have a type argument.
-// TODO ID?
 export class CustomType extends Type {
     constructor(public name: string,
                 public typeArguments: Type[] = [],
@@ -843,11 +843,25 @@ export class CustomType extends Type {
         let needCatchAll = tp.constructors.length === 0;
         let hasCatchAll = false;
 
+        let needExtraWork = new Map<string, [Pattern & Expression, Expression][]>();
+
         for (let i = 0; i < match.length; ++i) {
             if (hasCatchAll) {
                 return [new Warning(match[i][0].position,
                     'Some cases are unused in this match.')];
             }
+            if (match[i][0] instanceof FunctionApplication) {
+                let cn = (<ValueIdentifier> (<FunctionApplication> match[i][0]).func).name.getText();
+
+                let old: [Pattern & Expression, Expression][] = [];
+                if (needExtraWork.has(cn)) {
+                    old = <[Pattern & Expression, Expression][]> needExtraWork.get(cn);
+                }
+                old.push([<Pattern & Expression> (<FunctionApplication> match[i][0]).argument, match[i][1]]);
+                needExtraWork = needExtraWork.set(cn, old);
+                continue;
+            }
+
             let tmp = match[i][0].getMatchedValues(state, tyVarBnd);
             if (tmp === undefined) {
                 hasCatchAll = true;
@@ -859,6 +873,34 @@ export class CustomType extends Type {
                 }
             }
         }
+
+        let result: Warning[] = [];
+        needExtraWork.forEach((val: [Pattern & Expression, Expression][], key: string) => {
+            let cinf = state.getStaticValue(key);
+            if (cinf === undefined || cinf[1] === 0) {
+                throw new ElaborationError(position, 'Unacceptable.');
+            }
+            let ctp = cinf[0];
+            while (ctp instanceof TypeVariableBind) {
+                ctp = (<TypeVariableBind> ctp).type;
+            }
+            if (!(ctp instanceof FunctionType)) {
+                throw new ElaborationError(position, 'Unacceptable.');
+            }
+            let tmp = ctp.parameterType.checkExhaustiveness(state, tyVarBnd, position, val);
+
+            let bad = false;
+            for (let e of tmp) {
+                if (e.message.includes('non-exhaustive')) {
+                    bad = true;
+                } else {
+                    result.push(new Warning(e.position, 'Constructor "' + key + '": ' + e.message));
+                }
+            }
+            if (!bad) {
+                found = found.set(key, true);
+            }
+        });
 
         let ok = !needCatchAll || hasCatchAll;
         let missing: string[] = [];
@@ -878,19 +920,19 @@ export class CustomType extends Type {
                 res += '"' + missing[i] + '"';
             }
             if (missing.length > 1) {
-                res = ' (Constructors ' + res + ' have no match rule.)\n';
+                res = ' (Rules for constructors ' + res + ' are non-exhaustive.)\n';
             } else if (missing.length > 0) {
-                res = ' (Constructor ' + res + ' has no match rule.)\n';
+                res = ' (Rules for constructor ' + res + ' are non-exhaustive.)\n';
             } else {
                 res = '\n';
             }
 
             if (!hasCatchAll) {
-                return [new Warning(position, 'Pattern matching is non-exhaustive.' + res)];
+                return result.concat([new Warning(position, 'Pattern matching is non-exhaustive.' + res)]);
             }
         }
 
-        return [];
+        return result;
     }
 
     isOpaque(): boolean {
