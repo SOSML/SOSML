@@ -887,6 +887,11 @@ export class CustomType extends Type {
             if (!(ctp instanceof FunctionType)) {
                 throw new ElaborationError(position, 'Unacceptable.');
             }
+            let rt = ctp.returnType.merge(state, new Map<string, [Type, boolean]>(), this);
+            ctp = ctp.instantiate(state, rt[1]);
+            if (!(ctp instanceof FunctionType)) {
+                throw new ElaborationError(position, 'Unacceptable.');
+            }
             let tmp = ctp.parameterType.checkExhaustiveness(state, tyVarBnd, position, val);
 
             let bad = false;
