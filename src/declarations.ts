@@ -176,7 +176,6 @@ export class ValueDeclaration extends Declaration {
     }
 
     toString(): string {
-        // TODO
         let res = 'val <stuff>';
         for (let i = 0; i < this.valueBinding.length; ++i) {
             if (i > 0) {
@@ -226,7 +225,6 @@ export class TypeDeclaration extends Declaration {
     }
 
     toString(): string {
-        // TODO
         let res = 'type';
         for (let i = 0; i < this.typeBinding.length; ++i) {
             if (i > 0) {
@@ -268,16 +266,7 @@ export class DatatypeDeclaration extends Declaration {
                 this.datatypeBinding[i].name,
                 ntype));
         }
-
-        // TODO Correctly implement the withtype ~> type transition or clean up this mess
-        /*
-        if (this.typeBinding) {
-            return new SequentialDeclaration(this.position, [
-                new DatatypeDeclaration(this.position, datbnd, undefined),
-                new TypeDeclaration(this.position, this.typeBinding).simplify()]);
-        } else { */
         return new DatatypeDeclaration(this.position, datbnd, undefined, this.id);
-        /* } */
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
@@ -414,7 +403,6 @@ export class ExceptionDeclaration extends Declaration {
     }
 
     toString(): string {
-        // TODO
         return 'exception <stuff>;';
     }
 
@@ -1052,8 +1040,6 @@ export class DatatypeBinding {
                 throw ElaborationError.getUnguarded(this.position, ungar);
             }
 
-            // TODO ID
-            // let id = state.getValueIdentifierId(this.type[i][0].getText());
             ve.push([this.type[i][0].getText(), tp]);
             connames.push(this.type[i][0].getText());
         }

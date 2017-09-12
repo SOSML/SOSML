@@ -1,4 +1,4 @@
-import { TypeVariable, RecordType, Type, FunctionType, CustomType, AnyType, TypeVariableBind } from './types';
+import { TypeVariable, RecordType, Type, FunctionType, CustomType, AnyType, TypeVariableBind, Domain } from './types';
 import { Declaration, ValueBinding, ValueDeclaration } from './declarations';
 import { Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConstantToken,
          NumericToken, WordConstantToken, CharacterConstantToken, StringConstantToken,
@@ -51,7 +51,7 @@ export interface Pattern {
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>];
     matches(state: State, v: Value): [string, Value][] | undefined;
-    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined;
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain;
     simplify(): PatternExpression;
     toString(indentation: number, oneLine: boolean): string;
 }
@@ -61,8 +61,8 @@ export type PatternExpression = Pattern & Expression;
 export class Constant extends Expression implements Pattern {
     constructor(public position: number, public token: ConstantToken) { super(); }
 
-    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
-        return [];
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
+        return new Domain([]);
     }
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
@@ -135,7 +135,7 @@ export class ValueIdentifier extends Expression implements Pattern {
 // op longvid or longvid
     constructor(public position: number, public name: Token) { super(); }
 
-    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
         let val = state.getStaticValue(this.name.getText());
         if (this.name instanceof LongIdentifierToken) {
             let reslv = state.getAndResolveStaticStructure(this.name);
@@ -146,18 +146,18 @@ export class ValueIdentifier extends Expression implements Pattern {
             }
         }
         if (val !== undefined && val[1] === IdentifierStatus.VALUE_VARIABLE) {
-            return undefined;
+            return new Domain(undefined);
         } else if (val === undefined && tyVarBnd.has('\'**' + this.name.getText())) {
-            return undefined;
+            return new Domain(undefined);
         } else if (val === undefined) {
             throw new ElaborationError(this.position, 'RAINBOW!');
         }
 
         if (this.name instanceof LongIdentifierToken) {
-            return [this.name.id.getText()];
+            return new Domain([this.name.id.getText()]);
         }
 
-        return [this.name.getText()];
+        return new Domain([this.name.getText()]);
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
@@ -348,8 +348,12 @@ export class Record extends Expression implements Pattern {
         }
     }
 
-    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
-        throw new InternalInterpreterError(this.position, 'Anpan');
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
+        let res = new Map<string, Domain>();
+        for (let i of this.entries) {
+            res = res.set(i[0], (<PatternExpression> i[1]).getMatchedValues(state, tyVarBnd));
+        }
+        return new Domain(res);
     }
 
     getEntry(name: string): Expression | PatternExpression {
@@ -632,7 +636,7 @@ export class TypedExpression extends Expression implements Pattern {
     constructor(public position: number, public expression: Expression,
                 public typeAnnotation: Type) { super(); }
 
-    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
         return (<PatternExpression> this.expression).getMatchedValues(state, tyVarBnd);
     }
 
@@ -710,7 +714,7 @@ export class FunctionApplication extends Expression implements Pattern {
                 public func: Expression,
                 public argument: Expression|PatternExpression) { super(); }
 
-    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
         throw new InternalInterpreterError(this.position, 'Beep. Beep-Beep-Beep. Beep-Beep.');
     }
 
@@ -1200,8 +1204,12 @@ export class Match {
             nbnds = nbnds.set(key, val);
         });
 
-        warns = warns.concat((<FunctionType> restp).parameterType.checkExhaustiveness(
-            state, nbnds, this.position, this.matches));
+        try {
+            warns = warns.concat((<FunctionType> restp).parameterType.checkExhaustiveness(
+                state, nbnds, this.position, this.matches));
+        } catch (e) {
+            warns.push(new Warning(this.position, 'Couldn\'t check exhaustiveness: ' + e.message));
+        }
 
         return [restp, warns, nextName, tyVars, bnds, state.valueIdentifierId];
     }
@@ -1221,9 +1229,9 @@ export class Match {
 export class Wildcard extends Expression implements Pattern {
     constructor(public position: number) { super(); }
 
-    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
         // Wildcards catch everything
-        return undefined;
+        return new Domain(undefined);
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
@@ -1273,8 +1281,8 @@ export class LayeredPattern extends Expression implements Pattern {
                 public typeAnnotation: Type | undefined,
                 public pattern: Expression|PatternExpression) { super(); }
 
-    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
-        return undefined;
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
+        return new Domain(undefined);
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
@@ -1377,7 +1385,7 @@ export class InfixExpression extends Expression implements Pattern {
         super();
     }
 
-    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
         throw new InternalInterpreterError(this.position, 'This call is trash.');
     }
 
@@ -1499,7 +1507,7 @@ export class Tuple extends Expression implements Pattern {
     // (exp1, ..., expn), n > 1
     constructor(public position: number, public expressions: Expression[]) { super(); }
 
-    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
         throw new InternalInterpreterError(this.position,
             'What a wonderful explosion. I\'m going to faint now, though…');
     }
@@ -1537,7 +1545,7 @@ export class List extends Expression implements Pattern {
     // [exp1, ..., expn]
     constructor(public position: number, public expressions: Expression[]) { super(); }
 
-    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): string[] | undefined {
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
         throw new InternalInterpreterError(this.position, 'You did nothing wrong.');
     }
 

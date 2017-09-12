@@ -2,7 +2,223 @@ import { ElaborationError, Warning } from './errors';
 import { State, StaticBasis, DynamicBasis } from './state';
 import { LongIdentifierToken } from './tokens';
 import { Pattern, Expression, ValueIdentifier, Record, LayeredPattern, Wildcard,
-         FunctionApplication } from './expressions';
+         FunctionApplication, TypedExpression } from './expressions';
+
+export class Domain {
+    constructor(public entries: string[] | Map<string, Domain> | undefined) {
+    }
+
+    getSize(): number {
+        if (this.entries instanceof Array) {
+            return this.entries.length;
+        }
+        if (this.entries === undefined) {
+            return 1;
+        }
+        let res = 1;
+        this.entries.forEach((val: Domain) => {
+            res *= val.getSize();
+        });
+        return res;
+    }
+
+    isInfinite(): boolean {
+        if (this.entries === undefined) {
+            return true;
+        }
+        if (this.entries instanceof Map) {
+            let good = false;
+            this.entries.forEach((val: Domain, key: string) => {
+                good = good || val.isInfinite();
+            });
+            return good;
+        }
+        return false;
+    }
+
+    getValues(): string[] {
+        if (this.entries instanceof Array) {
+            return this.entries;
+        }
+        if (this.entries instanceof Map) {
+            // This stuff here is rather fragile; it may break if you look at it . . .
+            let res: string[] = [];
+            this.entries.forEach((val: Domain, key: string) => {
+                if (!val.isInfinite()) {
+                    let cur = val.getValues();
+                    let nres: string[] = [];
+                    if (res.length === 0) {
+                        res = cur;
+                    } else {
+                        for (let i of res) {
+                            for (let j of cur) {
+                                nres.push(i + ' * ' + j);
+                            }
+                        }
+                        res = nres;
+                    }
+                }
+            });
+            return res;
+        }
+        throw new ElaborationError(-1, 'Irredeemable.');
+    }
+
+    finitize(other: Domain): Domain {
+        if (this.entries instanceof Array) {
+            return new Domain(this.entries);
+        }
+        if (this.entries === undefined) {
+            return new Domain(other.entries);
+        }
+        let res = new Map<string, Domain>();
+        this.entries.forEach((val: Domain, key: string) => {
+            res = res.set(key, val.finitize(<Domain> (<Map<string, Domain>> other.entries).get(key)));
+        });
+        return new Domain(res);
+    }
+
+    match(position: number, other: Domain[]): Warning[] {
+        let res: Warning[] = [];
+        let nonex = false;
+        let redun = false;
+        let nondis = false;
+
+        if (this.entries === undefined) {
+            nonex = true;
+            for (let i of other) {
+                if (i.entries === undefined) {
+                    if (!nonex) {
+                        redun = true;
+                    }
+                    nonex = false;
+                }
+            }
+        } else if (this.entries instanceof Map) {
+            type col = { [name: string]: string };
+            let fnd = new Set<string>();
+            for (let i = 0; i < other.length; ++i) {
+                if (other[i].entries === undefined) {
+                    nonex = false;
+                    redun = (i < other.length - 1);
+                    break;
+                }
+                if (other[i].entries instanceof Array) {
+                    throw new ElaborationError(position, 'Pizza…');
+                }
+                if (other[i].entries instanceof Map) {
+                    let cur: col[] = [];
+                    let add = true;
+                    this.entries.forEach((val: Domain, key: string) => {
+                        // Check that all infin-dom have val undef in other;
+                        // Otherwise that match rule does not change the exhaust
+                        if (val.isInfinite()) {
+                            if (!(<Domain> (<Map<string, Domain>> other[i].entries).get(key)).isInfinite()) {
+                                add = false;
+                            }
+                        } else {
+                            let ncur: col[] = [];
+
+                            for (let j of (<Domain> (<Map<string, Domain>>
+                                other[i].entries).get(key)).finitize(val).getValues()) {
+                                if (cur.length === 0) {
+                                    let nk: col = {};
+                                    nk[key] = j;
+                                    ncur.push(nk);
+                                } else {
+                                    for (let k of cur) {
+                                        let nk: col = {};
+                                        for (let w in k) {
+                                            if (k.hasOwnProperty(w)) {
+                                                nk[w] = k[w];
+                                            }
+                                        }
+                                        nk[key] = j;
+                                        ncur.push(nk);
+                                    }
+                                }
+                            }
+                            cur = ncur;
+                        }
+                    });
+                    let good = false;
+                    for (let j of cur) {
+                        if (!fnd.has(JSON.stringify(j))) {
+                            good = true;
+                        } else {
+                            nondis = true;
+                        }
+                        if (add) {
+                            fnd = fnd.add(JSON.stringify(j));
+                        }
+                    }
+                    if (cur.length > 0) {
+                        redun = redun || !good;
+                    }
+                }
+            }
+            nonex = fnd.size !== this.getSize();
+        } else {
+            let fnd = new Map<string, boolean>();
+            for (let i of this.entries) {
+                fnd = fnd.set(i, false);
+            }
+            nonex = true;
+            for (let i = 0; i < other.length; ++i) {
+                if (other[i].entries === undefined) {
+                    nonex = false;
+                    redun = (i < other.length - 1);
+                    break;
+                }
+                if (other[i].entries instanceof Array) {
+                    for (let j of <string[]> other[i].entries) {
+                        fnd = fnd.set(j, true);
+                    }
+                }
+                throw new ElaborationError(position, 'Pizza…');
+            }
+            if (!nonex) {
+                let missing: string[] = [];
+                fnd.forEach((val: boolean, key: string) => {
+                    if (!val) {
+                        missing.push(key);
+                    }
+                });
+
+                if (missing.length > 0) {
+                    let rs = '';
+                    for (let i = 0; i < missing.length; ++i) {
+                        if (i > 0) {
+                            rs += ', ';
+                        }
+                        rs += '"' + missing[i] + '"';
+                    }
+                    if (missing.length > 1) {
+                        rs = ' (Rules for constructors ' + res + ' are non-exhaustive.)\n';
+                    } else if (missing.length > 0) {
+                        rs = ' (Rules for constructor ' + res + ' are non-exhaustive.)\n';
+                    } else {
+                        rs = '\n';
+                    }
+                    nonex = false;
+                    res.push(new Warning(position, 'Pattern matching is non-exhaustive.' + res));
+                }
+            }
+        }
+
+        if (nonex) {
+            res.push(new Warning(position, 'Pattern matching is non-exhaustive.\n'));
+        }
+        if (nondis) {
+            res.push(new Warning(position, 'Some rules are not disjoint.\n'));
+        }
+        if (redun) {
+            res.push(new Warning(position, 'Some cases are unused in this match.\n'));
+        }
+
+        return res;
+    }
+}
 
 export abstract class Type {
     abstract toString(): string;
@@ -69,6 +285,10 @@ export abstract class Type {
 
     admitsEquality(state: State): boolean {
         return false;
+    }
+
+    getDomain(state: State): Domain {
+        return new Domain(undefined);
     }
 
     // Normalizes a type. Free type variables need to get new names **across** different decls.
@@ -344,7 +564,6 @@ export class TypeVariable extends Type {
             let oth = other.instantiate(state, tyVarBnd);
 
             if (oth instanceof TypeVariable) {
-                // TODO equality checks
                 if (ths.name === oth.name) {
                     return [ths, tyVarBnd];
                 } else {
@@ -454,60 +673,61 @@ export class RecordType extends Type {
         super();
     }
 
+    getDomain(state: State): Domain {
+        let res = new Map<string, Domain>();
+
+        this.elements.forEach((val: Type, key: string) => {
+            res = res.set(key, val.getDomain(state));
+        });
+
+        return new Domain(res);
+    }
+
     checkExhaustiveness(state: State, tyVarBnd: Map<string, [Type, boolean]>, position: number, match:
         [Pattern & Expression, Expression][]): Warning[] {
 
-        // Split every match pattern and do the checks for each of them
-        let res: Warning[] = [];
+        let needsCatchAll = new Map<string, boolean>();
+        let domains = new Map<string, Domain>();
+        this.elements.forEach((val: Type, key: string) => {
+            domains = domains.set(key, val.getDomain(state));
+        });
 
         this.elements.forEach((val: Type, key: string) => {
-            let cmt: [Pattern & Expression, Expression][] = [];
-            for (let i = 0; i < match.length; ++i) {
-                if (match[i][0] instanceof ValueIdentifier || match[i][0] instanceof Wildcard
-                    || match[i][0] instanceof LayeredPattern) {
-                    cmt.push(match[i]);
-                } else if (match[i][0] instanceof Record) {
-                    cmt.push([<Pattern & Expression> (<Record> match[i][0]).getEntry(key),
-                        match[i][1]]);
-                }
-            }
-            let tmp = val.checkExhaustiveness(state, tyVarBnd, position, cmt);
-            for (let w of tmp) {
-                if (!w.message.includes('Some cases are unused in this match.')) {
-                    res.push(new Warning(w.position, 'Element "' + key + '": ' + w.message));
-                }
-            }
+            needsCatchAll = needsCatchAll.set(key, (<Domain> domains.get(key)).isInfinite());
         });
+
+        let found: Domain[] = [];
         for (let i = 0; i < match.length; ++i) {
             let fnsh = false;
-
+            let cur = new Map<string, Domain>();
             if (match[i][0] instanceof Record) {
-                fnsh = i < match.length - 1;
+                fnsh = true;
                 this.elements.forEach((val: Type, key: string) => {
-                    let tmp = val.checkExhaustiveness(state, tyVarBnd, position,
-                        [[<Pattern&Expression> (<Record> match[i][0]).getEntry(key), match[i][1]],
-                        [<Pattern&Expression> (<Record> match[i][0]).getEntry(key), match[i][1]]]);
-                    let found = false;
-                    for (let w of tmp) {
-                        if (w.message.includes('Some cases are unused in this match.')) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    fnsh = fnsh && found;
+                    let tmp = (<Pattern&Expression> (<Record> match[i][0]).getEntry(
+                        key)).getMatchedValues(state, tyVarBnd);
+                    fnsh = fnsh && (tmp.entries === undefined);
+                    cur = cur.set(key, (tmp.entries === undefined && needsCatchAll.get(key) !== true) ?
+                        (<Domain> domains.get(key)) : tmp);
                 });
+                if (fnsh && i === match.length - 1) {
+                    return [];
+                } else if (fnsh) {
+                    return [new Warning(position, 'Some cases are unused in this match.\n')];
+                }
+                found.push(new Domain(cur));
             }
 
-            if (fnsh || ((match[i][0] instanceof ValueIdentifier || match[i][0] instanceof Wildcard
-                || match[i][0] instanceof LayeredPattern)
-                && match[i][0].getMatchedValues(state, tyVarBnd) === undefined
-                && i !== match.length - 1)) {
-                res.push(new Warning(position, 'Some cases are unused in this match.\n'));
-                break;
+            if (((match[i][0] instanceof ValueIdentifier || match[i][0] instanceof Wildcard
+                || match[i][0] instanceof LayeredPattern || match[i][0] instanceof TypedExpression)
+                && match[i][0].getMatchedValues(state, tyVarBnd).entries === undefined)) {
+                if (i !== match.length - 1) {
+                    return [new Warning(position, 'Some cases are unused in this match.\n')];
+                }
+                return [];
             }
         }
 
-        return res;
+        return this.getDomain(state).match(position, found);
     }
 
     makeFree(): Type {
@@ -659,7 +879,7 @@ export class RecordType extends Type {
                     res += ' * ';
                 }
                 let sub = this.elements.get('' + i);
-                if (sub instanceof FunctionType) {
+                if (sub instanceof FunctionType || sub instanceof RecordType) {
                     res += '(' + sub + ')';
                 } else {
                     res += sub;
@@ -828,6 +1048,27 @@ export class CustomType extends Type {
         super();
     }
 
+    getDomain(state: State): Domain {
+        let tp = state.getStaticType(this.name);
+        if (this.qualifiedName !== undefined) {
+            let reslv = state.getAndResolveStaticStructure(this.qualifiedName);
+            if (reslv !== undefined) {
+                tp = reslv.getType(this.name);
+            } else {
+                tp = undefined;
+            }
+        }
+        if (tp === undefined) {
+            throw new ElaborationError(this.position, 'Mi…sa…Mi…sa…ka…MisakaMisakaMisakaMisaka');
+        }
+
+        if (tp.constructors.length === 0) {
+            return new Domain(undefined);
+        } else {
+            return new Domain(tp.constructors);
+        }
+    }
+
     checkExhaustiveness(state: State, tyVarBnd: Map<string, [Type, boolean]>, position: number, match:
         [Pattern & Expression, Expression][]): Warning[] {
 
@@ -875,10 +1116,13 @@ export class CustomType extends Type {
                 continue;
             }
 
-            let tmp = match[i][0].getMatchedValues(state, tyVarBnd);
+            let tmp = match[i][0].getMatchedValues(state, tyVarBnd).entries;
             if (tmp === undefined) {
                 hasCatchAll = true;
                 continue;
+            }
+            if (tmp instanceof Map) {
+                throw new ElaborationError(position, 'Anpan.');
             }
             for (let j of tmp) {
                 if (found.has(j)) {
