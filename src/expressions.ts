@@ -1208,7 +1208,7 @@ export class Match {
             warns = warns.concat((<FunctionType> restp).parameterType.checkExhaustiveness(
                 state, nbnds, this.position, this.matches));
         } catch (e) {
-            warns.push(new Warning(this.position, 'Couldn\'t check exhaustiveness: ' + e.message));
+            warns.push(new Warning(this.position, 'Couldn\'t check exhaustiveness: ' + e.message + '\n'));
         }
 
         return [restp, warns, nextName, tyVars, bnds, state.valueIdentifierId];
