@@ -2006,7 +2006,7 @@ export class Parser {
                                       this.currentToken().position);
             }
             let resdec = new InfixDeclaration(curTok.position, res, precedence, curId);
-            this.state = resdec.evaluate(this.state)[0];
+            resdec.setInfixStatus(this.state);
             return resdec;
         } else if (this.checkKeywordToken(curTok, 'infixr')) {
             ++this.position;
@@ -2030,7 +2030,7 @@ export class Parser {
                                       this.currentToken().position);
             }
             let resdec = new InfixRDeclaration(curTok.position, res, precedence, curId);
-            this.state = resdec.evaluate(this.state)[0];
+            resdec.setInfixStatus(this.state);
             return resdec;
         } else if (this.checkKeywordToken(curTok, 'nonfix')) {
             ++this.position;
@@ -2045,7 +2045,7 @@ export class Parser {
                                       this.currentToken().position);
             }
             let resdec = new NonfixDeclaration(curTok.position, res, curId);
-            this.state = resdec.evaluate(this.state)[0];
+            resdec.setInfixStatus(this.state);
             return resdec;
         }
 

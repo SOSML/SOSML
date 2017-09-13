@@ -8,6 +8,7 @@ import { State, DynamicInterface, DynamicStructureInterface, DynamicValueInterfa
 import { Warning, EvaluationError, ElaborationError, InternalInterpreterError } from './errors';
 import { Value } from './values';
 import { getInitialState } from './initialState';
+import { EvaluationResult, EvaluationParameters, EvaluationStack } from './evaluator';
 
 // Module Expressions
 
@@ -16,7 +17,8 @@ import { getInitialState } from './initialState';
 type MemBind = [number, Value][];
 
 export interface Structure {
-    computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind];
+    computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
+        [DynamicBasis | Value, Warning[], MemBind] | undefined;
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string];
 }
@@ -38,16 +40,35 @@ export class StructureExpression extends Expression implements Structure {
         return [tmp[0].getStaticChanges(0), tmp[1], tmp[2], tmp[3]];
     }
 
-    computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
-        let nstate = state.getNestedState(0).getNestedState(state.id);
-        let tmp = this.structureDeclaration.evaluate(nstate);
-        let mem = tmp[0].getMemoryChanges(0);
+    computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
+        [DynamicBasis | Value, Warning[], MemBind] | undefined {
+        if (params.recResult === undefined) {
+            let state = params.state;
+            let nstate = state.getNestedState(0).getNestedState(state.id);
 
-        if (tmp[1]) {
-            return [<Value> tmp[2], tmp[3], mem];
+            callStack.push({'next': recCall, 'params': params});
+            callStack.push({
+                'next': this.structureDeclaration,
+                'params': {'state': nstate, 'recResult': undefined}
+            });
+            return;
         }
+        // braced so linter does not complain about shadowed names
+        {
+            let tmp = params.recResult;
+            if (tmp === undefined
+                || tmp.newState === undefined) {
+                throw new InternalInterpreterError(-1, 'How is this undefined?');
+            }
+            let nstate = <State> tmp.newState;
+            let mem = nstate.getMemoryChanges(0);
 
-        return [tmp[0].getDynamicChanges(0), tmp[3], mem];
+            if (tmp.hasThrown) {
+                return [<Value> tmp.value, tmp.warns, mem];
+            }
+
+            return [nstate.getDynamicChanges(0), tmp.warns, mem];
+        }
     }
 
     toString(): string {
@@ -86,7 +107,9 @@ export class StructureIdentifier extends Expression implements Structure {
         return [res, [], tyVarBnd, nextName];
     }
 
-    computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
+    computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
+        [DynamicBasis | Value, Warning[], MemBind] | undefined {
+        let state = params.state;
         let res: DynamicBasis | undefined = undefined;
         if (this.identifier instanceof LongIdentifierToken) {
             let st = state.getAndResolveDynamicStructure(<LongIdentifierToken> this.identifier);
@@ -241,12 +264,16 @@ export class TransparentConstraint extends Expression implements Structure {
         return [res, [], tyVarBnd, nextName];
     }
 
-    computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
-        let tmp = this.structureExpression.computeStructure(state);
+    computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
+        [DynamicBasis | Value, Warning[], MemBind] | undefined {
+        let tmp = this.structureExpression.computeStructure(params, callStack, recCall);
+        if (tmp === undefined) {
+            return undefined;
+        }
         if (tmp[0] instanceof Value) {
             return tmp;
         }
-        let sig = this.signatureExpression.computeInterface(state);
+        let sig = this.signatureExpression.computeInterface(params.state);
         return [(<DynamicBasis> tmp[0]).restrict(sig), tmp[1], tmp[2]];
     }
 
@@ -393,12 +420,16 @@ export class OpaqueConstraint extends Expression implements Structure {
         return [res, [], tyVarBnd, nextName];
     }
 
-    computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
-        let tmp = this.structureExpression.computeStructure(state);
+    computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
+        [DynamicBasis | Value, Warning[], MemBind] | undefined {
+        let tmp = this.structureExpression.computeStructure(params, callStack, recCall);
+        if (tmp === undefined) {
+            return undefined;
+        }
         if (tmp[0] instanceof Value) {
             return tmp;
         }
-        let sig = this.signatureExpression.computeInterface(state);
+        let sig = this.signatureExpression.computeInterface(params.state);
         return [(<DynamicBasis> tmp[0]).restrict(sig), tmp[1], tmp[2]];
     }
 
@@ -424,7 +455,9 @@ export class FunctorApplication extends Expression implements Structure {
         throw new Error('ニャ－');
     }
 
-    computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
+    computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
+        [DynamicBasis | Value, Warning[], MemBind] | undefined {
+        let state = params.state;
         let fun = state.getDynamicFunctor(this.functorId.getText());
 
         if (fun === undefined) {
@@ -432,20 +465,41 @@ export class FunctorApplication extends Expression implements Structure {
                 'Undefined functor "' + this.functorId.getText() + '".');
         }
 
-        let res = this.structureExpression.computeStructure(state);
+        if (params.funappres === undefined) {
+            let res = this.structureExpression.computeStructure(params, callStack, recCall);
+            if (res === undefined) {
+                return undefined;
+            }
 
-        if (res[0] instanceof Value) {
-            return res;
+            if (res[0] instanceof Value) {
+                return res;
+            }
+            params.funappres = res;
         }
+        // braced so linter does not complain about shadowing
+        {
+            let res = params.funappres;
 
-        let nstate = fun.state.getNestedState(fun.state.id);
-        for (let i = 0; i < res[2].length; ++i) {
-            nstate.setCell(res[2][i][0], res[2][i][1]);
+            if (params.nstate === undefined) {
+                let nstate = fun.state.getNestedState(fun.state.id);
+                for (let i = 0; i < res[2].length; ++i) {
+                    nstate.setCell(res[2][i][0], res[2][i][1]);
+                }
+                nstate.setDynamicStructure(fun.paramName.getText(),
+                    (<DynamicBasis> res[0]).restrict(fun.param));
+                params.nstate = nstate;
+            }
+
+            // we have to fake our state for a short time, so computeStructure will add the correct recursive state
+            params.state = params.nstate;
+            let nres = fun.body.computeStructure(params, callStack, recCall);
+            params.state = state;
+
+            if (nres === undefined) {
+                return undefined;
+            }
+            return [nres[0], res[1].concat(nres[1]), res[2].concat(nres[2])];
         }
-        nstate.setDynamicStructure(fun.paramName.getText(),
-            (<DynamicBasis> res[0]).restrict(fun.param));
-        let nres = fun.body.computeStructure(nstate);
-        return [nres[0], res[1].concat(nres[1]), res[2].concat(nres[2])];
     }
 
     toString(): string {
@@ -491,15 +545,45 @@ export class LocalDeclarationStructureExpression extends Expression implements S
         return 'let ' + this.declaration + ' in ' + this.expression + ' end';
     }
 
-    computeStructure(state: State): [DynamicBasis | Value, Warning[], MemBind] {
-        let nstate = state.getNestedState(0).getNestedState(state.id);
-        let res = this.declaration.evaluate(nstate);
-        let membnd = res[0].getMemoryChanges(0);
-        if (res[1]) {
-            return [<Value> res[2], res[3], membnd];
+    computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
+        [DynamicBasis | Value, Warning[], MemBind] | undefined {
+        let state = params.state;
+        if (params.ldseRes === undefined) {
+            if (params.recResult === undefined) {
+                let nstate = state.getNestedState(0).getNestedState(state.id);
+                callStack.push({'next': recCall, 'params': params});
+                callStack.push({
+                    'next': this.declaration,
+                    'params': {'state': nstate, 'recResult': undefined}
+                });
+                return undefined;
+            }
+            params.ldseRes = params.recResult;
+            params.recResult = undefined;
         }
-        let nres = this.expression.computeStructure(res[0]);
-        return [nres[0], res[3].concat(nres[1]), membnd.concat(nres[2])];
+        let res = <EvaluationResult> params.ldseRes;
+        if (res === undefined
+            || res.newState === undefined) {
+            throw new InternalInterpreterError(-1, 'How is this undefined?');
+        }
+        // braced so linter does not complain about shadowing
+        {
+            let nstate = <State> res.newState;
+            let membnd = nstate.getMemoryChanges(0);
+            if (res.hasThrown) {
+                return [<Value> res.value, res.warns, membnd];
+            }
+
+            // we have to fake the state in order for the recursion to work correctly
+            params.state = nstate;
+            let nres = this.expression.computeStructure(params, callStack, recCall);
+            params.state = state;
+            if (nres === undefined) {
+                return undefined;
+            }
+
+            return [nres[0], res.warns.concat(nres[1]), membnd.concat(nres[2])];
+        }
     }
 }
 
@@ -646,17 +730,39 @@ export class StructureDeclaration extends Declaration {
         return [state, warns, tyVarBnd, nextName];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
-        let warns: Warning[] = [];
-        for (let i = 0; i < this.structureBinding.length; ++i) {
-            let tmp = this.structureBinding[i].evaluate(state);
-            if (tmp[1]) {
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        if (params.whichBind === undefined) {
+            params.warns = [];
+            params.whichBind = 0;
+        }
+
+        let warns: Warning[] = params.warns;
+        let whichBind: number = params.whichBind;
+
+        let tmp = this.structureBinding[whichBind].evaluate(params, callStack, this);
+        if (tmp !== undefined) {
+            if (tmp.hasThrown) {
                 return tmp;
             }
-            state = tmp[0];
-            warns = warns.concat(tmp[3]);
+            params.state = <State> tmp.newState;
+            params.warns = warns.concat(tmp.warns);
+            params.whichBind = params.whichBind + 1;
+            params.recResult = undefined;
+
+            if (params.whichBind === this.structureBinding.length) {
+                return {
+                    'newState': params.state,
+                    'value': undefined,
+                    'hasThrown': false,
+                    'warns': params.warns,
+                    'mem': undefined,
+                    'ids': undefined
+                };
+            }
+
+            callStack.push({'next': this, 'params': params});
         }
-        return [state, false, undefined, warns];
+        return undefined;
     }
 
     simplify(): StructureDeclaration {
@@ -695,11 +801,19 @@ export class SignatureDeclaration extends Declaration {
         return [state, warns, tyVarBnd, nextName];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        let state = params.state;
         for (let i = 0; i < this.signatureBinding.length; ++i) {
             state = this.signatureBinding[i].evaluate(state);
         }
-        return [state, false, undefined, []];
+        return {
+            'newState': state,
+            'value': undefined,
+            'hasThrown': false,
+            'warns': [],
+            'mem': undefined,
+            'ids': undefined
+        };
     }
 
     simplify(): SignatureDeclaration {
@@ -731,11 +845,19 @@ export class FunctorDeclaration extends Declaration {
         return [state, [new Warning(this.position, 'Skipped elaborating functor.\n')], tyVarBnd, nextName];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        let state = params.state;
         for (let i = 0; i < this.functorBinding.length; ++i) {
             state = this.functorBinding[i].evaluate(state);
         }
-        return [state, false, undefined, []];
+        return {
+            'newState': state,
+            'value': undefined,
+            'hasThrown': false,
+            'warns': [],
+            'mem': undefined,
+            'ids': undefined
+        };
     }
 
     simplify(): FunctorDeclaration {
@@ -774,16 +896,34 @@ export class StructureBinding {
         return [state, tmp[1], tmp[2], tmp[3]];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
-        let tmp = this.binding.computeStructure(state);
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration): EvaluationResult {
+        let tmp = this.binding.computeStructure(params, callStack, recCall);
+        if (tmp === undefined) {
+            return undefined;
+        }
+        let state = params.state;
         for (let i = 0; i < tmp[2].length; ++i) {
             state.setCell(tmp[2][i][0], tmp[2][i][1]);
         }
         if (tmp[0] instanceof Value) {
-            return [state, true, <Value> tmp[0], tmp[1]];
+            return {
+                'newState': state,
+                'value': <Value> tmp[0],
+                'hasThrown': true,
+                'warns': tmp[1],
+                'mem': undefined,
+                'ids': undefined
+            };
         }
         state.setDynamicStructure(this.name.getText(), <DynamicBasis> tmp[0]);
-        return [state, false, undefined, tmp[1]];
+        return {
+            'newState': state,
+            'value': undefined,
+            'hasThrown': false,
+            'warns': tmp[1],
+            'mem': undefined,
+            'ids': undefined
+        };
     }
 
     toString(): string {
