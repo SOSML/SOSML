@@ -280,8 +280,12 @@ structure List = struct
     fun length nil = 0
       | length (x::xr) = 1 + length xr;
 
-    fun rev nil = nil
-      | rev (x::xr) = rev xr @ [x];
+    fun rev xs = let
+            fun rev' nil ys = ys
+              | rev' (x::xs) ys = rev' xs (x::ys)
+          in
+            rev' xs nil
+          end;
 
     fun foldr f e []      = e
       | foldr f e (x::xr) = f(x, foldr f e xr);
