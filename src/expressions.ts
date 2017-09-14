@@ -1675,7 +1675,7 @@ export class LayeredPattern extends Expression implements Pattern {
                 public pattern: Expression|PatternExpression) { super(); }
 
     getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
-        return new Domain(undefined);
+        return (<PatternExpression> this.pattern).getMatchedValues(state, tyVarBnd);
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
