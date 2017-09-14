@@ -350,8 +350,13 @@ export class Record extends Expression implements Pattern {
 
     getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
         let res = new Map<string, Domain>();
+        let def = false;
         for (let i of this.entries) {
             res = res.set(i[0], (<PatternExpression> i[1]).getMatchedValues(state, tyVarBnd));
+            def = def || ((<Domain> res.get(i[0])).entries !== undefined);
+        }
+        if (!def) {
+            return new Domain(undefined);
         }
         return new Domain(res);
     }
@@ -715,7 +720,17 @@ export class FunctionApplication extends Expression implements Pattern {
                 public argument: Expression|PatternExpression) { super(); }
 
     getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
-        throw new InternalInterpreterError(this.position, 'Beep. Beep-Beep-Beep. Beep-Beep.');
+        if (!(this.func instanceof ValueIdentifier)) {
+            throw new InternalInterpreterError(this.position, 'Beep. Beep-Beep-Beep. Beep-Beep.');
+        }
+
+        let arg = (<PatternExpression> this.argument).getMatchedValues(state, tyVarBnd);
+        if (arg.entries === undefined) {
+            return new Domain([this.func.name.getText()]);
+        }
+        // TODO
+        // Correctly implementing this should be really tedious
+        return new Domain([this.func.name.getText()]);
     }
 
     isSafe(state: State): boolean {
@@ -996,7 +1011,7 @@ export class HandleException extends Expression {
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
-        let mtp = this.match.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
+        let mtp = this.match.getType(state, tyVarBnd, nextName, tyVars, forceRebind, false);
         if ((!(mtp[0] instanceof FunctionType))
             || !(<FunctionType> mtp[0]).parameterType.equals(new CustomType('exn'))) {
             throw new ElaborationError(this.match.position,
@@ -1152,7 +1167,7 @@ export class Match {
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
-            forceRebind: boolean = false):
+            forceRebind: boolean = false, checkEx: boolean = true):
     [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         let restp: Type = new FunctionType(new AnyType(), new AnyType());
@@ -1204,11 +1219,13 @@ export class Match {
             nbnds = nbnds.set(key, val);
         });
 
-        try {
-            warns = warns.concat((<FunctionType> restp).parameterType.checkExhaustiveness(
-                state, nbnds, this.position, this.matches));
-        } catch (e) {
-            warns.push(new Warning(this.position, 'Couldn\'t check exhaustiveness: ' + e.message + '\n'));
+        if (checkEx) {
+            try {
+                warns = warns.concat((<FunctionType> restp).parameterType.checkExhaustiveness(
+                    state, nbnds, this.position, this.matches));
+            } catch (e) {
+                warns.push(new Warning(this.position, 'Couldn\'t check exhaustiveness: ' + e.message + '\n'));
+            }
         }
 
         return [restp, warns, nextName, tyVars, bnds, state.valueIdentifierId];
