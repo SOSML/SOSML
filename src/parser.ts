@@ -35,6 +35,13 @@ export class Parser {
         }
     }
 
+    assertFinished(): void {
+        if (this.position <= this.tokens.length - 1) {
+            throw new ParserError('Junk after declaration: "' + this.currentToken().getText()
+                + '".', this.position);
+        }
+    }
+
     assertKeywordToken(tok: Token, text: string | undefined = undefined) {
         if (!(tok instanceof KeywordToken)) {
             throw new ParserError('Expected a reserved word, got "' + tok.getText()
@@ -2105,5 +2112,7 @@ export class Parser {
 
 export function parse(tokens: Token[], state: State, options: {[name: string]: any} = {}): Declaration {
     let p: Parser = new Parser(tokens, state, state.id, options);
-    return p.parseDeclaration(true, true);
+    let res = p.parseDeclaration(true, true);
+    p.assertFinished();
+    return res;
 }

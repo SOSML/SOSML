@@ -382,8 +382,13 @@ export class Record extends Expression implements Pattern {
 
     getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
         let res = new Map<string, Domain>();
+        let def = false;
         for (let i of this.entries) {
             res = res.set(i[0], (<PatternExpression> i[1]).getMatchedValues(state, tyVarBnd));
+            def = def || ((<Domain> res.get(i[0])).entries !== undefined);
+        }
+        if (!def) {
+            return new Domain(undefined);
         }
         return new Domain(res);
     }
