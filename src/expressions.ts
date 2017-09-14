@@ -720,7 +720,17 @@ export class FunctionApplication extends Expression implements Pattern {
                 public argument: Expression|PatternExpression) { super(); }
 
     getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
-        throw new InternalInterpreterError(this.position, 'Beep. Beep-Beep-Beep. Beep-Beep.');
+        if (!(this.func instanceof ValueIdentifier)) {
+            throw new InternalInterpreterError(this.position, 'Beep. Beep-Beep-Beep. Beep-Beep.');
+        }
+
+        let arg = (<PatternExpression> this.argument).getMatchedValues(state, tyVarBnd);
+        if (arg.entries === undefined) {
+            return new Domain([this.func.name.getText()]);
+        }
+        // TODO
+        // Correctly implementing this should be really tedious
+        return new Domain([this.func.name.getText()]);
     }
 
     isSafe(state: State): boolean {
