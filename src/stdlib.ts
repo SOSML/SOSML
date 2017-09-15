@@ -334,11 +334,123 @@ structure List = struct
 end;
 
 structure Char = struct
-    (* open Char; *)
-    fun isLower c  = #"a" <= c andalso c <= #"z";
-    fun isUpper c  = #"A" <= c andalso c <= #"Z";
-    fun isDigit c  = #"0" <= c andalso c <= #"9";
-    fun isAlpha c  = isLower c orelse isUpper c;
+    fun isLower c  = #"a" <= c andalso c <= #"z"
+    fun isUpper c  = #"A" <= c andalso c <= #"Z"
+    fun isDigit c  = #"0" <= c andalso c <= #"9"
+    fun isAlpha c  = isLower c orelse isUpper c
+    fun isHexDigit c = #"0" <= c andalso c <= #"9"
+	               orelse #"a" <= c andalso c <= #"f"
+	               orelse #"A" <= c andalso c <= #"F"
+    fun isAlphaNum c = isAlpha c orelse isDigit c
+    fun isPrint c  = c >= #" " andalso c < #"\\127"
+    fun isSpace c  = c = #" " orelse #"\\009" <= c andalso c <= #"\\013"
+    fun isGraph c  = isPrint c andalso not (isSpace c)
+    fun isPunct c  = isGraph c andalso not (isAlphaNum c)
+    fun isAscii c  = c <= #"\\127"
+    fun isCntrl c  = c < #" " orelse c >= #"\\127"
+
+    fun toLower c =
+		if #"A" <= c andalso c <= #"Z" then chr (ord c + 32)
+		else c;
+    fun toUpper c =
+		if #"a" <= c andalso c <= #"z" then chr (ord c - 32)
+		else c;
+end;
+
+structure Listsort = struct
+(* Listsort *)
+
+(* Smooth Applicative Merge Sort, Richard O'Keefe 1982        *)
+(* From L.C. Paulson: ML for the Working Programmer, CUP 1991 *)
+(* Optimized for Moscow ML *)
+
+(* Should be made stable; this requires more than a change to nextrun;
+   for inspiration, see
+   http://www.dcs.gla.ac.uk/mail-www/haskell/msg00207.html
+ *)
+
+fun sort ordr []          = []
+  | sort ordr (xs as [_]) = xs
+  | sort ordr (xs as [x1, x2]) =
+    (case ordr(x1, x2) of
+	 GREATER => [x2, x1]
+       | _       => xs)
+  | sort ordr xs =
+    let fun merge []       ys = ys
+	  | merge (x1::xr) ys =
+	    let fun take x1 xr []       = x1 :: xr
+		  | take x1 xr (y1::yr) =
+	            (case ordr(x1, y1) of
+			 LESS    => x1 :: take y1 yr xr
+		       | _       => y1 :: take x1 xr yr)
+	    in take x1 xr ys end
+        fun mergepairs l1  []              k = [l1]
+          | mergepairs l1 (ls as (l2::lr)) k =
+            if k mod 2 = 1 then l1::ls
+            else mergepairs (merge l1 l2) lr (k div 2)
+	fun nextrun run []      = (run, [])
+	  | nextrun run (xs as (x::xr)) =
+	    if ordr(x, List.hd run) = LESS then (run, xs)
+	    else nextrun (x::run) xr
+        fun sorting []      ls r = List.hd(mergepairs [] ls 0)
+          | sorting (x::xs) ls r =
+	    let val (revrun, tail) = nextrun [x] xs
+	    in sorting tail (mergepairs (List.rev revrun) ls (r+1)) (r+1) end
+    in sorting xs [] 0 end;
+
+(* Check sortedness *)
+
+fun sorted ordr []         = true
+  | sorted ordr (y1 :: yr) =
+    let fun h x0 []       = true
+	  | h x0 (x1::xr) = ordr(x0, x1) <> GREATER andalso h x1 xr
+    in h y1 yr end;
+
+(* Merge without duplicates *)
+
+fun mergeUniq ordr ([],     ys) = ys
+  | mergeUniq ordr (x1::xr, ys) =
+    let fun take x1 xr []       = x1 :: xr
+	  | take x1 xr (y1::yr) =
+	    (case ordr(x1, y1) of
+		 LESS    => x1 :: take y1 yr xr
+	       | GREATER => y1 :: take x1 xr yr
+	       | EQUAL   => take x1 xr yr)
+    in take x1 xr ys end;
+
+(* Merge with duplicates *)
+
+fun merge ordr ([],     ys) = ys
+  | merge ordr (x1::xr, ys) =
+    let fun take x1 xr []       = x1 :: xr
+	  | take x1 xr (y1::yr) =
+	    (case ordr(x1, y1) of
+		 LESS    => x1 :: take y1 yr xr
+	       | _       => y1 :: take x1 xr yr)
+    in take x1 xr ys end;
+
+(* Find the equivalence classes of a sorted list *)
+
+fun eqclasses ordr xs =
+    let val xs = List.rev (sort ordr xs)
+	fun group last rest cs1 css =
+	    case rest of
+		[]     => cs1 :: css
+	      | r1::rr =>
+		    if ordr(r1, last) = EQUAL then
+			group r1 rr (r1 :: cs1) css
+		    else
+			group r1 rr [r1] (cs1 :: css)
+    in
+	case xs of
+	    []     => []
+	  | x1::xr => group x1 xr [x1] []
+    end;
+end;
+
+structure List = struct
+	open List;
+	open Listsort;
 end;
 
 fun ! (a : \'A ref): \'A = ! a;
