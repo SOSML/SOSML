@@ -1880,7 +1880,25 @@ val f : real -> real = fn x => x;
         ['fun iter n s f = if n<1 then s else iter (n-1) (f s) f;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('iter')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('iter')).toEqualWithType(TODO);
+            expect(state.getStaticValue('iter')).toEqualWithType([
+                new Type.TypeVariableBind(
+                    '\'a',
+                    new Type.FunctionType(
+                        new Type.CustomType('int'),
+                        new Type.FunctionType(
+                            new Type.TypeVariable('\'a'),
+                            new Type.FunctionType(
+                                new Type.FunctionType(
+                                    new Type.TypeVariable('\'a'),
+                                    new Type.TypeVariable('\'a')
+                                ),
+                                new Type.TypeVariable('\'a')
+                            )
+                        )
+                    )
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['fun power x n = iter n 1 (fn a => a*x);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -1989,12 +2007,36 @@ fun f (x,y,z) = if x=y then x else z;
         ['fun eq x y = x = y;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('eq')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('eq')).toEqualWithType(TODO);
+            expect(state.getStaticValue('eq')).toEqualWithType([
+                new Type.TypeVariableBind(
+                    '\'a',
+                    new Type.FunctionType(
+                        new Type.TypeVariable('\'a'),
+                        new Type.FunctionType(
+                            new Type.TypeVariable('\'a'),
+                            new Type.CustomType('bool')
+                        )
+                    )
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['fun neq x y = x <> y;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('neq')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('neq')).toEqualWithType(TODO);
+            expect(state.getStaticValue('neq')).toEqualWithType([
+                new Type.TypeVariableBind(
+                    '\'a',
+                    new Type.FunctionType(
+                        new Type.TypeVariable('\'a'),
+                        new Type.FunctionType(
+                            new Type.TypeVariable('\'a'),
+                            new Type.CustomType('bool')
+                        )
+                    )
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['fun f (x,y,z) = if x=y then x else z;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -2060,7 +2102,16 @@ fun id z = z;
         ['fun id z = z;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('id')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('id')).toEqualWithType(TODO);
+            expect(state.getStaticValue('id')).toEqualWithType([
+                new Type.TypeVariableBind(
+                    '\'a',
+                    new Type.FunctionType(
+                        new Type.TypeVariable('\'a'),
+                        new Type.TypeVariable('\'a')
+                    )
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }]
     ]);
 });
@@ -2080,12 +2131,42 @@ op+;
         ['fun forall m n p = m>n orelse (p m andalso forall (m+1) n p);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('forall')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('forall')).toEqualWithType(TODO);
+            expect(state.getStaticValue('forall')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.CustomType('int', [], 0),
+                    new Type.FunctionType(
+                        new Type.CustomType('int', [], 0),
+                        new Type.FunctionType(
+                            new Type.FunctionType(
+                                new Type.CustomType('int', [], 0),
+                                new Type.CustomType('bool', [], 0)
+                            ),
+                            new Type.CustomType('bool', [], 0)
+                        )
+                    )
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['fun snd (_, y) = y;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('snd')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('snd')).toEqualWithType(TODO);
+            expect(state.getStaticValue('snd')).toEqualWithType([
+                new Type.TypeVariableBind(
+                    '\'a',
+                    new Type.TypeVariableBind(
+                        '\'b',
+                        new Type.FunctionType(
+                            new Type.RecordType(new Map([
+                                ['1', new Type.TypeVariable('\'a')],
+                                ['2', new Type.TypeVariable('\'b')]
+                            ])),
+                            new Type.TypeVariable('\'b')
+                        )
+                    )
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['op+(8,9);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -2246,7 +2327,34 @@ op o;
         ['fun compose f g x = f (g x);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('compose')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('compose')).toEqualWithType(TODO);
+            expect(state.getStaticValue('compose')).toEqualWithType([
+                new Type.TypeVariableBind(
+                    '\'a',
+                    new Type.TypeVariableBind(
+                        '\'b',
+                        new Type.TypeVariableBind(
+                            '\'c',
+                            new Type.FunctionType(
+                                new Type.FunctionType(
+                                    new Type.TypeVariable('\'a'),
+                                    new Type.TypeVariable('\'b')
+                                ),
+                                new Type.FunctionType(
+                                    new Type.FunctionType(
+                                        new Type.TypeVariable('\'c'),
+                                        new Type.TypeVariable('\'a')
+                                    ),
+                                    new Type.FunctionType(
+                                        new Type.TypeVariable('\'c'),
+                                        new Type.TypeVariable('\'b')
+                                    )
+                                )
+                            )
+                        )
+                    )
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }],
         ['fun plus x y = x+y;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
