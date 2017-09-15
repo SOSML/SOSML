@@ -1093,6 +1093,7 @@ export class CustomType extends Type {
         let hasCatchAll = false;
 
         let needExtraWork = new Map<string, [Pattern & Expression, Expression][]>();
+        let redun = false;
 
         for (let i = 0; i < match.length; ++i) {
             if (hasCatchAll) {
@@ -1126,6 +1127,9 @@ export class CustomType extends Type {
             }
             for (let j of tmp) {
                 if (found.has(j)) {
+                    if (found.get(j) === true) {
+                        redun = true;
+                    }
                     found = found.set(j, true);
                 }
             }
@@ -1171,7 +1175,12 @@ export class CustomType extends Type {
                 }
             }
             if (!bad) {
-                found = found.set(key, true);
+                if (found.has(key)) {
+                    if (found.get(key) === true) {
+                        redun = true;
+                    }
+                    found = found.set(key, true);
+                }
             }
         });
 
@@ -1201,8 +1210,12 @@ export class CustomType extends Type {
             }
 
             if (!hasCatchAll) {
-                return result.concat([new Warning(position, 'Pattern matching is non-exhaustive.' + res)]);
+                result = result.concat([new Warning(position, 'Pattern matching is non-exhaustive.' + res)]);
             }
+        }
+
+        if (redun) {
+            result.push(new Warning(position, 'Some cases are unused in this match.'));
         }
 
         return result;
