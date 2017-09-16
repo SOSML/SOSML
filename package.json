@@ -1,7 +1,8 @@
 {
   "name": "sosml-interpreter",
   "version": "1.0.0",
-  "description": "",
+  "description": "An interpreter for Standard ML written in TypeSrcipt.",
+  "license": "GPL-3.0",
   "scripts": {
     "citest": "jest --coverage --expand --verbose",
     "cilint": "tslint -c tslint.json 'src/**/*.ts'",
@@ -10,7 +11,10 @@
     "dist": "webpack --env=prod"
   },
   "author": "SOSML Team",
-  "license": "UNLICENSED",
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/npm/npm.git"
+  },
   "devDependencies": {
     "@types/jest": "^19.2.3",
     "@types/node": "^7.0.22",
