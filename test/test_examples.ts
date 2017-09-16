@@ -2477,7 +2477,6 @@ it("3.13", () => {
 fun iterup m n s f = if m>n then s else iterup (m+1) n (f(m,s)) f;
 fun iterdn n m s f = if n<m then s else iterdn (n-1) m (f(n,s)) f;
      */
-    //TODO test types
     run_test([
         ['fun iterup m n s f = if m>n then s else iterup (m+1) n (f(m,s)) f;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -2485,10 +2484,22 @@ fun iterdn n m s f = if n<m then s else iterdn (n-1) m (f(n,s)) f;
             expect(state.getStaticValue('iterup')).toEqualWithType([
                 new Type.TypeVariableBind('\'a',
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 12),
+                        new Type.CustomType('int'),
                         new Type.FunctionType(
-                            new Type.CustomType('int', [], 20),
-                            new Type.FunctionType()//TODO
+                            new Type.CustomType('int'),
+                            new Type.FunctionType(
+                                new Type.TypeVariable('\'a'),
+                                new Type.FunctionType(
+                                    new Type.FunctionType(
+                                        new Type.RecordType(new Map([
+                                            ['1', new Type.CustomType('int')],
+                                            ['2', new Type.TypeVariable('\'a')]
+                                        ])),
+                                        new Type.TypeVariable('\'a')
+                                    )
+                                    new Type.TypeVariable('\'a')
+                                )
+                            )
                         )
                     )
                 )
@@ -2498,7 +2509,30 @@ fun iterdn n m s f = if n<m then s else iterdn (n-1) m (f(n,s)) f;
         ['fun iterdn n m s f = if n<m then s else iterdn (n-1) m (f(n,s)) f;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('iterdn')).not.toEqualWithType(undefined); // TODO exact value
-            expect(state.getStaticValue('iterdn')).toEqualWithType();//TODO
+            expect(state.getStaticValue('iterdn')).toEqualWithType([
+                new Type.TypeVariableBind('\'a',
+                    new Type.FunctionType(
+                        new Type.CustomType('int'),
+                        new Type.FunctionType(
+                            new Type.CustomType('int'),
+                            new Type.FunctionType(
+                                new Type.TypeVariable('\'a'),
+                                new Type.FunctionType(
+                                    new Type.FunctionType(
+                                        new Type.RecordType(new Map([
+                                            ['1', new Type.CustomType('int')],
+                                            ['2', new Type.TypeVariable('\'a')]
+                                        ])),
+                                        new Type.TypeVariable('\'a')
+                                    )
+                                    new Type.TypeVariable('\'a')
+                                )
+                            )
+                        )
+                    )
+                )
+                
+            , 0]);
         }]
     ]);
 });
@@ -2880,7 +2914,30 @@ tabulate(5, fn x => x*x)
         ['fun iterdn n m s f = if n<m then s else iterdn (n-1) m (f(n,s)) f;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('iterdn')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('iterdn')).toEqualWithType(TODO);
+            expect(state.getStaticValue('iterdn')).toEqualWithType([
+                new Type.TypeVariableBind('\'a',
+                    new Type.FunctionType(
+                        new Type.CustomType('int'),
+                        new Type.FunctionType(
+                            new Type.CustomType('int'),
+                            new Type.FunctionType(
+                                new Type.TypeVariable('\'a'),
+                                new Type.FunctionType(
+                                    new Type.FunctionType(
+                                        new Type.RecordType(new Map([
+                                            ['1', new Type.CustomType('int')],
+                                            ['2', new Type.TypeVariable('\'a')]
+                                        ])),
+                                        new Type.TypeVariable('\'a')
+                                    )
+                                    new Type.TypeVariable('\'a')
+                                )
+                            )
+                        )
+                    )
+                )
+                
+            , 0]);
         }],
         ['fun tabulate (n,f) = iterdn (n-1) 0 nil (fn (i,xs) => f i::xs);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -3394,7 +3451,31 @@ fun foldr f s nil = s
         ['fun foldr f s nil = s | foldr f s (x::xr) = f(x, foldr f s xr);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('foldr')).not.toEqualWithType(undefined); // TODO exact value
-            //expect(state.getStaticValue('foldr')).toEqualWithType(TODO);
+            expect(state.getStaticValue('foldr')).toEqualWithType([
+                new Type.TypeVariableBind(
+                    '\'a',
+                    new Type.TypeVariableBind(
+                        '\'b',
+                        new Type.FunctionType(
+                            new Type.FunctionType(
+                                new Type.RecordType(new Map([
+                                    ['1',new Type.TypeVariable('\'a')],
+                                    ['2',new Type.TypeVariable('\'b')]
+                                ])),
+                                new Type.TypeVariable('\'b')
+                            ),
+                            new Type.FunctionType(
+                                new Type.TypeVariable('\'b'),
+                                new Type.FunctionType(
+                                    new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
+                                    new Type.TypeVariable('\'b')
+                                )
+                            )
+                        )
+                    )
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
         }]
     ]);
 });
@@ -6024,7 +6105,7 @@ val size = fold (foldl op+ 1);
                             new Type.TypeVariable('\'a')
                         ),
                         new Type.FunctionType(
-                            new Type.CustomType('tree', [], 0)
+                            new Type.CustomType('tree', [], -1)
                             new Type.TypeVariable('\'a')
                         )
                    )
