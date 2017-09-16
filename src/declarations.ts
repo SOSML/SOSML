@@ -93,7 +93,7 @@ export class ValueDeclaration extends Declaration {
         });
         let ncp = nextName;
         let ids = state.valueIdentifierId;
-        for (let l = 0; l < 1; ++l) {
+        for (let l = 0; l < 4; ++l) {
             warns = wcp;
             bnds = new Map<string, [Type, boolean]>();
             bcp.forEach((val: [Type, boolean], key: string) => {
