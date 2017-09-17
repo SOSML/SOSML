@@ -576,6 +576,18 @@ export class TypeVariable extends Type {
         return (<[Type, boolean]> tyVarBnd.get(this.name))[0].instantiate(state, tyVarBnd, nsen);
     }
 
+    mergeDomain(other: Type[]): Type[] {
+        let res: Type[] = [];
+        for (let i of this.domain) {
+            for (let j of other) {
+                if (i.equals(j)) {
+                    res.push(i);
+                }
+            }
+        }
+        return res;
+    }
+
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type): [Type, Map<string, [Type, boolean]>] {
         if (other instanceof AnyType) {
             return [this, tyVarBnd];
@@ -588,7 +600,13 @@ export class TypeVariable extends Type {
 
             if (oth instanceof TypeVariable) {
                 if (ths.name === oth.name) {
-                    return [ths, tyVarBnd];
+                    let ndomain = ths.mergeDomain(oth.domain);
+                    if (ndomain.length === 0 && ths.domain.length + oth.domain.length > 0) {
+                        throw ['Cannot merge domains of "' + this.normalize()[0]  + '" and "'
+                            + other.normalize()[0] + '".'];
+                    }
+                    return [new TypeVariable(ths.name, ths.position, ths.mergeDomain(oth.domain)),
+                        tyVarBnd];
                 } else {
                     let repl = new Map<string, string>();
                     let rs = ths;
@@ -597,6 +615,11 @@ export class TypeVariable extends Type {
                     } else {
                         repl.set(ths.name, oth.name);
                         rs = oth;
+                    }
+                    rs.domain = ths.mergeDomain(oth.domain);
+                    if (rs.domain.length === 0 && ths.domain.length + oth.domain.length > 0) {
+                        throw ['Cannot merge domains of "' + this.normalize()[0]  + '" and "'
+                            + other.normalize()[0] + '".'];
                     }
                     let nvb = new Map<string, [Type, boolean]>();
                     tyVarBnd.forEach((val: [Type, boolean], key: string) => {
@@ -627,6 +650,10 @@ export class TypeVariable extends Type {
                         oth = nt[0];
                         tyVarBnd = nt[1];
                     }
+                }
+                if (ths.domain.length > 0 && ths.mergeDomain([oth]).length === 0) {
+                    throw ['Type "' + oth.normalize()[0] + '" is not part of the domain of "'
+                        + ths.normalize()[0] + '".'];
                 }
                 return [oth, tyVarBnd.set(ths.name, [oth, ths.isFree])];
             }
