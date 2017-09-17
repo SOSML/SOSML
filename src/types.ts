@@ -240,7 +240,7 @@ export abstract class Type {
     }
 
     // Return all (free) type variables
-    getTypeVariables(free: boolean = false): Set<string> {
+    getTypeVariables(free: boolean = false): Map<string, Type[]> {
         throw new ElaborationError(-1, 'This is wrong.\nI said with a posed look.');
     }
 
@@ -254,6 +254,10 @@ export abstract class Type {
     }
 
     qualify(state: State, qualifiers: LongIdentifierToken): Type {
+        return this;
+    }
+
+    propagate(domains: Map<string, Type[]> = new Map<string, Type[]>()): Type {
         return this;
     }
 
@@ -365,8 +369,8 @@ export class AnyType extends Type {
         return [this, tyVarBnd];
     }
 
-    getTypeVariables(free: boolean = false): Set<string> {
-        return new Set<string>();
+    getTypeVariables(free: boolean = false): Map<string, Type[]> {
+        return new Map<string, Type[]>();
     }
 
     getOrderedTypeVariables(): string[] {
@@ -399,6 +403,15 @@ export class TypeVariableBind extends Type {
 
     qualify(state: State, qualifiers: LongIdentifierToken): Type {
         let res = new TypeVariableBind(this.name, this.type.qualify(state, qualifiers), this.domain);
+        res.isFree = this.isFree;
+        return res;
+    }
+
+    propagate(domains: Map<string, Type[]> = new Map<string, Type[]>()): Type {
+        if (this.domain.length > 0) {
+            domains = domains.set(this.name, this.domain);
+        }
+        let res = new TypeVariableBind(this.name, this.type.propagate(domains), this.domain);
         res.isFree = this.isFree;
         return res;
     }
@@ -473,17 +486,17 @@ export class TypeVariableBind extends Type {
         return res;
     }
 
-    getTypeVariables(free: boolean = false): Set<string> {
+    getTypeVariables(free: boolean = false): Map<string, Type[]> {
         let rec = this.type.getTypeVariables(free);
-        let res = new Set<string>();
+        let res = new Map<string, Type[]>();
 
-        rec.forEach((val: string) => {
+        rec.forEach((dom: Type[], val: string) => {
             if (val !== this.name || free === this.isFree) {
-                res.add(val);
+                res = res.set(val, dom);
             }
         });
         if (free && this.isFree && !res.has(this.name)) {
-            res.add(this.name);
+            res = res.set(this.name, this.domain);
         }
         return res;
     }
@@ -495,7 +508,7 @@ export class TypeVariableBind extends Type {
     replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
         if (replacements.has(this.name)) {
             let res = new TypeVariableBind(<string> replacements.get(this.name),
-                this.type.replaceTypeVariables(replacements, free));
+                this.type.replaceTypeVariables(replacements, free), this.domain);
             if (free.has(this.name)) {
                 res.isFree = true;
             } else {
@@ -503,7 +516,7 @@ export class TypeVariableBind extends Type {
             }
             return res;
         } else {
-            let res = new TypeVariableBind(this.name, this.type.replaceTypeVariables(replacements, free));
+            let res = new TypeVariableBind(this.name, this.type.replaceTypeVariables(replacements, free), this.domain);
             res.isFree = this.isFree;
             return res;
         }
@@ -520,14 +533,24 @@ export class TypeVariableBind extends Type {
 
 export class TypeVariable extends Type {
     isFree: boolean;
-    constructor(public name: string, public position: number = 0) {
+    constructor(public name: string, public position: number = 0, public domain: Type[] = []) {
         super();
         this.isFree = false;
     }
 
     makeFree(): Type {
-        let res = new TypeVariable(this.name, this.position);
+        let res = new TypeVariable(this.name, this.position, this.domain);
         res.isFree = true;
+        return res;
+    }
+
+    propagate(domains: Map<string, Type[]> = new Map<string, Type[]>()): Type {
+        let dom: Type[] = [];
+        if (domains.has(this.name)) {
+            dom = <Type[]> domains.get(this.name);
+        }
+        let res = new TypeVariable(this.name, this.position, dom);
+        res.isFree = this.isFree;
         return res;
     }
 
@@ -619,18 +642,18 @@ export class TypeVariable extends Type {
         if (tyVarBnd.has(this.name)) {
             let tmp = (<[Type, boolean]> tyVarBnd.get(this.name))[0].makeEqType(state, tyVarBnd);
             tyVarBnd = tmp[1];
-            let n = new TypeVariable('\'' + this.name, this.position);
+            let n = new TypeVariable('\'' + this.name, this.position, this.domain);
             n.isFree = this.isFree;
             tyVarBnd = tyVarBnd.set(n.name, [tmp[0], n.isFree]);
         }
-        let nt = new TypeVariable('\'' + this.name, this.position);
+        let nt = new TypeVariable('\'' + this.name, this.position, this.domain);
         return [nt, tyVarBnd.set(this.name, [nt, this.isFree])];
     }
 
-    getTypeVariables(free: boolean = false): Set<string> {
-        let res = new Set<string>();
+    getTypeVariables(free: boolean = false): Map<string, Type[]> {
+        let res = new Map<string, Type[]>();
         if (!free || this.isFree) {
-            res.add(this.name);
+            res = res.set(this.name, this.domain);
         }
         return res;
     }
@@ -641,7 +664,7 @@ export class TypeVariable extends Type {
 
     replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
         if (replacements.has(this.name)) {
-            let res = new TypeVariable(<string> replacements.get(this.name), this.position);
+            let res = new TypeVariable(<string> replacements.get(this.name), this.position, this.domain);
             if (free.has(this.name)) {
                 res.isFree = true;
             } else {
@@ -754,6 +777,13 @@ export class RecordType extends Type {
         return new RecordType(newElements, this.complete, this.position);
     }
 
+    propagate(domains: Map<string, Type[]> = new Map<string, Type[]>()): Type {
+        let newElements: Map<string, Type> = new Map<string, Type>();
+        this.elements.forEach((type: Type, key: string) => {
+            newElements.set(key, type.propagate(domains));
+        });
+        return new RecordType(newElements, this.complete, this.position);
+    }
 
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type): [Type, Map<string, [Type, boolean]>] {
         if (other instanceof TypeVariable || other instanceof AnyType) {
@@ -814,11 +844,11 @@ export class RecordType extends Type {
         return [new RecordType(newElements, this.complete, this.position), tyVarBnd];
     }
 
-    getTypeVariables(free: boolean = false): Set<string> {
-        let res = new Set<string>();
+    getTypeVariables(free: boolean = false): Map<string, Type[]> {
+        let res = new Map<string, Type[]>();
         this.elements.forEach((val: Type) => {
-            val.getTypeVariables(free).forEach((id: string) => {
-                res.add(id);
+            val.getTypeVariables(free).forEach((dom: Type[], id: string) => {
+                res = res.set(id, dom);
             });
         });
         return res;
@@ -963,6 +993,11 @@ export class FunctionType extends Type {
             this.returnType.qualify(state, qualifiers), this.position);
     }
 
+    propagate(domains: Map<string, Type[]> = new Map<string, Type[]>()): Type {
+        return new FunctionType(this.parameterType.propagate(domains),
+            this.returnType.propagate(domains), this.position);
+    }
+
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type): [Type, Map<string, [Type, boolean]>] {
         if (other instanceof TypeVariable || other instanceof AnyType) {
             return other.merge(state, tyVarBnd, this);
@@ -984,13 +1019,13 @@ export class FunctionType extends Type {
         return [this, tyVarBnd];
     }
 
-    getTypeVariables(free: boolean = false): Set<string> {
-        let res = new Set<string>();
-        this.parameterType.getTypeVariables(free).forEach((value: string) => {
-            res.add(value);
+    getTypeVariables(free: boolean = false): Map<string, Type[]> {
+        let res = new Map<string, Type[]>();
+        this.parameterType.getTypeVariables(free).forEach((dom: Type[], value: string) => {
+            res = res.set(value, dom);
         });
-        this.returnType.getTypeVariables(free).forEach((value: string) => {
-            res.add(value);
+        this.returnType.getTypeVariables(free).forEach((dom: Type[], value: string) => {
+            res = res.set(value, dom);
         });
         return res;
     }
@@ -1257,6 +1292,15 @@ export class CustomType extends Type {
         return rs;
     }
 
+    propagate(domains: Map<string, Type[]> = new Map<string, Type[]>()): Type {
+        let res: Type[] = [];
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            res.push(this.typeArguments[i].propagate(domains));
+        }
+        return new CustomType(this.name, res, this.position,
+            this.qualifiedName, this.opaque, this.id);
+    }
+
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
         let tp = state.getStaticType(this.name);
         if (this.qualifiedName !== undefined) {
@@ -1368,12 +1412,12 @@ export class CustomType extends Type {
             this.qualifiedName, this.opaque, this.id), tyVarBnd];
     }
 
-    getTypeVariables(free: boolean = false): Set<string> {
-        let res = new Set<string>();
+    getTypeVariables(free: boolean = false): Map<string, Type[]> {
+        let res = new Map<string, Type[]>();
         if (this.typeArguments.length > 0) {
             for (let i = 0; i < this.typeArguments.length; ++i) {
-                this.typeArguments[i].getTypeVariables(free).forEach((val: string) => {
-                    res.add(val);
+                this.typeArguments[i].getTypeVariables(free).forEach((dom: Type[], val: string) => {
+                    res = res.set(val, dom);
                 });
             }
         }

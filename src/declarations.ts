@@ -847,7 +847,7 @@ export class ValueBinding {
         let noBind = new Set<string>();
         res[2].forEach((val: [Type, boolean], key: string) => {
             noBind.add(key);
-            val[0].getTypeVariables().forEach((v: string) => {
+            val[0].getTypeVariables().forEach((dom: Type[], v: string) => {
                 noBind.add(v);
             });
         });
@@ -878,19 +878,20 @@ export class ValueBinding {
             let done = new Set<string>();
             for (let j = ntys.length - 1; j >= 0; --j) {
                 if (tv.has(ntys[j].name)) {
-                    res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1]);
+                    res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1],
+                        <Type[]> tv.get(ntys[j].name));
                     (<TypeVariableBind> res[0][i][1]).isFree = valuePoly || free.has(ntys[j].name);
                     done.add(ntys[j].name);
                 }
             }
             ntys = [];
-            res[0][i][1].getTypeVariables().forEach((val: string) => {
+            res[0][i][1].getTypeVariables().forEach((dom: Type[], val: string) => {
                 if ((isTopLevel || !noBind.has(val)) && !done.has(val)) {
-                    ntys.push(new TypeVariable(val));
+                    ntys.push(new TypeVariable(val, 0, dom));
                 }
             });
             for (let j = ntys.length - 1; j >= 0; --j) {
-                res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1]);
+                res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1], ntys[j].domain);
                 (<TypeVariableBind> res[0][i][1]).isFree = valuePoly || free.has(ntys[j].name);
             }
         }
@@ -1028,11 +1029,11 @@ export class DatatypeBinding {
             }
             let ungar: string[] = [];
 
-            tp.getTypeVariables().forEach((val: string) => {
-                if (!tvs.has(val)) {
-                    ungar.push(val);
+            tp.getTypeVariables().forEach((val: Type[], key: string) => {
+                if (!tvs.has(key)) {
+                    ungar.push(key);
                 } else {
-                    tp = new TypeVariableBind(val, tp);
+                    tp = new TypeVariableBind(key, tp, val);
                 }
             });
 
@@ -1081,7 +1082,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
         if (this.type !== undefined) {
             let tp = this.type.simplify().instantiate(state, new Map<string, [Type, boolean]>());
             let tyvars: string[] = [];
-            tp.getTypeVariables().forEach((val: string) => {
+            tp.getTypeVariables().forEach((dom: Type[], val: string) => {
                 tyvars.push(val);
             });
             if (isTopLevel && tyvars.length > 0) {
