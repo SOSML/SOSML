@@ -30,18 +30,18 @@ let intWordRealType = new TypeVariable('\'iwr');
 let anyType = new TypeVariable('\'any');
 
 function intWordBind(type: Type): Type {
-    return new TypeVariableBind('\'iw', type, [new CustomType('int'), new CustomType('word')]);
+    return new TypeVariableBind('\'iw', type, [new CustomType('int'), new CustomType('word')]).propagate();
 }
 function intRealBind(type: Type): Type {
-    return new TypeVariableBind('\'ir', type, [new CustomType('int'), new CustomType('real')]);
+    return new TypeVariableBind('\'ir', type, [new CustomType('int'), new CustomType('real')]).propagate();
 }
 function intWordRealBind(type: Type): Type {
     return new TypeVariableBind('\'iwr', type, [new CustomType('int'), new CustomType('word'),
-        new CustomType('real')]);
+        new CustomType('real')]).propagate();
 }
 function anyBind(type: Type): Type {
     return new TypeVariableBind('\'any', type, [new CustomType('int'), new CustomType('word'),
-        new CustomType('real'), new CustomType('string'), new CustomType('char')]);
+        new CustomType('real'), new CustomType('string'), new CustomType('char')]).propagate();
 }
 
 let initialState: State = new State(

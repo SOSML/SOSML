@@ -1017,8 +1017,8 @@ export class ValueSpecification extends Specification {
             let tp = this.valueDescription[i][1].simplify().instantiate(state, tyVarBnd);
             let tyv = tp.getTypeVariables();
 
-            tyv.forEach((val: string) => {
-                tp = new TypeVariableBind(val, tp);
+            tyv.forEach((dom: Type[], val: string) => {
+                tp = new TypeVariableBind(val, tp, dom);
             });
 
             res.setValue(this.valueDescription[i][0].getText(), tp, IdentifierStatus.VALUE_VARIABLE);
