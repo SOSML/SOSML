@@ -13,7 +13,8 @@ export abstract class Declaration {
     id: number;
     elaborate(state: State,
               tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-              nextName: string = '\'*t0', isTopLevel: boolean = false):
+              nextName: string = '\'*t0', isTopLevel: boolean = false,
+              options: { [name: string]: any } = {}):
                 [State, Warning[], Map<string, [Type, boolean]>, string] {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
@@ -51,7 +52,8 @@ export class ValueDeclaration extends Declaration {
         return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd, this.id);
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              isTopLevel: boolean, options: { [name: string]: any }):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         let result: [string, Type][] = [];
 
@@ -204,7 +206,8 @@ export class TypeDeclaration extends Declaration {
         return new TypeDeclaration(this.position, bnds, this.id);
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              isTopLevel: boolean, options: { [name: string]: any }):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         for (let i = 0; i < this.typeBinding.length; ++i) {
             state.setStaticType(this.typeBinding[i].name.getText(),
@@ -269,7 +272,8 @@ export class DatatypeDeclaration extends Declaration {
         return new DatatypeDeclaration(this.position, datbnd, undefined, this.id);
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              isTopLevel: boolean, options: { [name: string]: any }):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         // I'm assuming the withtype is empty
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
@@ -340,7 +344,8 @@ export class DatatypeReplication extends Declaration {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              isTopLevel: boolean, options: { [name: string]: any }):
     [State, Warning[], Map<string, [Type, boolean]>, string] {
         let res: TypeInformation | undefined = undefined;
 
@@ -406,10 +411,11 @@ export class ExceptionDeclaration extends Declaration {
         return 'exception <stuff>;';
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              isTopLevel: boolean, options: { [name: string]: any }):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         for (let i = 0; i < this.bindings.length; ++i) {
-            state = this.bindings[i].elaborate(state, isTopLevel);
+            state = this.bindings[i].elaborate(state, isTopLevel, options);
         }
         return [state, [], tyVarBnd, nextName];
     }
@@ -437,14 +443,15 @@ export class LocalDeclaration extends Declaration {
         return new LocalDeclaration(this.position, this.declaration.simplify(), this.body.simplify(), this.id);
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              isTopLevel: boolean, options: { [name: string]: any }):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         let nstate: [State, Warning[], Map<string, [Type, boolean]>, string]
             = [state.getNestedState(0).getNestedState(state.id), [], tyVarBnd, nextName];
-        let res = this.declaration.elaborate(nstate[0], tyVarBnd, nextName);
+        let res = this.declaration.elaborate(nstate[0], tyVarBnd, nextName, false, options);
         state.valueIdentifierId = res[0].getIdChanges(0);
         let input = res[0].getNestedState(state.id);
-        nstate = this.body.elaborate(input, res[2], res[3], isTopLevel);
+        nstate = this.body.elaborate(input, res[2], res[3], isTopLevel, options);
         // Forget all local definitions
         input.parent = state;
         return [nstate[0], res[1].concat(nstate[1]), nstate[2], nstate[3]];
@@ -491,7 +498,8 @@ export class OpenDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              isTopLevel: boolean, options: { [name: string]: any }):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         for (let i = 0; i < this.names.length; ++i) {
             let tmp: StaticBasis | undefined = undefined;
@@ -552,7 +560,8 @@ export class EmptyDeclaration extends Declaration {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              isTopLevel: boolean, options: { [name: string]: any }):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         return [state, [], tyVarBnd, nextName];
     }
@@ -580,7 +589,8 @@ export class SequentialDeclaration extends Declaration {
         return new SequentialDeclaration(this.position, decls, this.id);
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              isTopLevel: boolean, options: { [name: string]: any }):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         let warns: Warning[] = [];
         let bnds = tyVarBnd;
@@ -593,7 +603,7 @@ export class SequentialDeclaration extends Declaration {
                 });
             }
             let res = this.declarations[i].elaborate(
-                state.getNestedState(this.declarations[i].id), bnds, str, isTopLevel);
+                state.getNestedState(this.declarations[i].id), bnds, str, isTopLevel, options);
             state = res[0];
             warns = warns.concat(res[1]);
             bnds = res[2];
@@ -607,7 +617,7 @@ export class SequentialDeclaration extends Declaration {
                 if (val[1] && key[1] === '~' ) {
                     // Only free type variables are to be kept
                     let ntp = val[0].instantiate(state, res[2]).normalize(
-                        state.freeTypeVariables[0]);
+                        state.freeTypeVariables[0], options);
                     if (!(<State> state.parent).getTypeVariableBinds()[1].has(key)) {
                         warns.push(new Warning(this.position, 'The free type variable "'
                             + key + '" has been instantiated to "' + ntp[0] + '".\n'));
@@ -623,7 +633,7 @@ export class SequentialDeclaration extends Declaration {
                 for (let v in state.staticBasis.valueEnvironment) {
                     if (state.staticBasis.valueEnvironment.hasOwnProperty(v)) {
                         let tp = <[Type, IdentifierStatus]> state.staticBasis.valueEnvironment[v];
-                        let norm = tp[0].normalize(state.freeTypeVariables[0]);
+                        let norm = tp[0].normalize(state.freeTypeVariables[0], options);
                         state.freeTypeVariables[0] = norm[1];
                         state.setStaticValue(v, norm[0], tp[1]);
                     }
@@ -1068,7 +1078,7 @@ export class DatatypeBinding {
 
 export interface ExceptionBinding {
     evaluate(state: State): [State, boolean, Value|undefined];
-    elaborate(state: State, isTopLevel: boolean): State;
+    elaborate(state: State, isTopLevel: boolean, options: { [name: string]: any }): State;
 }
 
 export class DirectExceptionBinding implements ExceptionBinding {
@@ -1078,7 +1088,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
                 public type: Type | undefined) {
     }
 
-    elaborate(state: State, isTopLevel: boolean): State {
+    elaborate(state: State, isTopLevel: boolean, options: { [name: string]: any }): State {
         if (this.type !== undefined) {
             let tp = this.type.simplify().instantiate(state, new Map<string, [Type, boolean]>());
             let tyvars: string[] = [];
@@ -1123,7 +1133,7 @@ export class ExceptionAlias implements ExceptionBinding {
     constructor(public position: number, public name: IdentifierToken, public oldname: Token) {
     }
 
-    elaborate(state: State, isTopLevel: boolean): State {
+    elaborate(state: State, isTopLevel: boolean, options: { [name: string]: any }): State {
         let res: [Type, IdentifierStatus] | undefined = undefined;
         if (this.oldname instanceof LongIdentifierToken) {
             let st = state.getAndResolveStaticStructure(<LongIdentifierToken> this.oldname);

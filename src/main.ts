@@ -25,7 +25,8 @@ export function interpret(nextInstruction: string,
                           options: { [name: string]: any } = {
                               'allowUnicodeInStrings': false,
                               'allowSuccessorML': false,
-                              'disableElaboration': false
+                              'disableElaboration': false,
+                              'strictMode': true
                           }): { [name: string]: any } {
     let state = oldState.getNestedState();
 
@@ -46,7 +47,7 @@ export function interpret(nextInstruction: string,
         };
     }
 
-    let elab = ast.elaborate(state, new Map<string, [Type, boolean]>(), '\'*t0', true);
+    let elab = ast.elaborate(state, new Map<string, [Type, boolean]>(), '\'*t0', true, options);
     state = elab[0];
 
     // Use a fresh state to be able to piece types and values together
