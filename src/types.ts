@@ -1054,11 +1054,11 @@ export class FunctionType extends Type {
     }
 
     makeFree(): Type {
-        return new FunctionType(this.parameterType.makeFree(), this.returnType.makeFree());
+        return new FunctionType(this.parameterType.makeFree(), this.returnType.makeFree(), this.position);
     }
 
     flatten(repl: Map<string, Type>): Type {
-        return new FunctionType(this.parameterType.flatten(repl), this.returnType.flatten(repl));
+        return new FunctionType(this.parameterType.flatten(repl), this.returnType.flatten(repl), this.position);
     }
 
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
