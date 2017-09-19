@@ -3294,8 +3294,26 @@ it("module language - structure derived", () => {
                     new Token.AlphanumericIdentifierToken("a",10),
                     new Modu.FunctorApplication(14,
                         new Token.AlphanumericIdentifierToken("b", 14),
-                        new Modu.StructureIdentifier(17,
-                            new Token.AlphanumericIdentifierToken("c", 17)
+                        new Modu.StructureExpression(
+                            14,
+                            new Decl.SequentialDeclaration(
+                                17,
+                                [
+                                    new Modu.StructureDeclaration(
+                                        17,
+                                        [
+                                            new Modu.StructureBinding(
+                                                27,
+                                                new Token.AlphanumericIdentifierToken('a', 27),
+                                                new Modu.StructureIdentifier(
+                                                    31,
+                                                    new Token.AlphanumericIdentifierToken('b', 31)
+                                                )
+                                            )
+                                        ]
+                                    )
+                                ]
+                            )
                         )
                     )
                 )
@@ -4160,9 +4178,18 @@ it("module language - spec", () => {
     expect(parse("signature a = sig include a b c end;")).toEqualWithType(
         spec_tester([
             new Modu.IncludeSpecification(18,[
-                new Type.SignatureIdentifier('a'),
-                new Type.SignatureIdentifier('b'),
-                new Type.SignatureIdentifier('c'),
+                new Modu.SignatureIdentifier(
+                    26,
+                    new Token.AlphanumericIdentifierToken('a', 26)
+                ),
+                new Modu.SignatureIdentifier(
+                    28,
+                    new Token.AlphanumericIdentifierToken('b', 28)
+                ),
+                new Modu.SignatureIdentifier(
+                    30,
+                    new Token.AlphanumericIdentifierToken('c', 30)
+                ),
             ])
         ])
     );
