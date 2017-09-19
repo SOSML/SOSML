@@ -7,8 +7,8 @@ import { InternalInterpreterError, ElaborationError,
          EvaluationError, FeatureDisabledError, Warning } from './errors';
 import { Value, ValueConstructor, ExceptionConstructor, ExceptionValue,
          FunctionValue } from './values';
+import { IdCnt, MemBind, EvaluationResult, EvaluationStack, EvaluationParameters } from './evaluator';
 
-type IdCnt = { [name: string]: number };
 export abstract class Declaration {
     id: number;
     elaborate(state: State,
@@ -19,8 +19,7 @@ export abstract class Declaration {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
-    // Returns [computed state, has Error occured, Exception]
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
@@ -127,37 +126,85 @@ export class ValueDeclaration extends Declaration {
         return [state, warns, bnds, nextName];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
-        let result: [string, Value][] = [];
-        let recursives: [string, Value][] = [];
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        let state = params.state;
+        if (params.step === undefined) {
+            params.result = [];
+            params.recursives = [];
+            params.isRec = false;
+            params.warns = [];
+            params.step = -1;
+        }
 
-        let isRec = false;
-        let warns: Warning[] = [];
-        for (let i = 0; i < this.valueBinding.length; ++i) {
-            if (this.valueBinding[i].isRecursive) {
+        let result: [string, Value][] = params.result;
+        let recursives: [string, Value][] = params.recursives;
+
+        let isRec: boolean = params.isRec;
+        let warns: Warning[] = params.warns;
+
+        let step: number = params.step;
+
+        if (step >= 0) {
+            let val = params.recResult;
+            if (val === undefined
+                || val.ids === undefined
+                || val.mem === undefined) {
+                throw new InternalInterpreterError(-1, 'How is this undefined? ' + JSON.stringify(val));
+            }
+
+            if (this.valueBinding[step].isRecursive) {
                 isRec = true;
             }
-            let val = this.valueBinding[i].compute(state);
-            warns = warns.concat(val[2]);
-            state.valueIdentifierId = val[4];
-            for (let j = 0; j < val[3].length; ++j) {
-                state.setCell(val[3][j][0], val[3][j][1]);
+
+            warns = warns.concat(val.warns);
+            state.valueIdentifierId = <IdCnt> val.ids;
+            let mem = <MemBind> val.mem;
+            for (let j = 0; j < mem.length; ++j) {
+                state.setCell(mem[j][0], mem[j][1]);
             }
 
-            if (val[1] !== undefined) {
-                return [state, true, val[1], warns];
+            if (val.hasThrown) {
+                return {
+                    'newState': state,
+                    'value': val.value,
+                    'hasThrown': true,
+                    'warns': warns,
+                    'mem': undefined,
+                    'ids': undefined
+                };
             }
-            if (val[0] === undefined) {
-                return [state, true, new ExceptionValue('Bind'), warns];
+            let matched = this.valueBinding[step].pattern.matches(state, <Value> val.value);
+            if (matched === undefined) {
+                return {
+                    'newState': state,
+                    'value': new ExceptionValue('Bind'),
+                    'hasThrown': true,
+                    'warns': warns,
+                    'mem': undefined,
+                    'ids': undefined
+                };
             }
 
-            for (let j = 0; j < (<[string, Value][]> val[0]).length; ++j) {
+            for (let j = 0; j < (<[string, Value][]> matched).length; ++j) {
                 if (!isRec) {
-                    result.push((<[string, Value][]> val[0])[j]);
+                    result.push((<[string, Value][]> matched)[j]);
                 } else {
-                    recursives.push((<[string, Value][]> val[0])[j]);
+                    recursives.push((<[string, Value][]> matched)[j]);
                 }
             }
+        }
+
+        ++step;
+        if (step < this.valueBinding.length) {
+            params.step = step;
+            params.isRec = isRec;
+            params.warns = warns;
+            callStack.push({'next': this, 'params': params});
+            callStack.push({
+                'next': this.valueBinding[step].expression,
+                'params': {'state': state, 'recResult': undefined}
+            });
+            return;
         }
 
         for (let j = 0; j < result.length; ++j) {
@@ -174,7 +221,14 @@ export class ValueDeclaration extends Declaration {
             }
         }
 
-        return [state, false, undefined, warns];
+        return {
+            'newState': state,
+            'value': undefined,
+            'hasThrown': false,
+            'warns': warns,
+            'mem': undefined,
+            'ids': undefined
+        };
     }
 
     toString(): string {
@@ -220,11 +274,19 @@ export class TypeDeclaration extends Declaration {
         return [state, [], tyVarBnd, nextName];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        let state = params.state;
         for (let i = 0; i < this.typeBinding.length; ++i) {
             state.setDynamicType(this.typeBinding[i].name.getText(), []);
         }
-        return [state, false, undefined, []];
+        return {
+            'newState': state,
+            'value': undefined,
+            'hasThrown': false,
+            'warns': [],
+            'mem': undefined,
+            'ids': undefined
+        };
     }
 
     toString(): string {
@@ -294,7 +356,8 @@ export class DatatypeDeclaration extends Declaration {
         return [state, [], tyVarBnd, nextName];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        let state = params.state;
         // I'm assuming the withtype is empty
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
             let res = this.datatypeBinding[i].compute(state);
@@ -309,7 +372,14 @@ export class DatatypeDeclaration extends Declaration {
             state.setDynamicType(res[1][0], res[1][1]);
             state.incrementValueIdentifierId(res[1][0]);
         }
-        return [state, false, undefined, []];
+        return {
+            'newState': state,
+            'value': undefined,
+            'hasThrown': false,
+            'warns': [],
+            'mem': undefined,
+            'ids': undefined
+        };
     }
 
     toString(): string {
@@ -371,7 +441,8 @@ export class DatatypeReplication extends Declaration {
         return [state, [], tyVarBnd, nextName];
    }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        let state = params.state;
         let tp: string[] | undefined = [];
         if (this.oldname instanceof LongIdentifierToken) {
             let st = state.getAndResolveDynamicStructure(<LongIdentifierToken> this.oldname);
@@ -389,7 +460,14 @@ export class DatatypeReplication extends Declaration {
         }
 
         state.setDynamicType(this.name.getText(), tp);
-        return [state, false, undefined, []];
+        return {
+            'newState': state,
+            'value': undefined,
+            'hasThrown': false,
+            'warns': [],
+            'mem': undefined,
+            'ids': undefined
+        };
     }
 
     toString(): string {
@@ -420,15 +498,19 @@ export class ExceptionDeclaration extends Declaration {
         return [state, [], tyVarBnd, nextName];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        let state = params.state;
         for (let i = 0; i < this.bindings.length; ++i) {
-            let res = this.bindings[i].evaluate(state);
-            if (res[1]) {
-                return [res[0], res[1], res[2], []];
-            }
-            state = res[0];
+            this.bindings[i].evaluate(state);
         }
-        return [state, false, undefined, []];
+        return {
+            'newState': state,
+            'value': undefined,
+            'hasThrown': false,
+            'warns': [],
+            'mem': undefined,
+            'ids': undefined
+        };
     }
 }
 
@@ -457,27 +539,77 @@ export class LocalDeclaration extends Declaration {
         return [nstate[0], res[1].concat(nstate[1]), nstate[2], nstate[3]];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
-        let nstate = state.getNestedState(0).getNestedState(state.id);
-        let res = this.declaration.evaluate(nstate);
-        let membnd = res[0].getMemoryChanges(0);
-        state.valueIdentifierId = res[0].getIdChanges(0);
-
-        for (let i = 0; i < membnd.length; ++i) {
-            state.setCell(membnd[i][0], membnd[i][1]);
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        let state = params.state;
+        if (params.step === undefined) {
+            params.step = -1;
         }
 
-        if (res[1]) {
-            // Something came flying in our direction. So hide we were here and let it flow.
-            return [state, true, res[2], res[3]];
-        }
-        nstate = res[0].getNestedState(state.id);
-        let nres = this.body.evaluate(nstate);
+        let step: number = params.step;
 
-        // Forget all local definitions
-        nstate.parent = state;
-        nres[3] = res[3].concat(nres[3]);
-        return nres;
+        if (step === -1) {
+            let nstate = state.getNestedState(0).getNestedState(state.id);
+            params.nstate = nstate;
+            params.step = step + 1;
+            callStack.push({'next': this, 'params': params});
+            callStack.push({
+                'next': this.declaration,
+                'params': {'state': nstate, 'recResult': undefined}
+            });
+            return;
+        }
+        if (step === 0) {
+            let res = params.recResult;
+            if (res === undefined
+                || res.newState === undefined) {
+                throw new InternalInterpreterError(-1, 'How is this undefined?');
+            }
+            let nnstate = <State> res.newState;
+            let membnd = nnstate.getMemoryChanges(0);
+            state.valueIdentifierId = nnstate.getIdChanges(0);
+
+            for (let i = 0; i < membnd.length; ++i) {
+                state.setCell(membnd[i][0], membnd[i][1]);
+            }
+
+            if (res.hasThrown) {
+                // Something came flying in our direction. So hide we were here and let it flow.
+                return {
+                    'newState': state,
+                    'value': res.value,
+                    'hasThrown': true,
+                    'warns': res.warns,
+                    'mem': undefined,
+                    'ids': undefined
+                };
+            }
+            let nstate = nnstate.getNestedState(state.id);
+
+            params.nstate = nstate;
+            params.res = res;
+            params.step = step + 1;
+            callStack.push({'next': this, 'params': params});
+            callStack.push({
+                'next': this.body,
+                'params': {'state': nstate, 'recResult': undefined}
+            });
+            return;
+        }
+        // braced, so linter does not complain about nstate being shadowed
+        {
+            let nres = params.recResult;
+            let nstate = <State> params.nstate;
+            let res = <EvaluationResult> params.res;
+            if (nres === undefined
+                || res === undefined) {
+                throw new InternalInterpreterError(-1, 'How is this undefined?');
+            }
+
+            // Forget all local definitions
+            nstate.parent = state;
+            nres.warns = res.warns.concat(nres.warns);
+            return nres;
+        }
     }
 
     toString(): string {
@@ -521,7 +653,8 @@ export class OpenDeclaration extends Declaration {
         return [state, [], tyVarBnd, nextName];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        let state = params.state;
         for (let i = 0; i < this.names.length; ++i) {
             let tmp: DynamicBasis | undefined;
             if (this.names[i] instanceof LongIdentifierToken) {
@@ -538,7 +671,14 @@ export class OpenDeclaration extends Declaration {
             }
             state.dynamicBasis.extend(<DynamicBasis> tmp);
         }
-        return [state, false, undefined, []];
+        return {
+            'newState': state,
+            'value': undefined,
+            'hasThrown': false,
+            'warns': [],
+            'mem': undefined,
+            'ids': undefined
+        };
     }
 
     toString(): string {
@@ -566,8 +706,15 @@ export class EmptyDeclaration extends Declaration {
         return [state, [], tyVarBnd, nextName];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]]  {
-        return [state, false, undefined, []];
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        return {
+            'newState': params.state,
+            'value': undefined,
+            'hasThrown': false,
+            'warns': [],
+            'mem': undefined,
+            'ids': undefined
+        };
     }
 
     toString(): string {
@@ -644,19 +791,59 @@ export class SequentialDeclaration extends Declaration {
         return [state, warns, bnds, str];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]] {
-        let warns: Warning[] = [];
-        for (let i = 0; i < this.declarations.length; ++i) {
-            let nstate = state.getNestedState(this.declarations[i].id);
-            let res = this.declarations[i].evaluate(nstate);
-            warns = warns.concat(res[3]);
-            if (res[1]) {
-                // Something blew up, so let someone else handle the mess
-                return [res[0], res[1], res[2], warns];
-            }
-            state = res[0];
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        let state = params.state;
+        if (params.step === undefined) {
+            params.warns = [];
+            params.step = -1;
         }
-        return [state, false, undefined, warns];
+
+        let warns: Warning[] = params.warns;
+        let step: number = params.step;
+
+        if (step >= 0) {
+            let val = params.recResult;
+            if (val === undefined
+                || val.newState === undefined) {
+                throw new InternalInterpreterError(-1, 'How is this undefined?');
+            }
+
+            warns = warns.concat(val.warns);
+            if (val.hasThrown) {
+                // Something blew up, so let someone else handle the mess
+                return {
+                    'newState': val.newState,
+                    'value': val.value,
+                    'hasThrown': true,
+                    'warns': warns,
+                    'mem': undefined,
+                    'ids': undefined
+                };
+            }
+            state = <State> val.newState;
+        }
+        ++step;
+        if (step < this.declarations.length) {
+            let nstate = state.getNestedState(this.declarations[step].id);
+            params.step = step;
+            params.warns = warns;
+            params.state = state;
+            callStack.push({'next': this, 'params': params});
+            callStack.push({
+                'next': this.declarations[step],
+                'params': {'state': nstate, 'recResult': undefined}
+            });
+            return;
+        }
+
+        return {
+            'newState': state,
+            'value': undefined,
+            'hasThrown': false,
+            'warns': warns,
+            'mem': undefined,
+            'ids': undefined
+        };
     }
 
     toString(): string {
@@ -747,11 +934,23 @@ export class InfixDeclaration extends Declaration {
         return [state, [], tyVarBnd, nextName];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]]  {
+    setInfixStatus(state: State): void {
         for (let i = 0; i < this.operators.length; ++i) {
             state.setInfixStatus(this.operators[i], this.precedence, false, true);
         }
-        return [state, false, undefined, []];
+    }
+
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        let state = params.state;
+        this.setInfixStatus(state);
+        return {
+            'newState': state,
+            'value': undefined,
+            'hasThrown': false,
+            'warns': [],
+            'mem': undefined,
+            'ids': undefined
+        };
     }
 
     toString(): string {
@@ -780,11 +979,23 @@ export class InfixRDeclaration extends Declaration {
         return [state, [], tyVarBnd, nextName];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]]  {
+    setInfixStatus(state: State): void {
         for (let i = 0; i < this.operators.length; ++i) {
             state.setInfixStatus(this.operators[i], this.precedence, true, true);
         }
-        return [state, false, undefined, []];
+    }
+
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        let state = params.state;
+        this.setInfixStatus(state);
+        return {
+            'newState': state,
+            'value': undefined,
+            'hasThrown': false,
+            'warns': [],
+            'mem': undefined,
+            'ids': undefined
+        };
     }
 
     toString(): string {
@@ -813,11 +1024,23 @@ export class NonfixDeclaration extends Declaration {
         return [state, [], tyVarBnd, nextName];
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined, Warning[]]  {
+    setInfixStatus(state: State): void {
         for (let i = 0; i < this.operators.length; ++i) {
             state.setInfixStatus(this.operators[i], 0, false, false);
         }
-        return [state, false, undefined, []];
+    }
+
+    evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        let state = params.state;
+        this.setInfixStatus(state);
+        return {
+            'newState': state,
+            'value': undefined,
+            'hasThrown': false,
+            'warns': [],
+            'mem': undefined,
+            'ids': undefined
+        };
     }
 
     toString(): string {
@@ -907,15 +1130,6 @@ export class ValueBinding {
         }
 
         return [res[0], tp[1], res[2], tp[2], tp[5]];
-    }
-
-    // Returns [ VE | undef, Excep | undef, Warning[]]
-    compute(state: State): [[string, Value][] | undefined, Value | undefined, Warning[], [number, Value][], IdCnt] {
-        let v = this.expression.compute(state);
-        if (v[1]) {
-            return [undefined, v[0], v[2], v[3], v[4]];
-        }
-        return [this.pattern.matches(state, v[0]), undefined, v[2], v[3], v[4]];
     }
 }
 
@@ -1077,7 +1291,7 @@ export class DatatypeBinding {
 // Exception Bindings
 
 export interface ExceptionBinding {
-    evaluate(state: State): [State, boolean, Value|undefined];
+    evaluate(state: State): void;
     elaborate(state: State, isTopLevel: boolean, options: { [name: string]: any }): State;
 }
 
@@ -1109,7 +1323,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
         return state;
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined] {
+    evaluate(state: State): void {
         let numArg = 0;
         if (this.type !== undefined) {
             numArg = 1;
@@ -1124,7 +1338,6 @@ export class DirectExceptionBinding implements ExceptionBinding {
 
         state.setDynamicValue(this.name.getText(),
             new ExceptionConstructor(this.name.getText(), numArg, id), IdentifierStatus.EXCEPTION_CONSTRUCTOR);
-        return [state, false, undefined];
     }
 }
 
@@ -1154,7 +1367,7 @@ export class ExceptionAlias implements ExceptionBinding {
         return state;
     }
 
-    evaluate(state: State): [State, boolean, Value|undefined] {
+    evaluate(state: State): void {
         let res: [Value, IdentifierStatus] | undefined = undefined;
         if (this.oldname instanceof LongIdentifierToken) {
             let st = state.getAndResolveDynamicStructure(<LongIdentifierToken> this.oldname);
@@ -1172,6 +1385,5 @@ export class ExceptionAlias implements ExceptionBinding {
                 + res[0].toString(state) + '" into an exception.');
         }
         state.setDynamicValue(this.name.getText(), res[0], IdentifierStatus.EXCEPTION_CONSTRUCTOR);
-        return [state, false, undefined];
     }
 }

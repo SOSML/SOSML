@@ -16,9 +16,11 @@ let AST = instance.lexParse(..code..);
 import { State } from './state';
 import { getInitialState } from './initialState';
 import { addStdLib } from './stdlib';
+import { InternalInterpreterError } from './errors';
 import { Type } from './types';
 import * as Lexer from './lexer';
 import * as Parser from './parser';
+import * as Evaluator from './evaluator';
 
 export function interpret(nextInstruction: string,
                           oldState: State = getInitialState(),
@@ -38,9 +40,12 @@ export function interpret(nextInstruction: string,
     ast = ast.simplify();
 
     if (options.disableElaboration === true) {
-        let tmp = ast.evaluate(oldState.getNestedState() /* , options */);
+        let tmp = Evaluator.evaluate(oldState.getNestedState(), ast /* , options */);
+        if (tmp === undefined) {
+            throw new InternalInterpreterError(-1, 'How is this undefined?');
+        }
         return {
-            'state':                tmp[0],
+            'state':                <State> tmp.newState,
             'evaluationErrored':    tmp[1],
             'error':                tmp[2],
             'warnings':             tmp[3]
@@ -51,22 +56,25 @@ export function interpret(nextInstruction: string,
     state = elab[0];
 
     // Use a fresh state to be able to piece types and values together
-    let res = ast.evaluate(oldState.getNestedState() /* , options */);
-
-    for (let i = 0; i < elab[1].length; ++i) {
-        res[3].push(elab[1][i]);
+    let res = Evaluator.evaluate(oldState.getNestedState(), ast /* , options */);
+    if (res === undefined) {
+        throw new InternalInterpreterError(-1, 'How is this undefined?');
     }
 
-    if (res[1]) {
+    for (let i = 0; i < elab[1].length; ++i) {
+        res.warns.push(elab[1][i]);
+    }
+
+    if (res.hasThrown) {
         return {
-            'state':                res[0],
+            'state':                res.newState,
             'evaluationErrored':    true,
-            'error':                res[2],
-            'warnings':             res[3]
+            'error':                res.value,
+            'warnings':             res.warns
         };
     }
 
-    let curState = res[0];
+    let curState = <State> res.newState;
 
     while (curState.id > oldState.id) {
         if (curState.dynamicBasis !== undefined) {
@@ -132,10 +140,10 @@ export function interpret(nextInstruction: string,
     }
 
     return {
-        'state':                res[0],
+        'state':                res.newState,
         'evaluationErrored':    false,
-        'error':                res[2],
-        'warnings':             res[3]
+        'error':                res.value,
+        'warnings':             res.warns
     };
 }
 
