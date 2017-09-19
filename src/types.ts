@@ -641,8 +641,9 @@ export class TypeVariable extends Type {
                             + '" and "' + other.normalize(0, {'strictMode': false})[0]
                             + '" ({' + ths.domain + '} and {' + oth.domain + '})'];
                     }
-                    return [new TypeVariable(ths.name, ths.position, ths.mergeDomain(oth.domain)),
-                        tyVarBnd];
+                    let res = new TypeVariable(ths.name, ths.position, ths.mergeDomain(oth.domain));
+                    res.isFree = ths.isFree && oth.isFree;
+                    return [res, tyVarBnd];
                 } else {
                     let repl = new Map<string, string>();
                     let rs = ths;
@@ -662,10 +663,11 @@ export class TypeVariable extends Type {
                     tyVarBnd.forEach((val: [Type, boolean], key: string) => {
                         nvb = nvb.set(key, [val[0].replaceTypeVariables(repl), val[1]]);
                     });
+                    rs.isFree = ths.isFree && oth.isFree;
                     if (ths.name < oth.name) {
-                        nvb.set(oth.name, [ths, oth.isFree]);
+                        nvb.set(oth.name, [ths, rs.isFree]);
                     } else {
-                        nvb.set(ths.name, [oth, ths.isFree]);
+                        nvb.set(ths.name, [oth, rs.isFree]);
                     }
                     return [rs, nvb];
                 }
