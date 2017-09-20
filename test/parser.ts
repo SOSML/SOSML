@@ -3287,6 +3287,26 @@ it("module language - structure", () => {
 });
 
 it("module language - structure derived", () => {
+    let seq =
+    new Decl.SequentialDeclaration(
+        17,
+        [
+            new Modu.StructureDeclaration(
+                17,
+                [
+                    new Modu.StructureBinding(
+                        27,
+                        new Token.AlphanumericIdentifierToken('a', 27),
+                        new Modu.StructureIdentifier(
+                             31,
+                             new Token.AlphanumericIdentifierToken('b', 31)
+                        )
+                    )
+                ]
+            )
+        ]
+    );
+    seq.id=3;
     expect(parse("structure a = b (structure a = b);")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Modu.StructureDeclaration(0, [
@@ -3296,24 +3316,7 @@ it("module language - structure derived", () => {
                         new Token.AlphanumericIdentifierToken("b", 14),
                         new Modu.StructureExpression(
                             14,
-                            new Decl.SequentialDeclaration(
-                                17,
-                                [
-                                    new Modu.StructureDeclaration(
-                                        17,
-                                        [
-                                            new Modu.StructureBinding(
-                                                27,
-                                                new Token.AlphanumericIdentifierToken('a', 27),
-                                                new Modu.StructureIdentifier(
-                                                    31,
-                                                    new Token.AlphanumericIdentifierToken('b', 31)
-                                                )
-                                            )
-                                        ]
-                                    )
-                                ]
-                            )
+                            seq
                         )
                     )
                 )
@@ -3386,18 +3389,8 @@ it("module language - signature", () => {
         ], 1)
     );
 
-    expect(parse("signature a = b where type c=d and type e=f;")).toEqualWithType(
-        new Decl.SequentialDeclaration(0, [
-            new Modu.SignatureDeclaration(0, [
-                new Modu.SignatureBinding(10,
-                    new Token.AlphanumericIdentifierToken("a", 10),
-                    new Modu.TypeRealisation(
-                        14,
-                        
-                    )
-                )
-            ])
-        ], 1)
+    expect(parse("signature a = b where type c=d and   type e=f;")).toEqualWithType(
+       parse("signature a = b where type c=d where type e=f;") 
     );
 });
 
