@@ -2201,11 +2201,11 @@ op+;
             expect(state.getDynamicValue('it')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 0),
-                    new Type.FunctionType(
-                        new Type.CustomType('int', [], 0),
-                        new Type.CustomType('int', [], 0)
-                    )
+                    new Type.RecordType(new Map([
+                        ['1', new Type.CustomType('int', [], 0)],
+                        ['2', new Type.CustomType('int', [], 0)]
+                    ]), true),
+                    new Type.CustomType('int', [], 0)
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -2386,10 +2386,10 @@ op o;
             expect(state.getDynamicValue('plus')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('plus')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 12),
+                    new Type.CustomType('int', [], 0),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 12),
-                        new Type.CustomType('int', [], 20)
+                        new Type.CustomType('int', [], 0),
+                        new Type.CustomType('int', [], 0)
                     )
                 )
             , 0]);
@@ -2399,10 +2399,10 @@ op o;
             expect(state.getDynamicValue('times')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('times')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 12),
+                    new Type.CustomType('int', [], 0),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 12),
-                        new Type.CustomType('int', [], 20)
+                        new Type.CustomType('int', [], 0),
+                        new Type.CustomType('int', [], 0)
                     )
                 )
             , 0]);
@@ -2503,7 +2503,7 @@ fun iterdn n m s f = if n<m then s else iterdn (n-1) m (f(n,s)) f;
                         )
                     )
                 )
-                
+
             , 0]);
         }],
         ['fun iterdn n m s f = if n<m then s else iterdn (n-1) m (f(n,s)) f;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
@@ -2531,7 +2531,7 @@ fun iterdn n m s f = if n<m then s else iterdn (n-1) m (f(n,s)) f;
                         )
                     )
                 )
-                
+
             , 0]);
         }]
     ]);
@@ -2936,7 +2936,7 @@ tabulate(5, fn x => x*x)
                         )
                     )
                 )
-                
+
             , 0]);
         }],
         ['fun tabulate (n,f) = iterdn (n-1) 0 nil (fn (i,xs) => f i::xs);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
@@ -4251,13 +4251,19 @@ val ys = rev xs;
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.CustomType('list', [new Type.CustomType('int', [], 0)]),
                         new Type.FunctionType(
-                            new Type.CustomType('list', [new Type.CustomType('int', [], 0)]),
-                            new Type.CustomType('list', [new Type.CustomType('int', [], 0)])
+                            new Type.RecordType(new Map([
+                                ['1', new Type.TypeVariable('\'a')],
+                                ['2', new Type.TypeVariable('\'a')]
+                            ]), true),
+                            new Type.CustomType('order', [], -1)
+                        ),
+                        new Type.FunctionType(
+                            new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
+                            new Type.CustomType('list', [new Type.TypeVariable('\'a')])
                         )
                     )
-                ),//TODO
+                ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -7604,7 +7610,7 @@ and pty (BOOL::tr) = (Bool,tr)
             expect(state.getStaticValue('ty')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
-                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0) 
+                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -7612,7 +7618,7 @@ and pty (BOOL::tr) = (Bool,tr)
             expect(state.getStaticValue('pty')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
-                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0) 
+                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -7718,7 +7724,7 @@ and pty (BOOL::tr) = (Bool,tr)
                 ]), 0),
             ]), 0));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('ty', [], -1), 
+                new Type.CustomType('ty', [], -1),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -7732,7 +7738,7 @@ and pty (BOOL::tr) = (Bool,tr)
                 ]), 0),
             ]), 0));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('ty', [], -1), 
+                new Type.CustomType('ty', [], -1),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -7902,7 +7908,7 @@ lexInt ~1 34 (explode "72 Katzen");
                     new Type.CustomType('list', [new Type.CustomType('char')], 0),
                     new Type.FunctionType(
                         new Type.CustomType('list', [new Type.CustomType('char')], 0)
-                        new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0) 
+                        new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -8094,7 +8100,7 @@ parse exp (lex (explode "2*x+y+(z+u)"));
                 new Type.FunctionType(
                     new Type.CustomType('int', [], 22),
                     new Type.CustomType('exp', [], -1)
-                ) 
+                )
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Id')[0]).toEqualWithType(new Val.ValueConstructor('Id', 1));
@@ -8102,7 +8108,7 @@ parse exp (lex (explode "2*x+y+(z+u)"));
                 new Type.FunctionType(
                     new Type.CustomType('string', [], 34),
                     new Type.CustomType('exp', [], -1)
-                ) 
+                )
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Sum')[0]).toEqualWithType(new Val.ValueConstructor('Sum', 1));
@@ -8113,7 +8119,7 @@ parse exp (lex (explode "2*x+y+(z+u)"));
                         ['2', new Type.CustomType('exp', [], 56)]
                     ]), true, 54)
                     new Type.CustomType('exp', [], -1)
-                ) 
+                )
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Pro')[0]).toEqualWithType(new Val.ValueConstructor('Pro', 1));
@@ -8124,7 +8130,7 @@ parse exp (lex (explode "2*x+y+(z+u)"));
                         ['2', new Type.CustomType('exp', [], 77)]
                     ]), true, 75)
                     new Type.CustomType('exp', [], -1)
-                ) 
+                )
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('exp')).not.toEqualWithType(undefined); // TODO exact value
@@ -8135,7 +8141,7 @@ parse exp (lex (explode "2*x+y+(z+u)"));
                         ['1', new Type.CustomType('exp', [], 50)],
                         ['2', new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)]
                     ]))
-                ) 
+                )
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
             expect(state.getDynamicValue('mexp')).not.toEqualWithType(undefined); // TODO exact value
@@ -8146,7 +8152,7 @@ parse exp (lex (explode "2*x+y+(z+u)"));
                         ['1', new Type.CustomType('exp', [], 71)],
                         ['2', new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)]
                     ]))
-                ) 
+                )
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
             expect(state.getDynamicValue('pexp')).not.toEqualWithType(undefined); // TODO exact value
@@ -8157,7 +8163,7 @@ parse exp (lex (explode "2*x+y+(z+u)"));
                         ['1', new Type.CustomType('exp', [], 50)],
                         ['2', new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)]
                     ])),
-                ) 
+                )
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -8180,7 +8186,7 @@ parse exp (lex (explode "2*x+y+(z+u)"));
                 new Type.RecordType(new Map([
                     ['1', new Type.CustomType('exp', [], 71)],
                     ['2', new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)]
-                ])), 
+                ])),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -8200,7 +8206,7 @@ parse exp (lex (explode "2*x+y+(z+u)"));
                 ]), 0)
             ]), 0));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('exp', [], 50), 
+                new Type.CustomType('exp', [], 50),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -8219,94 +8225,94 @@ datatype token = ARROW | LPAR | RPAR | COLON (* : *)
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('ARROW')[0]).toEqualWithType(new Val.ValueConstructor('ARROW', 0));
             expect(state.getStaticValue('ARROW')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('LPAR')[0]).toEqualWithType(new Val.ValueConstructor('LPAR', 0));
             expect(state.getStaticValue('LPAR')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('RPAR')[0]).toEqualWithType(new Val.ValueConstructor('RPAR', 0));
             expect(state.getStaticValue('RPAR')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('COLON')[0]).toEqualWithType(new Val.ValueConstructor('COLON', 0));
             expect(state.getStaticValue('COLON')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('DARROW')[0]).toEqualWithType(new Val.ValueConstructor('DARROW', 0));
             expect(state.getStaticValue('DARROW')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('LEQ')[0]).toEqualWithType(new Val.ValueConstructor('LEQ', 0));
             expect(state.getStaticValue('LEQ')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('ADD')[0]).toEqualWithType(new Val.ValueConstructor('ADD', 0));
             expect(state.getStaticValue('ADD')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('SUB')[0]).toEqualWithType(new Val.ValueConstructor('SUB', 0));
             expect(state.getStaticValue('SUB')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('MUL')[0]).toEqualWithType(new Val.ValueConstructor('MUL', 0));
             expect(state.getStaticValue('MUL')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('BOOL')[0]).toEqualWithType(new Val.ValueConstructor('BOOL', 0));
             expect(state.getStaticValue('BOOL')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('INT')[0]).toEqualWithType(new Val.ValueConstructor('INT', 0));
             expect(state.getStaticValue('INT')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('IF')[0]).toEqualWithType(new Val.ValueConstructor('IF', 0));
             expect(state.getStaticValue('IF')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('THEN')[0]).toEqualWithType(new Val.ValueConstructor('THEN', 0));
             expect(state.getStaticValue('THEN')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('ELSE')[0]).toEqualWithType(new Val.ValueConstructor('ELSE', 0));
             expect(state.getStaticValue('ELSE')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('FN')[0]).toEqualWithType(new Val.ValueConstructor('FN', 0));
             expect(state.getStaticValue('FN')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('FALSE')[0]).toEqualWithType(new Val.ValueConstructor('FALSE', 0));
             expect(state.getStaticValue('FALSE')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('TRUE')[0]).toEqualWithType(new Val.ValueConstructor('TRUE', 0));
             expect(state.getStaticValue('TRUE')).toEqualWithType([
-                new Type.CustomType('token', [], -1) 
+                new Type.CustomType('token', [], -1)
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('ICON')[0]).toEqualWithType(new Val.ValueConstructor('ICON', 1));
             expect(state.getStaticValue('ICON')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.CustomType('int', [], 157),
-                    new Type.CustomType('token', [], -1) 
+                    new Type.CustomType('token', [], -1)
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -8314,8 +8320,8 @@ datatype token = ARROW | LPAR | RPAR | COLON (* : *)
             expect(state.getStaticValue('ID')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.CustomType('string', [], 169),
-                    new Type.CustomType('token', [], -1) 
-                ) 
+                    new Type.CustomType('token', [], -1)
+                )
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
         }]
