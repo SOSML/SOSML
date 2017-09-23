@@ -3287,6 +3287,26 @@ it("module language - structure", () => {
 });
 
 it("module language - structure derived", () => {
+    let seq =
+    new Decl.SequentialDeclaration(
+        17,
+        [
+            new Modu.StructureDeclaration(
+                17,
+                [
+                    new Modu.StructureBinding(
+                        27,
+                        new Token.AlphanumericIdentifierToken('a', 27),
+                        new Modu.StructureIdentifier(
+                             31,
+                             new Token.AlphanumericIdentifierToken('b', 31)
+                        )
+                    )
+                ]
+            )
+        ]
+    );
+    seq.id=3;
     expect(parse("structure a = b (structure a = b);")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
             new Modu.StructureDeclaration(0, [
@@ -3296,24 +3316,7 @@ it("module language - structure derived", () => {
                         new Token.AlphanumericIdentifierToken("b", 14),
                         new Modu.StructureExpression(
                             14,
-                            new Decl.SequentialDeclaration(
-                                17,
-                                [
-                                    new Modu.StructureDeclaration(
-                                        17,
-                                        [
-                                            new Modu.StructureBinding(
-                                                27,
-                                                new Token.AlphanumericIdentifierToken('a', 27),
-                                                new Modu.StructureIdentifier(
-                                                    31,
-                                                    new Token.AlphanumericIdentifierToken('b', 31)
-                                                )
-                                            )
-                                        ]
-                                    )
-                                ]
-                            )
+                            seq
                         )
                     )
                 )
@@ -3386,19 +3389,11 @@ it("module language - signature", () => {
         ], 1)
     );
 
-    expect(parse("signature a = b where type c=d and type e=f;")).toEqualWithType(
-        new Decl.SequentialDeclaration(0, [
-            new Modu.SignatureDeclaration(0, [
-                new Modu.SignatureBinding(10,
-                    new Token.AlphanumericIdentifierToken("a", 10),
-                    new Modu.TypeRealisation(
-                        14,
-                        
-                    )
-                )
-            ])
-        ], 1)
+    expect(parse("signature a = b where type c=d and   type e=f;")).toEqualWithType(
+       parse("signature a = b where type c=d where type e=f;") 
     );
+
+    expect(() => {parse("signature a = b and type c=d and   type e=f;")}).toThrow(Parser.InterpreterError);
 });
 
 it("module language - functor", () => {
@@ -3418,6 +3413,12 @@ it("module language - functor", () => {
             ])
         ], 1)
     );
+
+    expect(() => {parse("functor a (b: fun) = d;")}).toThrow();
+
+    expect(() => {parse("functor a (fun: c) = d;")}).toThrow();
+
+    expect(() => {parse("functor fun (b: c) = d;")}).toThrow();
 
     expect(parse("functor a (b: c) = d and a (b: c) = d;")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -3440,6 +3441,39 @@ it("module language - functor", () => {
                     ),
                     new Modu.StructureIdentifier(36,
                         new Token.AlphanumericIdentifierToken("d", 36)
+                    )
+                )
+            ])
+        ], 1)
+    );
+
+    expect(parse("functor a (b: c):f = d and a (b: c) = d;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.FunctorDeclaration(0, [
+                new Modu.FunctorBinding(8,
+                    new Token.AlphanumericIdentifierToken("a", 8),
+                    new Token.AlphanumericIdentifierToken("b", 11),
+                    new Modu.SignatureIdentifier(14,
+                        new Token.AlphanumericIdentifierToken("c", 14)
+                    ),
+                    new Modu.TransparentConstraint(
+                        8,
+                        new Modu.StructureIdentifier(21,
+                            new Token.AlphanumericIdentifierToken("d", 21)
+                        )
+                        new Modu.SignatureIdentifier(17
+                            new Token.AlphanumericIdentifierToken("f", 17)
+                        )
+                    )
+                ),
+                new Modu.FunctorBinding(27,
+                    new Token.AlphanumericIdentifierToken("a", 27),
+                    new Token.AlphanumericIdentifierToken("b", 30),
+                    new Modu.SignatureIdentifier(33,
+                        new Token.AlphanumericIdentifierToken("c", 33)
+                    ),
+                    new Modu.StructureIdentifier(38,
+                        new Token.AlphanumericIdentifierToken("d", 38)
                     )
                 )
             ])
