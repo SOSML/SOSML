@@ -3392,6 +3392,8 @@ it("module language - signature", () => {
     expect(parse("signature a = b where type c=d and   type e=f;")).toEqualWithType(
        parse("signature a = b where type c=d where type e=f;") 
     );
+
+    expect(() => {parse("signature a = b and type c=d and   type e=f;")}).toThrow(Parser.InterpreterError);
 });
 
 it("module language - functor", () => {
@@ -3411,6 +3413,12 @@ it("module language - functor", () => {
             ])
         ], 1)
     );
+
+    expect(() => {parse("functor a (b: fun) = d;")}).toThrow();
+
+    expect(() => {parse("functor a (fun: c) = d;")}).toThrow();
+
+    expect(() => {parse("functor fun (b: c) = d;")}).toThrow();
 
     expect(parse("functor a (b: c) = d and a (b: c) = d;")).toEqualWithType(
         new Decl.SequentialDeclaration(0, [
@@ -3433,6 +3441,39 @@ it("module language - functor", () => {
                     ),
                     new Modu.StructureIdentifier(36,
                         new Token.AlphanumericIdentifierToken("d", 36)
+                    )
+                )
+            ])
+        ], 1)
+    );
+
+    expect(parse("functor a (b: c):f = d and a (b: c) = d;")).toEqualWithType(
+        new Decl.SequentialDeclaration(0, [
+            new Modu.FunctorDeclaration(0, [
+                new Modu.FunctorBinding(8,
+                    new Token.AlphanumericIdentifierToken("a", 8),
+                    new Token.AlphanumericIdentifierToken("b", 11),
+                    new Modu.SignatureIdentifier(14,
+                        new Token.AlphanumericIdentifierToken("c", 14)
+                    ),
+                    new Modu.TransparentConstraint(
+                        8,
+                        new Modu.StructureIdentifier(21,
+                            new Token.AlphanumericIdentifierToken("d", 21)
+                        )
+                        new Modu.SignatureIdentifier(17
+                            new Token.AlphanumericIdentifierToken("f", 17)
+                        )
+                    )
+                ),
+                new Modu.FunctorBinding(27,
+                    new Token.AlphanumericIdentifierToken("a", 27),
+                    new Token.AlphanumericIdentifierToken("b", 30),
+                    new Modu.SignatureIdentifier(33,
+                        new Token.AlphanumericIdentifierToken("c", 33)
+                    ),
+                    new Modu.StructureIdentifier(38,
+                        new Token.AlphanumericIdentifierToken("d", 38)
                     )
                 )
             ])

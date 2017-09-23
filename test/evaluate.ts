@@ -176,6 +176,12 @@ it("signature", () => {
         ['structure bb : a = struct fun f x = 29 end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
         }],
+        ['structure bc : a = struct type z=int end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['structure bd : a = struct type z=blu end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(true);
+        }],
         ['structure c :> a = struct end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
         }],
@@ -185,10 +191,22 @@ it("signature", () => {
         ['structure cb :> a = struct fun f x = 29 end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
         }],
+        ['structure cc :> a = struct type z=int end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['structure cd :> a = struct type z=blu end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(true);
+        }],
         ['ba.x;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
             (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
         ],
         ['bb.f;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ],
+        ['bc.z;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ],
+        ['bd.z;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
             (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
         ],
         ['ca.x;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
@@ -197,5 +215,20 @@ it("signature", () => {
         ['cb.f;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
             (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
         ],
+        ['cc.z;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ],
+        ['cd.z;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ],
+    ]);
+    run_test([
+        ['signature a = sig end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['structure b :> a = struct type c=int end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('b.c')).toEqualWithType([new Val.Real(1), 0]);
+        }],
     ]);
 });
