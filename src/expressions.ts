@@ -446,8 +446,7 @@ export class Record extends Expression implements Pattern {
 
         for (let i = 0; i < this.entries.length; ++i) {
             if (!(<RecordType> t).hasType(this.entries[i][0])) {
-                // TODO Better message
-                throw new ElaborationError(this.position, 'Elaboration failed.');
+                throw new ElaborationError(this.position, 'My brain trembles.');
             }
             let cur = (<PatternExpression> this.entries[i][1]).matchType(
                 state, bnd, (<RecordType> t).getType(this.entries[i][0]));
@@ -889,8 +888,7 @@ export class FunctionApplication extends Expression implements Pattern {
                 'You simply cannot match function values.');
         } */
         if (!(this.func instanceof ValueIdentifier)) {
-            // TODO Better message
-            throw new ElaborationError(this.position, 'Elaboration failed. 1');
+            throw new ElaborationError(this.position, 'This is truly...slothful.');
         }
 
         let ti = state.getStaticValue((<ValueIdentifier> this.func).name.getText());
@@ -911,8 +909,7 @@ export class FunctionApplication extends Expression implements Pattern {
         tyVarBnd = tmp[4];
 
         if (!(ti[0] instanceof FunctionType)) {
-            // TODO Better message
-            throw new ElaborationError(this.position, 'Elaboration failed. 2');
+            throw new ElaborationError(this.position, 'This is even more...slothful.');
         }
 
         try {
@@ -926,7 +923,6 @@ export class FunctionApplication extends Expression implements Pattern {
             if (!(e instanceof Array)) {
                 throw e;
             }
-            // TODO Better message
             throw new ElaborationError(this.position, 'Merge failed: ' + e[0]);
         }
     }

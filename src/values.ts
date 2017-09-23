@@ -39,6 +39,67 @@ export class ReferenceValue extends Value {
     }
 }
 
+export class VectorValue extends Value {
+    constructor(public entries: Value[] = []) {
+        super();
+    }
+
+    equals(other: VectorValue) {
+        if (this.entries.length !== other.entries.length) {
+            return false;
+        }
+        for (let i = 0; i < this.entries.length; ++i) {
+            if (!this.entries[i].equals(other.entries[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    toString(state: State|undefined) {
+        let res = '#[';
+        for (let i = 0; i < this.entries.length; ++i) {
+            if (i > 0) {
+                res += ', ';
+            }
+            res += this.entries[i].toString(state);
+        }
+        return res += ']';
+    }
+}
+
+export class ArrayValue extends Value {
+    // Array : Collection of memory cells
+    constructor(public address: number, public length: number) {
+        super();
+    }
+
+    equals(other: ArrayValue) {
+        return this.address === other.address;
+    }
+
+    toString(state: State|undefined) {
+        if (state === undefined) {
+            return '[|$' + this.address + '...$' + (this.address + this.length - 1) + '|]';
+        } else {
+            let res = '[|';
+            for (let i = 0; i < this.length; ++i) {
+                if (i > 0) {
+                    res += ', ';
+                }
+
+                if (state.getCell(this.address + i) !== undefined) {
+                    res += (<Value> state.getCell(this.address + i)).toString(state);
+                } else {
+                    throw new EvaluationError(-1, 'Ouch, you may not de-reference "$'
+                        + (this.address + i) + '".');
+                }
+            }
+            return res += '|]';
+        }
+    }
+}
+
 export class BoolValue extends Value {
     constructor(public value: boolean) {
         super();
