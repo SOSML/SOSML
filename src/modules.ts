@@ -147,26 +147,24 @@ export class TransparentConstraint extends Expression implements Structure {
             <Expression & Signature> this.signatureExpression.simplify());
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    restrict(sig: StaticBasis, str: StaticBasis, state: State,
+             tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        let str = this.structureExpression.elaborate(state, tyVarBnd, nextName);
-        let sig = this.signatureExpression.elaborate(state, str[2], str[3]);
-
         let res = new StaticBasis({}, {}, {}, {}, {});
 
         let nstate = state.getNestedState(state.id);
-        nstate.staticBasis = str[0];
+        nstate.staticBasis = str;
         let nstate2 = state.getNestedState(state.id);
-        nstate2.staticBasis = sig[0];
+        nstate2.staticBasis = sig;
 
-        for (let i in sig[0].typeEnvironment) {
-            if (sig[0].typeEnvironment.hasOwnProperty(i)) {
-                if (!str[0].typeEnvironment.hasOwnProperty(i)) {
+        for (let i in sig.typeEnvironment) {
+            if (sig.typeEnvironment.hasOwnProperty(i)) {
+                if (!str.typeEnvironment.hasOwnProperty(i)) {
                     throw new ElaborationError(this.position,
                         'Signature mismatch: Unimplemented type "' + i + '".');
                 }
-                let sg = <TypeInformation> sig[0].typeEnvironment[i];
-                let st = <TypeInformation> str[0].typeEnvironment[i];
+                let sg = <TypeInformation> sig.typeEnvironment[i];
+                let st = <TypeInformation> str.typeEnvironment[i];
 
                 if (sg.arity !== st.arity) {
                     throw new ElaborationError(this.position,
@@ -194,14 +192,14 @@ export class TransparentConstraint extends Expression implements Structure {
             }
         }
 
-        for (let i in sig[0].valueEnvironment) {
-            if (sig[0].valueEnvironment.hasOwnProperty(i)) {
-                if (!str[0].valueEnvironment.hasOwnProperty(i)) {
+        for (let i in sig.valueEnvironment) {
+            if (sig.valueEnvironment.hasOwnProperty(i)) {
+                if (!str.valueEnvironment.hasOwnProperty(i)) {
                     throw new ElaborationError(this.position,
                         'Signature mismatch: Unimplemented value "' + i + '".');
                 }
-                let sg = <[Type, IdentifierStatus]> sig[0].valueEnvironment[i];
-                let st = <[Type, IdentifierStatus]> str[0].valueEnvironment[i];
+                let sg = <[Type, IdentifierStatus]> sig.valueEnvironment[i];
+                let st = <[Type, IdentifierStatus]> str.valueEnvironment[i];
 
                 let repl = new Map<string, string>();
                 let vsg = sg[0].getTypeVariables();
@@ -259,9 +257,36 @@ export class TransparentConstraint extends Expression implements Structure {
             }
         }
 
-        // TODO Structs, Functors?
+        for (let i in sig.structureEnvironment) {
+            if (sig.structureEnvironment.hasOwnProperty(i)) {
+                if (!str.structureEnvironment.hasOwnProperty(i)) {
+                    throw new ElaborationError(this.position,
+                        'Unimplemented structure "' + i + '".');
+                }
+
+                try {
+                    let tmp = this.restrict(<StaticBasis> sig.getStructure(i),
+                        <StaticBasis> str.getStructure(i), nstate, tyVarBnd, nextName);
+                    res.setStructure(i, tmp[0]);
+                    tyVarBnd = tmp[2];
+                    nextName = tmp[3];
+                } catch (e) {
+                    throw new ElaborationError(this.position,
+                        'Signature Mismatch: Wrong implementation of structure "' + i + '": '
+                        + e.message);
+                }
+            }
+        }
 
         return [res, [], tyVarBnd, nextName];
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        let str = this.structureExpression.elaborate(state, tyVarBnd, nextName);
+        let sig = this.signatureExpression.elaborate(state, str[2], str[3]);
+
+        return this.restrict(sig[0], str[0], state, sig[2], sig[3]);
     }
 
     computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
@@ -295,28 +320,26 @@ export class OpaqueConstraint extends Expression implements Structure {
             <Expression & Signature> this.signatureExpression.simplify());
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    restrict(sig: StaticBasis, str: StaticBasis, state: State,
+             tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-
-        let str = this.structureExpression.elaborate(state, tyVarBnd, nextName);
-        let sig = this.signatureExpression.elaborate(state, str[2], str[3]);
 
         let res = new StaticBasis({}, {}, {}, {}, {});
 
         let nstate = state.getNestedState(state.id);
-        nstate.staticBasis = str[0];
+        nstate.staticBasis = str;
         let nstate2 = state.getNestedState(state.id);
-        nstate2.staticBasis = sig[0];
+        nstate2.staticBasis = sig;
         nstate2 = nstate2.getNestedState(state.id);
 
-        for (let i in sig[0].typeEnvironment) {
-            if (sig[0].typeEnvironment.hasOwnProperty(i)) {
-                if (!str[0].typeEnvironment.hasOwnProperty(i)) {
+        for (let i in sig.typeEnvironment) {
+            if (sig.typeEnvironment.hasOwnProperty(i)) {
+                if (!str.typeEnvironment.hasOwnProperty(i)) {
                     throw new ElaborationError(this.position,
                         'Signature mismatch: Unimplemented type "' + i + '".');
                 }
-                let sg = <TypeInformation> sig[0].typeEnvironment[i];
-                let st = <TypeInformation> str[0].typeEnvironment[i];
+                let sg = <TypeInformation> sig.typeEnvironment[i];
+                let st = <TypeInformation> str.typeEnvironment[i];
 
                 if (sg.arity !== st.arity) {
                     throw new ElaborationError(this.position,
@@ -349,14 +372,14 @@ export class OpaqueConstraint extends Expression implements Structure {
             }
         }
 
-        for (let i in sig[0].valueEnvironment) {
-            if (sig[0].valueEnvironment.hasOwnProperty(i)) {
-                if (!str[0].valueEnvironment.hasOwnProperty(i)) {
+        for (let i in sig.valueEnvironment) {
+            if (sig.valueEnvironment.hasOwnProperty(i)) {
+                if (!str.valueEnvironment.hasOwnProperty(i)) {
                     throw new ElaborationError(this.position,
                         'Signature mismatch: Unimplemented value "' + i + '".');
                 }
-                let sg = <[Type, IdentifierStatus]> sig[0].valueEnvironment[i];
-                let st = <[Type, IdentifierStatus]> str[0].valueEnvironment[i];
+                let sg = <[Type, IdentifierStatus]> sig.valueEnvironment[i];
+                let st = <[Type, IdentifierStatus]> str.valueEnvironment[i];
 
                 let repl = new Map<string, string>();
                 let vsg = sg[0].getTypeVariables();
@@ -415,10 +438,38 @@ export class OpaqueConstraint extends Expression implements Structure {
             }
         }
 
-        // TODO Structs, Functors?
+        for (let i in sig.structureEnvironment) {
+            if (sig.structureEnvironment.hasOwnProperty(i)) {
+                if (!str.structureEnvironment.hasOwnProperty(i)) {
+                    throw new ElaborationError(this.position,
+                        'Unimplemented structure "' + i + '".');
+                }
+
+                try {
+                    let tmp = this.restrict(<StaticBasis> sig.getStructure(i),
+                        <StaticBasis> str.getStructure(i), nstate, tyVarBnd, nextName);
+                    res.setStructure(i, tmp[0]);
+                    tyVarBnd = tmp[2];
+                    nextName = tmp[3];
+                } catch (e) {
+                    throw new ElaborationError(this.position,
+                        'Signature Mismatch: Wrong implementation of structure "' + i + '": '
+                        + e.message);
+                }
+            }
+        }
 
         return [res, [], tyVarBnd, nextName];
     }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+        [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+
+        let str = this.structureExpression.elaborate(state, tyVarBnd, nextName);
+        let sig = this.signatureExpression.elaborate(state, str[2], str[3]);
+
+        return this.restrict(sig[0], str[0], state, sig[2], sig[3]);
+   }
 
     computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
         [DynamicBasis | Value, Warning[], MemBind] | undefined {
