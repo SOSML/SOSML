@@ -223,12 +223,14 @@ it("signature", () => {
         ],
     ]);
     run_test([
-        ['signature a = sig end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['signature a = sig type z end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['structure b :> a = struct type c=int end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
-            expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('b.c')).toEqualWithType([new Val.Real(1), 0]);
+        ['structure b :> a = struct type z=int end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false); //TODO
+        }],
+        ['structure c : a = struct type z=int end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false); //TODO
         }],
     ]);
 });
