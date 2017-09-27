@@ -1103,6 +1103,7 @@ export class ValueBinding {
         }
 
         let valuePoly = !this.isRecursive && !this.expression.isSafe(state);
+        let hasFree = false;
 
         for (let i = 0; i < res[0].length; ++i) {
             res[0][i][1] = res[0][i][1].instantiate(state, res[2]);
@@ -1114,6 +1115,7 @@ export class ValueBinding {
                     res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1],
                         <Type[]> tv.get(ntys[j].name));
                     (<TypeVariableBind> res[0][i][1]).isFree = valuePoly || free.has(ntys[j].name);
+                    hasFree = hasFree || valuePoly || free.has(ntys[j].name);
                     done.add(ntys[j].name);
                 }
             }
@@ -1126,7 +1128,12 @@ export class ValueBinding {
             for (let j = ntys.length - 1; j >= 0; --j) {
                 res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1], ntys[j].domain);
                 (<TypeVariableBind> res[0][i][1]).isFree = valuePoly || free.has(ntys[j].name);
+                hasFree = hasFree || valuePoly || free.has(ntys[j].name);
             }
+        }
+
+        if (hasFree && isTopLevel) {
+            tp[1].push(new Warning(this.position, 'Free type variables at top level.\n'));
         }
 
         return [res[0], tp[1], res[2], tp[2], tp[5]];
