@@ -5561,7 +5561,7 @@ end;
     //TODO test types
     //TODO maybe test that findDouble is usable?
     run_test([
-        ['datatype \'a option = NONE | SOME of \'a;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['(*datatype \'a option = NONE | SOME of \'a*);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('NONE')[0]).toEqualWithType(new Val.ValueConstructor('NONE', 0, 0));
             //expect(state.getStaticValue('NONE')).toEqualWithType(TODO);
