@@ -283,7 +283,8 @@ export class TypeDeclaration extends Declaration {
 export class DatatypeDeclaration extends Declaration {
 // datatype datatypeBinding <withtype typeBinding>
     constructor(public position: number, public datatypeBinding: DatatypeBinding[],
-                public typeBinding: (TypeBinding[]) | undefined, public id: number = 0) {
+                public typeBinding: (TypeBinding[]) | undefined, public id: number = 0,
+                public givenIds: {[name: string]: number} = {}) {
         super();
 
         if (this.typeBinding !== undefined) {
@@ -339,7 +340,7 @@ export class DatatypeDeclaration extends Declaration {
         let modifiable = params.modifiable;
         // I'm assuming the withtype is empty
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
-            let res = this.datatypeBinding[i].compute(state);
+            let res = this.datatypeBinding[i].compute(state, modifiable);
 
             for (let j = 0; j < res[0].length; ++j) {
                 if (!State.allowsRebind(res[0][j][0])) {
@@ -349,7 +350,10 @@ export class DatatypeDeclaration extends Declaration {
                 state.setDynamicValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
             }
             state.setDynamicType(res[1][0], res[1][1]);
-            modifiable.incrementValueIdentifierId(res[1][0]);
+            if (this.givenIds[res[1][0]] === undefined) {
+                modifiable.incrementValueIdentifierId(res[1][0]);
+                this.givenIds[res[1][0]] = state.getValueIdentifierId(res[1][0]);
+            }
         }
         return {
             'newState': state,
@@ -1167,7 +1171,8 @@ export class DatatypeBinding {
 // typeVariableSequence name = <op> constructor <of type>
     // type: [constructorName, <type>]
     constructor(public position: number, public typeVariableSequence: TypeVariable[],
-                public name: IdentifierToken, public type: [IdentifierToken, Type | undefined][]) {
+                public name: IdentifierToken, public type: [IdentifierToken, Type | undefined][],
+                public givenIds: {[name: string]: number} = {}) {
     }
 
     getType(state: State, isTopLevel: boolean): [[string, Type][], Type, [string, string[]]] {
@@ -1214,7 +1219,7 @@ export class DatatypeBinding {
         return [ve, restp, [this.name.getText(), connames]];
     }
 
-    compute(state: State): [[string, Value][], [string, string[]]] {
+    compute(state: State, modifiable: State): [[string, Value][], [string, string[]]] {
         let connames: string[] = [];
         let ve: [string, Value][] = [];
         for (let i = 0; i < this.type.length; ++i) {
@@ -1222,8 +1227,13 @@ export class DatatypeBinding {
             if (this.type[i][1] !== undefined) {
                 numArg = 1;
             }
-            let id = state.getValueIdentifierId(this.type[i][0].getText());
-            state.incrementValueIdentifierId(this.type[i][0].getText());
+            if (this.givenIds[this.type[i][0].getText()] === undefined) {
+                let id = modifiable.getValueIdentifierId(this.type[i][0].getText());
+                modifiable.incrementValueIdentifierId(this.type[i][0].getText());
+                this.givenIds[this.type[i][0].getText()] = id;
+            } else {
+                let id = this.givenIds[this.type[i][0].getText()];
+            }
             ve.push([this.type[i][0].getText(), new ValueConstructor(this.type[i][0].getText(), numArg, id)]);
             connames.push(this.type[i][0].getText());
         }
