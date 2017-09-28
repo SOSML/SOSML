@@ -6,7 +6,7 @@ import { State, IdentifierStatus } from './state';
 import { InternalInterpreterError, EvaluationError, Warning } from './errors';
 import { int, char, IdentifierToken } from './tokens';
 import { Match } from './expressions';
-import { MemBind, EvaluationStack } from './evaluator';
+import { EvaluationStack } from './evaluator';
 
 export abstract class Value {
     abstract toString(state: State|undefined|undefined): string;
@@ -457,7 +457,7 @@ export class FunctionValue extends Value {
 
     // Computes the function on the given argument,
     // returns [result, is thrown]
-    compute(callStack: EvaluationStack, argument: Value, memory: MemBind): void {
+    compute(callStack: EvaluationStack, argument: Value, modifiable: State): void {
         // adjoin the bindings in this.state into the state
         let nstate = this.state.getNestedState(this.state.id);
         for (let i = 0; i < this.recursives.length; ++i) {
@@ -470,13 +470,9 @@ export class FunctionValue extends Value {
                     IdentifierStatus.VALUE_VARIABLE);
             }
         }
-
-        for (let i = 0; i < memory.length; ++i) {
-            nstate.setCell(memory[i][0], memory[i][1]);
-        }
         callStack.push({
             'next': this.body,
-            'params': {'state': nstate, 'recResult': undefined, 'value': argument}
+            'params': {'state': nstate, 'recResult': undefined, 'modifiable': modifiable, 'value': argument}
         });
         return;
     }

@@ -48,7 +48,7 @@ export function interpret(nextInstruction: string,
             'state':                tmp.newState,
             'evaluationErrored':    true,
             'error':                tmp.value,
-            'warnings':             tmp.warns
+            'warnings':             (<State> tmp.newState).getWarnings()
         };
     }
 
@@ -62,7 +62,7 @@ export function interpret(nextInstruction: string,
     }
 
     for (let i = 0; i < elab[1].length; ++i) {
-        res.warns.push(elab[1][i]);
+        (<State> res.newState).addWarning(elab[1][i]);
     }
 
     if (res.hasThrown) {
@@ -70,7 +70,7 @@ export function interpret(nextInstruction: string,
             'state':                res.newState,
             'evaluationErrored':    true,
             'error':                res.value,
-            'warnings':             res.warns
+            'warnings':             (<State> res.newState).getWarnings()
         };
     }
 
@@ -143,7 +143,7 @@ export function interpret(nextInstruction: string,
         'state':                res.newState,
         'evaluationErrored':    false,
         'error':                res.value,
-        'warnings':             res.warns
+        'warnings':             (<State> res.newState).getWarnings()
     };
 }
 

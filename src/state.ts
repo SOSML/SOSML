@@ -1,7 +1,7 @@
 import { Type } from './types';
 import { Value, ReferenceValue } from './values';
 import { Token, IdentifierToken, LongIdentifierToken } from './tokens';
-import { InternalInterpreterError, EvaluationError } from './errors';
+import { Warning, InternalInterpreterError, EvaluationError } from './errors';
 import { Structure } from './modules';
 import { Expression } from './expressions';
 
@@ -320,7 +320,8 @@ export class State {
                 public freeTypeVariables: FreeTypeVariableInformation
                     = [0, new Map<string, [Type, boolean]>()],
                 private infixEnvironment: InfixEnvironment = {},
-                public valueIdentifierId: { [name: string]: number } = {}) {
+                public valueIdentifierId: { [name: string]: number } = {},
+                public warns: Warning[] = []) {
     }
 
     getIdChanges(stopId: number): { [name: string]: number } {
@@ -593,6 +594,10 @@ export class State {
         }
     }
 
+    getWarnings(): Warning[] {
+        return this.warns;
+    }
+
     incrementValueIdentifierId(name: string, atId: number|undefined = undefined): void {
         if (atId === undefined || this.id === atId) {
             this.valueIdentifierId[name] = this.getValueIdentifierId(name, atId) + 1;
@@ -738,6 +743,36 @@ export class State {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
             this.parent.setInfixStatus(id, precedence, rightAssociative, infix, atId);
+        }
+    }
+
+    setValueIdentifierId(name: string, setTo: number, atId: number|undefined = undefined) {
+        if (atId === undefined || atId === this.id) {
+            this.valueIdentifierId[name] = setTo;
+        } else if (atId > this.id || this.parent === undefined) {
+            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+        } else {
+            this.parent.setValueIdentifierId(name, setTo, atId);
+        }
+    }
+
+    addWarning(warn: Warning, atId: number|undefined = undefined) {
+        if (atId === undefined || atId === this.id) {
+            this.warns.push(warn);
+        } else if (atId > this.id || this.parent === undefined) {
+            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+        } else {
+            this.parent.addWarning(warn, atId);
+        }
+    }
+
+    setWarnings(warns: Warning[], atId: number|undefined = undefined) {
+        if (atId === undefined || atId === this.id) {
+            this.warns = warns;
+        } else if (atId > this.id || this.parent === undefined) {
+            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+        } else {
+            this.parent.setWarnings(warns, atId);
         }
     }
 }

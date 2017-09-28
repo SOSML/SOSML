@@ -7,7 +7,9 @@ import { InternalInterpreterError, ElaborationError,
          EvaluationError, FeatureDisabledError, Warning } from './errors';
 import { Value, ValueConstructor, ExceptionConstructor, ExceptionValue,
          FunctionValue } from './values';
-import { IdCnt, MemBind, EvaluationResult, EvaluationStack, EvaluationParameters } from './evaluator';
+import { EvaluationResult, EvaluationStack, EvaluationParameters } from './evaluator';
+
+type IdCnt = { [name: string]: number };
 
 export abstract class Declaration {
     id: number;
@@ -132,7 +134,6 @@ export class ValueDeclaration extends Declaration {
             params.result = [];
             params.recursives = [];
             params.isRec = false;
-            params.warns = [];
             params.step = -1;
         }
 
@@ -140,15 +141,12 @@ export class ValueDeclaration extends Declaration {
         let recursives: [string, Value][] = params.recursives;
 
         let isRec: boolean = params.isRec;
-        let warns: Warning[] = params.warns;
 
         let step: number = params.step;
 
         if (step >= 0) {
             let val = params.recResult;
-            if (val === undefined
-                || val.ids === undefined
-                || val.mem === undefined) {
+            if (val === undefined) {
                 throw new InternalInterpreterError(-1, 'How is this undefined? ' + JSON.stringify(val));
             }
 
@@ -156,21 +154,11 @@ export class ValueDeclaration extends Declaration {
                 isRec = true;
             }
 
-            warns = warns.concat(val.warns);
-            state.valueIdentifierId = <IdCnt> val.ids;
-            let mem = <MemBind> val.mem;
-            for (let j = 0; j < mem.length; ++j) {
-                state.setCell(mem[j][0], mem[j][1]);
-            }
-
             if (val.hasThrown) {
                 return {
                     'newState': state,
                     'value': val.value,
                     'hasThrown': true,
-                    'warns': warns,
-                    'mem': undefined,
-                    'ids': undefined
                 };
             }
             let matched = this.valueBinding[step].pattern.matches(state, <Value> val.value);
@@ -179,9 +167,6 @@ export class ValueDeclaration extends Declaration {
                     'newState': state,
                     'value': new ExceptionValue('Bind'),
                     'hasThrown': true,
-                    'warns': warns,
-                    'mem': undefined,
-                    'ids': undefined
                 };
             }
 
@@ -198,11 +183,10 @@ export class ValueDeclaration extends Declaration {
         if (step < this.valueBinding.length) {
             params.step = step;
             params.isRec = isRec;
-            params.warns = warns;
             callStack.push({'next': this, 'params': params});
             callStack.push({
                 'next': this.valueBinding[step].expression,
-                'params': {'state': state, 'recResult': undefined}
+                'params': {'state': state, 'modifiable': params.modifiable, 'recResult': undefined}
             });
             return;
         }
@@ -225,9 +209,6 @@ export class ValueDeclaration extends Declaration {
             'newState': state,
             'value': undefined,
             'hasThrown': false,
-            'warns': warns,
-            'mem': undefined,
-            'ids': undefined
         };
     }
 
@@ -283,9 +264,6 @@ export class TypeDeclaration extends Declaration {
             'newState': state,
             'value': undefined,
             'hasThrown': false,
-            'warns': [],
-            'mem': undefined,
-            'ids': undefined
         };
     }
 
@@ -358,6 +336,7 @@ export class DatatypeDeclaration extends Declaration {
 
     evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
         let state = params.state;
+        let modifiable = params.modifiable;
         // I'm assuming the withtype is empty
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
             let res = this.datatypeBinding[i].compute(state);
@@ -370,15 +349,12 @@ export class DatatypeDeclaration extends Declaration {
                 state.setDynamicValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
             }
             state.setDynamicType(res[1][0], res[1][1]);
-            state.incrementValueIdentifierId(res[1][0]);
+            modifiable.incrementValueIdentifierId(res[1][0]);
         }
         return {
             'newState': state,
             'value': undefined,
             'hasThrown': false,
-            'warns': [],
-            'mem': undefined,
-            'ids': undefined
         };
     }
 
@@ -464,9 +440,6 @@ export class DatatypeReplication extends Declaration {
             'newState': state,
             'value': undefined,
             'hasThrown': false,
-            'warns': [],
-            'mem': undefined,
-            'ids': undefined
         };
     }
 
@@ -507,9 +480,6 @@ export class ExceptionDeclaration extends Declaration {
             'newState': state,
             'value': undefined,
             'hasThrown': false,
-            'warns': [],
-            'mem': undefined,
-            'ids': undefined
         };
     }
 }
@@ -541,6 +511,7 @@ export class LocalDeclaration extends Declaration {
 
     evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
         let state = params.state;
+        let modifiable = params.modifiable;
         if (params.step === undefined) {
             params.step = -1;
         }
@@ -554,7 +525,7 @@ export class LocalDeclaration extends Declaration {
             callStack.push({'next': this, 'params': params});
             callStack.push({
                 'next': this.declaration,
-                'params': {'state': nstate, 'recResult': undefined}
+                'params': {'state': nstate, 'modifiable': modifiable, 'recResult': undefined}
             });
             return;
         }
@@ -565,12 +536,6 @@ export class LocalDeclaration extends Declaration {
                 throw new InternalInterpreterError(-1, 'How is this undefined?');
             }
             let nnstate = <State> res.newState;
-            let membnd = nnstate.getMemoryChanges(0);
-            state.valueIdentifierId = nnstate.getIdChanges(0);
-
-            for (let i = 0; i < membnd.length; ++i) {
-                state.setCell(membnd[i][0], membnd[i][1]);
-            }
 
             if (res.hasThrown) {
                 // Something came flying in our direction. So hide we were here and let it flow.
@@ -578,9 +543,6 @@ export class LocalDeclaration extends Declaration {
                     'newState': state,
                     'value': res.value,
                     'hasThrown': true,
-                    'warns': res.warns,
-                    'mem': undefined,
-                    'ids': undefined
                 };
             }
             let nstate = nnstate.getNestedState(state.id);
@@ -591,7 +553,7 @@ export class LocalDeclaration extends Declaration {
             callStack.push({'next': this, 'params': params});
             callStack.push({
                 'next': this.body,
-                'params': {'state': nstate, 'recResult': undefined}
+                'params': {'state': nstate, 'modifiable': modifiable, 'recResult': undefined}
             });
             return;
         }
@@ -607,7 +569,6 @@ export class LocalDeclaration extends Declaration {
 
             // Forget all local definitions
             nstate.parent = state;
-            nres.warns = res.warns.concat(nres.warns);
             return nres;
         }
     }
@@ -675,9 +636,6 @@ export class OpenDeclaration extends Declaration {
             'newState': state,
             'value': undefined,
             'hasThrown': false,
-            'warns': [],
-            'mem': undefined,
-            'ids': undefined
         };
     }
 
@@ -711,9 +669,6 @@ export class EmptyDeclaration extends Declaration {
             'newState': params.state,
             'value': undefined,
             'hasThrown': false,
-            'warns': [],
-            'mem': undefined,
-            'ids': undefined
         };
     }
 
@@ -794,11 +749,9 @@ export class SequentialDeclaration extends Declaration {
     evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
         let state = params.state;
         if (params.step === undefined) {
-            params.warns = [];
             params.step = -1;
         }
 
-        let warns: Warning[] = params.warns;
         let step: number = params.step;
 
         if (step >= 0) {
@@ -808,16 +761,12 @@ export class SequentialDeclaration extends Declaration {
                 throw new InternalInterpreterError(-1, 'How is this undefined?');
             }
 
-            warns = warns.concat(val.warns);
             if (val.hasThrown) {
                 // Something blew up, so let someone else handle the mess
                 return {
                     'newState': val.newState,
                     'value': val.value,
                     'hasThrown': true,
-                    'warns': warns,
-                    'mem': undefined,
-                    'ids': undefined
                 };
             }
             state = <State> val.newState;
@@ -826,12 +775,11 @@ export class SequentialDeclaration extends Declaration {
         if (step < this.declarations.length) {
             let nstate = state.getNestedState(this.declarations[step].id);
             params.step = step;
-            params.warns = warns;
             params.state = state;
             callStack.push({'next': this, 'params': params});
             callStack.push({
                 'next': this.declarations[step],
-                'params': {'state': nstate, 'recResult': undefined}
+                'params': {'state': nstate, 'modifiable': params.modifiable, 'recResult': undefined}
             });
             return;
         }
@@ -840,9 +788,6 @@ export class SequentialDeclaration extends Declaration {
             'newState': state,
             'value': undefined,
             'hasThrown': false,
-            'warns': warns,
-            'mem': undefined,
-            'ids': undefined
         };
     }
 
@@ -947,9 +892,6 @@ export class InfixDeclaration extends Declaration {
             'newState': state,
             'value': undefined,
             'hasThrown': false,
-            'warns': [],
-            'mem': undefined,
-            'ids': undefined
         };
     }
 
@@ -992,9 +934,6 @@ export class InfixRDeclaration extends Declaration {
             'newState': state,
             'value': undefined,
             'hasThrown': false,
-            'warns': [],
-            'mem': undefined,
-            'ids': undefined
         };
     }
 
@@ -1037,9 +976,6 @@ export class NonfixDeclaration extends Declaration {
             'newState': state,
             'value': undefined,
             'hasThrown': false,
-            'warns': [],
-            'mem': undefined,
-            'ids': undefined
         };
     }
 

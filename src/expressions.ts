@@ -9,7 +9,9 @@ import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
          ExceptionValue, ConstructedValue, ReferenceValue } from './values';
 import { getInitialState } from './initialState';
-import { MemBind, IdCnt, EvaluationResult, EvaluationParameters, EvaluationStack } from './evaluator';
+import { EvaluationResult, EvaluationParameters, EvaluationStack } from './evaluator';
+
+type IdCnt = { [name: string]: number };
 
 export abstract class Expression {
     position: number;
@@ -69,7 +71,8 @@ export class Constant extends Expression implements Pattern {
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        let val = this.compute({'state': state, 'recResult': undefined}, []);
+        // the call to compute just gets two states but will not use them
+        let val = this.compute({'state': state, 'modifiable': state, 'recResult': undefined}, []);
         if (val === undefined || val.value === undefined) {
             throw new InternalInterpreterError(this.token.position,
                 'How is this undefined?');
@@ -114,7 +117,6 @@ export class Constant extends Expression implements Pattern {
     }
 
     compute(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
-        let state = params.state;
         let val: Value | undefined = undefined;
         if (this.token instanceof IntegerConstantToken || this.token instanceof NumericToken) {
             val = new Integer((<IntegerConstantToken | NumericToken> this.token).value);
@@ -136,9 +138,6 @@ export class Constant extends Expression implements Pattern {
             'newState': undefined,
             'value': val,
             'hasThrown': false,
-            'warns': [],
-            'mem': [],
-            'ids': state.valueIdentifierId
         };
     }
 }
@@ -337,9 +336,6 @@ export class ValueIdentifier extends Expression implements Pattern {
                 'newState': undefined,
                 'value': (<ValueConstructor> res[0]).construct(),
                 'hasThrown': false,
-                'warns': [],
-                'mem': [],
-                'ids': state.valueIdentifierId
             };
         }
         if (res[1] === IdentifierStatus.EXCEPTION_CONSTRUCTOR
@@ -348,9 +344,6 @@ export class ValueIdentifier extends Expression implements Pattern {
                 'newState': undefined,
                 'value': (<ExceptionConstructor> res[0]).construct(),
                 'hasThrown': false,
-                'warns': [],
-                'mem': [],
-                'ids': state.valueIdentifierId
             };
         }
 
@@ -358,9 +351,6 @@ export class ValueIdentifier extends Expression implements Pattern {
             'newState': undefined,
             'value': res[0],
             'hasThrown': false,
-            'warns': [],
-            'mem': [],
-            'ids': state.valueIdentifierId
         };
     }
 }
@@ -545,43 +535,25 @@ export class Record extends Expression implements Pattern {
     compute(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
         let state = params.state;
         if (params.step === undefined) {
-            params.warns = [];
             params.step = -1;
             params.nentr = new Map<string, Value>();
-            params.membnd = [];
         }
 
         let nentr: Map<string, Value> = params.nentr;
-        let membnd: MemBind = params.membnd;
-
-        let warns: Warning[] = params.warns;
         let step: number = params.step;
 
         if (step >= 0) {
             let val = params.recResult;
-            if (val === undefined
-                || val.mem === undefined
-                || val.value === undefined
-                || val.ids === undefined) {
+            if (val === undefined) {
                 throw new InternalInterpreterError(-1, 'How is this undefined?');
             }
 
-            let mem = <MemBind> val.mem;
-            membnd = membnd.concat(mem);
-            warns = warns.concat(val.warns);
-            state.valueIdentifierId = <IdCnt> val.ids;
-            for (let j = 0; j < mem.length; ++j) {
-                state.setCell(mem[j][0], mem[j][1]);
-            }
             if (val.hasThrown) {
                 // Computing some expression failed
                 return {
                     'newState': undefined,
                     'value': val.value,
                     'hasThrown': true,
-                    'warns': warns,
-                    'mem': membnd,
-                    'ids': state.valueIdentifierId
                 };
             }
             nentr = nentr.set(this.entries[step][0], <Value> val.value);
@@ -589,13 +561,11 @@ export class Record extends Expression implements Pattern {
         ++step;
         if (step < this.entries.length) {
             params.step = step;
-            params.warns = warns;
             params.nentr = nentr;
-            params.membnd = membnd;
             callStack.push({'next': this, 'params': params});
             callStack.push({
                 'next': this.entries[step][1],
-                'params': {'state': state, 'recResult': undefined}
+                'params': {'state': state, 'modifiable': params.modifiable, 'recResult': undefined}
             });
             return;
         }
@@ -604,9 +574,6 @@ export class Record extends Expression implements Pattern {
             'newState': undefined,
             'value': new RecordValue(nentr),
             'hasThrown': false,
-            'warns': warns,
-            'mem': membnd,
-            'ids': state.valueIdentifierId
         };
     }
 }
@@ -717,7 +684,7 @@ export class LocalDeclarationExpression extends Expression {
             callStack.push({'next': this, 'params': params});
             callStack.push({
                 'next': this.declaration,
-                'params': {'state': nstate, 'recResult': undefined}
+                'params': {'state': nstate, 'modifiable': params.modifiable, 'recResult': undefined}
             });
             return;
         }
@@ -729,44 +696,28 @@ export class LocalDeclarationExpression extends Expression {
                 throw new InternalInterpreterError(-1, 'How is this undefined?');
             }
             let nstate = <State> res.newState;
-            let membnd = nstate.getMemoryChanges(0);
             if (res.hasThrown) {
                 return {
                     'newState': undefined,
                     'value': res.value,
                     'hasThrown': true,
-                    'warns': res.warns,
-                    'mem': membnd,
-                    'ids': nstate.valueIdentifierId
                 };
             }
 
-            // TODO always tail recursion
-            if (res.warns.length > 0 || membnd.length > 0) {
-                params.step = step + 1;
-                params.state = state;
-                params.warns = res.warns;
-                params.membnd = membnd;
-                callStack.push({'next': this, 'params': params});
-            }
             callStack.push({
                 'next': this.expression,
-                'params': {'state': nstate, 'recResult': undefined}
+                'params': {'state': nstate, 'modifiable': params.modifiable, 'recResult': undefined}
             });
             return;
         }
         let nres = params.recResult;
-        if (nres === undefined
-            || nres.mem === undefined) {
+        if (nres === undefined) {
             throw new InternalInterpreterError(-1, 'How is this undefined?');
         }
         return {
             'newState': undefined,
             'value': nres.value,
             'hasThrown': nres.hasThrown,
-            'warns': params.warns.concat(nres.warns),
-            'mem': params.membnd.concat(nres.mem),
-            'ids': nres.ids
         };
     }
 }
@@ -1030,6 +981,7 @@ export class FunctionApplication extends Expression implements Pattern {
 
     compute(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
         let state = params.state;
+        let modifiable = params.modifiable;
         if (params.step === undefined) {
             params.step = -1;
         }
@@ -1047,14 +999,13 @@ export class FunctionApplication extends Expression implements Pattern {
                     callStack.push({'next': this, 'params': params});
                     callStack.push({
                         'next': this.argument,
-                        'params': {'state': state, 'recResult': undefined}
+                        'params': {'state': state, 'modifiable': modifiable, 'recResult': undefined}
                     });
                     return;
                 }
 
                 let aVal = params.recResult;
                 if (aVal === undefined
-                    || aVal.mem === undefined
                     || aVal.value === undefined) {
                     throw new InternalInterpreterError(-1, 'How is this undefined?');
                 }
@@ -1063,43 +1014,29 @@ export class FunctionApplication extends Expression implements Pattern {
                         'newState': undefined,
                         'value': aVal.value,
                         'hasThrown': true,
-                        'warns': aVal.warns,
-                        'mem': aVal.mem,
-                        'ids': aVal.ids
                     };
                 }
                 let val = <Value> aVal.value;
-                let mem = <MemBind> aVal.mem;
-                for (let i = 0; i < mem.length; ++i) {
-                    state.setCell(mem[i][0], mem[i][1]);
-                }
 
                 if (this.func.name.getText() === 'ref') {
-                    let res: ReferenceValue = state.setNewCell(val);
-                    mem.push([res.address, val]);
+                    let res: ReferenceValue = modifiable.setNewCell(val);
 
                     return {
                         'newState': undefined,
                         'value': res,
                         'hasThrown': false,
-                        'warns': aVal.warns,
-                        'mem': mem,
-                        'ids': aVal.ids
                     };
                 } else if (this.func.name.getText() === ':=') {
                     if ((!(val instanceof RecordValue))
                         || (!((<RecordValue> val).getValue('1') instanceof ReferenceValue))) {
                         throw new EvaluationError(this.position, 'That\'s not how ":=" works.');
                     }
-                    mem.push([(<ReferenceValue> (<RecordValue> val).getValue('1')).address,
-                        (<RecordValue> val).getValue('2')]);
+                    modifiable.setCell((<ReferenceValue> (<RecordValue> val).getValue('1')).address,
+                        (<RecordValue> val).getValue('2'));
                     return {
                         'newState': undefined,
                         'value': new RecordValue(),
                         'hasThrown': false,
-                        'warns': aVal.warns,
-                        'mem': mem,
-                        'ids': aVal.ids
                     };
                 } else if (this.func.name.getText() === '!') {
                     if (!(val instanceof ReferenceValue)) {
@@ -1108,11 +1045,8 @@ export class FunctionApplication extends Expression implements Pattern {
                     }
                     return {
                         'newState': undefined,
-                        'value': state.getCell((<ReferenceValue> val).address),
+                        'value': modifiable.getCell((<ReferenceValue> val).address),
                         'hasThrown': false,
-                        'warns': aVal.warns,
-                        'mem': mem,
-                        'ids': aVal.ids
                     };
                 }
             }
@@ -1124,16 +1058,14 @@ export class FunctionApplication extends Expression implements Pattern {
             callStack.push({'next': this, 'params': params});
             callStack.push({
                 'next': this.func,
-                'params': {'state': state, 'recResult': undefined}
+                'params': {'state': state, 'modifiable': modifiable, 'recResult': undefined}
             });
             return;
         }
 
         if (step === 0) {
             let funcVal = params.recResult;
-            if (funcVal === undefined
-                || funcVal.mem === undefined
-                || funcVal.ids === undefined) {
+            if (funcVal === undefined) {
                 throw new InternalInterpreterError(-1, 'How is this undefined?');
             }
             if (funcVal.hasThrown) {
@@ -1141,19 +1073,13 @@ export class FunctionApplication extends Expression implements Pattern {
                 return funcVal;
             }
 
-            let mem = <MemBind> funcVal.mem;
-            for (let i = 0; i < mem.length; ++i) {
-                state.setCell(mem[i][0], mem[i][1]);
-            }
-            state.valueIdentifierId = <IdCnt> funcVal.ids;
-
             params.step = step + 1;
             params.state = state;
             params.funcVal = funcVal;
             callStack.push({'next': this, 'params': params});
             callStack.push({
                 'next': this.argument,
-                'params': {'state': state, 'recResult': undefined}
+                'params': {'state': state, 'modifiable': modifiable, 'recResult': undefined}
             });
             return;
         }
@@ -1163,80 +1089,45 @@ export class FunctionApplication extends Expression implements Pattern {
             let argVal = <EvaluationResult> params.recResult;
 
             if (funcVal === undefined
-                || funcVal.mem === undefined
-                || funcVal.value === undefined
-                || argVal === undefined
-                || argVal.mem === undefined
-                || argVal.value === undefined
-                || argVal.ids === undefined) {
+                || funcVal.value === undefined) {
+                throw new InternalInterpreterError(-1, 'How is this undefined?');
+            }
+            if (argVal === undefined
+                || argVal.value === undefined) {
                 throw new InternalInterpreterError(-1, 'How is this undefined?');
             }
 
-            let warns = funcVal.warns.concat(argVal.warns);
-            let membnd = (<MemBind> funcVal.mem).concat(<MemBind> argVal.mem);
             if (argVal.hasThrown) {
                 return {
                     'newState': undefined,
                     'value': argVal.value,
                     'hasThrown': true,
-                    'warns': warns,
-                    'mem': membnd,
-                    'ids': argVal.ids
                 };
             }
             if (funcVal.value instanceof FunctionValue) {
-                let mem = <MemBind> funcVal.mem;
-                for (let i = 0; i < mem.length; ++i) {
-                    state.setCell(mem[i][0], mem[i][1]);
-                }
-                let nmem: MemBind = [];
-
-                for (let i = 0; i < state.memory[0]; ++i) {
-                    if (state.getCell(i) !== undefined) {
-                        nmem.push([i, <Value> state.getCell(i)]);
-                    }
-                }
-
-                // TODO somehow fix warnings + mem so we can always have tail recursion
-                if (warns.length > 0 || membnd.length > 0) {
-                    callStack.push({'next': this, 'params': {
-                        'state': state,
-                        'recResult': undefined,
-                        'step': step + 1,
-                        'membnd': membnd,
-                        'warns': warns,
-                        'ids': argVal.ids
-                    }});
-                }
-                (<FunctionValue> funcVal.value).compute(callStack, <Value> argVal.value, nmem);
+                (<FunctionValue> funcVal.value).compute(callStack, <Value> argVal.value, modifiable);
                 return;
             } else if (funcVal.value instanceof ValueConstructor) {
                 return {
                     'newState': undefined,
                     'value': (<ValueConstructor> funcVal.value).construct(argVal.value),
                     'hasThrown': false,
-                    'warns': warns,
-                    'mem': membnd,
-                    'ids': argVal.ids
                 };
             } else if (funcVal.value instanceof ExceptionConstructor) {
                 return {
                     'newState': undefined,
                     'value': (<ExceptionConstructor> funcVal.value).construct(argVal.value),
                     'hasThrown': false,
-                    'warns': warns,
-                    'mem': membnd,
-                    'ids': argVal.ids
                 };
             } else if (funcVal.value instanceof PredefinedFunction) {
                 let res = (<PredefinedFunction> funcVal.value).apply(argVal.value);
+                for (let warn of res[2]) {
+                    modifiable.addWarning(warn);
+                }
                 return {
                     'newState': undefined,
                     'value': res[0],
                     'hasThrown': res[1],
-                    'warns': warns.concat(res[2]),
-                    'mem': membnd,
-                    'ids': argVal.ids
                 };
             }
             throw new EvaluationError(this.position, 'Cannot evaluate the function "'
@@ -1245,21 +1136,14 @@ export class FunctionApplication extends Expression implements Pattern {
         // brace so linter does not complain about shadowed names
         {
             let res = <EvaluationResult> params.recResult;
-            if (res === undefined
-                || res.mem === undefined
-                || res.ids === undefined) {
+            if (res === undefined) {
                 throw new InternalInterpreterError(-1, 'How is this undefined?');
             }
 
-            let warns = params.warns;
-            let membnd = params.membnd;
             return {
                 'newState': undefined,
                 'value': res.value,
                 'hasThrown': res.hasThrown,
-                'warns': warns.concat(res.warns),
-                'mem': membnd.concat(res.mem),
-                'ids': params.ids
             };
         }
     }
@@ -1320,30 +1204,28 @@ export class HandleException extends Expression {
             callStack.push({'next': this, 'params': params});
             callStack.push({
                 'next': this.expression,
-                'params': {'state': state, 'recResult': undefined}
+                'params': {'state': state, 'modifiable': params.modifiable, 'recResult': undefined}
             });
             return;
         }
         let res = params.recResult;
         if (res === undefined
-            || res.mem === undefined
-            || res.value === undefined
-            || res.ids === undefined) {
+            || res.value === undefined) {
             throw new InternalInterpreterError(-1, 'How is this undefined?');
         }
         if (params.exprResult === undefined) {
             if (res.hasThrown) {
-                let mem = <MemBind> res.mem;
-                for (let i = 0; i < mem.length; ++i) {
-                    state.setCell(mem[i][0], mem[i][1]);
-                }
-                state.valueIdentifierId = <IdCnt> res.ids;
 
                 params.exprResult = res;
                 callStack.push({'next': this, 'params': params});
                 callStack.push({
                     'next': this.match,
-                    'params': {'state': state, 'recResult': undefined, 'value': res.value}
+                    'params': {
+                        'state': state,
+                        'modifiable': params.modifiable,
+                        'recResult': undefined,
+                        'value': res.value
+                    }
                 });
                 return;
             }
@@ -1352,12 +1234,9 @@ export class HandleException extends Expression {
         res = params.exprResult;
         let next = params.recResult;
         if (res === undefined
-            || res.mem === undefined
             || res.value === undefined
             || next === undefined
-            || next.ids === undefined
-            || next.value === undefined
-            || next.mem === undefined) {
+            || next.value === undefined) {
             throw new InternalInterpreterError(-1, 'How is this undefined?');
         }
         if (!next.hasThrown || !(<Value> next.value).equals(new ExceptionValue('Match', undefined, 0))) {
@@ -1366,18 +1245,12 @@ export class HandleException extends Expression {
                 'newState': undefined,
                 'value': next.value,
                 'hasThrown': next.hasThrown,
-                'warns': res.warns.concat(next.warns),
-                'mem': (<MemBind> res.mem).concat(<MemBind> next.mem),
-                'ids': next.ids
             };
         }
         return {
             'newState': undefined,
             'value': res.value,
             'hasThrown': res.hasThrown,
-            'warns': res.warns.concat(next.warns),
-            'mem': (<MemBind> res.mem).concat(<MemBind> next.mem),
-            'ids': next.ids
         };
     }
 }
@@ -1422,7 +1295,7 @@ export class RaiseException extends Expression {
             callStack.push({'next': this, 'params': params});
             callStack.push({
                 'next': this.expression,
-                'params': {'state': state, 'recResult': undefined}
+                'params': {'state': state, 'modifiable': params.modifiable, 'recResult': undefined}
             });
             return;
         }
@@ -1441,9 +1314,6 @@ export class RaiseException extends Expression {
             'newState': state,
             'value': res.value,
             'hasThrown': true,
-            'warns': res.warns,
-            'mem': res.mem,
-            'ids': res.ids
         };
     }
 }
@@ -1480,9 +1350,6 @@ export class Lambda extends Expression {
             'newState': undefined,
             'value': new FunctionValue(nstate, [], this.match),
             'hasThrown': false,
-            'warns': [],
-            'mem': [],
-            'ids': state.valueIdentifierId
         };
     }
 }
@@ -1522,7 +1389,7 @@ export class Match {
                 }
                 callStack.push({
                     'next': this.matches[i][1],
-                    'params': {'state': nstate, 'recResult': undefined}
+                    'params': {'state': nstate, 'modifiable': params.modifiable, 'recResult': undefined}
                 });
                 return;
             }
@@ -1531,9 +1398,6 @@ export class Match {
             'newState': undefined,
             'value': new ExceptionValue('Match', undefined, 0),
             'hasThrown': true,
-            'warns': [],
-            'mem': [],
-            'ids': state.valueIdentifierId
         };
     }
 
