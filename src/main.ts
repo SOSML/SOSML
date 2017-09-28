@@ -45,10 +45,10 @@ export function interpret(nextInstruction: string,
             throw new InternalInterpreterError(-1, 'How is this undefined?');
         }
         return {
-            'state':                <State> tmp.newState,
-            'evaluationErrored':    tmp[1],
-            'error':                tmp[2],
-            'warnings':             tmp[3]
+            'state':                tmp.newState,
+            'evaluationErrored':    true,
+            'error':                tmp.value,
+            'warnings':             tmp.warns
         };
     }
 
