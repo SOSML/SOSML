@@ -1227,12 +1227,13 @@ export class DatatypeBinding {
             if (this.type[i][1] !== undefined) {
                 numArg = 1;
             }
+            let id = -1;
             if (this.givenIds[this.type[i][0].getText()] === undefined) {
-                let id = modifiable.getValueIdentifierId(this.type[i][0].getText());
+                id = modifiable.getValueIdentifierId(this.type[i][0].getText());
                 modifiable.incrementValueIdentifierId(this.type[i][0].getText());
                 this.givenIds[this.type[i][0].getText()] = id;
             } else {
-                let id = this.givenIds[this.type[i][0].getText()];
+                id = this.givenIds[this.type[i][0].getText()];
             }
             ve.push([this.type[i][0].getText(), new ValueConstructor(this.type[i][0].getText(), numArg, id)]);
             connames.push(this.type[i][0].getText());
@@ -1335,7 +1336,7 @@ export class ExceptionAlias implements ExceptionBinding {
                 + this.oldname.getText() + '".');
         } else if (res[1] !== IdentifierStatus.EXCEPTION_CONSTRUCTOR) {
             throw new EvaluationError(this.position, 'You cannot transform "'
-                + res[0].toString(state) + '" into an exception.');
+                + res[0].toString(state, 40) + '" into an exception.');
         }
         state.setDynamicValue(this.name.getText(), res[0], IdentifierStatus.EXCEPTION_CONSTRUCTOR);
     }

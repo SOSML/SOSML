@@ -8,8 +8,16 @@ import { int, char, IdentifierToken } from './tokens';
 import { Match } from './expressions';
 import { EvaluationStack } from './evaluator';
 
+export class PrintCounter {
+    constructor(public charactersLeft: number) {
+    }
+}
+
 export abstract class Value {
-    abstract toString(state: State|undefined|undefined): string;
+    abstract pcToString(state: State|undefined|undefined, pc: PrintCounter): string;
+    toString(state: State|undefined|undefined, length: number = 120): string {
+        return this.pcToString(state, new PrintCounter(length));
+    }
     equals(other: Value): boolean {
         throw new InternalInterpreterError(-1,
             'Tried comparing incomparable things.');
@@ -25,12 +33,15 @@ export class ReferenceValue extends Value {
         return this.address === other.address;
     }
 
-    toString(state: State|undefined) {
+    pcToString(state: State|undefined, pc: PrintCounter) {
         if (state === undefined) {
-            return '$' + this.address;
+            let ret = '$' + this.address;
+            pc.charactersLeft -= ret.length;
+            return ret;
         } else {
             if (state.getCell(this.address) !== undefined) {
-                return 'ref ' + (<Value> state.getCell(this.address)).toString(state);
+                pc.charactersLeft -= 4;
+                return 'ref ' + (<Value> state.getCell(this.address)).pcToString(state, pc);
             } else {
                 throw new EvaluationError(-1, 'Ouch, you may not de-reference "$'
                     + this.address + '".');
@@ -56,13 +67,26 @@ export class VectorValue extends Value {
         return true;
     }
 
-    toString(state: State|undefined) {
+    pcToString(state: State|undefined, pc: PrintCounter) {
         let res = '#[';
+        pc.charactersLeft -= 3;
         for (let i = 0; i < this.entries.length; ++i) {
             if (i > 0) {
                 res += ', ';
+                pc.charactersLeft -= 2;
             }
-            res += this.entries[i].toString(state);
+            if (pc.charactersLeft > 0) {
+                let reserve = 0;
+                if (i < this.entries.length) {
+                    reserve = Math.floor(pc.charactersLeft / 2);
+                }
+                pc.charactersLeft -= reserve;
+                res += this.entries[i].pcToString(state, pc);
+                pc.charactersLeft += reserve;
+            } else {
+                res += '…';
+                break;
+            }
         }
         return res += ']';
     }
@@ -78,21 +102,36 @@ export class ArrayValue extends Value {
         return this.address === other.address;
     }
 
-    toString(state: State|undefined) {
+    pcToString(state: State|undefined, pc: PrintCounter) {
         if (state === undefined) {
-            return '[|$' + this.address + '...$' + (this.address + this.length - 1) + '|]';
+            let ret = '[|$' + this.address + '...$' + (this.address + this.length - 1) + '|]';
+            pc.charactersLeft -= ret.length;
+            return ret;
         } else {
             let res = '[|';
+            pc.charactersLeft -= 4;
             for (let i = 0; i < this.length; ++i) {
                 if (i > 0) {
                     res += ', ';
+                    pc.charactersLeft -= 2;
                 }
 
-                if (state.getCell(this.address + i) !== undefined) {
-                    res += (<Value> state.getCell(this.address + i)).toString(state);
+                if (pc.charactersLeft > 0) {
+                    if (state.getCell(this.address + i) !== undefined) {
+                        let reserve = 0;
+                        if (i < this.length) {
+                            reserve = Math.floor(pc.charactersLeft / 2);
+                        }
+                        pc.charactersLeft -= reserve;
+                        res += (<Value> state.getCell(this.address + i)).pcToString(state, pc);
+                        pc.charactersLeft += reserve;
+                    } else {
+                        throw new EvaluationError(-1, 'Ouch, you may not de-reference "$'
+                            + (this.address + i) + '".');
+                    }
                 } else {
-                    throw new EvaluationError(-1, 'Ouch, you may not de-reference "$'
-                        + (this.address + i) + '".');
+                    res += '…';
+                    break;
                 }
             }
             return res += '|]';
@@ -109,10 +148,12 @@ export class BoolValue extends Value {
         return this.value === other.value;
     }
 
-    toString(state: State|undefined) {
+    pcToString(state: State|undefined, pc: PrintCounter) {
         if (this.value) {
+            pc.charactersLeft -= 4;
             return 'true';
         } else {
+            pc.charactersLeft -= 5;
             return 'false';
         }
     }
@@ -123,8 +164,10 @@ export class CharValue extends Value {
         super();
     }
 
-    toString(state: State|undefined): string {
-        return '#' + new StringValue(this.value).toString(state);
+    pcToString(state: State|undefined, pc: PrintCounter): string {
+        pc.charactersLeft -= 1;
+        let ret = '#' + new StringValue(this.value).pcToString(state, pc);
+        return ret;
     }
 
     compareTo(other: CharValue): number {
@@ -175,9 +218,15 @@ export class StringValue extends Value {
         super();
     }
 
-    toString(state: State|undefined): string {
+    pcToString(state: State|undefined, pc: PrintCounter): string {
         let pretty = '';
+        pc.charactersLeft -= 2;
         for (let chr of this.value) {
+            if (pc.charactersLeft < 0) {
+                pretty += '…';
+                break;
+            }
+            pc.charactersLeft -= 1;
             switch (chr) {
                 case '\n': pretty += '\\n'; break;
                 case '\t': pretty += '\\t'; break;
@@ -190,7 +239,9 @@ export class StringValue extends Value {
                 case '\xFF': pretty += '\\255'; break;
                 default:
                     if (chr.charCodeAt(0) < 32) {
-                        pretty += '\\^' + String.fromCharCode(chr.charCodeAt(0) + 64);
+                        let ch = '\\^' + String.fromCharCode(chr.charCodeAt(0) + 64);
+                        pretty += ch;
+                        pc.charactersLeft -= ch.length - 1;
                     } else {
                         pretty += chr;
                     }
@@ -237,8 +288,10 @@ export class Word extends Value {
         super();
     }
 
-    toString(state: State|undefined): string {
-        return '' + this.value;
+    pcToString(state: State|undefined, pc: PrintCounter): string {
+        let ret = '' + this.value;
+        pc.charactersLeft -= ret.length;
+        return ret;
     }
 
     compareTo(val: Value) {
@@ -271,8 +324,9 @@ export class Integer extends Value {
         super();
     }
 
-    toString(state: State|undefined): string {
+    pcToString(state: State|undefined, pc: PrintCounter): string {
         let str = '' + this.value;
+        pc.charactersLeft -= str.length;
         return str.replace(/-/, '~');
     }
 
@@ -308,11 +362,12 @@ export class Real extends Value {
         super();
     }
 
-    toString(state: State|undefined): string {
+    pcToString(state: State|undefined, pc: PrintCounter): string {
         let str = '' + this.value;
         if (str.search(/\./) === -1) {
             str += '.0';
         }
+        pc.charactersLeft -= str.length;
         return str.replace(/-/, '~');
     }
 
@@ -364,7 +419,7 @@ export class RecordValue extends Value {
         super();
     }
 
-    toString(state: State|undefined): string {
+    pcToString(state: State|undefined, pc: PrintCounter): string {
         let isTuple = this.entries.size !== 1;
         for (let i = 1; i <= this.entries.size; ++i) {
             if (!this.entries.has('' + i)) {
@@ -374,13 +429,26 @@ export class RecordValue extends Value {
 
         if (isTuple) {
             let res: string = '(';
+            pc.charactersLeft -= 2;
             for (let i = 1; i <= this.entries.size; ++i) {
                 if (i > 1) {
                     res += ', ';
+                    pc.charactersLeft -= 2;
                 }
                 let sub = this.entries.get('' + i);
                 if (sub !== undefined) {
-                    res += sub.toString(state);
+                    if (pc.charactersLeft > 0) {
+                        let reserve = 0;
+                        if (i < this.entries.size) {
+                            reserve = Math.floor(pc.charactersLeft / 2);
+                        }
+                        pc.charactersLeft -= reserve;
+                        res += sub.pcToString(state, pc);
+                        pc.charactersLeft += reserve;
+                    } else {
+                        res += '…';
+                        break;
+                    }
                 } else {
                     throw new InternalInterpreterError(-1,
                         'How did we loose this value? It was there before. I promise…');
@@ -389,17 +457,36 @@ export class RecordValue extends Value {
             return res + ')';
         }
 
-        let result: string = '{ ';
+        let result: string = '{';
+        pc.charactersLeft -= 2;
         let first: boolean = true;
+        let skip: boolean = false;
+        let j = 0;
         this.entries.forEach((value: Value, key: string) => {
+            if (skip) {
+                return;
+            }
             if (!first) {
                 result += ', ';
+                pc.charactersLeft -= 2;
             } else {
                 first = false;
             }
-            result += key + ' = ' + value.toString(state);
+            if (pc.charactersLeft > 0) {
+                let reserve = 0;
+                if (j < this.entries.size) {
+                    reserve = Math.floor(pc.charactersLeft / 2);
+                }
+                pc.charactersLeft -= reserve;
+                result += key + ' = ' + value.pcToString(state, pc);
+                pc.charactersLeft += reserve;
+            } else {
+                result += '…';
+                skip = true;
+            }
+            ++j;
         });
-        return result + ' }';
+        return result + '}';
     }
 
     getValue(name: string): Value {
@@ -451,7 +538,8 @@ export class FunctionValue extends Value {
         super();
     }
 
-    toString(state: State|undefined): string {
+    pcToString(state: State|undefined, pc: PrintCounter): string {
+        pc.charactersLeft -= 2;
         return 'fn';
     }
 
@@ -478,8 +566,9 @@ export class FunctionValue extends Value {
     }
 
     equals(other: Value): boolean {
-        throw new InternalInterpreterError(-1, 'You simply cannot compare "' + this.toString(undefined)
-            + '" and "' + other.toString(undefined) + '".');
+        throw new InternalInterpreterError(-1, 'You simply cannot compare "'
+            + this.pcToString(undefined, new PrintCounter(20))
+            + '" and "' + other.pcToString(undefined, new PrintCounter(20)) + '".');
     }
 }
 
@@ -491,9 +580,10 @@ export class ConstructedValue extends Value {
         super();
     }
 
-    toString(state: State|undefined): string {
+    pcToString(state: State|undefined, pc: PrintCounter): string {
         if (this.constructorName === '::') {
             let res = '[';
+            pc.charactersLeft -= 2;
 
             let list: ConstructedValue = this;
             while (list.constructorName !== 'nil') {
@@ -508,8 +598,20 @@ export class ConstructedValue extends Value {
                     if (a1 instanceof Value && a2 instanceof ConstructedValue) {
                         if (list !== this) {
                             res += ', ';
+                            pc.charactersLeft -= 2;
                         }
-                        res += a1.toString(state);
+                        if (pc.charactersLeft > 0) {
+                            let reserve = 0;
+                            if (a2.constructorName !== 'nil') {
+                                reserve = Math.floor(pc.charactersLeft / 2);
+                            }
+                            pc.charactersLeft -= reserve;
+                            res += a1.pcToString(state, pc);
+                            pc.charactersLeft += reserve;
+                        } else {
+                            res += '…';
+                            break;
+                        }
                         list = a2;
                     } else {
                         throw new InternalInterpreterError(-1,
@@ -523,6 +625,7 @@ export class ConstructedValue extends Value {
 
             return res + ']';
         } else if (this.constructorName === 'nil') {
+            pc.charactersLeft -= 2;
             return '[]';
         }
 
@@ -534,23 +637,45 @@ export class ConstructedValue extends Value {
                 let left = this.argument.getValue('1');
                 let right = this.argument.getValue('2');
                 if (left instanceof Value && right instanceof Value) {
-                    let res: string = '(' + left.toString(state);
+                    pc.charactersLeft -= 4 + this.constructorName.length;
+                    let reserve = Math.floor(pc.charactersLeft / 2);
+                    pc.charactersLeft -= reserve;
+                    let res: string = '(';
+                    if (pc.charactersLeft > 0) {
+                        res += left.pcToString(state, pc);
+                    } else {
+                        res += '…';
+                    }
+                    pc.charactersLeft += reserve;
                     res += ' ' + this.constructorName;
                     if (this.id > 0) {
-                        res += '/' + this.id;
+                        let idtext = '/' + this.id;
+                        res += idtext;
+                        pc.charactersLeft -= idtext.length;
                     }
-                    res += ' ' + right.toString(state);
+                    if (pc.charactersLeft > 0) {
+                        res += ' ' + right.pcToString(state, pc);
+                    } else {
+                        res += ' …';
+                    }
                     return res + ')';
                 }
             }
         }
 
-        let result: string =  this.constructorName;
+        let result: string = this.constructorName;
+        pc.charactersLeft -= this.constructorName.length + 1;
         if (this.id > 0) {
-            result += '/' + this.id;
+            let idtext = '/' + this.id;
+            result += idtext;
+            pc.charactersLeft -= idtext.length;
         }
         if (this.argument) {
-            result += ' ' + this.argument.toString(state);
+            if (pc.charactersLeft > 0) {
+                result += ' ' + this.argument.pcToString(state, pc);
+            } else {
+                result += ' …';
+            }
         }
         return result;
     }
@@ -586,13 +711,20 @@ export class ExceptionValue extends Value {
         super();
     }
 
-    toString(state: State|undefined): string {
+    pcToString(state: State|undefined, pc: PrintCounter): string {
         let result: string = this.constructorName;
+        pc.charactersLeft -= this.constructorName.length + 1;
         if (this.id > 0) {
-            result += '/' + this.id;
+            let idtext = '/' + this.id;
+            result += idtext;
+            pc.charactersLeft -= idtext.length;
         }
         if (this.argument) {
-            result += ' ' + this.argument.toString(state);
+            if (pc.charactersLeft > 0) {
+                result += ' ' + this.argument.pcToString(state, pc);
+            } else {
+                result += ' …';
+            }
         }
         return result;
     }
@@ -628,7 +760,8 @@ export class PredefinedFunction extends Value {
         super();
     }
 
-    toString(state: State|undefined): string {
+    pcToString(state: State|undefined, pc: PrintCounter): string {
+        pc.charactersLeft -= 2;
         return 'fn';
     }
 
@@ -658,10 +791,13 @@ export class ValueConstructor extends Value {
         return new ConstructedValue(this.constructorName, parameter, this.id);
     }
 
-    toString(state: State|undefined) {
-        let result = this.constructorName;
+    pcToString(state: State|undefined, pc: PrintCounter) {
+        let result: string = this.constructorName;
+        pc.charactersLeft -= this.constructorName.length;
         if (this.id > 0) {
-            result += '/' + this.id;
+            let idtext = '/' + this.id;
+            result += idtext;
+            pc.charactersLeft -= idtext.length;
         }
         return result;
     }
@@ -685,10 +821,13 @@ export class ExceptionConstructor extends Value {
         return new ExceptionValue(this.exceptionName, parameter, this.id);
     }
 
-    toString(state: State|undefined) {
-        let result = this.exceptionName;
+    pcToString(state: State|undefined, pc: PrintCounter) {
+        let result: string = this.exceptionName;
+        pc.charactersLeft -= this.exceptionName.length;
         if (this.id > 0) {
-            result += '/' + this.id;
+            let idtext = '/' + this.id;
+            result += idtext;
+            pc.charactersLeft -= idtext.length;
         }
         return result;
     }

@@ -464,7 +464,7 @@ let initialState: State = new State(
                 if (val instanceof StringValue) {
                     warns.push(new Warning(-2, (<StringValue> val).value));
                 } else {
-                    warns.push(new Warning(-2, val.toString(undefined)));
+                    warns.push(new Warning(-2, val.toString(undefined, 1e18)));
                 }
                 return [new RecordValue(), false, warns];
             }), IdentifierStatus.VALUE_VARIABLE],
@@ -473,7 +473,7 @@ let initialState: State = new State(
                 if (val instanceof StringValue) {
                     warns.push(new Warning(-2, (<StringValue> val).value + '\n'));
                 } else {
-                    warns.push(new Warning(-2, val.toString(undefined) + '\n'));
+                    warns.push(new Warning(-2, val.toString(undefined, 1e18) + '\n'));
                 }
                 return [new RecordValue(), false, warns];
             }), IdentifierStatus.VALUE_VARIABLE]
