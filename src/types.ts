@@ -1414,6 +1414,9 @@ export class CustomType extends Type {
                     + '" failed: ' + e[0]);
             }
         } else if (tp === undefined) {
+            if (this.id > 0) {
+                throw new ElaborationError(-1, 'Unbound type "' + this.name + '/' + this.id + '".');
+            }
             throw new ElaborationError(-1, 'Unbound type "' + this.name + '".');
         } else if (tp !== undefined && tp.type.isOpaque()) {
             this.opaque = true;
@@ -1421,6 +1424,12 @@ export class CustomType extends Type {
             || this.typeArguments.length !== (<CustomType> tp.type).typeArguments.length)) {
             throw new ElaborationError(this.position, 'Arity mismatch: '
                 + this.normalize()[0] + ' vs ' + tp.type.normalize()[0] + '.');
+        } else if (tp !== undefined && ((!(tp.type instanceof CustomType))
+            || this.id !== (<CustomType> tp.type).id)) {
+            if (this.id > 0) {
+                throw new ElaborationError(-1, 'Unbound type "' + this.name + '/' + this.id + '".');
+            }
+            throw new ElaborationError(-1, 'Unbound type "' + this.name + '".');
         }
 
         let res: Type[] = [];
