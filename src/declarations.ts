@@ -248,7 +248,7 @@ export class TypeDeclaration extends Declaration {
             state.setStaticType(this.typeBinding[i].name.getText(),
                 new FunctionType(new CustomType(this.typeBinding[i].name.getText(),
                     this.typeBinding[i].typeVariableSequence),
-                    this.typeBinding[i].type), [],
+                    this.typeBinding[i].type.instantiate(state, tyVarBnd)), [],
                 this.typeBinding[i].typeVariableSequence.length);
         }
 
