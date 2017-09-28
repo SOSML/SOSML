@@ -1403,7 +1403,9 @@ export class CustomType extends Type {
         if (tp !== undefined && tp.type instanceof FunctionType) {
             try {
                 let mt = this.merge(state, tyVarBnd, (<FunctionType> tp.type).parameterType, true);
-                return (<FunctionType> tp.type).returnType.instantiate(state, mt[1], seen);
+                let newstate = state.getNestedState(state.id);
+                newstate.setStaticType(this.name, (<FunctionType> tp.type).returnType, [], -1);
+                return (<FunctionType> tp.type).returnType.instantiate(newstate, mt[1]);
             } catch (e) {
                 if (!(e instanceof Array)) {
                     throw e;
