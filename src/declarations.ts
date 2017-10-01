@@ -117,7 +117,7 @@ export class ValueDeclaration extends Declaration {
                         let oldtp = state.getStaticValue(val[0][k][0]);
                         if (oldtp === undefined || !oldtp[0].normalize()[0].equals(val[0][k][1].normalize()[0])) {
                             throw new ElaborationError(this.position,
-                                'You done goofed. Too much circularity.');
+                                'My brain trembles; too much circularity.');
                         }
                     }
                     state.setStaticValue(val[0][k][0], val[0][k][1], IdentifierStatus.VALUE_VARIABLE);
