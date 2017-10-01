@@ -35,6 +35,7 @@ export class StructureExpression extends Expression implements Structure {
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let nstate = state.getNestedState(0).getNestedState(state.id);
         let tmp = this.structureDeclaration.elaborate(nstate, tyVarBnd, nextName, true);
+        state.valueIdentifierId = tmp[0].valueIdentifierId;
         return [tmp[0].getStaticChanges(0), tmp[1], tmp[2], tmp[3]];
     }
 

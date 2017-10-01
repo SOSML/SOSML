@@ -1425,7 +1425,7 @@ export class CustomType extends Type {
             throw new ElaborationError(this.position, 'Arity mismatch: '
                 + this.normalize()[0] + ' vs ' + tp.type.normalize()[0] + '.');
         } else if (tp !== undefined && ((!(tp.type instanceof CustomType))
-            || this.id !== (<CustomType> tp.type).id)) {
+            || this.id > (<CustomType> tp.type).id)) {
             if (this.id > 0) {
                 throw new ElaborationError(-1, 'Unbound type "' + this.name + '/' + this.id + '".');
             }
