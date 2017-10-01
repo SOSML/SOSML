@@ -245,6 +245,11 @@ export class TypeDeclaration extends Declaration {
               isTopLevel: boolean, options: { [name: string]: any }):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         for (let i = 0; i < this.typeBinding.length; ++i) {
+            let ex = state.getStaticType(this.typeBinding[i].name.getText());
+            if (ex !== undefined && ex.type instanceof CustomType) {
+                throw new ElaborationError(this.position,
+                    'Nnaaa~ Redefining types as aliases is not yet implemented.');
+            }
             state.setStaticType(this.typeBinding[i].name.getText(),
                 new FunctionType(new CustomType(this.typeBinding[i].name.getText(),
                     this.typeBinding[i].typeVariableSequence),
