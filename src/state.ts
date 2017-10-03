@@ -321,7 +321,9 @@ export class State {
                     = [0, new Map<string, [Type, boolean]>()],
                 private infixEnvironment: InfixEnvironment = {},
                 public valueIdentifierId: { [name: string]: number } = {},
-                public warns: Warning[] = []) {
+                public warns: Warning[] = [],
+                public insideLocalDeclBody: boolean = false,
+                public localDeclStart: boolean = false) {
     }
 
     getIdChanges(stopId: number): { [name: string]: number } {
@@ -374,6 +376,20 @@ export class State {
         return res;
     }
 
+    getDynamicLocalDeclChanges(stopId: number): DynamicBasis {
+        if (this.id === stopId || this.localDeclStart) {
+            return new DynamicBasis({}, {}, {}, {}, {});
+        }
+        let res = new DynamicBasis({}, {}, {}, {}, {});
+
+        if (this.parent !== undefined) {
+            res = this.parent.getDynamicLocalDeclChanges(stopId);
+        }
+
+        res = res.extend(this.dynamicBasis);
+        return res;
+    }
+
     getStaticChanges(stopId: number): StaticBasis {
         if (this.id === stopId) {
             return new StaticBasis({}, {}, {}, {}, {});
@@ -398,6 +414,7 @@ export class State {
             new DynamicBasis({}, {}, {}, {}, {}),
             [this.memory[0], {}],
             [this.freeTypeVariables[0], new Map<string, [Type, boolean]>()]);
+        res.insideLocalDeclBody = this.insideLocalDeclBody;
         return res;
     }
 

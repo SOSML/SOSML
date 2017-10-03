@@ -528,7 +528,11 @@ export class LocalDeclaration extends Declaration {
         let step: number = params.step;
 
         if (step === -1) {
-            let nstate = state.getNestedState(0).getNestedState(state.id);
+            let parent = state.getNestedState(0);
+            let nstate = parent.getNestedState(state.id);
+            if (!parent.insideLocalDeclBody) {
+                parent.localDeclStart = true;
+            }
             params.nstate = nstate;
             params.step = step + 1;
             callStack.push({'next': this, 'params': params});
@@ -555,6 +559,7 @@ export class LocalDeclaration extends Declaration {
                 };
             }
             let nstate = nnstate.getNestedState(state.id);
+            nstate.insideLocalDeclBody = true;
 
             params.nstate = nstate;
             params.res = res;
@@ -578,6 +583,9 @@ export class LocalDeclaration extends Declaration {
 
             // Forget all local definitions
             nstate.parent = state;
+            if (nres.newState !== undefined) {
+                (nres.newState.insideLocalDeclBody) = state.insideLocalDeclBody;
+            }
             return nres;
         }
     }

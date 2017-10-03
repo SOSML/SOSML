@@ -8,7 +8,6 @@ import { InternalInterpreterError, ElaborationError, EvaluationError, ParserErro
 import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
          ExceptionValue, ConstructedValue, ReferenceValue } from './values';
-import { getInitialState } from './initialState';
 import { EvaluationResult, EvaluationParameters, EvaluationStack } from './evaluator';
 
 type IdCnt = { [name: string]: number };
@@ -1342,9 +1341,12 @@ export class Lambda extends Expression {
         // We need to ensure that the function value receives a capture
         // of the current state, and that that capture stays that way
         // (Local declarations may change the past, so we must record that, too.
-        let nstate = getInitialState().getNestedState(state.id);
+        let nstate = state.getNestedState(state.id);
 
-        nstate.dynamicBasis = state.getDynamicChanges(-1);
+        if (nstate.insideLocalDeclBody) {
+            nstate.dynamicBasis = state.getDynamicLocalDeclChanges(-1);
+            nstate.insideLocalDeclBody = false;
+        }
 
         return {
             'newState': undefined,
