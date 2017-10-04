@@ -435,7 +435,7 @@ export class Record extends Expression implements Pattern {
 
         for (let i = 0; i < this.entries.length; ++i) {
             if (!(<RecordType> t).hasType(this.entries[i][0])) {
-                throw new ElaborationError(this.position, 'My brain trembles.');
+                throw new ElaborationError(this.position, 'I am mad scientist. Sunovabitch!');
             }
             let cur = (<PatternExpression> this.entries[i][1]).matchType(
                 state, bnd, (<RecordType> t).getType(this.entries[i][0]));
