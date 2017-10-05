@@ -46,7 +46,7 @@ export function interpret(nextInstruction: string,
         }
         return {
             'state':                tmp.newState,
-            'evaluationErrored':    false,
+            'evaluationErrored':    tmp.hasThrown,
             'error':                tmp.value,
             'warnings':             (<State> tmp.newState).getWarnings()
         };
