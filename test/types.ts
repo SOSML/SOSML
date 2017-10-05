@@ -77,7 +77,50 @@ it("basic", () => {
         ['[1.0];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("list", [new Type.CustomType("real")]), 0]);
-        }]
+        }],
+        ['fun f true = false | f false = true;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('f')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.CustomType('bool', [], 0),
+                    new Type.CustomType('bool', [], 0)
+                )
+            , 0]);
+        }],
+        ['fun f true = false;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('f')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.CustomType('bool', [], 0),
+                    new Type.CustomType('bool', [], 0)
+                )
+            , 0]);
+            //TODO test non-exaustive warning
+        }],
+        ['op+;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.RecordType(new Map([
+                        ['1', new Type.CustomType('int', [], 0)],
+                        ['2', new Type.CustomType('int', [], 0)]
+                    ])),
+                    new Type.CustomType('int', [], 0)
+                )
+            , 0]);
+        }],
+        ['op+(1,2);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([
+                new Type.CustomType('int', [], 0)
+            , 0]);
+        }],
+        ['op+(1.0,2.0);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getStaticValue('it')).toEqualWithType([
+                new Type.CustomType('real', [], 0)
+            , 0]);
+        }],
     ]);
     run_test([
         ['[1, 1.0];', (x) => { expect(x).toThrow(Errors.ElaborationError); },
@@ -108,7 +151,8 @@ it("basic with annotation", () => {
         ['42.0:real;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("real"), 0]);
-        }]
+        }],
+        
     ]);
     run_test([
         ['42.0:int;', (x) => { expect(x).toThrow(Errors.ElaborationError); },

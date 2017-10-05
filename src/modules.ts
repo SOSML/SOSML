@@ -199,7 +199,7 @@ export class TransparentConstraint extends Expression implements Structure {
                 let sg = <[Type, IdentifierStatus]> sig.valueEnvironment[i];
                 let st = <[Type, IdentifierStatus]> str.valueEnvironment[i];
 
-                let repl = new Map<string, string>();
+                let repl = new Map<string, TypeVariable>();
                 let vsg = sg[0].getTypeVariables();
                 let vst = st[0].getTypeVariables();
                 while (st[0] instanceof TypeVariableBind) {
@@ -212,7 +212,7 @@ export class TransparentConstraint extends Expression implements Structure {
                             if ((<TypeVariableBind> st[0]).name[1] === '\'') {
                                 nname = '\'' + nname;
                             }
-                            repl = repl.set((<TypeVariableBind> st[0]).name, nname);
+                            repl = repl.set((<TypeVariableBind> st[0]).name, new TypeVariable(nname));
                             break;
                         }
 
@@ -232,7 +232,7 @@ export class TransparentConstraint extends Expression implements Structure {
                             if ((<TypeVariableBind> nsg).name[1] === '\'') {
                                 nname = '\'' + nname;
                             }
-                            repl = repl.set((<TypeVariableBind> nsg).name, nname);
+                            repl = repl.set((<TypeVariableBind> nsg).name, new TypeVariable(nname));
                             break;
                         }
 
@@ -379,7 +379,7 @@ export class OpaqueConstraint extends Expression implements Structure {
                 let sg = <[Type, IdentifierStatus]> sig.valueEnvironment[i];
                 let st = <[Type, IdentifierStatus]> str.valueEnvironment[i];
 
-                let repl = new Map<string, string>();
+                let repl = new Map<string, TypeVariable>();
                 let vsg = sg[0].getTypeVariables();
                 let vst = st[0].getTypeVariables();
                 let nst = st[0];
@@ -393,7 +393,7 @@ export class OpaqueConstraint extends Expression implements Structure {
                             if ((<TypeVariableBind> nst).name[1] === '\'') {
                                 nname = '\'' + nname;
                             }
-                            repl = repl.set((<TypeVariableBind> nst).name, nname);
+                            repl = repl.set((<TypeVariableBind> nst).name, new TypeVariable(nname));
                             break;
                         }
 
@@ -413,7 +413,7 @@ export class OpaqueConstraint extends Expression implements Structure {
                             if ((<TypeVariableBind> nsg).name[1] === '\'') {
                                 nname = '\'' + nname;
                             }
-                            repl = repl.set((<TypeVariableBind> nsg).name, nname);
+                            repl = repl.set((<TypeVariableBind> nsg).name, new TypeVariable(nname));
                             break;
                         }
 

@@ -208,11 +208,13 @@ export class ValueIdentifier extends Expression implements Pattern {
 
         let vars = new Set<string>();
         let frees = new Set<string>();
-        let repl = new Map<string, string>();
+        let repl = new Map<string, TypeVariable>();
         while (res[0] instanceof TypeVariableBind) {
             if ((<TypeVariableBind> res[0]).isFree) {
                 frees = frees.add((<TypeVariableBind> res[0]).name);
-                repl.set((<TypeVariableBind> res[0]).name, (<TypeVariableBind> res[0]).name);
+                repl.set((<TypeVariableBind> res[0]).name,
+                    new TypeVariable((<TypeVariableBind> res[0]).name,
+                        -1, (<TypeVariableBind> res[0]).domain));
             } else {
                 vars = vars.add((<TypeVariableBind> res[0]).name);
             }
@@ -237,7 +239,7 @@ export class ValueIdentifier extends Expression implements Pattern {
                         nm = nextName;
                     }
                     nwvar.push(nm);
-                    repl = repl.set(val, nm);
+                    repl = repl.set(val, new TypeVariable(nm));
                     break;
                 }
             }
@@ -435,7 +437,7 @@ export class Record extends Expression implements Pattern {
 
         for (let i = 0; i < this.entries.length; ++i) {
             if (!(<RecordType> t).hasType(this.entries[i][0])) {
-                throw new ElaborationError(this.position, 'My brain trembles.');
+                throw new ElaborationError(this.position, 'I am mad scientist. Sunovabitch!');
             }
             let cur = (<PatternExpression> this.entries[i][1]).matchType(
                 state, bnd, (<RecordType> t).getType(this.entries[i][0]));
@@ -635,7 +637,7 @@ export class LocalDeclarationExpression extends Expression {
                         if (!names.has(v)) {
                             change = true;
                             nnames.add(v);
-                            console.log(v);
+                            console.nog(v);
                         }
                     });
                 }
@@ -739,7 +741,7 @@ export class TypedExpression extends Expression implements Pattern {
         let tp = (<PatternExpression> this.expression).matchType(state, tyVarBnd, t);
 
         try {
-            let res = tp[1].merge(state, tp[2], this.typeAnnotation);
+            let res = tp[1].merge(state, tp[2], this.typeAnnotation.instantiate(state, tp[2]));
             for (let i = 0; i < tp[0].length; ++i) {
                 tp[0][i][1] = tp[0][i][1].instantiate(state, res[1]);
             }
@@ -1439,6 +1441,9 @@ export class Match {
                 throw new ElaborationError(this.position, 'Match rules disagree on type: ' + e[0]);
             }
             restp = restp.instantiate(state, bnds);
+            //            console.log('HERE');
+            //console.log(nmap);
+            //console.log(bnds);
             bnds.forEach((val: [Type, boolean], key: string) => {
                 if (key[1] !== '*' || key[2] !== '*') {
                     nmap = nmap.set(key, [val[0].instantiate(state, bnds), val[1]]);
@@ -1446,6 +1451,7 @@ export class Match {
                     keep = keep.set(key, val);
                 }
             });
+            //console.log(bnds);
             bnds = nmap;
         }
 

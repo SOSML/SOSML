@@ -1062,6 +1062,8 @@ export class ValueBinding {
             res[0][i][1] = res[0][i][1].instantiate(state, res[2]);
             let tv = res[0][i][1].getTypeVariables();
             let free = res[0][i][1].getTypeVariables(true);
+            //            console.log(res[0][i][1] + '');
+            //console.log(res[2]);
             let done = new Set<string>();
             for (let j = ntys.length - 1; j >= 0; --j) {
                 if (tv.has(ntys[j].name)) {

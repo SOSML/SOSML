@@ -58,6 +58,14 @@ it("basic", () => {
       p @ (List.map (fn a => x :: a) p)
     end;`, (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
+        }],
+        [`fun pot [] = [[]]
+  | pot (x::xs) = let
+    val p = pot xs
+  in
+    (List.map (fn a => x :: a) p) @ p
+  end;`, (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
         }]
     ], true);
 });

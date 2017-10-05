@@ -4533,15 +4533,12 @@ fun msort [] = []
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('merge')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('merge')).toEqualWithType([
-                new Type.TypeVariableBind(
-                    '\'a',
-                    new Type.FunctionType(
-                        new Type.RecordType(new Map([
-                            ['1',new Type.CustomType('list', [new Type.TypeVariable('\'a')])],
-                            ['2',new Type.CustomType('list', [new Type.TypeVariable('\'a')])]
-                        ])),
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')])
-                    )
+                new Type.FunctionType(
+                    new Type.RecordType(new Map([
+                        ['1',new Type.CustomType('list', [new Type.CustomType('int', [], 0)])],
+                        ['2',new Type.CustomType('list', [new Type.CustomType('int', [], 0)])]
+                    ])),
+                    new Type.CustomType('list', [new Type.CustomType('int', [], 0)])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -4550,12 +4547,9 @@ fun msort [] = []
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('msort')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('msort')).toEqualWithType([
-                new Type.TypeVariableBind(
-                    '\'a',
-                    new Type.FunctionType(
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')])
-                    )
+                new Type.FunctionType(
+                    new Type.CustomType('list', [new Type.CustomType('int', [], 0)]),
+                    new Type.CustomType('list', [new Type.CustomType('int', [], 0)])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
