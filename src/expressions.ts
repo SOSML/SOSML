@@ -208,11 +208,13 @@ export class ValueIdentifier extends Expression implements Pattern {
 
         let vars = new Set<string>();
         let frees = new Set<string>();
-        let repl = new Map<string, string>();
+        let repl = new Map<string, TypeVariable>();
         while (res[0] instanceof TypeVariableBind) {
             if ((<TypeVariableBind> res[0]).isFree) {
                 frees = frees.add((<TypeVariableBind> res[0]).name);
-                repl.set((<TypeVariableBind> res[0]).name, (<TypeVariableBind> res[0]).name);
+                repl.set((<TypeVariableBind> res[0]).name,
+                    new TypeVariable((<TypeVariableBind> res[0]).name,
+                        -1, (<TypeVariableBind> res[0]).domain));
             } else {
                 vars = vars.add((<TypeVariableBind> res[0]).name);
             }
@@ -237,7 +239,7 @@ export class ValueIdentifier extends Expression implements Pattern {
                         nm = nextName;
                     }
                     nwvar.push(nm);
-                    repl = repl.set(val, nm);
+                    repl = repl.set(val, new TypeVariable(nm));
                     break;
                 }
             }
@@ -635,7 +637,7 @@ export class LocalDeclarationExpression extends Expression {
                         if (!names.has(v)) {
                             change = true;
                             nnames.add(v);
-                            console.log(v);
+                            console.nog(v);
                         }
                     });
                 }

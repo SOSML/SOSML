@@ -249,7 +249,7 @@ export abstract class Type {
         throw new ElaborationError(-1, 'You seem well today.\nDid something nice happen?');
     }
 
-    replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
+    replaceTypeVariables(replacements: Map<string, TypeVariable>, free: Set<string> = new Set<string>()): Type {
         throw new ElaborationError(-1, 'あんたバカ?');
     }
 
@@ -303,7 +303,7 @@ export abstract class Type {
     normalize(nextFree: number = 0, options: { [name: string]: any } = {}): [Type, number] {
         let orderedVars = this.getOrderedTypeVariables();
         let freeVars = this.getTypeVariables(true);
-        let replacements = new Map<string, string>();
+        let replacements = new Map<string, TypeVariable>();
         let rcnt = 0;
 
         for (let v of orderedVars) {
@@ -340,7 +340,7 @@ export abstract class Type {
                 newVar = newVar.toUpperCase();
             }
 
-            replacements.set(v, newVar);
+            replacements.set(v, new TypeVariable(newVar));
         }
         let restp = this.replaceTypeVariables(replacements);
         if (options.strictMode !== false) {
@@ -385,7 +385,7 @@ export class AnyType extends Type {
         return [];
     }
 
-    replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
+    replaceTypeVariables(replacements: Map<string, TypeVariable>, free: Set<string> = new Set<string>()): Type {
         return this;
     }
 }
@@ -508,9 +508,13 @@ export class TypeVariableBind extends Type {
         let rec = this.type.getTypeVariables(free);
         let res = new Map<string, Type[]>();
 
-        rec.forEach((dom: Type[], val: string) => {
-            if (val !== this.name || free === this.isFree) {
-                res = res.set(val, dom);
+        rec.forEach((dom: Type[], id: string) => {
+            if (id !== this.name || free === this.isFree) {
+                if (res.has(id)) {
+                    res = res.set(id, TypeVariable.mergeDomain(dom, <Type[]> res.get(id)));
+                } else {
+                    res = res.set(id, dom);
+                }
             }
         });
         if (free && this.isFree && !res.has(this.name)) {
@@ -523,9 +527,9 @@ export class TypeVariableBind extends Type {
         return [this.name].concat(this.type.getOrderedTypeVariables());
     }
 
-    replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
+    replaceTypeVariables(replacements: Map<string, TypeVariable>, free: Set<string> = new Set<string>()): Type {
         if (replacements.has(this.name)) {
-            let res = new TypeVariableBind(<string> replacements.get(this.name),
+            let res = new TypeVariableBind((<TypeVariable> replacements.get(this.name)).name,
                 this.type.replaceTypeVariables(replacements, free), this.domain);
             if (free.has(this.name)) {
                 res.isFree = true;
@@ -551,6 +555,25 @@ export class TypeVariableBind extends Type {
 
 export class TypeVariable extends Type {
     isFree: boolean;
+
+    static mergeDomain(domain: Type[], other: Type[]): Type[] {
+        if (domain.length === 0) {
+            return other;
+        }
+        if (other.length === 0) {
+            return domain;
+        }
+        let res: Type[] = [];
+        for (let i of domain) {
+            for (let j of other) {
+                if (i.equals(j)) {
+                    res.push(i);
+                }
+            }
+        }
+        return res;
+    }
+
     constructor(public name: string, public position: number = 0, public domain: Type[] = []) {
         super();
         this.isFree = false;
@@ -584,6 +607,9 @@ export class TypeVariable extends Type {
     }
 
     toString(): string {
+        if (this.domain.length > 0) {
+            return this.name + '{}';
+        }
         return this.name;
     }
 
@@ -605,24 +631,6 @@ export class TypeVariable extends Type {
         return (<[Type, boolean]> tyVarBnd.get(this.name))[0].instantiate(state, tyVarBnd, nsen);
     }
 
-    mergeDomain(other: Type[]): Type[] {
-        if (this.domain.length === 0) {
-            return other;
-        }
-        if (other.length === 0) {
-            return this.domain;
-        }
-        let res: Type[] = [];
-        for (let i of this.domain) {
-            for (let j of other) {
-                if (i.equals(j)) {
-                    res.push(i);
-                }
-            }
-        }
-        return res;
-    }
-
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type): [Type, Map<string, [Type, boolean]>] {
         if (other instanceof AnyType) {
             return [this, tyVarBnd];
@@ -635,25 +643,28 @@ export class TypeVariable extends Type {
 
             if (oth instanceof TypeVariable) {
                 if (ths.name === oth.name) {
-                    let ndomain = ths.mergeDomain(oth.domain);
+                    let ndomain = TypeVariable.mergeDomain(ths.domain, oth.domain);
                     if (ndomain.length === 0 && ths.domain.length + oth.domain.length > 0) {
                         throw ['Cannot merge domains of "' + ths.normalize(0, {'strictMode': false})[0]
                             + '" and "' + other.normalize(0, {'strictMode': false})[0]
                             + '" ({' + ths.domain + '} and {' + oth.domain + '})'];
                     }
-                    let res = new TypeVariable(ths.name, ths.position, ths.mergeDomain(oth.domain));
+                    let res = new TypeVariable(ths.name, ths.position, ndomain);
                     res.isFree = ths.isFree && oth.isFree;
                     return [res, tyVarBnd];
                 } else {
-                    let repl = new Map<string, string>();
+                    let repl = new Map<string, TypeVariable>();
                     let rs = ths;
                     if (ths.name < oth.name) {
-                        repl.set(oth.name, ths.name);
+                        ths.domain = TypeVariable.mergeDomain(ths.domain, oth.domain);
+                        repl.set(oth.name, ths);
+                        repl.set(ths.name, ths);
                     } else {
-                        repl.set(ths.name, oth.name);
+                        oth.domain = TypeVariable.mergeDomain(ths.domain, oth.domain);
+                        repl.set(ths.name, oth);
+                        repl.set(oth.name, oth);
                         rs = oth;
                     }
-                    rs.domain = ths.mergeDomain(oth.domain);
                     if (rs.domain.length === 0 && ths.domain.length + oth.domain.length > 0) {
                         throw ['Cannot merge domains of "' + this.normalize(0, {'strictMode': false})[0]
                             + '" and "' + other.normalize(0, {'strictMode': false})[0]
@@ -690,7 +701,7 @@ export class TypeVariable extends Type {
                         tyVarBnd = nt[1];
                     }
                 }
-                if (ths.domain.length > 0 && ths.mergeDomain([oth]).length === 0) {
+                if (ths.domain.length > 0 && TypeVariable.mergeDomain(ths.domain, [oth]).length === 0) {
                     throw ['Type "' + oth.normalize(0, {'strictMode': false})[0]
                         + '" is not part of the domain of "'
                         + ths.normalize(0, {'strictMode': false})[0] + '" ({'
@@ -730,9 +741,11 @@ export class TypeVariable extends Type {
         return [this.name];
     }
 
-    replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
+    replaceTypeVariables(replacements: Map<string, TypeVariable>, free: Set<string> = new Set<string>()): Type {
         if (replacements.has(this.name)) {
-            let res = new TypeVariable(<string> replacements.get(this.name), this.position, this.domain);
+            let nw = <TypeVariable> replacements.get(this.name);
+            let res = new TypeVariable(nw.name, this.position,
+                nw.domain.length === 0 ? this.domain : nw.domain);
             if (free.has(this.name)) {
                 res.isFree = true;
             } else {
@@ -924,7 +937,11 @@ export class RecordType extends Type {
         let res = new Map<string, Type[]>();
         this.elements.forEach((val: Type) => {
             val.getTypeVariables(free).forEach((dom: Type[], id: string) => {
-                res = res.set(id, dom);
+                if (res.has(id)) {
+                    res = res.set(id, TypeVariable.mergeDomain(dom, <Type[]> res.get(id)));
+                } else {
+                    res = res.set(id, dom);
+                }
             });
         });
         return res;
@@ -938,7 +955,7 @@ export class RecordType extends Type {
         return res;
     }
 
-    replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
+    replaceTypeVariables(replacements: Map<string, TypeVariable>, free: Set<string> = new Set<string>()): Type {
         let rt: Map<string, Type> = new Map<string, Type>();
         this.elements.forEach((val: Type, key: string) => {
             rt = rt.set(key, val.replaceTypeVariables(replacements, free));
@@ -1101,11 +1118,19 @@ export class FunctionType extends Type {
 
     getTypeVariables(free: boolean = false): Map<string, Type[]> {
         let res = new Map<string, Type[]>();
-        this.parameterType.getTypeVariables(free).forEach((dom: Type[], value: string) => {
-            res = res.set(value, dom);
+        this.parameterType.getTypeVariables(free).forEach((dom: Type[], id: string) => {
+            if (res.has(id)) {
+                res = res.set(id, TypeVariable.mergeDomain(dom, <Type[]> res.get(id)));
+            } else {
+                res = res.set(id, dom);
+            }
         });
-        this.returnType.getTypeVariables(free).forEach((dom: Type[], value: string) => {
-            res = res.set(value, dom);
+        this.returnType.getTypeVariables(free).forEach((dom: Type[], id: string) => {
+            if (res.has(id)) {
+                res = res.set(id, TypeVariable.mergeDomain(dom, <Type[]> res.get(id)));
+            } else {
+                res = res.set(id, dom);
+            }
         });
         return res;
     }
@@ -1117,7 +1142,7 @@ export class FunctionType extends Type {
         return res;
     }
 
-    replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
+    replaceTypeVariables(replacements: Map<string, TypeVariable>, free: Set<string> = new Set<string>()): Type {
         let res = this.parameterType.replaceTypeVariables(replacements, free);
         let res2 = this.returnType.replaceTypeVariables(replacements, free);
         return new FunctionType(res, res2, this.position);
@@ -1516,8 +1541,12 @@ export class CustomType extends Type {
         let res = new Map<string, Type[]>();
         if (this.typeArguments.length > 0) {
             for (let i = 0; i < this.typeArguments.length; ++i) {
-                this.typeArguments[i].getTypeVariables(free).forEach((dom: Type[], val: string) => {
-                    res = res.set(val, dom);
+                this.typeArguments[i].getTypeVariables(free).forEach((dom: Type[], id: string) => {
+                    if (res.has(id)) {
+                        res = res.set(id, TypeVariable.mergeDomain(dom, <Type[]> res.get(id)));
+                    } else {
+                        res = res.set(id, dom);
+                    }
                 });
             }
         }
@@ -1532,8 +1561,7 @@ export class CustomType extends Type {
         return res;
     }
 
-    replaceTypeVariables(replacements: Map<string, string> = new Map<string, string>(),
-                         free: Set<string> = new Set<string>()): Type {
+    replaceTypeVariables(replacements: Map<string, TypeVariable>, free: Set<string>): Type {
         let rt: Type[] = [];
 
         for (let i = 0; i < this.typeArguments.length; ++i) {
