@@ -741,7 +741,7 @@ export class TypedExpression extends Expression implements Pattern {
         let tp = (<PatternExpression> this.expression).matchType(state, tyVarBnd, t);
 
         try {
-            let res = tp[1].merge(state, tp[2], this.typeAnnotation);
+            let res = tp[1].merge(state, tp[2], this.typeAnnotation.instantiate(state, tp[2]));
             for (let i = 0; i < tp[0].length; ++i) {
                 tp[0][i][1] = tp[0][i][1].instantiate(state, res[1]);
             }
@@ -1441,6 +1441,9 @@ export class Match {
                 throw new ElaborationError(this.position, 'Match rules disagree on type: ' + e[0]);
             }
             restp = restp.instantiate(state, bnds);
+            //            console.log('HERE');
+            //console.log(nmap);
+            //console.log(bnds);
             bnds.forEach((val: [Type, boolean], key: string) => {
                 if (key[1] !== '*' || key[2] !== '*') {
                     nmap = nmap.set(key, [val[0].instantiate(state, bnds), val[1]]);
@@ -1448,6 +1451,7 @@ export class Match {
                     keep = keep.set(key, val);
                 }
             });
+            //console.log(bnds);
             bnds = nmap;
         }
 

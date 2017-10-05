@@ -607,7 +607,7 @@ export class TypeVariable extends Type {
     }
 
     toString(): string {
-        return this.name;
+        return this.name + ' ' + this.domain.length;
     }
 
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
@@ -650,6 +650,13 @@ export class TypeVariable extends Type {
                     res.isFree = ths.isFree && oth.isFree;
                     return [res, tyVarBnd];
                 } else {
+                    //  if (ths.name === '\'*t13' || oth.name === '\'*t13') {
+                        //                            console.log(ths + ' ' + oth);
+                        // if (TypeVariable.mergeDomain(ths.domain, oth.domain).length === 0)) {
+                        //    console.trace();
+                        // }
+                        // }
+
                     let repl = new Map<string, TypeVariable>();
                     let rs = ths;
                     if (ths.name < oth.name) {
