@@ -607,7 +607,7 @@ export class TypeVariable extends Type {
     }
 
     toString(): string {
-        return this.name + ' ' + this.domain.length;
+        return this.name;// + ' ' + this.domain.length;
     }
 
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
