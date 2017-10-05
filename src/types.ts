@@ -607,9 +607,6 @@ export class TypeVariable extends Type {
     }
 
     toString(): string {
-        if (this.domain.length > 0) {
-            return this.name + '{}';
-        }
         return this.name;
     }
 
