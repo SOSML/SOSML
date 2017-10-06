@@ -208,13 +208,11 @@ export class ValueIdentifier extends Expression implements Pattern {
 
         let vars = new Set<string>();
         let frees = new Set<string>();
-        let repl = new Map<string, TypeVariable>();
+        let repl = new Map<string, string>();
         while (res[0] instanceof TypeVariableBind) {
             if ((<TypeVariableBind> res[0]).isFree) {
                 frees = frees.add((<TypeVariableBind> res[0]).name);
-                repl.set((<TypeVariableBind> res[0]).name,
-                    new TypeVariable((<TypeVariableBind> res[0]).name,
-                        -1, (<TypeVariableBind> res[0]).domain));
+                repl.set((<TypeVariableBind> res[0]).name, (<TypeVariableBind> res[0]).name);
             } else {
                 vars = vars.add((<TypeVariableBind> res[0]).name);
             }
@@ -239,7 +237,7 @@ export class ValueIdentifier extends Expression implements Pattern {
                         nm = nextName;
                     }
                     nwvar.push(nm);
-                    repl = repl.set(val, new TypeVariable(nm));
+                    repl = repl.set(val, nm);
                     break;
                 }
             }
@@ -1441,9 +1439,6 @@ export class Match {
                 throw new ElaborationError(this.position, 'Match rules disagree on type: ' + e[0]);
             }
             restp = restp.instantiate(state, bnds);
-            //            console.log('HERE');
-            //console.log(nmap);
-            //console.log(bnds);
             bnds.forEach((val: [Type, boolean], key: string) => {
                 if (key[1] !== '*' || key[2] !== '*') {
                     nmap = nmap.set(key, [val[0].instantiate(state, bnds), val[1]]);
@@ -1451,7 +1446,6 @@ export class Match {
                     keep = keep.set(key, val);
                 }
             });
-            //console.log(bnds);
             bnds = nmap;
         }
 

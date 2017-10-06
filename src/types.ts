@@ -249,7 +249,7 @@ export abstract class Type {
         throw new ElaborationError(-1, 'You seem well today.\nDid something nice happen?');
     }
 
-    replaceTypeVariables(replacements: Map<string, TypeVariable>, free: Set<string> = new Set<string>()): Type {
+    replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
         throw new ElaborationError(-1, 'あんたバカ?');
     }
 
@@ -303,7 +303,7 @@ export abstract class Type {
     normalize(nextFree: number = 0, options: { [name: string]: any } = {}): [Type, number] {
         let orderedVars = this.getOrderedTypeVariables();
         let freeVars = this.getTypeVariables(true);
-        let replacements = new Map<string, TypeVariable>();
+        let replacements = new Map<string, string>();
         let rcnt = 0;
 
         for (let v of orderedVars) {
@@ -340,7 +340,7 @@ export abstract class Type {
                 newVar = newVar.toUpperCase();
             }
 
-            replacements.set(v, new TypeVariable(newVar));
+            replacements.set(v, newVar);
         }
         let restp = this.replaceTypeVariables(replacements);
         if (options.strictMode !== false) {
@@ -385,7 +385,7 @@ export class AnyType extends Type {
         return [];
     }
 
-    replaceTypeVariables(replacements: Map<string, TypeVariable>, free: Set<string> = new Set<string>()): Type {
+    replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
         return this;
     }
 }
@@ -527,9 +527,9 @@ export class TypeVariableBind extends Type {
         return [this.name].concat(this.type.getOrderedTypeVariables());
     }
 
-    replaceTypeVariables(replacements: Map<string, TypeVariable>, free: Set<string> = new Set<string>()): Type {
+    replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
         if (replacements.has(this.name)) {
-            let res = new TypeVariableBind((<TypeVariable> replacements.get(this.name)).name,
+            let res = new TypeVariableBind(<string> replacements.get(this.name),
                 this.type.replaceTypeVariables(replacements, free), this.domain);
             if (free.has(this.name)) {
                 res.isFree = true;
@@ -607,7 +607,7 @@ export class TypeVariable extends Type {
     }
 
     toString(): string {
-        return this.name;// + ' ' + this.domain.length;
+        return this.name;
     }
 
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
@@ -650,23 +650,14 @@ export class TypeVariable extends Type {
                     res.isFree = ths.isFree && oth.isFree;
                     return [res, tyVarBnd];
                 } else {
-                    //  if (ths.name === '\'*t13' || oth.name === '\'*t13') {
-                        //                            console.log(ths + ' ' + oth);
-                        // if (TypeVariable.mergeDomain(ths.domain, oth.domain).length === 0)) {
-                        //    console.trace();
-                        // }
-                        // }
-
-                    let repl = new Map<string, TypeVariable>();
+                    let repl = new Map<string, string>();
                     let rs = ths;
                     if (ths.name < oth.name) {
                         ths.domain = TypeVariable.mergeDomain(ths.domain, oth.domain);
-                        repl.set(oth.name, ths);
-                        repl.set(ths.name, ths);
+                        repl.set(oth.name, ths.name);
                     } else {
                         oth.domain = TypeVariable.mergeDomain(ths.domain, oth.domain);
-                        repl.set(ths.name, oth);
-                        repl.set(oth.name, oth);
+                        repl.set(ths.name, oth.name);
                         rs = oth;
                     }
                     if (rs.domain.length === 0 && ths.domain.length + oth.domain.length > 0) {
@@ -684,6 +675,18 @@ export class TypeVariable extends Type {
                     } else {
                         nvb.set(ths.name, [oth, rs.isFree]);
                     }
+                    let dm = rs.domain;
+                    if (nvb.has('$' + ths.name)) {
+                        dm = TypeVariable.mergeDomain(dm,
+                            (<[TypeVariable, boolean]> nvb.get('$' + ths.name))[0].domain);
+                    }
+                    if (nvb.has('$' + oth.name)) {
+                        dm = TypeVariable.mergeDomain(dm,
+                            (<[TypeVariable, boolean]> nvb.get('$' + oth.name))[0].domain);
+                    }
+                    nvb.set('$' + ths.name, [new TypeVariable(ths.name, -1, dm), rs.isFree]);
+                    nvb.set('$' + oth.name, [new TypeVariable(oth.name, -1, dm), rs.isFree]);
+
                     return [rs, nvb];
                 }
             } else {
@@ -745,11 +748,10 @@ export class TypeVariable extends Type {
         return [this.name];
     }
 
-    replaceTypeVariables(replacements: Map<string, TypeVariable>, free: Set<string> = new Set<string>()): Type {
+    replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
         if (replacements.has(this.name)) {
-            let nw = <TypeVariable> replacements.get(this.name);
-            let res = new TypeVariable(nw.name, this.position,
-                nw.domain.length === 0 ? this.domain : nw.domain);
+            let res = new TypeVariable(<string> replacements.get(this.name),
+                this.position, this.domain);
             if (free.has(this.name)) {
                 res.isFree = true;
             } else {
@@ -959,7 +961,7 @@ export class RecordType extends Type {
         return res;
     }
 
-    replaceTypeVariables(replacements: Map<string, TypeVariable>, free: Set<string> = new Set<string>()): Type {
+    replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
         let rt: Map<string, Type> = new Map<string, Type>();
         this.elements.forEach((val: Type, key: string) => {
             rt = rt.set(key, val.replaceTypeVariables(replacements, free));
@@ -1146,7 +1148,7 @@ export class FunctionType extends Type {
         return res;
     }
 
-    replaceTypeVariables(replacements: Map<string, TypeVariable>, free: Set<string> = new Set<string>()): Type {
+    replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
         let res = this.parameterType.replaceTypeVariables(replacements, free);
         let res2 = this.returnType.replaceTypeVariables(replacements, free);
         return new FunctionType(res, res2, this.position);
@@ -1565,7 +1567,7 @@ export class CustomType extends Type {
         return res;
     }
 
-    replaceTypeVariables(replacements: Map<string, TypeVariable>, free: Set<string>): Type {
+    replaceTypeVariables(replacements: Map<string, string>, free: Set<string>): Type {
         let rt: Type[] = [];
 
         for (let i = 0; i < this.typeArguments.length; ++i) {

@@ -1062,13 +1062,15 @@ export class ValueBinding {
             res[0][i][1] = res[0][i][1].instantiate(state, res[2]);
             let tv = res[0][i][1].getTypeVariables();
             let free = res[0][i][1].getTypeVariables(true);
-            //            console.log(res[0][i][1] + '');
-            //console.log(res[2]);
             let done = new Set<string>();
             for (let j = ntys.length - 1; j >= 0; --j) {
                 if (tv.has(ntys[j].name)) {
-                    res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1],
-                        <Type[]> tv.get(ntys[j].name));
+                    let dm = <Type[]> tv.get(ntys[j].name);
+                    if (res[2].has('$' + ntys[j].name)) {
+                        dm = TypeVariable.mergeDomain(dm,
+                            (<[TypeVariable, boolean]> res[2].get('$' + ntys[j].name))[0].domain);
+                    }
+                    res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1], dm);
                     (<TypeVariableBind> res[0][i][1]).isFree = valuePoly || free.has(ntys[j].name);
                     hasFree = hasFree || valuePoly || free.has(ntys[j].name);
                     done.add(ntys[j].name);
@@ -1077,7 +1079,12 @@ export class ValueBinding {
             ntys = [];
             res[0][i][1].getTypeVariables().forEach((dom: Type[], val: string) => {
                 if ((isTopLevel || !noBind.has(val)) && !done.has(val)) {
-                    ntys.push(new TypeVariable(val, 0, dom));
+                    let dm = dom;
+                    if (res[2].has('$' + val)) {
+                        dm = TypeVariable.mergeDomain(dm,
+                            (<[TypeVariable, boolean]> res[2].get('$' + val))[0].domain);
+                    }
+                    ntys.push(new TypeVariable(val, 0, dm));
                 }
             });
             for (let j = ntys.length - 1; j >= 0; --j) {
