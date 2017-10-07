@@ -258,8 +258,15 @@ end
 
 fun not true = false | not false = true;
 
+structure List :> sig val rev: 'a list -> 'a list end = struct
+    fun rev' nil ys     = ys
+      | rev' (x::xs) ys = rev' xs (x::ys)
+    fun rev xs = rev' xs nil;
+end;
+
 structure List = struct
     exception Empty;
+    open List;
 
     fun hd nil = raise Empty
       | hd (x::xr) = x;
@@ -279,13 +286,6 @@ structure List = struct
 
     fun length nil = 0
       | length (x::xr) = 1 + length xr;
-
-    fun rev xs = let
-            fun rev' nil ys = ys
-              | rev' (x::xs) ys = rev' xs (x::ys)
-          in
-            rev' xs nil
-          end;
 
     fun foldr f e []      = e
       | foldr f e (x::xr) = f(x, foldr f e xr);
@@ -325,12 +325,9 @@ structure List = struct
              EQUAL  => collate compare (xr, yr)
            | s      => s;
 
-    fun nth (xs, n) = let
-        fun h []      _ = raise Subscript
-          | h (x::xr) n = if n = 0 then x else h xr (n - 1)
-    in
-        if n < 0 then raise Subscript else h xs n
-    end;
+    fun nth ([], _)    = raise Subscript
+      | nth (x::xs, 0) = x
+      | nth (x::xs, n) = nth (xs, n - 1);
 end;
 
 structure Char = struct
@@ -357,95 +354,74 @@ structure Char = struct
 		else c;
 end;
 
-structure Listsort = struct
-(* Listsort *)
+signature LISTSORT = sig
+    val sort: ('a * 'a -> order) -> 'a list -> 'a list;
+    val sorted: ('a * 'a -> order) -> 'a list -> bool;
+    val mergeUniq: ('a * 'a -> order) -> 'a list * 'a list -> 'a list;
+    val merge: ('a * 'a -> order) -> 'a list * 'a list -> 'a list;
+    val eqclasses: ('a * 'a -> order) -> 'a list -> 'a list list;
+end;
 
-(* Smooth Applicative Merge Sort, Richard O'Keefe 1982        *)
-(* From L.C. Paulson: ML for the Working Programmer, CUP 1991 *)
-(* Optimized for Moscow ML *)
+structure Listsort :> LISTSORT = struct
+  fun take ordr x1 xr []       = x1 :: xr
+    | take ordr x1 xr (y1::yr) = (case ordr(x1, y1) of
+        LESS    => x1 :: take ordr y1 yr xr
+      | _       => y1 :: take ordr x1 xr yr);
 
-(* Should be made stable; this requires more than a change to nextrun;
-   for inspiration, see
-   http://www.dcs.gla.ac.uk/mail-www/haskell/msg00207.html
- *)
+  fun takeUniq ordr x1 xr []       = x1 :: xr
+    | takeUniq ordr x1 xr (y1::yr) = (case ordr(x1, y1) of
+        LESS    => x1 :: takeUniq ordr y1 yr xr
+      | GREATER => y1 :: takeUniq ordr x1 xr yr
+      | EQUAL   => takeUniq ordr x1 xr yr);
 
-fun sort ordr []          = []
-  | sort ordr (xs as [_]) = xs
-  | sort ordr (xs as [x1, x2]) =
-    (case ordr(x1, x2) of
-	 GREATER => [x2, x1]
-       | _       => xs)
-  | sort ordr xs =
-    let fun merge []       ys = ys
-	  | merge (x1::xr) ys =
-	    let fun take x1 xr []       = x1 :: xr
-		  | take x1 xr (y1::yr) =
-	            (case ordr(x1, y1) of
-			 LESS    => x1 :: take y1 yr xr
-		       | _       => y1 :: take x1 xr yr)
-	    in take x1 xr ys end
-        fun mergepairs l1  []              k = [l1]
-          | mergepairs l1 (ls as (l2::lr)) k =
-            if k mod 2 = 1 then l1::ls
-            else mergepairs (merge l1 l2) lr (k div 2)
-	fun nextrun run []      = (run, [])
-	  | nextrun run (xs as (x::xr)) =
-	    if ordr(x, List.hd run) = LESS then (run, xs)
-	    else nextrun (x::run) xr
-        fun sorting []      ls r = List.hd(mergepairs [] ls 0)
-          | sorting (x::xs) ls r =
-	    let val (revrun, tail) = nextrun [x] xs
-	    in sorting tail (mergepairs (List.rev revrun) ls (r+1)) (r+1) end
-    in sorting xs [] 0 end;
+  fun merge ordr ([],     ys) = ys
+    | merge ordr (x1::xr, ys) = take ordr x1 xr ys;
 
-(* Check sortedness *)
+  fun mergeUniq ordr ([],     ys) = ys
+    | mergeUniq ordr (x1::xr, ys) = takeUniq ordr x1 xr ys;
 
-fun sorted ordr []         = true
-  | sorted ordr (y1 :: yr) =
-    let fun h x0 []       = true
-	  | h x0 (x1::xr) = ordr(x0, x1) <> GREATER andalso h x1 xr
-    in h y1 yr end;
+  fun mergepairs ordr l1  [] k              = [l1]
+    | mergepairs ordr l1 (ls as (l2::lr)) k =
+      if k mod 2 = 1 then l1::ls
+      else mergepairs ordr (merge ordr (l1, l2)) lr (k div 2);
 
-(* Merge without duplicates *)
+  fun nextrun ordr run []      = (run, [])
+    | nextrun ordr run (xs as (x::xr)) =
+      if ordr(x, List.hd run) = LESS then (run, xs)
+      else nextrun ordr (x::run) xr;
 
-fun mergeUniq ordr ([],     ys) = ys
-  | mergeUniq ordr (x1::xr, ys) =
-    let fun take x1 xr []       = x1 :: xr
-	  | take x1 xr (y1::yr) =
-	    (case ordr(x1, y1) of
-		 LESS    => x1 :: take y1 yr xr
-	       | GREATER => y1 :: take x1 xr yr
-	       | EQUAL   => take x1 xr yr)
-    in take x1 xr ys end;
+  fun sorting ordr []      ls r = List.hd(mergepairs ordr [] ls 0)
+    | sorting ordr (x::xs) ls r = let
+        val (revrun, tail) = nextrun ordr [x] xs
+      in
+        sorting ordr tail (mergepairs ordr (List.rev revrun) ls (r+1)) (r+1)
+      end;
 
-(* Merge with duplicates *)
+  fun group ordr last rest cs1 css = case rest of
+      []     => cs1 :: css
+    | r1::rr => if ordr(r1, last) = EQUAL then group ordr r1 rr (r1 :: cs1) css
+                else group ordr r1 rr [r1] (cs1 :: css);
 
-fun merge ordr ([],     ys) = ys
-  | merge ordr (x1::xr, ys) =
-    let fun take x1 xr []       = x1 :: xr
-	  | take x1 xr (y1::yr) =
-	    (case ordr(x1, y1) of
-		 LESS    => x1 :: take y1 yr xr
-	       | _       => y1 :: take x1 xr yr)
-    in take x1 xr ys end;
+  fun sort ordr []               = []
+    | sort ordr (xs as [_])      = xs
+    | sort ordr (xs as [x1, x2]) = (case ordr(x1, x2) of
+        GREATER => [x2, x1]
+      | _       => xs)
+    | sort ordr xs = sorting ordr xs [] 0;
 
-(* Find the equivalence classes of a sorted list *)
+  fun sorted ordr []           = true
+    | sorted ordr [x]          = true
+    | sorted ordr (x1::x2::xr) =
+      ordr(x1, x2) <> GREATER andalso sorted ordr (x2::xr);
 
-fun eqclasses ordr xs =
-    let val xs = List.rev (sort ordr xs)
-	fun group last rest cs1 css =
-	    case rest of
-		[]     => cs1 :: css
-	      | r1::rr =>
-		    if ordr(r1, last) = EQUAL then
-			group r1 rr (r1 :: cs1) css
-		    else
-			group r1 rr [r1] (cs1 :: css)
+
+  fun eqclasses ordr xs = let
+      val xs = List.rev (sort ordr xs)
     in
-	case xs of
-	    []     => []
-	  | x1::xr => group x1 xr [x1] []
-    end;
+      case xs of
+          []     => []
+        | x1::xr => group ordr x1 xr [x1] []
+      end;
 end;
 
 structure List = struct
