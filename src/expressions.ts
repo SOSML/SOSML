@@ -8,9 +8,7 @@ import { InternalInterpreterError, ElaborationError, EvaluationError, ParserErro
 import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
          ExceptionValue, ConstructedValue, ReferenceValue } from './values';
-import { EvaluationResult, EvaluationParameters, EvaluationStack } from './evaluator';
-
-type IdCnt = { [name: string]: number };
+import { EvaluationResult, EvaluationParameters, EvaluationStack, IdCnt } from './evaluator';
 
 export abstract class Expression {
     position: number;

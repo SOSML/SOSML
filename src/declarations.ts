@@ -7,9 +7,7 @@ import { InternalInterpreterError, ElaborationError,
          EvaluationError, FeatureDisabledError, Warning } from './errors';
 import { Value, ValueConstructor, ExceptionConstructor, ExceptionValue,
          FunctionValue } from './values';
-import { EvaluationResult, EvaluationStack, EvaluationParameters } from './evaluator';
-
-type IdCnt = { [name: string]: number };
+import { IdCnt, EvaluationResult, EvaluationStack, EvaluationParameters } from './evaluator';
 
 export abstract class Declaration {
     id: number;

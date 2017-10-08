@@ -616,7 +616,7 @@ export class TypeVariable extends Type {
         }
         if (seen.has(this.name)) {
             throw new ElaborationError(-1,
-                'Type clash. An expression of type "' + this.name.normalize()[0]
+                'Type clash. An expression of type "' + this.normalize()[0]
                 + '" cannot have type "' + (<[Type, boolean]> tyVarBnd.get(this.name))[0].normalize()[0]
                 + '" because of circularity.');
         }
@@ -692,8 +692,10 @@ export class TypeVariable extends Type {
             } else {
                 let otv = oth.getTypeVariables();
                 if (otv.has((<TypeVariable> ths).name)) {
+                    // console.log(otv);
+                    // console.log(ths);
                     throw new ElaborationError(-1,
-                        'Type clash. An expression of type "' + (<TypeVariable> ths).name.normalize()[0]
+                        'Type clash. An expression of type "' + (<TypeVariable> ths).normalize()[0]
                         + '" cannot have type "' + oth.normalize()[0] + '" because of circularity.');
                 }
                 if (ths.isFree) {
@@ -1433,6 +1435,9 @@ export class CustomType extends Type {
         }
         if (tp !== undefined && tp.type instanceof FunctionType) {
             try {
+                // console.log('HERE');
+                // console.log(this);
+                // console.log((<FunctionType> tp.type).parameterType);
                 let mt = this.merge(state, tyVarBnd, (<FunctionType> tp.type).parameterType, true);
                 let newstate = state.getNestedState(state.id);
                 newstate.setStaticType(this.name, (<FunctionType> tp.type).returnType, [], -1);
