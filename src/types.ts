@@ -1435,13 +1435,22 @@ export class CustomType extends Type {
         }
         if (tp !== undefined && tp.type instanceof FunctionType) {
             try {
-                // console.log('HERE');
-                // console.log(this);
-                // console.log((<FunctionType> tp.type).parameterType);
-                let mt = this.merge(state, tyVarBnd, (<FunctionType> tp.type).parameterType, true);
+                let tyvars = tp.type.getTypeVariables();
+                let nnm = 1;
+                let repl = new Map<string, string>();
+
+                tyvars.forEach((val: Type[], key: string) => {
+                    // TODO: Test that this is enough, i.e. we don't need to ensure that
+                    // the generated new names don't exist
+                    repl = repl.set(key, '\'*q' + nnm);
+                    ++nnm;
+                });
+
+                let ntype = <FunctionType> tp.type.replaceTypeVariables(repl);
+                let mt = this.merge(state, tyVarBnd, ntype.parameterType, true);
                 let newstate = state.getNestedState(state.id);
-                newstate.setStaticType(this.name, (<FunctionType> tp.type).returnType, [], -1);
-                return (<FunctionType> tp.type).returnType.instantiate(newstate, mt[1]);
+                newstate.setStaticType(this.name, ntype.returnType, [], -1);
+                return ntype.returnType.instantiate(newstate, mt[1]);
             } catch (e) {
                 if (!(e instanceof Array)) {
                     throw e;

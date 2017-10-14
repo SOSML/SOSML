@@ -1513,7 +1513,6 @@ export class Wildcard extends Expression implements Pattern {
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>] {
-        console.log("At " + this.constructor.name + ' matchType\n' + this);
         return [[], t, tyVarBnd];
     }
 
