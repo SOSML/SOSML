@@ -623,7 +623,6 @@ export class LocalDeclarationExpression extends Expression {
                 names.add(key);
             }
         });
-        console.log(res[2]);
         while (true) {
             let change = false;
             let nnames = new Set<string>();
@@ -829,20 +828,14 @@ export class FunctionApplication extends Expression implements Pattern {
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>] {
-
-            /*
-        if (t instanceof FunctionType) {
-            throw new ElaborationError(this.position,
-                'You simply cannot match function values.');
-        } */
         if (!(this.func instanceof ValueIdentifier)) {
             throw new ElaborationError(this.position, 'This is truly...slothful.');
         }
 
         let ti = state.getStaticValue((<ValueIdentifier> this.func).name.getText());
         if (ti === undefined || ti[1] === IdentifierStatus.VALUE_VARIABLE) {
-            throw new ElaborationError(this.position,
-                'Unbound value Identifier "' + (<ValueIdentifier> this.func).name.getText() + '".');
+            throw new ElaborationError(this.position, 'Expected a constructor, "'
+                + (<ValueIdentifier> this.func).name.getText() + '" isn\'t.');
         }
 
         let tmp = this.func.getType(state, tyVarBnd, '\'g0');
@@ -921,6 +914,14 @@ export class FunctionApplication extends Expression implements Pattern {
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
+
+        if (forceRebind && this.func instanceof ValueIdentifier) {
+            let t = state.getStaticValue((<ValueIdentifier> this.func).name.getText());
+            if (t === undefined || t[1] === IdentifierStatus.VALUE_VARIABLE) {
+                throw new ElaborationError(this.position,
+                    '"' + (<ValueIdentifier> this.func).name.getText() + '" is not a constructor.');
+            }
+        }
 
         let f = this.func.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
         state.valueIdentifierId = f[5];
@@ -1512,6 +1513,7 @@ export class Wildcard extends Expression implements Pattern {
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>] {
+        console.log("At " + this.constructor.name + ' matchType\n' + this);
         return [[], t, tyVarBnd];
     }
 
@@ -1587,6 +1589,7 @@ export class LayeredPattern extends Expression implements Pattern {
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>]  {
+
         let tp = t;
         if (this.typeAnnotation !== undefined) {
             try {
