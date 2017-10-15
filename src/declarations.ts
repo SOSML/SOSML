@@ -1053,6 +1053,15 @@ export class ValueBinding {
             }
             ntys.push(<TypeVariable> nt);
         }
+        this.expression.getExplicitTypeVariables().forEach((val: TypeVariable) => {
+            let nt = val.instantiate(state, res[2]);
+            if (!(nt instanceof TypeVariable) || (<TypeVariable> nt).domain.length > 0
+                || val.admitsEquality(state) !== nt.admitsEquality(state)) {
+                throw new ElaborationError(this.position,
+                    'Type clash. An expression of explicit type "' + val
+                    + '" cannot have type "' + nt.normalize()[0] + '".');
+            }
+        });
 
         let valuePoly = !this.isRecursive && !this.expression.isSafe(state);
         let hasFree = false;

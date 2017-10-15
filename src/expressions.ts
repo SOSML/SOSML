@@ -32,6 +32,10 @@ export abstract class Expression {
         return true;
     }
 
+    getExplicitTypeVariables(): Set<TypeVariable> {
+        return new Set<TypeVariable>();
+    }
+
     toString(): string {
         throw new InternalInterpreterError(this.position,
             'You humans can\'t seem to write bug-free code. What an inferior species.');
@@ -365,6 +369,16 @@ export class Record extends Expression implements Pattern {
                     'Label "' + this.entries[i][0] + '" occurs more than once in the same record.');
             }
         }
+    }
+
+    getExplicitTypeVariables(): Set<TypeVariable> {
+        let res = new Set<TypeVariable>();
+        for (let i = 0; i < this.entries.length; ++i) {
+            this.entries[i][1].getExplicitTypeVariables().forEach((val: TypeVariable) => {
+                res = res.add(val);
+            });
+        }
+        return res;
     }
 
     getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
@@ -723,6 +737,14 @@ export class TypedExpression extends Expression implements Pattern {
     constructor(public position: number, public expression: Expression,
                 public typeAnnotation: Type) { super(); }
 
+    getExplicitTypeVariables(): Set<TypeVariable> {
+        let res = new Set<TypeVariable>();
+        this.typeAnnotation.getTypeVariables().forEach((val: Type[], key: string) => {
+            res = res.add(new TypeVariable(key, 0, val));
+        });
+        return res;
+    }
+
     getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
         return (<PatternExpression> this.expression).getMatchedValues(state, tyVarBnd);
     }
@@ -800,6 +822,17 @@ export class FunctionApplication extends Expression implements Pattern {
     constructor(public position: number,
                 public func: Expression,
                 public argument: Expression|PatternExpression) { super(); }
+
+    getExplicitTypeVariables(): Set<TypeVariable> {
+        let res = new Set<TypeVariable>();
+        this.func.getExplicitTypeVariables().forEach((val: TypeVariable) => {
+            res = res.add(val);
+        });
+        this.argument.getExplicitTypeVariables().forEach((val: TypeVariable) => {
+            res = res.add(val);
+        });
+        return res;
+    }
 
     getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
         if (!(this.func instanceof ValueIdentifier)) {
@@ -1153,6 +1186,10 @@ export class HandleException extends Expression {
         super();
     }
 
+    getExplicitTypeVariables(): Set<TypeVariable> {
+        return this.expression.getExplicitTypeVariables();
+    }
+
     isSafe(state: State): boolean {
         return this.expression.isSafe(state);
     }
@@ -1257,6 +1294,10 @@ export class RaiseException extends Expression {
     // raise expression
     constructor(public position: number, public expression: Expression) { super(); }
 
+    getExplicitTypeVariables(): Set<TypeVariable> {
+        return this.expression.getExplicitTypeVariables();
+    }
+
     simplify(): RaiseException {
         return new RaiseException(this.position, this.expression.simplify());
     }
@@ -1320,6 +1361,10 @@ export class Lambda extends Expression {
     // fn match
     constructor(public position: number, public match: Match) { super(); }
 
+    getExplicitTypeVariables(): Set<TypeVariable> {
+        return this.match.getExplicitTypeVariables();
+    }
+
     simplify(): Lambda {
         return new Lambda(this.position, this.match.simplify());
     }
@@ -1360,6 +1405,19 @@ export class Lambda extends Expression {
 export class Match {
     // pat => exp or pat => exp | match
     constructor(public position: number, public matches: [PatternExpression, Expression][]) { }
+
+    getExplicitTypeVariables(): Set<TypeVariable> {
+        let res = new Set<TypeVariable>();
+        for (let i = 0; i < this.matches.length; ++i) {
+            this.matches[i][0].getExplicitTypeVariables().forEach((val: TypeVariable) => {
+                res = res.add(val);
+            });
+            this.matches[i][1].getExplicitTypeVariables().forEach((val: TypeVariable) => {
+                res = res.add(val);
+            });
+        }
+        return res;
+    }
 
     toString(): string {
         let res = '';
