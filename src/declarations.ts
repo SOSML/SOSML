@@ -1045,10 +1045,11 @@ export class ValueBinding {
         let ntys: TypeVariable[] = [];
         for (let i = 0; i < tyVarSeq.length; ++i) {
             let nt = tyVarSeq[i].instantiate(state, res[2]);
-            if (!(nt instanceof TypeVariable)) {
+            if (!(nt instanceof TypeVariable) || (<TypeVariable> nt).domain.length > 0
+                || tyVarSeq[i].admitsEquality(state) !== nt.admitsEquality(state)) {
                 throw new ElaborationError(this.position,
                     'Type clash. An expression of explicit type "' + tyVarSeq[i]
-                    + '" cannot have type "' + nt + '".');
+                    + '" cannot have type "' + nt.normalize()[0] + '".');
             }
             ntys.push(<TypeVariable> nt);
         }
