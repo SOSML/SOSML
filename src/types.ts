@@ -1010,7 +1010,8 @@ export class RecordType extends Type {
                     res += ' * ';
                 }
                 let sub = this.elements.get('' + i);
-                if (sub instanceof FunctionType || sub instanceof RecordType) {
+                if (sub instanceof FunctionType ||
+                    (sub instanceof RecordType && (<RecordType> sub).elements.size !== 0)) {
                     res += '(' + sub + ')';
                 } else {
                     res += sub;
