@@ -82,7 +82,7 @@ export class Domain {
         let res: Warning[] = [];
         let nonex = false;
         let redun = false;
-        let nondis = false;
+        // let nondis = false;
 
         if (this.entries === undefined) {
             nonex = true;
@@ -145,9 +145,10 @@ export class Domain {
                     for (let j of cur) {
                         if (!fnd.has(JSON.stringify(j))) {
                             good = true;
-                        } else {
-                            nondis = true;
                         }
+                        // else {
+                        //    nondis = true;
+                        // }
                         if (add) {
                             fnd = fnd.add(JSON.stringify(j));
                         }
@@ -209,9 +210,9 @@ export class Domain {
         if (nonex) {
             res.push(new Warning(position, 'Pattern matching is non-exhaustive.\n'));
         }
-        if (nondis) {
-            res.push(new Warning(position, 'Some rules are not disjoint.\n'));
-        }
+        // if (nondis) {
+            // res.push(new Warning(position, 'Some rules are not disjoint.\n'));
+        // }
         if (redun) {
             res.push(new Warning(position, 'Some cases are unused in this match.\n'));
         }
