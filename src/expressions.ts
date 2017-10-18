@@ -1210,8 +1210,14 @@ export class HandleException extends Expression {
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         let mtp = this.match.getType(state, tyVarBnd, nextName, tyVars, forceRebind, false);
-        if ((!(mtp[0] instanceof FunctionType))
-            || !(<FunctionType> mtp[0]).parameterType.equals(new CustomType('exn'))) {
+        if (!(mtp[0] instanceof FunctionType)) {
+            throw new ElaborationError(this.match.position,
+                'You can only handle things of type "exn" and not "'
+                + (<FunctionType> mtp[0]).parameterType.normalize()[0] + '".');
+        }
+        try {
+            (<FunctionType> mtp[0]).parameterType.merge(state, mtp[4], new CustomType('exn'));
+        } catch (e) {
             throw new ElaborationError(this.match.position,
                 'You can only handle things of type "exn" and not "'
                 + (<FunctionType> mtp[0]).parameterType.normalize()[0] + '".');
