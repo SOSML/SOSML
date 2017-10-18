@@ -15,7 +15,7 @@ let AST = instance.lexParse(..code..);
 
 import { State } from './state';
 import { getInitialState } from './initialState';
-import { addStdLib } from './stdlib';
+import { loadModule, STDLIB } from './stdlib';
 import { InternalInterpreterError } from './errors';
 import { Type } from './types';
 import * as Lexer from './lexer';
@@ -147,10 +147,24 @@ export function interpret(nextInstruction: string,
     };
 }
 
-export function getFirstState(withStdLib: boolean): State {
-    if (withStdLib) {
-        return addStdLib(getInitialState(), {});
+export function getAvailableModules(): string[] {
+    let res: string[] = [];
+    for (let i in STDLIB) {
+        if (Object.prototype.hasOwnProperty.call(STDLIB, i)) {
+            if ((<string> i)[0] !== '_') {
+                res.push(<string> i);
+            }
+        }
     }
-    return getInitialState();
+    return res;
+}
+
+export function getFirstState(loadModules: string[] = getAvailableModules(),
+                              options: {[name: string]: any } = {}): State {
+    let res = loadModule(getInitialState(), '__Base', options);
+    for (let i of loadModules) {
+        res = loadModule(res, i, options);
+    }
+    return res;
 }
 

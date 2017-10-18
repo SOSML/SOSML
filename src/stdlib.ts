@@ -5,6 +5,7 @@ import { CharValue, Real, Integer, PredefinedFunction, Value, RecordValue,
 import { InternalInterpreterError } from './errors';
 import * as Interpreter from './main';
 
+
 let intType = new CustomType('int');
 let realType = new CustomType('real');
 // let wordType = new CustomType('word');
@@ -219,226 +220,267 @@ function addRealLib(state: State): State {
     return state;
 }
 
-let code = `
-exception Domain;
-exception Size;
-exception Chr;
-exception Subscript;
+export let STDLIB: {
+    [name: string]: {
+        'native': ((state: State) => State) | undefined, /* callback for native parts */
+        'code': string | undefined,
+        'requires': string[] | undefined /* names of modules required for this module (excluding __Base) */
+    }
+} = {
+    '__Base': {
+        'native': undefined,
+        'code': `fun o (f,g) x = f (g x);
+            infix 3 o;
+            datatype order = LESS | EQUAL | GREATER;
 
-fun o (f,g) x = f (g x);
-infix 3 o;
+            exception Domain;
+            exception Size;
+            exception Chr;
+            exception Subscript;
 
-datatype order = LESS | EQUAL | GREATER;
+            fun not true = false | not false = true;
 
-structure Real = struct
-    open Real;
-    fun compare (x, y: real) = if x < y then LESS else if x > y then GREATER else EQUAL;
-end
+            fun ! (a : \'A ref): \'A = ! a;
+            fun op := ((a, b) : (\'A ref * \'A)): unit = a := b;
+            fun ref (a : \'A): \'A ref = ref a;`,
+        'requires': undefined },
+    'Char': {
+        'native': addCharLib,
+        'code':  `structure Char = struct
+                fun isLower c  = #"a" <= c andalso c <= #"z"
+                fun isUpper c  = #"A" <= c andalso c <= #"Z"
+                fun isDigit c  = #"0" <= c andalso c <= #"9"
+                fun isAlpha c  = isLower c orelse isUpper c
+                fun isHexDigit c = #"0" <= c andalso c <= #"9"
+                               orelse #"a" <= c andalso c <= #"f"
+                               orelse #"A" <= c andalso c <= #"F"
+                fun isAlphaNum c = isAlpha c orelse isDigit c
+                fun isPrint c  = c >= #" " andalso c < #"\\127"
+                fun isSpace c  = c = #" " orelse #"\\009" <= c andalso c <= #"\\013"
+                fun isGraph c  = isPrint c andalso not (isSpace c)
+                fun isPunct c  = isGraph c andalso not (isAlphaNum c)
+                fun isAscii c  = c <= #"\\127"
+                fun isCntrl c  = c < #" " orelse c >= #"\\127"
 
-structure Option = struct
-    exception Option;
+                fun toLower c =
+                    if #"A" <= c andalso c <= #"Z" then chr (ord c + 32)
+                    else c;
+                fun toUpper c =
+                    if #"a" <= c andalso c <= #"z" then chr (ord c - 32)
+                    else c;
 
-    datatype 'a option = NONE | SOME of 'a;
+                val ord = ord;
+                val chr = chr;
+            end;`,
+        'requires': undefined },
+    'Int': {
+        'native': undefined,
+        'code': `structure Int = struct
+                fun compare (x, y: int) = if x < y then LESS else if x > y then GREATER else EQUAL;
 
-    fun valOf (SOME x) = x
-      | valOf NONE = raise Option;
+                val minInt = SOME ~1073741824;
+                val maxInt = SOME 1073741823;
+                fun max (x, y) = if x < y then y else x : int;
+            end;`,
+        'requires': ['Option'] },
+    'List': {
+        'native': undefined,
+        'code': `structure List :> sig val rev: 'a list -> 'a list end = struct
+                fun rev' nil ys     = ys
+                  | rev' (x::xs) ys = rev' xs (x::ys)
+                fun rev xs = rev' xs nil;
+            end;
 
-    fun isSome NONE = false
-      | isSome (SOME _) = true;
-end;
-open Option;
+            structure List = struct
+                exception Empty;
+                open List;
 
-structure Int = struct
-    fun compare (x, y: int) = if x < y then LESS else if x > y then GREATER else EQUAL;
+                fun hd nil = raise Empty
+                  | hd (x::xr) = x;
 
-    val minInt = SOME ~1073741824;
-    val maxInt = SOME 1073741823;
-    fun max (x, y) = if x < y then y else x : int;
-end
+                fun tl nil = raise Empty
+                  | tl (x::xr) = xr;
 
-fun not true = false | not false = true;
+                fun null nil = true
+                  | null (x::xr) = false;
 
-structure List :> sig val rev: 'a list -> 'a list end = struct
-    fun rev' nil ys     = ys
-      | rev' (x::xs) ys = rev' xs (x::ys)
-    fun rev xs = rev' xs nil;
-end;
+                fun map f nil = nil
+                  | map f (x::xr) = (f x) :: (map f xr);
 
-structure List = struct
-    exception Empty;
-    open List;
+                infixr 5 @;
+                fun [] @ ys = ys
+                  | (x::xr) @ ys = x :: (xr @ ys);
 
-    fun hd nil = raise Empty
-      | hd (x::xr) = x;
+                fun length nil = 0
+                  | length (x::xr) = 1 + length xr;
 
-    fun tl nil = raise Empty
-      | tl (x::xr) = xr;
+                fun foldr f e []      = e
+                  | foldr f e (x::xr) = f(x, foldr f e xr);
 
-    fun null nil = true
-      | null (x::xr) = false;
+                fun foldl f e []      = e
+                  | foldl f e (x::xr) = foldl f (f(x, e)) xr;
+            end;
+            open List;
+            infixr 5 @;
 
-    fun map f nil = nil
-      | map f (x::xr) = (f x) :: (map f xr);
+            structure List = struct
+                open List;
 
-    infixr 5 @;
-    fun [] @ ys = ys
-      | (x::xr) @ ys = x :: (xr @ ys);
+                fun concat nil = nil
+                  | concat (x::xr) = x @ concat xr;
 
-    fun length nil = 0
-      | length (x::xr) = 1 + length xr;
+                fun tabulate (n, f) = let
+                    fun h i = if i < n then f i :: h (i + 1) else []
+                in
+                    if n < 0 then raise Size else h 0
+                end;
 
-    fun foldr f e []      = e
-      | foldr f e (x::xr) = f(x, foldr f e xr);
+                fun exists p []      = false
+                  | exists p (x::xr) = p x orelse exists p xr;
 
-    fun foldl f e []      = e
-      | foldl f e (x::xr) = foldl f (f(x, e)) xr;
-end;
-open List;
-infixr 5 @;
+                fun all p []      = true
+                  | all p (x::xr) = p x andalso all p xr;
 
-structure List = struct
-    open List;
+                fun filter p []      = []
+                  | filter p (x::xr) = if p x then x :: filter p xr else filter p xr;
 
-    fun concat nil = nil
-      | concat (x::xr) = x @ concat xr;
+                fun collate (compare : 'a * 'a -> order) p = case p of
+                    (nil, _::_)     => LESS
+                  | (nil, nil)      => EQUAL
+                  | (_::_, nil)     => GREATER
+                  | (x::xr, y::yr)  => case compare (x, y) of
+                         EQUAL  => collate compare (xr, yr)
+                       | s      => s;
 
-    fun tabulate (n, f) = let
-        fun h i = if i < n then f i :: h (i + 1) else []
-    in
-        if n < 0 then raise Size else h 0
-    end;
+                fun nth ([], _)    = raise Subscript
+                  | nth (x::xs, 0) = x
+                  | nth (x::xs, n) = nth (xs, n - 1);
+            end;`,
+        'requires': undefined },
+    'Listsort': {
+        'native': undefined,
+        'code': `signature LISTSORT = sig
+                val sort: ('a * 'a -> order) -> 'a list -> 'a list;
+                val sorted: ('a * 'a -> order) -> 'a list -> bool;
+                val mergeUniq: ('a * 'a -> order) -> 'a list * 'a list -> 'a list;
+                val merge: ('a * 'a -> order) -> 'a list * 'a list -> 'a list;
+                val eqclasses: ('a * 'a -> order) -> 'a list -> 'a list list;
+            end;
 
-    fun exists p []      = false
-      | exists p (x::xr) = p x orelse exists p xr;
+            structure Listsort :> LISTSORT = struct
+              fun take ordr x1 xr []       = x1 :: xr
+                | take ordr x1 xr (y1::yr) = (case ordr(x1, y1) of
+                    LESS    => x1 :: take ordr y1 yr xr
+                  | _       => y1 :: take ordr x1 xr yr);
 
-    fun all p []      = true
-      | all p (x::xr) = p x andalso all p xr;
+              fun takeUniq ordr x1 xr []       = x1 :: xr
+                | takeUniq ordr x1 xr (y1::yr) = (case ordr(x1, y1) of
+                    LESS    => x1 :: takeUniq ordr y1 yr xr
+                  | GREATER => y1 :: takeUniq ordr x1 xr yr
+                  | EQUAL   => takeUniq ordr x1 xr yr);
 
-    fun filter p []      = []
-      | filter p (x::xr) = if p x then x :: filter p xr else filter p xr;
+              fun merge ordr ([],     ys) = ys
+                | merge ordr (x1::xr, ys) = take ordr x1 xr ys;
 
-    fun collate (compare : 'a * 'a -> order) p = case p of
-        (nil, _::_)     => LESS
-      | (nil, nil)      => EQUAL
-      | (_::_, nil)     => GREATER
-      | (x::xr, y::yr)  => case compare (x, y) of
-             EQUAL  => collate compare (xr, yr)
-           | s      => s;
+              fun mergeUniq ordr ([],     ys) = ys
+                | mergeUniq ordr (x1::xr, ys) = takeUniq ordr x1 xr ys;
 
-    fun nth ([], _)    = raise Subscript
-      | nth (x::xs, 0) = x
-      | nth (x::xs, n) = nth (xs, n - 1);
-end;
+              fun mergepairs ordr l1  [] k              = [l1]
+                | mergepairs ordr l1 (ls as (l2::lr)) k =
+                  if k mod 2 = 1 then l1::ls
+                  else mergepairs ordr (merge ordr (l1, l2)) lr (k div 2);
 
-structure Char = struct
-    fun isLower c  = #"a" <= c andalso c <= #"z"
-    fun isUpper c  = #"A" <= c andalso c <= #"Z"
-    fun isDigit c  = #"0" <= c andalso c <= #"9"
-    fun isAlpha c  = isLower c orelse isUpper c
-    fun isHexDigit c = #"0" <= c andalso c <= #"9"
-	               orelse #"a" <= c andalso c <= #"f"
-	               orelse #"A" <= c andalso c <= #"F"
-    fun isAlphaNum c = isAlpha c orelse isDigit c
-    fun isPrint c  = c >= #" " andalso c < #"\\127"
-    fun isSpace c  = c = #" " orelse #"\\009" <= c andalso c <= #"\\013"
-    fun isGraph c  = isPrint c andalso not (isSpace c)
-    fun isPunct c  = isGraph c andalso not (isAlphaNum c)
-    fun isAscii c  = c <= #"\\127"
-    fun isCntrl c  = c < #" " orelse c >= #"\\127"
+              fun nextrun ordr run []      = (run, [])
+                | nextrun ordr run (xs as (x::xr)) =
+                  if ordr(x, List.hd run) = LESS then (run, xs)
+                  else nextrun ordr (x::run) xr;
 
-    fun toLower c =
-		if #"A" <= c andalso c <= #"Z" then chr (ord c + 32)
-		else c;
-    fun toUpper c =
-		if #"a" <= c andalso c <= #"z" then chr (ord c - 32)
-		else c;
-end;
+              fun sorting ordr []      ls r = List.hd(mergepairs ordr [] ls 0)
+                | sorting ordr (x::xs) ls r = let
+                    val (revrun, tail) = nextrun ordr [x] xs
+                  in
+                    sorting ordr tail (mergepairs ordr (List.rev revrun) ls (r+1)) (r+1)
+                  end;
 
-signature LISTSORT = sig
-    val sort: ('a * 'a -> order) -> 'a list -> 'a list;
-    val sorted: ('a * 'a -> order) -> 'a list -> bool;
-    val mergeUniq: ('a * 'a -> order) -> 'a list * 'a list -> 'a list;
-    val merge: ('a * 'a -> order) -> 'a list * 'a list -> 'a list;
-    val eqclasses: ('a * 'a -> order) -> 'a list -> 'a list list;
-end;
+              fun group ordr last rest cs1 css = case rest of
+                  []     => cs1 :: css
+                | r1::rr => if ordr(r1, last) = EQUAL then group ordr r1 rr (r1 :: cs1) css
+                            else group ordr r1 rr [r1] (cs1 :: css);
 
-structure Listsort :> LISTSORT = struct
-  fun take ordr x1 xr []       = x1 :: xr
-    | take ordr x1 xr (y1::yr) = (case ordr(x1, y1) of
-        LESS    => x1 :: take ordr y1 yr xr
-      | _       => y1 :: take ordr x1 xr yr);
+              fun sort ordr []               = []
+                | sort ordr (xs as [_])      = xs
+                | sort ordr (xs as [x1, x2]) = (case ordr(x1, x2) of
+                    GREATER => [x2, x1]
+                  | _       => xs)
+                | sort ordr xs = sorting ordr xs [] 0;
 
-  fun takeUniq ordr x1 xr []       = x1 :: xr
-    | takeUniq ordr x1 xr (y1::yr) = (case ordr(x1, y1) of
-        LESS    => x1 :: takeUniq ordr y1 yr xr
-      | GREATER => y1 :: takeUniq ordr x1 xr yr
-      | EQUAL   => takeUniq ordr x1 xr yr);
-
-  fun merge ordr ([],     ys) = ys
-    | merge ordr (x1::xr, ys) = take ordr x1 xr ys;
-
-  fun mergeUniq ordr ([],     ys) = ys
-    | mergeUniq ordr (x1::xr, ys) = takeUniq ordr x1 xr ys;
-
-  fun mergepairs ordr l1  [] k              = [l1]
-    | mergepairs ordr l1 (ls as (l2::lr)) k =
-      if k mod 2 = 1 then l1::ls
-      else mergepairs ordr (merge ordr (l1, l2)) lr (k div 2);
-
-  fun nextrun ordr run []      = (run, [])
-    | nextrun ordr run (xs as (x::xr)) =
-      if ordr(x, List.hd run) = LESS then (run, xs)
-      else nextrun ordr (x::run) xr;
-
-  fun sorting ordr []      ls r = List.hd(mergepairs ordr [] ls 0)
-    | sorting ordr (x::xs) ls r = let
-        val (revrun, tail) = nextrun ordr [x] xs
-      in
-        sorting ordr tail (mergepairs ordr (List.rev revrun) ls (r+1)) (r+1)
-      end;
-
-  fun group ordr last rest cs1 css = case rest of
-      []     => cs1 :: css
-    | r1::rr => if ordr(r1, last) = EQUAL then group ordr r1 rr (r1 :: cs1) css
-                else group ordr r1 rr [r1] (cs1 :: css);
-
-  fun sort ordr []               = []
-    | sort ordr (xs as [_])      = xs
-    | sort ordr (xs as [x1, x2]) = (case ordr(x1, x2) of
-        GREATER => [x2, x1]
-      | _       => xs)
-    | sort ordr xs = sorting ordr xs [] 0;
-
-  fun sorted ordr []           = true
-    | sorted ordr [x]          = true
-    | sorted ordr (x1::x2::xr) =
-      ordr(x1, x2) <> GREATER andalso sorted ordr (x2::xr);
+              fun sorted ordr []           = true
+                | sorted ordr [x]          = true
+                | sorted ordr (x1::x2::xr) =
+                  ordr(x1, x2) <> GREATER andalso sorted ordr (x2::xr);
 
 
-  fun eqclasses ordr xs = let
-      val xs = List.rev (sort ordr xs)
-    in
-      case xs of
-          []     => []
-        | x1::xr => group ordr x1 xr [x1] []
-      end;
-end;
+              fun eqclasses ordr xs = let
+                  val xs = List.rev (sort ordr xs)
+                in
+                  case xs of
+                      []     => []
+                    | x1::xr => group ordr x1 xr [x1] []
+                  end;
+            end;
+            structure List = struct
+                open List;
+                open Listsort;
+            end;`,
+        'requires': ['List'] },
+    'Math': {
+        'native': addMathLib,
+        'code': undefined,
+        'requires': undefined },
+    'Option': {
+        'native': undefined,
+        'code': `structure Option = struct
+                exception Option;
 
-structure List = struct
-	open List;
-	open Listsort;
-end;
+                datatype 'a option = NONE | SOME of 'a;
 
-fun ! (a : \'A ref): \'A = ! a;
-fun op := ((a, b) : (\'A ref * \'A)): unit = a := b;
-fun ref (a : \'A): \'A ref = ref a;
-`;
+                fun valOf (SOME x) = x
+                  | valOf NONE = raise Option;
 
-export function addStdLib(state: State, options: {[name: string]: any }): State {
-    state = addMathLib(state);
-    state = addCharLib(state);
-    state = addRealLib(state);
-    state = Interpreter.interpret(code, state, options).state;
+                fun isSome NONE = false
+                  | isSome (SOME _) = true;
+            end;
+            open Option;`,
+        'requires': undefined },
+    'Real': {
+        'native': addRealLib,
+        'code': `structure Real = struct
+                open Real;
+                fun compare (x, y: real) = if x < y then LESS else if x > y then GREATER else EQUAL;
+            end;`,
+        'requires': undefined },
+};
 
-    return state;
+export function loadModule(state: State, name: string, options: {[name: string]: any }): State {
+    if (!STDLIB.hasOwnProperty(name)) {
+        throw new InternalInterpreterError(-1, 'The module "' + name + '" does not exist. Auuuu~');
+    }
+    let mod = STDLIB[name];
+    let nstate = state.getNestedState(state.id);
+    if (mod.requires !== undefined ) {
+        for (let i of mod.requires) {
+            nstate = loadModule(nstate, i, options);
+        }
+    }
+    nstate = nstate.getNestedState(nstate.id);
+    let wstate = nstate;
+    if (mod.native !== undefined) {
+        nstate = mod.native(nstate);
+    }
+    if (mod.code !== undefined) {
+        nstate = Interpreter.interpret(mod.code, nstate, options).state;
+    }
+    wstate.parent = state;
+    return nstate;
 }
+

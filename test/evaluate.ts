@@ -14,9 +14,9 @@ const Val = require("../src/values.ts");
 const TestHelper = require("./test_helper.ts");
 TestHelper.init();
 
-function run_test(commands, loadStdlib: boolean = false): void {
+function run_test(commands, loadStdlib: boolean = true): void {
     let oldTests = [];
-    let state = API.getFirstState(loadStdlib);
+    let state = API.getFirstState();
     let exception;
     let value;
     for(let step of commands) {

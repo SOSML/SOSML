@@ -16,7 +16,7 @@ TestHelper.init();
 //TODO determine actual types
 function run_test(commands): void {
     let oldTests = [];
-    let state = API.getFirstState(true);
+    let state = API.getFirstState();
     let exception;
     let value;
     for(let step of commands) {
@@ -3124,7 +3124,7 @@ all (fn x => x>0) [1, ~2, 3];
                 new Type.CustomType(
                     'list',
                     [
-                        new Type.CustomType('list', [new Type.CustomType('int')], 841)
+                        new Type.CustomType('list', [new Type.CustomType('int')], 42)
                     ]
                 )
             , 0]);
@@ -3886,7 +3886,7 @@ fun test xs y = case rev xs
             expect(state.getDynamicValue('test')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('test')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('int', [], 0)], 830),
+                    new Type.CustomType('list', [new Type.CustomType('int', [], 0)], 31),
                     new Type.FunctionType(
                         new Type.CustomType('int', [], 0),
                         new Type.CustomType('bool', [], 0)
@@ -4287,7 +4287,7 @@ val ys = rev xs;
             }
             expect(state.getDynamicValue('ys')[0]).toEqualWithType(createList(res));
             expect(state.getStaticValue('ys')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('int')], 841),
+                new Type.CustomType('list', [new Type.CustomType('int')], 42),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -4324,8 +4324,8 @@ pisort Real.compare [5.0, 2.0, 2.0, 13.0, 4.0, 9.0];
             expect(state.getDynamicValue('it')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('int', [], 566)]),
-                    new Type.CustomType('list', [new Type.CustomType('int', [], 566)])
+                    new Type.CustomType('list', [new Type.CustomType('int', [], 58)]),
+                    new Type.CustomType('list', [new Type.CustomType('int', [], 58)])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -4347,7 +4347,7 @@ pisort Real.compare [5.0, 2.0, 2.0, 13.0, 4.0, 9.0];
                 new Type.CustomType(
                     'list',
                     [
-                        new Type.CustomType('int', [], 566)
+                        new Type.CustomType('int', [], 58)
                     ]
                 )
             , 0]);
@@ -4366,7 +4366,7 @@ pisort Real.compare [5.0, 2.0, 2.0, 13.0, 4.0, 9.0];
                 new Type.CustomType(
                     'list',
                     [
-                        new Type.CustomType('real', [], 213)
+                        new Type.CustomType('real', [], 86)
                     ]
                 )
             , 0]);
@@ -4451,7 +4451,7 @@ pisort (lex Int.compare) [[4,1], [], [4], [4,1,~8]];
                 new Type.CustomType(
                     'list',
                     [
-                        new Type.CustomType('int', [], 566)
+                        new Type.CustomType('int', [], 58)
                     ]
                 )
             , 0]);
@@ -4491,7 +4491,7 @@ pisort (lex Int.compare) [[4,1], [], [4], [4,1,~8]];
                createList([new Val.Integer(4),new Val.Integer(1),new Val.Integer(-8)])
            ]));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('list', [new Type.CustomType('int', [], 566)])]),
+                new Type.CustomType('list', [new Type.CustomType('list', [new Type.CustomType('int', [], 58)])]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -7899,7 +7899,7 @@ lexInt ~1 34 (explode "72 Katzen");
             expect(state.getDynamicValue('lexId')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('lexId')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('char')], 830),
+                    new Type.CustomType('list', [new Type.CustomType('char')], 31),
                     new Type.FunctionType(
                         new Type.CustomType('list', [new Type.CustomType('char')], 0)
                         new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)
@@ -8765,7 +8765,7 @@ val ys = rev xs;
             }
             expect(state.getDynamicValue('ys')[0]).toEqualWithType(createList(res));
             expect(state.getStaticValue('ys')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('int', [], 0)], 841),
+                new Type.CustomType('list', [new Type.CustomType('int', [], 0)], 42),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
