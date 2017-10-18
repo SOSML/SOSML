@@ -352,7 +352,9 @@ export class Integer extends Value {
     add(other: Integer): Integer { return new Integer(this.value + other.value); }
     multiply(other: Integer): Integer { return new Integer(this.value * other.value); }
     divide(other: Integer): Integer { return new Integer(Math.floor(this.value / other.value)); }
-    modulo(other: Integer): Integer { return new Integer(this.value % other.value); }
+    modulo(other: Integer): Integer {
+        return new Integer(this.value - (Math.floor(this.value / other.value)) * other.value);
+    }
     toReal(): Real { return new Real(this.value); }
     hasOverflow(): boolean { return this.value > 1073741823 || this.value < -1073741824; }
 }
