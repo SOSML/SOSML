@@ -512,7 +512,15 @@ let initialState: State = new State(
         'Match':    1,
         'Bind':     1,
         'Div':      1,
-        'Overflow': 1
+        'Overflow': 1,
+
+        'int':      1,
+        'real':     1,
+        'string':   1,
+        'char':     1,
+        'unit':     1,
+        'word':     1,
+        'list':     1
     }
 );
 
