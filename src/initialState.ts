@@ -520,7 +520,8 @@ let initialState: State = new State(
         'char':     1,
         'unit':     1,
         'word':     1,
-        'list':     1
+        'list':     1,
+        'bool':     1
     }
 );
 
