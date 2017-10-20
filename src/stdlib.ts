@@ -1,7 +1,7 @@
 import { State, IdentifierStatus, DynamicBasis, StaticBasis } from './state';
 import { FunctionType, CustomType, TupleType } from './types';
 import { CharValue, Real, Integer, PredefinedFunction, Value, RecordValue,
-         ExceptionConstructor } from './values';
+         ExceptionConstructor, MAXINT, MININT } from './values';
 import { InternalInterpreterError } from './errors';
 import * as Interpreter from './main';
 
@@ -278,8 +278,8 @@ export let STDLIB: {
         'code': `structure Int = struct
                 fun compare (x, y: int) = if x < y then LESS else if x > y then GREATER else EQUAL;
 
-                val minInt = SOME ~1073741824;
-                val maxInt = SOME 1073741823;
+                val minInt = SOME ~` + -MININT + `;
+                val maxInt = SOME ` + MAXINT + `;
                 fun max (x, y) = if x < y then y else x : int;
             end;`,
         'requires': ['Option'] },

@@ -7,6 +7,7 @@ import { int, char, Token, KeywordToken, WordConstantToken, CharacterConstantTok
          StringConstantToken, IdentifierToken, AlphanumericIdentifierToken, TypeVariableToken,
          EqualityTypeVariableToken, StarToken, EqualsToken, NumericToken, LongIdentifierToken,
          RealConstantToken, IntegerConstantToken } from './tokens';
+import { MAXINT, MININT } from './values';
 
 // TODO: maybe these should be static class members
 let reservedWords: Set<string> = new Set<string>([
@@ -124,6 +125,12 @@ class Lexer {
             return new RealConstantToken(token, this.tokenStart, parseFloat(value));
         }
         let v: int = parseInt(value, hexadecimal ? 16 : 10);
+        if (v > MAXINT) {
+            throw new LexerError(this.position, '"' + v + '", whoa, it\'s over "' + MAXINT +'".');
+        } else if (v < MININT) {
+            throw new LexerError(this.position, '"' + v
+                + '", whoa, it\'s ounder "' + MININT +'".');
+        }
         if (word) {
             return new WordConstantToken(token, this.tokenStart, v);
         } else {
