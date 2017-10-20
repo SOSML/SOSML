@@ -1054,26 +1054,20 @@ export class RecordType extends Type {
         }
         if (!(other instanceof RecordType) || this.complete !== other.complete) {
             return false;
-        } else {
-            if (other === this) {
-                return true;
-            }
-            for (let name in this.elements) {
-                if (!this.elements.hasOwnProperty(name)) {
-                    if (!(this.elements.get(name) as Type).equals(other.elements.get(name))) {
-                        return false;
-                    }
-                }
-            }
-            for (let name in other.elements) {
-                if (!other.elements.hasOwnProperty(name)) {
-                    if (!(other.elements.get(name) as Type).equals(this.elements.get(name))) {
-                        return false;
-                    }
-                }
-            }
         }
-        return true;
+
+        let res = true;
+        this.elements.forEach((val: Type, name: string) => {
+            if (!val.equals(other.elements.get(name))) {
+                res = false;
+            }
+        });
+        other.elements.forEach((val: Type, name: string) => {
+            if (!val.equals(this.elements.get(name))) {
+                res = false;
+            }
+        });
+        return res;
     }
 }
 
