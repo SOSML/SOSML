@@ -183,6 +183,7 @@ export class Parser {
                         results.push(this.parseExpression());
                         continue;
                     }
+                    nextCurTok = this.currentToken();
                 }
                 if (this.checkKeywordToken(nextCurTok, ')')) {
                     ++this.position;
@@ -245,6 +246,11 @@ export class Parser {
             let tpos = newTok.position;
             while (this.checkKeywordToken(newTok, ';')) {
                 ++this.position;
+                if (this.options.allowSuccessorML
+                    && this.checkKeywordToken(this.currentToken(), 'end')) {
+                    newTok = this.currentToken();
+                    break;
+                }
                 res.push(this.parseExpression());
                 newTok = this.currentToken();
             }
@@ -747,6 +753,12 @@ export class Parser {
                 ++this.position;
                 this.assertKeywordToken(this.currentToken(), '=');
                 ++this.position;
+
+                if (this.options.allowSuccessorML === true) {
+                    if (this.checkKeywordToken(this.currentToken(), '|')) {
+                        ++this.position;
+                    }
+                }
 
                 let cons: [IdentifierToken, Type|undefined][] = [];
                 while (true) {
@@ -1381,6 +1393,13 @@ export class Parser {
         let result: [PatternExpression[], Type|undefined, Expression][] = [];
         let argcnt = -1;
         let name: ValueIdentifier|undefined = undefined;
+
+        if (this.options.allowSuccessorML === true) {
+            if (this.checkKeywordToken(this.currentToken(), '|')) {
+                ++this.position;
+            }
+        }
+
         while (true) {
             let args: PatternExpression[] = [];
             let ty: Type | undefined = undefined;
@@ -1388,17 +1407,27 @@ export class Parser {
 
             if (this.checkKeywordToken(this.currentToken(), '(')) {
                 let pat = this.parsePattern();
+                let isBad = false;
+                let revArgs: PatternExpression[] = [];
 
-                if ((!(pat instanceof FunctionApplication))
-                    || (!((<FunctionApplication> pat).argument.simplify() instanceof Record))
-                    || ((<Record> ((<FunctionApplication> pat).argument.simplify())).entries.length !== 2)
-                    || (!((<FunctionApplication> pat).func instanceof ValueIdentifier))) {
-                    throw new ParserError('If you start a function declaration with a "(",'
-                        + ' some infix expression should follow. But you gave me "'
-                        + pat + '" (' + pat.constructor.name + ').', pat.position);
+                if (!(pat instanceof FunctionApplication)) {
+                    isBad = true;
                 }
-                nm = <ValueIdentifier> (<FunctionApplication> pat).func;
-                args.push(<PatternExpression> (<FunctionApplication> pat).argument);
+                while (!isBad && (pat instanceof FunctionApplication)) {
+                    revArgs.push(<PatternExpression> (<FunctionApplication> pat).argument);
+                    pat  = <PatternExpression> (<FunctionApplication> pat).func;
+                }
+                if (!(pat instanceof ValueIdentifier)) {
+                    isBad = true;
+                }
+                if (isBad) {
+                    throw new ParserError('／人◕ ‿‿ ◕人＼', pat.position);
+                }
+
+                nm = <ValueIdentifier> pat;
+                for (let i = revArgs.length - 1; i >= 0; --i) {
+                    args.push(revArgs[i]);
+                }
             } else {
                 let oldPos = this.position;
                 let throwError = false;
@@ -1557,6 +1586,12 @@ export class Parser {
         this.assertKeywordToken(this.currentToken(), '=');
         ++this.position;
         let constrs: [IdentifierToken, Type|undefined][] = [];
+
+        if (this.options.allowSuccessorML === true) {
+            if (this.checkKeywordToken(this.currentToken(), '|')) {
+                ++this.position;
+            }
+        }
 
         while (true) {
             let name = this.parseOpIdentifierToken();
