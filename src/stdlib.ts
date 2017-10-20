@@ -203,7 +203,7 @@ function addRealLib(state: State): State {
     dres.setValue('ceil', new PredefinedFunction('ceil', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
-            let integer = new Integer(Math.round(value));
+            let integer = new Integer(Math.ceil(value));
             if (integer.hasOverflow()) {
                 return [new ExceptionConstructor('Overflow').construct(), true, []];
             }
