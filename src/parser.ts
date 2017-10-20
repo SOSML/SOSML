@@ -2,7 +2,8 @@ import { Expression, Tuple, Constant, ValueIdentifier, Wildcard,
          LayeredPattern, FunctionApplication, TypedExpression, Record, List,
          Sequence, RecordSelector, Lambda, Conjunction, LocalDeclarationExpression,
          Disjunction, Conditional, CaseAnalysis, RaiseException,
-         HandleException, Match, InfixExpression, PatternExpression, While } from './expressions';
+         HandleException, Match, InfixExpression, PatternExpression, While,
+         ConjunctivePattern, DisjunctivePattern, PatternGuard, NestedMatch } from './expressions';
 import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } from './types';
 import { InternalInterpreterError, IncompleteError, ParserError } from './errors';
 import { Token, KeywordToken, IdentifierToken, ConstantToken,
@@ -1207,9 +1208,40 @@ export class Parser {
         let curTok = this.currentToken();
         let pat = this.parseInfixPattern();
 
-        while (this.checkKeywordToken(this.currentToken(), ':')) {
-            ++this.position;
-            pat = new TypedExpression(curTok.position, pat, this.parseType());
+        while (true) {
+            if (this.checkKeywordToken(this.currentToken(), ':')) {
+                ++this.position;
+                pat = new TypedExpression(curTok.position, pat, this.parseType());
+                continue;
+            }
+
+            if (this.options.allowSuccessorML === true) {
+                if (this.checkKeywordToken(this.currentToken(), 'as')) {
+                    ++this.position;
+                    pat = new ConjunctivePattern(curTok.position, pat, this.parsePattern());
+                    continue;
+                }
+                if (this.checkKeywordToken(this.currentToken(), '|')) {
+                    ++this.position;
+                    pat = new DisjunctivePattern(curTok.position, pat, this.parseInfixPattern());
+                    continue;
+                }
+                if (this.checkKeywordToken(this.currentToken(), 'with')) {
+                    ++this.position;
+                    let nested = this.parsePattern();
+                    this.assertKeywordToken(this.currentToken(), '=');
+                    ++this.position;
+                    pat = new NestedMatch(curTok.position, pat, nested, this.parseExpression());
+                    continue;
+                }
+                if (this.checkKeywordToken(this.currentToken(), 'if')) {
+                    ++this.position;
+                    pat = new PatternGuard(curTok.position, pat, this.parseExpression());
+                    continue;
+                }
+            }
+
+            break;
         }
         return pat;
     }
