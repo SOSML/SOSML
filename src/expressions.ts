@@ -1739,23 +1739,23 @@ export class ConjunctivePattern extends Expression implements Pattern {
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         let r1 = this.left.matches(state, v);
-        let r2 = this.right.matches(state, v);
 
-        if (r1 === undefined || r2 === undefined) {
+        if (r1 === undefined) {
             return undefined;
         }
 
-        let res: [string, Value][] = [];
-
-        // Yeah we could be faster here
+        let nstate = state.getNestedState(state.id);
         for (let i of r1) {
-            for (let j of r2) {
-                if (i === j) {
-                    res.push(i);
-                }
-            }
+            nstate.setDynamicValue(i[0], i[1], IdentifierStatus.VALUE_VARIABLE);
         }
-        return res;
+
+        let r2 = this.right.matches(nstate, v);
+
+        if (r2 === undefined) {
+            return undefined;
+        }
+
+        return (<[string, Value][]> r1).concat(r2);
     }
 }
 
@@ -1842,47 +1842,15 @@ export class NestedMatch extends Expression implements Pattern {
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
+        let r1 = this.pattern.matches(state, v);
+        if (r1 === undefined) {
+            return undefined;
+        }
+
         // TODO
         throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
     }
 }
-
-export class PatternGuard extends Expression implements Pattern {
-// pat if exp
-    constructor(public position: number, public pattern: PatternExpression,
-                public condition: Expression) {
-        super();
-    }
-
-    getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
-            forceRebind: boolean = false)
-        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
-
-        // TODO
-        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
-    }
-
-    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
-        return new Domain([]);
-    }
-
-    simplify(): PatternGuard {
-        return new PatternGuard(this.position, this.pattern.simplify(), this.condition.simplify());
-    }
-
-    matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
-        [[string, Type][], Type, Map<string, [Type, boolean]>]  {
-        // TODO
-        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
-    }
-
-    matches(state: State, v: Value): [string, Value][] | undefined {
-        // TODO
-        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
-    }
-}
-
 
 // The following classes are derived forms.
 // They will not be present in the simplified AST and do not implement elaborate/getType
@@ -2182,5 +2150,32 @@ export class While extends Expression {
 
     toString(): string {
         return '( while ' + this.condition + ' do ' + this.body + ' )';
+    }
+}
+
+// Successor ML
+export class PatternGuard extends Expression implements Pattern {
+// pat if exp
+    constructor(public position: number, public pattern: PatternExpression,
+                public condition: Expression) {
+        super();
+    }
+
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
+        return new Domain([]);
+    }
+
+    simplify(): NestedMatch {
+        return new NestedMatch(this.position, this.pattern.simplify(),
+            trueConstant, this.condition.simplify());
+    }
+
+    matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
+        [[string, Type][], Type, Map<string, [Type, boolean]>]  {
+        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+    }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
     }
 }
