@@ -1694,6 +1694,120 @@ export class LayeredPattern extends Expression implements Pattern {
     }
 }
 
+// Successor ML
+
+export class ConjunctivePattern extends Expression implements Pattern {
+// pat1 as pat2
+    constructor(public position: number, public left: PatternExpression,
+                public right: PatternExpression) {
+        super();
+    }
+
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
+        // TODO
+        return new Domain([]);
+    }
+
+    simplify(): ConjunctivePattern {
+        return new ConjunctivePattern(this.position, this.left.simplify(), this.right.simplify());
+    }
+
+    matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
+        [[string, Type][], Type, Map<string, [Type, boolean]>]  {
+        // TODO
+        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+    }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        // TODO
+        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+    }
+}
+
+export class DisjunctivePattern extends Expression implements Pattern {
+// pat1 | pat2
+    constructor(public position: number, public left: PatternExpression,
+                public right: PatternExpression) {
+        super();
+    }
+
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
+        // TODO
+        return new Domain([]);
+    }
+
+    simplify(): DisjunctivePattern {
+        return new DisjunctivePattern(this.position, this.left.simplify(), this.right.simplify());
+    }
+
+    matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
+        [[string, Type][], Type, Map<string, [Type, boolean]>]  {
+        // TODO
+        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+    }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        // TODO
+        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+    }
+}
+
+export class NestedMatch extends Expression implements Pattern {
+// pat1 with pat2 = exp
+    constructor(public position: number, public pattern: PatternExpression,
+                public nested: PatternExpression, public expression: Expression) {
+        super();
+    }
+
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
+        // TODO
+        return new Domain([]);
+    }
+
+    simplify(): NestedMatch {
+        return new NestedMatch(this.position, this.pattern.simplify(),
+            this.nested.simplify(), this.expression.simplify());
+    }
+
+    matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
+        [[string, Type][], Type, Map<string, [Type, boolean]>]  {
+        // TODO
+        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+    }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        // TODO
+        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+    }
+}
+
+export class PatternGuard extends Expression implements Pattern {
+// pat if exp
+    constructor(public position: number, public pattern: PatternExpression,
+                public condition: Expression) {
+        super();
+    }
+
+    getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
+        return new Domain([]);
+    }
+
+    simplify(): PatternGuard {
+        return new PatternGuard(this.position, this.pattern.simplify(), this.condition.simplify());
+    }
+
+    matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
+        [[string, Type][], Type, Map<string, [Type, boolean]>]  {
+        // TODO
+        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+    }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        // TODO
+        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+    }
+}
+
 
 // The following classes are derived forms.
 // They will not be present in the simplified AST and do not implement elaborate/getType
