@@ -996,7 +996,7 @@ export class Parser {
                     tp = this.parseType();
                     nextTok = this.currentToken();
                 }
-                if (nextTok.text === 'as') {
+                if (nextTok.text === 'as' && !this.options.allowSuccessorML) {
                     ++this.position;
                     pat = new LayeredPattern(pat.position, <IdentifierToken> (<ValueIdentifier> pat).name,
                         tp, this.parsePattern());

@@ -1703,6 +1703,25 @@ export class ConjunctivePattern extends Expression implements Pattern {
         super();
     }
 
+    getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false)
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
+        let r1 = this.left.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
+        let r2 = this.right.getType(state, r1[4], r1[2], r1[3], forceRebind);
+
+        try {
+            let res = r1[0].merge(state, r2[4], r2[0]);
+            return [res[0], r1[1].concat(r2[1]), r2[2], r2[3], res[1], r2[5]];
+        } catch (e) {
+            if (!(e instanceof Array)) {
+                throw e;
+            }
+            throw new ElaborationError(this.position,
+                'Both patterns of a conjunctive pattern must have the same type.');
+        }
+    }
+
     getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
         // TODO
         return new Domain([]);
@@ -1719,8 +1738,24 @@ export class ConjunctivePattern extends Expression implements Pattern {
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        // TODO
-        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+        let r1 = this.left.matches(state, v);
+        let r2 = this.right.matches(state, v);
+
+        if (r1 === undefined || r2 === undefined) {
+            return undefined;
+        }
+
+        let res: [string, Value][] = [];
+
+        // Yeah we could be faster here
+        for (let i of r1) {
+            for (let j of r2) {
+                if (i === j) {
+                    res.push(i);
+                }
+            }
+        }
+        return res;
     }
 }
 
@@ -1729,6 +1764,25 @@ export class DisjunctivePattern extends Expression implements Pattern {
     constructor(public position: number, public left: PatternExpression,
                 public right: PatternExpression) {
         super();
+    }
+
+    getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false)
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
+        let r1 = this.left.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
+        let r2 = this.right.getType(state, r1[4], r1[2], r1[3], forceRebind);
+
+        try {
+            let res = r1[0].merge(state, r2[4], r2[0]);
+            return [res[0], r1[1].concat(r2[1]), r2[2], r2[3], res[1], r2[5]];
+        } catch (e) {
+            if (!(e instanceof Array)) {
+                throw e;
+            }
+            throw new ElaborationError(this.position,
+                'Both patterns of a disjunctive pattern must have the same type.');
+        }
     }
 
     getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
@@ -1747,8 +1801,11 @@ export class DisjunctivePattern extends Expression implements Pattern {
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        // TODO
-        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+        let r1 = this.left.matches(state, v);
+        if (r1 !== undefined) {
+            return r1;
+        }
+        return this.right.matches(state, v);
     }
 }
 
@@ -1757,6 +1814,15 @@ export class NestedMatch extends Expression implements Pattern {
     constructor(public position: number, public pattern: PatternExpression,
                 public nested: PatternExpression, public expression: Expression) {
         super();
+    }
+
+    getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false)
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
+
+        // TODO
+        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
     }
 
     getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
@@ -1786,6 +1852,15 @@ export class PatternGuard extends Expression implements Pattern {
     constructor(public position: number, public pattern: PatternExpression,
                 public condition: Expression) {
         super();
+    }
+
+    getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
+            nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
+            forceRebind: boolean = false)
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
+
+        // TODO
+        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
     }
 
     getMatchedValues(state: State, tyVarBnd: Map<string, [Type, boolean]>): Domain {
