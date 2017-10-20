@@ -87,7 +87,7 @@ function addMathLib(state: State): State {
             let val2 = (<RecordValue> val).getValue('2');
             if (val1 instanceof Real && val2 instanceof Real) {
                 let value1 = (<Real> val1).value;
-                let value2 = (<Real> val1).value;
+                let value2 = (<Real> val2).value;
                 return [new Real(Math.pow(value1, value2)), false, []];
             } else {
                 throw new InternalInterpreterError(-1, 'std type mismatch');
