@@ -327,7 +327,7 @@ export class State {
     }
 
     getIdChanges(stopId: number): { [name: string]: number } {
-        if (this.id === stopId) {
+        if (this.id <= stopId) {
             return {};
         }
         let res: { [name: string]: number } = {};
@@ -345,7 +345,7 @@ export class State {
    }
 
    getMemoryChanges(stopId: number): [number, Value][] {
-        if (this.id === stopId) {
+        if (this.id <= stopId) {
             return [];
         }
         let res: [number, Value][] = [];
@@ -363,7 +363,7 @@ export class State {
     }
 
     getDynamicChanges(stopId: number): DynamicBasis {
-        if (this.id === stopId) {
+        if (this.id <= stopId) {
             return new DynamicBasis({}, {}, {}, {}, {});
         }
         let res = new DynamicBasis({}, {}, {}, {}, {});
@@ -377,7 +377,7 @@ export class State {
     }
 
     getDynamicLocalDeclChanges(stopId: number): DynamicBasis {
-        if (this.id === stopId || this.localDeclStart) {
+        if (this.id <= stopId || this.localDeclStart) {
             return new DynamicBasis({}, {}, {}, {}, {});
         }
         let res = new DynamicBasis({}, {}, {}, {}, {});
@@ -391,7 +391,7 @@ export class State {
     }
 
     getStaticChanges(stopId: number): StaticBasis {
-        if (this.id === stopId) {
+        if (this.id <= stopId) {
             return new StaticBasis({}, {}, {}, {}, {});
         }
         let res = new StaticBasis({}, {}, {}, {}, {});
