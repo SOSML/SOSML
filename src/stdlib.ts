@@ -465,22 +465,25 @@ export function loadModule(state: State, name: string, options: {[name: string]:
     if (!STDLIB.hasOwnProperty(name)) {
         throw new InternalInterpreterError(-1, 'The module "' + name + '" does not exist. Auuuu~');
     }
+    if (state.hasModule(name)) {
+        return state;
+    }
+
     let mod = STDLIB[name];
-    let nstate = state.getNestedState(state.id);
     if (mod.requires !== undefined ) {
         for (let i of mod.requires) {
-            nstate = loadModule(nstate, i, options);
+            if (!state.hasModule(i)) {
+                state = loadModule(state, i, options);
+            }
         }
     }
-    nstate = nstate.getNestedState(nstate.id);
-    let wstate = nstate;
     if (mod.native !== undefined) {
-        nstate = mod.native(nstate);
+        state = mod.native(state);
     }
     if (mod.code !== undefined) {
-        nstate = Interpreter.interpret(mod.code, nstate, options).state;
+        state = Interpreter.interpret(mod.code, state, options).state;
     }
-    wstate.parent = state;
-    return nstate;
+    state.registerModule(name);
+    return state;
 }
 

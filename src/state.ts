@@ -323,7 +323,37 @@ export class State {
                 public valueIdentifierId: { [name: string]: number } = {},
                 public warns: Warning[] = [],
                 public insideLocalDeclBody: boolean = false,
-                public localDeclStart: boolean = false) {
+                public localDeclStart: boolean = false,
+                public loadedModules: string[] = []) {
+    }
+
+    getNestedState(newId: number|undefined = undefined) {
+        if (newId === undefined) {
+            newId = this.id + 1;
+        }
+        let res = new State(<number> newId, this,
+            new StaticBasis({}, {}, {}, {}, {}),
+            new DynamicBasis({}, {}, {}, {}, {}),
+            [this.memory[0], {}],
+            [this.freeTypeVariables[0], new Map<string, [Type, boolean]>()]);
+        res.insideLocalDeclBody = this.insideLocalDeclBody;
+        for (let i of this.loadedModules) {
+            res.loadedModules.push(i);
+        }
+        return res;
+    }
+
+    hasModule(name: string): boolean {
+        for (let i of this.loadedModules) {
+            if (i === name) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    registerModule(name: string): void {
+        this.loadedModules.push(name);
     }
 
     getIdChanges(stopId: number): { [name: string]: number } {
@@ -401,20 +431,6 @@ export class State {
         }
 
         res = res.extend(this.staticBasis);
-        return res;
-    }
-
-
-    getNestedState(newId: number|undefined = undefined) {
-        if (newId === undefined) {
-            newId = this.id + 1;
-        }
-        let res = new State(<number> newId, this,
-            new StaticBasis({}, {}, {}, {}, {}),
-            new DynamicBasis({}, {}, {}, {}, {}),
-            [this.memory[0], {}],
-            [this.freeTypeVariables[0], new Map<string, [Type, boolean]>()]);
-        res.insideLocalDeclBody = this.insideLocalDeclBody;
         return res;
     }
 
