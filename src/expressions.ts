@@ -862,7 +862,7 @@ export class FunctionApplication extends Expression implements Pattern {
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>] {
         if (!(this.func instanceof ValueIdentifier)) {
-            throw new ElaborationError(this.position, 'This is truly...slothful.');
+            throw new ElaborationError(this.position, 'Non-identifier applied to a pattern.');
         }
 
         let ti = state.getStaticValue((<ValueIdentifier> this.func).name.getText());
@@ -883,7 +883,7 @@ export class FunctionApplication extends Expression implements Pattern {
         tyVarBnd = tmp[4];
 
         if (!(ti[0] instanceof FunctionType)) {
-            throw new ElaborationError(this.position, 'This is even more...slothful.');
+            throw new ElaborationError(this.position, 'This is truly more...slothful.');
         }
 
         try {
