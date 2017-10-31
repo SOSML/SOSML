@@ -1,7 +1,7 @@
 import { State, IdentifierStatus, DynamicBasis, StaticBasis } from './state';
-import { FunctionType, CustomType, TupleType } from './types';
+import { TypeVariable, TypeVariableBind, FunctionType, CustomType, TupleType } from './types';
 import { CharValue, Real, Integer, PredefinedFunction, Value, RecordValue,
-         ExceptionConstructor, MAXINT, MININT } from './values';
+         ExceptionConstructor, MAXINT, MININT, ValueConstructor } from './values';
 import { InternalInterpreterError } from './errors';
 import * as Interpreter from './main';
 
@@ -220,6 +220,28 @@ function addRealLib(state: State): State {
     return state;
 }
 
+function addListLib(state: State): State {
+    let dres = new DynamicBasis({}, {}, {}, {}, {});
+    let sres = new StaticBasis({}, {}, {}, {}, {});
+
+    sres.setType('list', new CustomType('list', [new TypeVariable('\'a')]), ['nil', '::'], 1, true);
+    sres.setValue('nil', new TypeVariableBind('\'a',
+        new CustomType('list', [new TypeVariable('\'a')])), IdentifierStatus.VALUE_CONSTRUCTOR);
+    sres.setValue('::', new TypeVariableBind('\'a', new FunctionType(
+        new TupleType([new TypeVariable('\'a'),
+            new CustomType('list', [new TypeVariable('\'a')])]),
+        new CustomType('list', [new TypeVariable('\'a')]))).simplify(),
+        IdentifierStatus.VALUE_CONSTRUCTOR);
+
+    dres.setType('list', ['nil', '::']);
+    dres.setValue('nil', new ValueConstructor('nil'), IdentifierStatus.VALUE_CONSTRUCTOR);
+    dres.setValue('::', new ValueConstructor('::', 1), IdentifierStatus.VALUE_CONSTRUCTOR);
+
+    state.setDynamicStructure('List', dres);
+    state.setStaticStructure('List', sres);
+    return state;
+}
+
 export let STDLIB: {
     [name: string]: {
         'native': ((state: State) => State) | undefined, /* callback for native parts */
@@ -284,8 +306,12 @@ export let STDLIB: {
             end;`,
         'requires': ['Option'] },
     'List': {
-        'native': undefined,
-        'code': `structure List :> sig val rev: 'a list -> 'a list end = struct
+        'native': addListLib,
+        'code': `structure List : sig
+                datatype 'a list = nil | :: of 'a * 'a list;
+                val rev: 'a list -> 'a list;
+            end  = struct
+                open List;
                 fun rev' nil ys     = ys
                   | rev' (x::xs) ys = rev' xs (x::ys)
                 fun rev xs = rev' xs nil;
@@ -357,7 +383,7 @@ export let STDLIB: {
                   | nth (x::xs, n) = nth (xs, n - 1);
             end;`,
         'requires': undefined },
-    'Listsort': {
+        'Listsort': {
         'native': undefined,
         'code': `signature LISTSORT = sig
                 val sort: ('a * 'a -> order) -> 'a list -> 'a list;
@@ -437,7 +463,7 @@ export let STDLIB: {
         'native': addMathLib,
         'code': undefined,
         'requires': undefined },
-    'Option': {
+    'Option': { /* Complete */
         'native': undefined,
         'code': `structure Option = struct
                 exception Option;

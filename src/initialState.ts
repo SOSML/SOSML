@@ -87,9 +87,9 @@ let initialState: State = new State(
             'nil':      [new TypeVariableBind('\'a',
                 new CustomType('list', [typeVar])), IdentifierStatus.VALUE_CONSTRUCTOR],
             '::':       [new TypeVariableBind('\'a', new FunctionType(
-                            new TupleType([typeVar, new CustomType('list', [typeVar])]),
-                            new CustomType('list', [typeVar]))).simplify(),
-                                IdentifierStatus.VALUE_CONSTRUCTOR],
+                new TupleType([typeVar, new CustomType('list', [typeVar])]),
+                new CustomType('list', [typeVar]))).simplify(),
+                IdentifierStatus.VALUE_CONSTRUCTOR],
             'Match':    [new CustomType('exn'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
             'Bind':     [new CustomType('exn'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
             'Div':      [new CustomType('exn'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
@@ -387,12 +387,12 @@ let initialState: State = new State(
             // 'ref': new ValueIdentifier(new FunctionType(typeVar, new CustomType('ref', typeVar)),
             'true':     [new BoolValue(true), IdentifierStatus.VALUE_CONSTRUCTOR],
             'false':    [new BoolValue(false), IdentifierStatus.VALUE_CONSTRUCTOR],
-            'nil':      [new ValueConstructor('nil').construct(), IdentifierStatus.VALUE_CONSTRUCTOR],
+            'nil':      [new ValueConstructor('nil'), IdentifierStatus.VALUE_CONSTRUCTOR],
             '::':       [new ValueConstructor('::', 1), IdentifierStatus.VALUE_CONSTRUCTOR],
-            'Match':    [new ExceptionConstructor('Match').construct(), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
-            'Bind':     [new ExceptionConstructor('Bind').construct(), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
-            'Div':      [new ExceptionConstructor('Div').construct(), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
-            'Overflow': [new ExceptionConstructor('Overflow').construct(), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
+            'Match':    [new ExceptionConstructor('Match'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
+            'Bind':     [new ExceptionConstructor('Bind'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
+            'Div':      [new ExceptionConstructor('Div'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
+            'Overflow': [new ExceptionConstructor('Overflow'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
             '^':        [new PredefinedFunction('^', (val: Value) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
@@ -417,7 +417,7 @@ let initialState: State = new State(
                     return [StringValue.implode(val), false, []];
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called "implode" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
             '~':        [new PredefinedFunction('~', (val: Value) => {
                 if (val instanceof Integer) {
@@ -507,8 +507,6 @@ let initialState: State = new State(
         '^': new InfixStatus(true, 6, false),
     },
     {
-        'nil':      1,
-        '::':       1,
         'Match':    1,
         'Bind':     1,
         'Div':      1,

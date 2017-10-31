@@ -301,6 +301,7 @@ export abstract class Type {
     }
 
     // Normalizes a type. Free type variables need to get new names **across** different decls.
+    // removes all positions in types
     normalize(nextFree: number = 0, options: { [name: string]: any } = {}): [Type, number] {
         let orderedVars = this.getOrderedTypeVariables();
         let freeVars = this.getTypeVariables(true);
@@ -753,8 +754,7 @@ export class TypeVariable extends Type {
 
     replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
         if (replacements.has(this.name)) {
-            let res = new TypeVariable(<string> replacements.get(this.name),
-                this.position, this.domain);
+            let res = new TypeVariable(<string> replacements.get(this.name), 0, this.domain);
             if (free.has(this.name)) {
                 res.isFree = true;
             } else {
@@ -969,7 +969,7 @@ export class RecordType extends Type {
         this.elements.forEach((val: Type, key: string) => {
             rt = rt.set(key, val.replaceTypeVariables(replacements, free));
         });
-        return new RecordType(rt, this.complete, this.position);
+        return new RecordType(rt, this.complete, 0);
     }
 
     getType(name: string): Type {
@@ -1149,7 +1149,7 @@ export class FunctionType extends Type {
     replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
         let res = this.parameterType.replaceTypeVariables(replacements, free);
         let res2 = this.returnType.replaceTypeVariables(replacements, free);
-        return new FunctionType(res, res2, this.position);
+        return new FunctionType(res, res2, 0);
     }
 
     admitsEquality(state: State): boolean {
@@ -1583,7 +1583,7 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             rt.push(this.typeArguments[i].replaceTypeVariables(replacements, free));
         }
-        return new CustomType(this.name, rt, this.position,
+        return new CustomType(this.name, rt, 0,
             this.qualifiedName, this.opaque, this.id);
     }
 
