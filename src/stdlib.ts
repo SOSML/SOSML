@@ -444,11 +444,36 @@ export let STDLIB: {
 
                 datatype 'a option = NONE | SOME of 'a;
 
-                fun valOf (SOME x) = x
-                  | valOf NONE = raise Option;
+                fun getOpt (NONE, a) = a
+                  | getOpt (SOME x, a) = x;
 
                 fun isSome NONE = false
                   | isSome (SOME _) = true;
+
+                fun valOf (SOME x) = x
+                  | valOf NONE = raise Option;
+
+                fun filter f x = if f x then SOME x else NONE;
+
+                fun join NONE = NONE
+                  | join (SOME (SOME x)) = SOME x;
+
+                fun app f (SOME v) = f v
+                  | app f NONE = ();
+
+                fun map f NONE = NONE
+                  | map f (SOME v) = SOME(f v);
+
+                fun mapPartial f NONE = NONE
+                  | mapPartial f (SOME v) = f v;
+
+                fun compose (f, g) a = case g a of
+                      NONE => NONE
+                    | SOME v => SOME (f v);
+
+                fun compose (f, g) a = case g a of
+                      NONE => NONE
+                    | SOME v => (f v);
             end;
             open Option;`,
         'requires': undefined },
