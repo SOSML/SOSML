@@ -1,7 +1,7 @@
 import { State, IdentifierStatus, DynamicBasis, StaticBasis } from './state';
-import { FunctionType, CustomType, TupleType } from './types';
+import { TypeVariable, TypeVariableBind, FunctionType, CustomType, TupleType } from './types';
 import { CharValue, Real, Integer, PredefinedFunction, Value, RecordValue,
-         ExceptionConstructor, MAXINT, MININT } from './values';
+         ExceptionConstructor, MAXINT, MININT, ValueConstructor } from './values';
 import { InternalInterpreterError } from './errors';
 import * as Interpreter from './main';
 
@@ -51,6 +51,16 @@ function addMathLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('cos', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
+    dres.setValue('tan', new PredefinedFunction('tan', (val: Value) => {
+        if (val instanceof Real) {
+            let value = (<Real> val).value;
+            return [new Real(Math.tan(value)), false, []];
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('tan', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
+
     dres.setValue('asin', new PredefinedFunction('asin', (val: Value) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
@@ -70,6 +80,34 @@ function addMathLib(state: State): State {
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('acos', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
+
+    dres.setValue('atan', new PredefinedFunction('atan', (val: Value) => {
+        if (val instanceof Real) {
+            let value = (<Real> val).value;
+            return [new Real(Math.atan(value)), false, []];
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('atan', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
+
+    dres.setValue('atan2', new PredefinedFunction('atan2', (val: Value) => {
+        if (val instanceof RecordValue) {
+            let val1 = (<RecordValue> val).getValue('1');
+            let val2 = (<RecordValue> val).getValue('2');
+            if (val1 instanceof Real && val2 instanceof Real) {
+                let value1 = (<Real> val1).value;
+                let value2 = (<Real> val2).value;
+                return [new Real(Math.atan2(value1, value2)), false, []];
+            } else {
+                throw new InternalInterpreterError(-1, 'std type mismatch');
+            }
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('atan2', new FunctionType(new TupleType([realType, realType]), realType).simplify(),
+        IdentifierStatus.VALUE_VARIABLE);
 
     dres.setValue('exp', new PredefinedFunction('exp', (val: Value) => {
         if (val instanceof Real) {
@@ -118,6 +156,36 @@ function addMathLib(state: State): State {
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('log10', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
+
+    dres.setValue('sinh', new PredefinedFunction('sinh', (val: Value) => {
+        if (val instanceof Real) {
+            let value = (<Real> val).value;
+            return [new Real(Math.sinh(value)), false, []];
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('sinh', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
+
+    dres.setValue('cosh', new PredefinedFunction('cosh', (val: Value) => {
+        if (val instanceof Real) {
+            let value = (<Real> val).value;
+            return [new Real(Math.cosh(value)), false, []];
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('cosh', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
+
+    dres.setValue('tanh', new PredefinedFunction('tanh', (val: Value) => {
+        if (val instanceof Real) {
+            let value = (<Real> val).value;
+            return [new Real(Math.tanh(value)), false, []];
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('tanh', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
     dres.setValue('pi', new Real(3.14159265359), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('pi', realType, IdentifierStatus.VALUE_VARIABLE);
@@ -220,6 +288,28 @@ function addRealLib(state: State): State {
     return state;
 }
 
+function addListLib(state: State): State {
+    let dres = new DynamicBasis({}, {}, {}, {}, {});
+    let sres = new StaticBasis({}, {}, {}, {}, {});
+
+    sres.setType('list', new CustomType('list', [new TypeVariable('\'a')]), ['nil', '::'], 1, true);
+    sres.setValue('nil', new TypeVariableBind('\'a',
+        new CustomType('list', [new TypeVariable('\'a')])), IdentifierStatus.VALUE_CONSTRUCTOR);
+    sres.setValue('::', new TypeVariableBind('\'a', new FunctionType(
+        new TupleType([new TypeVariable('\'a'),
+            new CustomType('list', [new TypeVariable('\'a')])]),
+        new CustomType('list', [new TypeVariable('\'a')]))).simplify(),
+        IdentifierStatus.VALUE_CONSTRUCTOR);
+
+    dres.setType('list', ['nil', '::']);
+    dres.setValue('nil', new ValueConstructor('nil'), IdentifierStatus.VALUE_CONSTRUCTOR);
+    dres.setValue('::', new ValueConstructor('::', 1), IdentifierStatus.VALUE_CONSTRUCTOR);
+
+    state.setDynamicStructure('List', dres);
+    state.setStaticStructure('List', sres);
+    return state;
+}
+
 export let STDLIB: {
     [name: string]: {
         'native': ((state: State) => State) | undefined, /* callback for native parts */
@@ -283,9 +373,13 @@ export let STDLIB: {
                 fun max (x, y) = if x < y then y else x : int;
             end;`,
         'requires': ['Option'] },
-    'List': {
-        'native': undefined,
-        'code': `structure List :> sig val rev: 'a list -> 'a list end = struct
+    'List': { /* complete */
+        'native': addListLib,
+        'code': `structure List : sig
+                datatype 'a list = nil | :: of 'a * 'a list;
+                val rev: 'a list -> 'a list;
+            end  = struct
+                open List;
                 fun rev' nil ys     = ys
                   | rev' (x::xs) ys = rev' xs (x::ys)
                 fun rev xs = rev' xs nil;
@@ -355,9 +449,43 @@ export let STDLIB: {
                 fun nth ([], _)    = raise Subscript
                   | nth (x::xs, 0) = x
                   | nth (x::xs, n) = nth (xs, n - 1);
+
+                fun last [x] = x
+                  | last (x::xs) = last xs
+                  | last [] = raise Empty;
+
+                fun getItem [] = NONE
+                  | getItem x = SOME (hd x, tl x);
+
+                fun take (x, 0) = []
+                  | take ([], _) = raise Subscript
+                  | take (x::xs, n) = x :: take (xs, n - 1);
+
+                fun drop (x, 0) = x
+                  | drop ([], _) = raise Subscript
+                  | drop (x::xs, n) = drop (xs, n - 1);
+
+                fun revAppend (l1, l2) = (rev l1) @ l2;
+
+                fun app f [] = ()
+                  | app f (x::xs) = (f x; app f xs);
+
+                fun mapPartial f l
+                    = ((map valOf) o (filter isSome) o (map f)) l;
+
+                fun find f [] = NONE
+                  | find f (x::xs) = if f x then SOME x else find f xs;
+
+                fun partition f [] = ([], [])
+                  | partition f (x::xs) = let
+                    val tmp = partition f xs
+                in
+                    if f x then (x :: #1 tmp, #2 tmp)
+                    else (#1 tmp, x :: #2 tmp)
+                end;
             end;`,
-        'requires': undefined },
-    'Listsort': {
+        'requires': ['Option'] },
+    'Listsort': { /* complete */
         'native': undefined,
         'code': `signature LISTSORT = sig
                 val sort: ('a * 'a -> order) -> 'a list -> 'a list;
@@ -433,22 +561,47 @@ export let STDLIB: {
                 open Listsort;
             end;`,
         'requires': ['List'] },
-    'Math': {
+    'Math': { /* Complete */
         'native': addMathLib,
         'code': undefined,
         'requires': undefined },
-    'Option': {
+    'Option': { /* Complete */
         'native': undefined,
         'code': `structure Option = struct
                 exception Option;
 
                 datatype 'a option = NONE | SOME of 'a;
 
-                fun valOf (SOME x) = x
-                  | valOf NONE = raise Option;
+                fun getOpt (NONE, a) = a
+                  | getOpt (SOME x, a) = x;
 
                 fun isSome NONE = false
                   | isSome (SOME _) = true;
+
+                fun valOf (SOME x) = x
+                  | valOf NONE = raise Option;
+
+                fun filter f x = if f x then SOME x else NONE;
+
+                fun join NONE = NONE
+                  | join (SOME (SOME x)) = SOME x;
+
+                fun app f (SOME v) = f v
+                  | app f NONE = ();
+
+                fun map f NONE = NONE
+                  | map f (SOME v) = SOME(f v);
+
+                fun mapPartial f NONE = NONE
+                  | mapPartial f (SOME v) = f v;
+
+                fun compose (f, g) a = case g a of
+                      NONE => NONE
+                    | SOME v => SOME (f v);
+
+                fun compose (f, g) a = case g a of
+                      NONE => NONE
+                    | SOME v => (f v);
             end;
             open Option;`,
         'requires': undefined },

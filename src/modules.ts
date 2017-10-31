@@ -178,7 +178,7 @@ export class TransparentConstraint extends Expression implements Structure {
                     }
                     let tp = sgtp.merge(nstate, tyVarBnd, sttp);
 
-                    res.setType(i, st.type.instantiate(nstate2, tp[1]), [], sg.arity, sg.allowsEquality);
+                    res.setType(i, st.type.instantiate(nstate2, tp[1]), sg.constructors, sg.arity, sg.allowsEquality);
                     tyVarBnd = tp[1];
                 } catch (e) {
                     if (!(e instanceof Array)) {
@@ -243,8 +243,7 @@ export class TransparentConstraint extends Expression implements Structure {
 
                 try {
                     let mg = nsg.merge(nstate, tyVarBnd, st[0]);
-                    res.setValue(i, sg[0].instantiate(nstate, mg[1]),
-                        IdentifierStatus.VALUE_VARIABLE);
+                    res.setValue(i, sg[0].instantiate(nstate, mg[1]), sg[1]);
                 } catch (e) {
                     if (!(e instanceof Array)) {
                         throw e;
@@ -357,7 +356,7 @@ export class OpaqueConstraint extends Expression implements Structure {
                         sgtp.qualifiedName, true);
 
                     res.setType(i, sgtp, [], sg.arity, sg.allowsEquality);
-                    nstate2.staticBasis.setType(i, sgtp, [], sg.arity, sg.allowsEquality);
+                    nstate2.staticBasis.setType(i, sgtp, sg.constructors, sg.arity, sg.allowsEquality);
 
                     tyVarBnd = tp[1];
                 } catch (e) {
@@ -424,8 +423,7 @@ export class OpaqueConstraint extends Expression implements Structure {
 
                 try {
                     nsg.merge(nstate, tyVarBnd, nst);
-                    res.setValue(i, sg[0].instantiate(nstate2, tyVarBnd),
-                        IdentifierStatus.VALUE_VARIABLE);
+                    res.setValue(i, sg[0].instantiate(nstate2, tyVarBnd), sg[1]);
                 } catch (e) {
                     if (!(e instanceof Array)) {
                         throw e;
@@ -1114,8 +1112,35 @@ export class DatatypeSpecification extends Specification {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        // TODO
-        throw new Error('ニャ－');
+        let res = new StaticBasis({}, {}, {}, {}, {});
+
+        for (let i = 0; i < this.datatypeDescription.length; ++i) {
+            let ctr: string[] = [];
+            let ctp = new CustomType(this.datatypeDescription[i][1].getText(),
+                this.datatypeDescription[i][0]);
+            for (let j = 0; j < this.datatypeDescription[i][2].length; ++j) {
+                ctr.push(this.datatypeDescription[i][2][j][0].getText());
+                if (this.datatypeDescription[i][2][j][1] === undefined) {
+                    let ntp: Type = ctp;
+                    ntp.getTypeVariables().forEach((val: Type[], name: string) => {
+                        ntp = new TypeVariableBind(name, ntp, val);
+                    });
+                    res.setValue(this.datatypeDescription[i][2][j][0].getText(), ntp,
+                    IdentifierStatus.VALUE_CONSTRUCTOR);
+                } else {
+                    let ntp: Type = new FunctionType(<Type> this.datatypeDescription[i][2][j][1], ctp);
+                    ntp.getTypeVariables().forEach((val: Type[], name: string) => {
+                        ntp = new TypeVariableBind(name, ntp, val);
+                    });
+                    res.setValue(this.datatypeDescription[i][2][j][0].getText(),
+                        ntp, IdentifierStatus.VALUE_CONSTRUCTOR);
+                }
+            }
+            res.setType(this.datatypeDescription[i][1].getText(), ctp, ctr,
+                this.datatypeDescription[i][0].length, true);
+        }
+
+        return [res, [], tyVarBnd, nextName];
     }
 
     computeInterface(state: State): DynamicInterface {
@@ -1132,6 +1157,25 @@ export class DatatypeSpecification extends Specification {
             ti[this.datatypeDescription[i][1].getText()] = cns;
         }
         return new DynamicInterface(ti, vi, {});
+    }
+
+    simplify(): DatatypeSpecification {
+        let dds: [TypeVariable[], IdentifierToken, [IdentifierToken, Type|undefined][]][] = [];
+
+        for (let i = 0; i < this.datatypeDescription.length; ++i) {
+            let cds: [IdentifierToken, Type|undefined][] = [];
+            for (let j = 0; j < this.datatypeDescription[i][2].length; ++j) {
+                if (this.datatypeDescription[i][2][j][1] === undefined) {
+                    cds.push(this.datatypeDescription[i][2][j]);
+                } else {
+                    cds.push([this.datatypeDescription[i][2][j][0],
+                        (<Type> this.datatypeDescription[i][2][j][1]).simplify()]);
+                }
+            }
+            dds.push([this.datatypeDescription[i][0], this.datatypeDescription[i][1], cds]);
+        }
+
+        return new DatatypeSpecification(this.position, dds);
     }
 }
 
@@ -1191,6 +1235,20 @@ export class ExceptionSpecification extends Specification {
             res[this.exceptionDescription[i][0].getText()] = IdentifierStatus.EXCEPTION_CONSTRUCTOR;
         }
         return new DynamicInterface({}, res, {});
+    }
+
+    simplify(): ExceptionSpecification {
+        let exns: [IdentifierToken, Type|undefined][] = [];
+        for (let i = 0; i < this.exceptionDescription.length; ++i) {
+            if (this.exceptionDescription[i][1] === undefined) {
+                exns.push(this.exceptionDescription[i]);
+            } else {
+                exns.push([this.exceptionDescription[i][0],
+                    (<Type> this.exceptionDescription[i][1]).simplify()]);
+            }
+        }
+
+        return new ExceptionSpecification(this.position, exns);
     }
 }
 

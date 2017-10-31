@@ -237,50 +237,50 @@ fun quadrat' (y:int) = y*(y-1)+y;
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('quadrat')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('quadrat')).toEqualWithType([
-                new Type.FunctionType(new Type.CustomType('int', [], 15), new Type.CustomType('int', [], 15)),
+                new Type.FunctionType(new Type.CustomType('int'), new Type.CustomType('int')),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
         ['quadrat(2+3);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(25), 0]);
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 15), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), State.IdentifierStatus.VALUE_VARIABLE]);
         }],
         ['quadrat 4;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(16), 0]);
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 15), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), State.IdentifierStatus.VALUE_VARIABLE]);
         }],
         ['quadrat 2 + 3;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(7), 0]);
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 15), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), State.IdentifierStatus.VALUE_VARIABLE]);
         }],
         ['(quadrat 2) + 3;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(7), 0]);
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 15), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), State.IdentifierStatus.VALUE_VARIABLE]);
         }],
         ['quadrat 2 + quadrat 3;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(13), 0]);
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 15), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), State.IdentifierStatus.VALUE_VARIABLE]);
         }],
         ['quadrat (2 + quadrat 3);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(121), 0]);
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 15), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), State.IdentifierStatus.VALUE_VARIABLE]);
         }],
         ['quadrat (quadrat 3);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(81), 0]);
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 15), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), State.IdentifierStatus.VALUE_VARIABLE]);
         }],
         ['fun quadrat\' (y:int) = y*(y-1)+y;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('quadrat\'')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('quadrat\'')).toEqualWithType([
-                new Type.FunctionType(new Type.CustomType('int', [], 16), new Type.CustomType('int', [], 16)),
+                new Type.FunctionType(new Type.CustomType('int'), new Type.CustomType('int')),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -356,14 +356,14 @@ if 4<2 then 3 else if 2<3 then ~1 else 1;
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('betrag')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('betrag')).toEqualWithType([
-                new Type.FunctionType(new Type.CustomType('int', [], 14), new Type.CustomType('int', [], 14)),
+                new Type.FunctionType(new Type.CustomType('int'), new Type.CustomType('int')),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
         ['betrag ~3;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(3), 0]);
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 14), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), State.IdentifierStatus.VALUE_VARIABLE]);
         }],
         ['if 4<2 then 3 else if 2<3 then ~1 else 1;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -411,20 +411,20 @@ fun hoch8 (x:int) = q (q (q x));
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('hoch8')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('hoch8')).toEqualWithType([
-                new Type.FunctionType(new Type.CustomType('int', [], 13), new Type.CustomType('int', [], 13)),
+                new Type.FunctionType(new Type.CustomType('int'), new Type.CustomType('int')),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
         ['hoch8 2;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(256), 0]);
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 13), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), State.IdentifierStatus.VALUE_VARIABLE]);
         }],
         ['fun q (y:int) = y*y;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('q')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('q')).toEqualWithType([
-                new Type.FunctionType(new Type.CustomType('int', [], 9), new Type.CustomType('int', [], 9)),
+                new Type.FunctionType(new Type.CustomType('int'), new Type.CustomType('int')),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -432,7 +432,7 @@ fun hoch8 (x:int) = q (q (q x));
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('hoch8')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('hoch8')).toEqualWithType([
-                new Type.FunctionType(new Type.CustomType('int', [], 13), new Type.CustomType('int', [], 9)),
+                new Type.FunctionType(new Type.CustomType('int'), new Type.CustomType('int')),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -556,15 +556,15 @@ max (~5,3);
                 new Type.FunctionType(
                     new Type.RecordType(
                         new Map([
-                            ['1', new Type.CustomType('int', [], 12)],
-                            ['2', new Type.CustomType('int', [], 16)],
+                            ['1', new Type.CustomType('int')],
+                            ['2', new Type.CustomType('int')],
                         ]),
-                        true, 15
+                        true
                     ),
                     new Type.RecordType(
                         new Map([
-                            ['1', new Type.CustomType('int', [], 16)],
-                            ['2', new Type.CustomType('int', [], 12)],
+                            ['1', new Type.CustomType('int')],
+                            ['2', new Type.CustomType('int')],
                         ])
                     )
                 ),
@@ -578,15 +578,15 @@ max (~5,3);
                 new Type.FunctionType(
                     new Type.RecordType(
                         new Map([
-                            ['1', new Type.CustomType('int', [], 12)],
-                            ['2', new Type.CustomType('int', [], 16)],
+                            ['1', new Type.CustomType('int')],
+                            ['2', new Type.CustomType('int')],
                         ]),
-                        true, 15
+                        true
                     ),
                     new Type.RecordType(
                         new Map([
-                            ['1', new Type.CustomType('int', [], 16)],
-                            ['2', new Type.CustomType('int', [], 12)],
+                            ['1', new Type.CustomType('int')],
+                            ['2', new Type.CustomType('int')],
                         ])
                     )
                 ),
@@ -598,8 +598,8 @@ max (~5,3);
             expect(state.getDynamicValue('swap')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('swap')).toEqualWithType([
                 new Type.FunctionType(
-                    createTupleType([new Type.CustomType('int', [], 12), new Type.CustomType('int', [], 19)]),
-                    createTupleType([new Type.CustomType('int', [], 19), new Type.CustomType('int', [], 12)])
+                    createTupleType([new Type.CustomType('int'), new Type.CustomType('int')]),
+                    createTupleType([new Type.CustomType('int'), new Type.CustomType('int')])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -609,8 +609,8 @@ max (~5,3);
             expect(state.getDynamicValue('max')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('max')).toEqualWithType([
                 new Type.FunctionType(
-                    createTupleType([new Type.CustomType('int', [], 11), new Type.CustomType('int', [], 18)]),
-                    new Type.CustomType('int', [], 18)
+                    createTupleType([new Type.CustomType('int'), new Type.CustomType('int')]),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -618,12 +618,12 @@ max (~5,3);
         ['max (5,3);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(5));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 18), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), State.IdentifierStatus.VALUE_VARIABLE]);
         }],
         ['max (~5,3);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(3));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 18), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), State.IdentifierStatus.VALUE_VARIABLE]);
         }]
     ]);
 });
@@ -678,8 +678,8 @@ potenz (2,10);
             expect(state.getDynamicValue('potenz')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('potenz')).toEqualWithType([
                 new Type.FunctionType(
-                    createTupleType([new Type.CustomType('int', [], 14), new Type.CustomType('int', [], 21)]),
-                    new Type.CustomType('int', [], 14)
+                    createTupleType([new Type.CustomType('int'), new Type.CustomType('int')]),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -687,7 +687,7 @@ potenz (2,10);
         ['potenz (2,10);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(1024));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 14), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), State.IdentifierStatus.VALUE_VARIABLE]);
         }]
     ]);
 });
@@ -704,8 +704,8 @@ wurzel 15;
             expect(state.getDynamicValue('w')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('w')).toEqualWithType([
                 new Type.FunctionType(
-                    createTupleType([new Type.CustomType('int', [], 9), new Type.CustomType('int', [], 15)]),
-                    new Type.CustomType('int', [], 9)
+                    createTupleType([new Type.CustomType('int'), new Type.CustomType('int')]),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -715,8 +715,8 @@ wurzel 15;
             expect(state.getDynamicValue('wurzel')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('wurzel')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 14),
-                    new Type.CustomType('int', [], 9)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -724,7 +724,7 @@ wurzel 15;
         ['wurzel 15;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(3));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 9), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), State.IdentifierStatus.VALUE_VARIABLE]);
         }]
     ]);
 });
@@ -742,8 +742,8 @@ fun potenz (x:int, n:int) = p(1,x,n);
             expect(state.getDynamicValue('w')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('w')).toEqualWithType([
                 new Type.FunctionType(
-                    createTupleType([new Type.CustomType('int', [], 9), new Type.CustomType('int', [], 15)]),
-                    new Type.CustomType('int', [], 9)
+                    createTupleType([new Type.CustomType('int'), new Type.CustomType('int')]),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -754,11 +754,11 @@ fun potenz (x:int, n:int) = p(1,x,n);
             expect(state.getStaticValue('p')).toEqualWithType([
                 new Type.FunctionType(
                     createTupleType([
-                        new Type.CustomType('int', [], 9),
-                        new Type.CustomType('int', [], 16),
-                        new Type.CustomType('int', [], 23)
+                        new Type.CustomType('int'),
+                        new Type.CustomType('int'),
+                        new Type.CustomType('int')
                     ]),
-                    new Type.CustomType('int', [], 9)
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -768,8 +768,8 @@ fun potenz (x:int, n:int) = p(1,x,n);
             expect(state.getDynamicValue('potenz')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('potenz')).toEqualWithType([
                 new Type.FunctionType(
-                    createTupleType([new Type.CustomType('int', [], 14), new Type.CustomType('int', [], 21)]),
-                    new Type.CustomType('int', [], 9)
+                    createTupleType([new Type.CustomType('int'), new Type.CustomType('int')]),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -791,8 +791,8 @@ val it = q 0;
             expect(state.getDynamicValue('p')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('p')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
-                    new Type.CustomType('int', [], 16)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -802,8 +802,8 @@ val it = q 0;
             expect(state.getDynamicValue('q')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('q')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
-                    new Type.CustomType('int', [], 0)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -882,11 +882,11 @@ sqrt 81.0;
             expect(state.getStaticValue('newton')).toEqualWithType([
                 new Type.FunctionType(
                     createTupleType([
-                        new Type.CustomType('real', [], 14),
-                        new Type.CustomType('real', [], 22),
-                        new Type.CustomType('int', [], 30)
+                        new Type.CustomType('real'),
+                        new Type.CustomType('real'),
+                        new Type.CustomType('int')
                     ]),
-                    new Type.CustomType('real', [], 14)
+                    new Type.CustomType('real')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -896,8 +896,8 @@ sqrt 81.0;
             expect(state.getDynamicValue('sqrt')).not.toEqualWithType(undefined);
             expect(state.getStaticValue('sqrt')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('real', [], 12),
-                    new Type.CustomType('real', [], 14)
+                    new Type.CustomType('real'),
+                    new Type.CustomType('real')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -905,17 +905,17 @@ sqrt 81.0;
         ['sqrt 4.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Real(2));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('real', [], 14), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('real'), State.IdentifierStatus.VALUE_VARIABLE]);
         ],
         ['sqrt 2.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Real(1.414213562373095));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('real', [], 14), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('real'), State.IdentifierStatus.VALUE_VARIABLE]);
         }],
         ['sqrt 81.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Real(9.000009415515176));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('real', [], 14), State.IdentifierStatus.VALUE_VARIABLE]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('real'), State.IdentifierStatus.VALUE_VARIABLE]);
         }]
     ]);
 });
@@ -965,12 +965,12 @@ fun f (t: int*int*int) = if #1t=0 then #2t else 2*(#3t);
                 new Type.FunctionType(
                     new Type.RecordType(
                         new Map([
-                            ['1', new Type.CustomType('int', [], 10)],
-                            ['2', new Type.CustomType('int', [], 14)],
-                            ['3', new Type.CustomType('int', [], 18)]
-                        ]), true, 13
+                            ['1', new Type.CustomType('int')],
+                            ['2', new Type.CustomType('int')],
+                            ['3', new Type.CustomType('int')]
+                        ]), true
                     ),
-                    new Type.CustomType('int', [], 14)
+                    new Type.CustomType('int')
                 ),
             0]);
         }]
@@ -994,8 +994,8 @@ fun f (x:int) : int = if x<1 then 1 else x*f(x-1);
             expect(state.getDynamicValue('p')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('p')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
-                    new Type.CustomType('int', [], 9)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
@@ -1004,8 +1004,8 @@ fun f (x:int) : int = if x<1 then 1 else x*f(x-1);
             expect(state.getDynamicValue('p')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('p')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
-                    new Type.CustomType('int', [], 9)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
@@ -1014,7 +1014,7 @@ fun f (x:int) : int = if x<1 then 1 else x*f(x-1);
             expect(state.getDynamicValue('f')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('f')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
+                    new Type.CustomType('int'),
                     new Type.CustomType('int')
                 ),
             0]);
@@ -1047,8 +1047,8 @@ val a = (p 5, q 5);
             expect(state.getDynamicValue('p')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('p')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
-                    new Type.CustomType('int', [], 9)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
@@ -1062,8 +1062,8 @@ val a = (p 5, q 5);
             expect(state.getDynamicValue('p')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('p')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
-                    new Type.CustomType('int', [], 9)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
@@ -1072,8 +1072,8 @@ val a = (p 5, q 5);
             expect(state.getDynamicValue('q')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('q')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
-                    new Type.CustomType('int', [], 9)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
@@ -1082,8 +1082,8 @@ val a = (p 5, q 5);
             expect(state.getDynamicValue('p')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('p')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
-                    new Type.CustomType('int', [], 9)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
@@ -1092,8 +1092,8 @@ val a = (p 5, q 5);
             expect(state.getDynamicValue('q')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('q')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
-                    new Type.CustomType('int', [], 9)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
@@ -1102,7 +1102,7 @@ val a = (p 5, q 5);
             expect(state.getDynamicValue('p')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('p')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
+                    new Type.CustomType('int'),
                     new Type.CustomType('int')
                 ),
             0]);
@@ -1117,7 +1117,7 @@ val a = (p 5, q 5);
                 new Type.RecordType(
                     new Map<string, Type>([
                         ['1', new Type.CustomType('int')],
-                        ['2', new Type.CustomType('int', [], 9)]
+                        ['2', new Type.CustomType('int')]
                     ])
                 ),
             0]);
@@ -1145,7 +1145,7 @@ fun f (x:int) : int = if x<y then 1 else x*f(x-1);
             expect(state.getDynamicValue('f')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('f')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
+                    new Type.CustomType('int'),
                     new Type.CustomType('int')
                 ),
             0]);
@@ -1175,11 +1175,11 @@ fun q (x:int, y:int) = x*x + 2*x*y + y*y;
                 new Type.FunctionType(
                     new Type.RecordType(
                         new Map([
-                            ['1', new Type.CustomType('int', [], 9)],
-                            ['2', new Type.CustomType('int', [], 16)]
+                            ['1', new Type.CustomType('int')],
+                            ['2', new Type.CustomType('int')]
                         ])
                     ),
-                    new Type.CustomType('int', [], 9)
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
@@ -1190,11 +1190,11 @@ fun q (x:int, y:int) = x*x + 2*x*y + y*y;
                 new Type.FunctionType(
                     new Type.RecordType(
                         new Map([
-                            ['1', new Type.CustomType('int', [], 9)],
-                            ['2', new Type.CustomType('int', [], 16)]
+                            ['1', new Type.CustomType('int')],
+                            ['2', new Type.CustomType('int')]
                         ])
                     ),
-                    new Type.CustomType('int', [], 16)
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
@@ -1224,11 +1224,11 @@ fun q (x:int, y:int) = x*x + 2*x*y + y*y;
                 new Type.FunctionType(
                     new Type.RecordType(
                         new Map([
-                            ['1', new Type.CustomType('int', [], 9)],
-                            ['2', new Type.CustomType('int', [], 16)]
+                            ['1', new Type.CustomType('int')],
+                            ['2', new Type.CustomType('int')]
                         ])
                     ),
-                    new Type.CustomType('int', [], 9)
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
@@ -1239,11 +1239,11 @@ fun q (x:int, y:int) = x*x + 2*x*y + y*y;
                 new Type.FunctionType(
                     new Type.RecordType(
                         new Map([
-                            ['1', new Type.CustomType('int', [], 9)],
-                            ['2', new Type.CustomType('int', [], 16)]
+                            ['1', new Type.CustomType('int')],
+                            ['2', new Type.CustomType('int')]
                         ])
                     ),
-                    new Type.CustomType('int', [], 9)
+                    new Type.CustomType('int')
                 ),
             0]);
         }]
@@ -1274,15 +1274,15 @@ fun f (x:int) = fn (y:int) => fn (z:int) => x+y+z;
             expect(state.getDynamicValue('it')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 6),
-                    new Type.CustomType('int', [], 6)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
         ['(fn (x:int) => x*x) 7;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(49));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 7), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), 0]);
         }],
         ['fn (x:int, y:int) => x*y;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -1291,28 +1291,28 @@ fun f (x:int) = fn (y:int) => fn (z:int) => x+y+z;
                 new Type.FunctionType(
                     new Type.RecordType(
                         new Map([
-                            ['1', new Type.CustomType('int', [], 6)],
-                            ['2', new Type.CustomType('int', [], 13)]
+                            ['1', new Type.CustomType('int')],
+                            ['2', new Type.CustomType('int')]
                         ])
                     ),
-                    new Type.CustomType('int', [], 6)
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
         ['(fn (x:int, y:int) => x*y) (4,7);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(28));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 7), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), 0]);
         }],
         ['fun mul (x:int) = fn (y:int) => x*y;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('mul')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('mul')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 11),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 24),
-                        new Type.CustomType('int', [], 11)
+                        new Type.CustomType('int'),
+                        new Type.CustomType('int')
                     )
                 ),
             0]);
@@ -1322,20 +1322,20 @@ fun f (x:int) = fn (y:int) => fn (z:int) => x+y+z;
             expect(state.getDynamicValue('it')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 24),
-                    new Type.CustomType('int', [], 11)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
         ['it 3;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(21));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 11), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), 0]);
         }],
         ['mul 7 5;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(35));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 11), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), 0]);
         }],
         ['fun mul (x:int, y:int) = x*y;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -1344,30 +1344,30 @@ fun f (x:int) = fn (y:int) => fn (z:int) => x+y+z;
                 new Type.FunctionType(
                     new Type.RecordType(
                         new Map([
-                            ['1', new Type.CustomType('int', [], 11)],
-                            ['2', new Type.CustomType('int', [], 18)]
+                            ['1', new Type.CustomType('int')],
+                            ['2', new Type.CustomType('int')]
                         ])
                     ),
-                    new Type.CustomType('int', [], 11)
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
         ['mul (7,5);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(35));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 11), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), 0]);
         }],
         ['fun f (x:int) (y:int) (z:int) = x+y+z;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('f')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('f')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 17),
+                        new Type.CustomType('int'),
                         new Type.FunctionType(
-                            new Type.CustomType('int', [], 25),
-                            new Type.CustomType('int', [], 9)
+                            new Type.CustomType('int'),
+                            new Type.CustomType('int')
                         )
                     )
                 ),
@@ -1378,12 +1378,12 @@ fun f (x:int) = fn (y:int) => fn (z:int) => x+y+z;
             expect(state.getDynamicValue('f')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('f')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 22),
+                        new Type.CustomType('int'),
                         new Type.FunctionType(
-                            new Type.CustomType('int', [], 36),
-                            new Type.CustomType('int', [], 9)
+                            new Type.CustomType('int'),
+                            new Type.CustomType('int')
                         )
                     )
                 ),
@@ -1406,10 +1406,10 @@ val g = f 7;
             expect(state.getDynamicValue('f')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('f')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 17),
-                        new Type.CustomType('int', [], 9)
+                        new Type.CustomType('int'),
+                        new Type.CustomType('int')
                     )
                 ),
             0]);
@@ -1419,8 +1419,8 @@ val g = f 7;
             expect(state.getDynamicValue('g')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('g')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 17),
-                    new Type.CustomType('int', [], 9)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
@@ -1429,10 +1429,10 @@ val g = f 7;
             expect(state.getDynamicValue('f')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('f')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 17),
-                        new Type.CustomType('int', [], 24)
+                        new Type.CustomType('int'),
+                        new Type.CustomType('int')
                     )
                 ),
             0]);
@@ -1442,8 +1442,8 @@ val g = f 7;
             expect(state.getDynamicValue('g')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('g')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 17),
-                    new Type.CustomType('int', [], 24)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
             0]);
         }]
@@ -1468,11 +1468,11 @@ val gauss = sum (fn (i:int) => i);
             expect(state.getStaticValue('sum')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 11),
-                        new Type.CustomType('int', [], 16),
-                    14),
+                        new Type.CustomType('int'),
+                        new Type.CustomType('int')
+                    ),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 24),
+                        new Type.CustomType('int'),
                         new Type.CustomType('int')
                     )
                 ),
@@ -1493,7 +1493,7 @@ val gauss = sum (fn (i:int) => i);
             expect(state.getDynamicValue('gauss')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('gauss')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 24),
+                    new Type.CustomType('int'),
                     new Type.CustomType('int')
                 ),
             0]);
@@ -1515,16 +1515,15 @@ power 2 10;
             expect(state.getDynamicValue('iter')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('iter')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 12),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 20),
+                        new Type.CustomType('int'),
                         new Type.FunctionType(
                             new Type.FunctionType(
-                                new Type.CustomType('int', [], 28),
-                                new Type.CustomType('int', [], 33),
-                                31
+                                new Type.CustomType('int'),
+                                new Type.CustomType('int')
                             ),
-                            new Type.CustomType('int', [], 20)
+                            new Type.CustomType('int')
                         )
                     )
                 ),
@@ -1535,10 +1534,10 @@ power 2 10;
             expect(state.getDynamicValue('power')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('power')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 13),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 21),
-                        new Type.CustomType('int', [], 20)
+                        new Type.CustomType('int'),
+                        new Type.CustomType('int')
                     )
                 ),
             0]);
@@ -1546,7 +1545,7 @@ power 2 10;
         ['power 2 10;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(1024));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 20), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), 0]);
         }]
     ]);
 });
@@ -1565,14 +1564,13 @@ sqrt 15;
             expect(state.getDynamicValue('first')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('first')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 13),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
                         new Type.FunctionType(
-                            new Type.CustomType('int', [], 21),
-                            new Type.CustomType('bool', [], 26),
-                            24
+                            new Type.CustomType('int'),
+                            new Type.CustomType('bool')
                         ),
-                        new Type.CustomType('int', [], 13)
+                        new Type.CustomType('int')
                     )
                 ),
             0]);
@@ -1582,15 +1580,15 @@ sqrt 15;
             expect(state.getDynamicValue('sqrt')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('sqrt')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 12),
-                    new Type.CustomType('int', [], 13)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
             0]);
         }],
         ['sqrt 15;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(3));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 13), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), 0]);
         }]
     ]);
 });
@@ -1617,16 +1615,15 @@ gauss 10;
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 15),
+                        new Type.CustomType('int'),
                         new Type.FunctionType(
-                            new Type.TypeVariable('\'a', ),
+                            new Type.TypeVariable('\'a'),
                             new Type.FunctionType(
                                 new Type.FunctionType(
-                                    new Type.TypeVariable('\'a', ),
-                                    new Type.TypeVariable('\'a', ),
-                                    32
+                                    new Type.TypeVariable('\'a'),
+                                    new Type.TypeVariable('\'a')
                                 ),
-                                new Type.TypeVariable('\'a', )
+                                new Type.TypeVariable('\'a')
                             )
                         )
                     )
@@ -1638,9 +1635,9 @@ gauss 10;
             expect(state.getDynamicValue('power')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('power')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 13),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 21),
+                        new Type.CustomType('int'),
                         new Type.CustomType('int')
                     )
                 ),
@@ -1656,9 +1653,9 @@ gauss 10;
             expect(state.getDynamicValue('power\'')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('power\'')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('real', [], 14),
+                    new Type.CustomType('real'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 23),
+                        new Type.CustomType('int'),
                         new Type.CustomType('real')
                     )
                 ),
@@ -1674,7 +1671,7 @@ gauss 10;
             expect(state.getDynamicValue('gauss')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('gauss')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 13),
+                    new Type.CustomType('int'),
                     new Type.CustomType('int')
                 ),
             0]);
@@ -1705,11 +1702,11 @@ project2 (1,true);
                         new Type.FunctionType(
                             new Type.RecordType(
                                 new Map([
-                                    ['1', new Type.TypeVariable('\'a', )],
-                                    ['2', new Type.TypeVariable('\'b', )]
+                                    ['1', new Type.TypeVariable('\'a')],
+                                    ['2', new Type.TypeVariable('\'b')]
                                 ])
                             ),
-                            new Type.TypeVariable('\'b', )
+                            new Type.TypeVariable('\'b')
                         )
                     )
                 ),
@@ -1746,8 +1743,8 @@ val x = id(id 3, id 5.0);
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.TypeVariable('\'a', ),
-                        new Type.TypeVariable('\'a', )
+                        new Type.TypeVariable('\'a'),
+                        new Type.TypeVariable('\'a')
                     )
                 ),
             0]);
@@ -1931,10 +1928,10 @@ val f : real -> real = fn x => x;
             expect(state.getDynamicValue('plus')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('plus')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('real', [], 12),
+                    new Type.CustomType('real'),
                     new Type.FunctionType(
-                        new Type.CustomType('real', [], 12),
-                        new Type.CustomType('real', [], 12)
+                        new Type.CustomType('real'),
+                        new Type.CustomType('real')
                     )
                 ),
             0]);
@@ -1944,10 +1941,10 @@ val f : real -> real = fn x => x;
             expect(state.getDynamicValue('plus')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('plus')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('real', [], 15),
+                    new Type.CustomType('real'),
                     new Type.FunctionType(
-                        new Type.CustomType('real', [], 15),
-                        new Type.CustomType('real', [], 15)
+                        new Type.CustomType('real'),
+                        new Type.CustomType('real')
                     )
                 ),
             0]);
@@ -1957,10 +1954,10 @@ val f : real -> real = fn x => x;
             expect(state.getDynamicValue('plus')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('plus')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('real', [], 12),
+                    new Type.CustomType('real'),
                     new Type.FunctionType(
-                        new Type.CustomType('real', [], 21),
-                        new Type.CustomType('real', [], 12)
+                        new Type.CustomType('real'),
+                        new Type.CustomType('real')
                     )
                 ),
             0]);
@@ -1972,11 +1969,11 @@ val f : real -> real = fn x => x;
                 new Type.FunctionType(
                     new Type.RecordType(
                         new Map([
-                            ['1', new Type.CustomType('real', [], 19)],
-                            ['2', new Type.CustomType('real', [], 19)]
+                            ['1', new Type.CustomType('real')],
+                            ['2', new Type.CustomType('real')]
                         ])
                     ),
-                    new Type.CustomType('real', [], 19)
+                    new Type.CustomType('real')
                 ),
             0]);
         }],
@@ -1985,8 +1982,8 @@ val f : real -> real = fn x => x;
             expect(state.getDynamicValue('it')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('bool', [], 14),
-                    new Type.CustomType('bool', [], 14)
+                    new Type.CustomType('bool'),
+                    new Type.CustomType('bool')
                 ),
             0]);
         }],
@@ -1995,8 +1992,8 @@ val f : real -> real = fn x => x;
             expect(state.getDynamicValue('f')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('f')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('real', [], 8),
-                    new Type.CustomType('real', [], 8)
+                    new Type.CustomType('real'),
+                    new Type.CustomType('real')
                 ),
             0]);
         }]
@@ -2151,15 +2148,15 @@ op+;
             expect(state.getDynamicValue('forall')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('forall')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 0),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 0),
+                        new Type.CustomType('int'),
                         new Type.FunctionType(
                             new Type.FunctionType(
-                                new Type.CustomType('int', [], 0),
-                                new Type.CustomType('bool', [], 0)
+                                new Type.CustomType('int'),
+                                new Type.CustomType('bool')
                             ),
-                            new Type.CustomType('bool', [], 0)
+                            new Type.CustomType('bool')
                         )
                     )
                 ),
@@ -2202,10 +2199,10 @@ op+;
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('int', [], 0)],
-                        ['2', new Type.CustomType('int', [], 0)]
+                        ['1', new Type.CustomType('int')],
+                        ['2', new Type.CustomType('int')]
                     ]), true),
-                    new Type.CustomType('int', [], 0)
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -2236,16 +2233,15 @@ nthprime 100;
             expect(state.getDynamicValue('iter')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('iter')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 12),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 20),
+                        new Type.CustomType('int'),
                         new Type.FunctionType(
                             new Type.FunctionType(
-                                new Type.CustomType('int', [], 28),
-                                new Type.CustomType('int', [], 33),
-                                31
+                                new Type.CustomType('int'),
+                                new Type.CustomType('int')
                             ),
-                            new Type.CustomType('int', [], 20)
+                            new Type.CustomType('int')
                         )
                     )
                 )
@@ -2256,14 +2252,13 @@ nthprime 100;
             expect(state.getDynamicValue('first')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('first')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 13),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
                         new Type.FunctionType(
-                            new Type.CustomType('int', [], 21),
-                            new Type.CustomType('bool', [], 26),
-                            24
+                            new Type.CustomType('int'),
+                            new Type.CustomType('bool')
                         ),
-                        new Type.CustomType('int', [], 13)
+                        new Type.CustomType('int')
                     )
                 )
             , 0]);
@@ -2273,8 +2268,8 @@ nthprime 100;
             expect(state.getDynamicValue('sqrt')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('sqrt')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 12),
-                    new Type.CustomType('int', [], 13)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 )
             , 0]);
         }],
@@ -2283,9 +2278,9 @@ nthprime 100;
             expect(state.getDynamicValue('forall')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('forall')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', []),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', []),
+                        new Type.CustomType('int'),
                         new Type.FunctionType(
                             new Type.FunctionType(
                                 new Type.CustomType('int'),
@@ -2302,7 +2297,7 @@ nthprime 100;
             expect(state.getDynamicValue('prime')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('prime')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 12),
+                    new Type.CustomType('int'),
                     new Type.CustomType('bool')
                 )
             , 0]);
@@ -2313,7 +2308,7 @@ nthprime 100;
             expect(state.getStaticValue('nextprime')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.CustomType('int'),
-                    new Type.CustomType('int', [], 13)
+                    new Type.CustomType('int')
                 )
             , 0]);
         }],
@@ -2322,15 +2317,15 @@ nthprime 100;
             expect(state.getDynamicValue('nthprime')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('nthprime')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 12),
-                    new Type.CustomType('int', [], 20)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 )
             , 0]);
         }],
         ['nthprime 100;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(541));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 20), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), 0]);
         }]
     ]);
 });
@@ -2386,10 +2381,10 @@ op o;
             expect(state.getDynamicValue('plus')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('plus')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 0),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 0),
-                        new Type.CustomType('int', [], 0)
+                        new Type.CustomType('int'),
+                        new Type.CustomType('int')
                     )
                 )
             , 0]);
@@ -2399,10 +2394,10 @@ op o;
             expect(state.getDynamicValue('times')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('times')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 0),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 0),
-                        new Type.CustomType('int', [], 0)
+                        new Type.CustomType('int'),
+                        new Type.CustomType('int')
                     )
                 )
             , 0]);
@@ -2412,8 +2407,8 @@ op o;
             expect(state.getDynamicValue('foo')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('foo')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', []),
-                    new Type.CustomType('int', [])
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 )
             , 0]);
         }],
@@ -2427,8 +2422,8 @@ op o;
             expect(state.getDynamicValue('foo')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('foo')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', []),
-                    new Type.CustomType('int', [])
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 )
             , 0]);
         }],
@@ -2591,10 +2586,10 @@ op@;
                     '\'a',
                     new Type.FunctionType(
                         new Type.RecordType(new Map([
-                            ['1', new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0)],
-                            ['2', new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0)]
+                            ['1', new Type.CustomType('list', [new Type.TypeVariable('\'a')])],
+                            ['2', new Type.CustomType('list', [new Type.TypeVariable('\'a')])]
                         ])),
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0)
+                        new Type.CustomType('list', [new Type.TypeVariable('\'a')])
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -2947,9 +2942,9 @@ tabulate(5, fn x => x*x)
                     '\'a',
                     new Type.FunctionType(
                         new Type.RecordType(new Map([
-                            ['1', new Type.CustomType('int', [], 0)],
+                            ['1', new Type.CustomType('int')],
                             ['2',new Type.FunctionType(
-                                new Type.CustomType('int', [], 0),
+                                new Type.CustomType('int'),
                                 new Type.TypeVariable('\'a')
                             )]
                         ])),
@@ -3043,8 +3038,8 @@ all (fn x => x>0) [1, ~2, 3];
                                 new Type.TypeVariable('\'b')
                             ),
                             new Type.FunctionType(
-                                new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
-                                new Type.CustomType('list', [new Type.TypeVariable('\'b')], 0)
+                                new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
+                                new Type.CustomType('list', [new Type.TypeVariable('\'b')])
                             )
                         )
                     )
@@ -3124,7 +3119,7 @@ all (fn x => x>0) [1, ~2, 3];
                 new Type.CustomType(
                     'list',
                     [
-                        new Type.CustomType('list', [new Type.CustomType('int')], 42)
+                        new Type.CustomType('list', [new Type.CustomType('int')])
                     ]
                 )
             , 0]);
@@ -3157,8 +3152,8 @@ all (fn x => x>0) [1, ~2, 3];
                             new Type.CustomType('bool')
                         ),
                         new Type.FunctionType(
-                            new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
-                            new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0)
+                            new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
+                            new Type.CustomType('list', [new Type.TypeVariable('\'a')])
                         )
                     )
                 ),
@@ -3208,7 +3203,7 @@ all (fn x => x>0) [1, ~2, 3];
                             new Type.CustomType('bool')
                         ),
                         new Type.FunctionType(
-                            new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
+                            new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
                             new Type.CustomType('bool')
                         )
                     )
@@ -3238,7 +3233,7 @@ all (fn x => x>0) [1, ~2, 3];
                             new Type.CustomType('bool')
                         ),
                         new Type.FunctionType(
-                            new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
+                            new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
                             new Type.CustomType('bool')
                         )
                     )
@@ -3368,7 +3363,7 @@ fun foldr f s nil = s
                         new Type.CustomType('list', [
                             new Type.CustomType('list', [
                                 new Type.TypeVariable('\'a')
-                            ], 0)
+                            ])
                         ]),
                         new Type.CustomType('list', [new Type.TypeVariable('\'a')])
                     )
@@ -3390,8 +3385,8 @@ fun foldr f s nil = s
                                 new Type.TypeVariable('\'b')
                             ),
                             new Type.FunctionType(
-                                new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
-                                new Type.CustomType('list', [new Type.TypeVariable('\'b')], 0)
+                                new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
+                                new Type.CustomType('list', [new Type.TypeVariable('\'b')])
                             )
                         )
                     )
@@ -3408,7 +3403,7 @@ fun foldr f s nil = s
                     new Type.FunctionType(
                         new Type.FunctionType(
                             new Type.TypeVariable('\'a'),
-                            new Type.CustomType('bool', [], 0)
+                            new Type.CustomType('bool')
                         ),
                         new Type.FunctionType(
                             new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
@@ -3438,7 +3433,7 @@ fun foldr f s nil = s
                             new Type.FunctionType(
                                 new Type.TypeVariable('\'b'),
                                 new Type.FunctionType(
-                                    new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
+                                    new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
                                     new Type.TypeVariable('\'b')
                                 )
                             )
@@ -3467,7 +3462,7 @@ fun foldr f s nil = s
                             new Type.FunctionType(
                                 new Type.TypeVariable('\'b'),
                                 new Type.FunctionType(
-                                    new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
+                                    new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
                                     new Type.TypeVariable('\'b')
                                 )
                             )
@@ -3505,9 +3500,9 @@ fun append (xs,ys) = if xs=nil then ys
 
 fun nth(xs,n) = if n<0 orelse null xs then raise Subscript
                 else if n=0 then hd xs else nth(tl xs, n-1);
-nth ([3,4,5], 0);
-nth ([3,4,5], 2);
-nth ([3,4,5], 3);
+nth ([3,4,5]);
+nth ([3,4,5]);
+nth ([3,4,5]);
      */
     run_test([
         ['hd [1,2,3,4,5];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
@@ -3547,7 +3542,7 @@ nth ([3,4,5], 3);
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
+                        new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
                         new Type.TypeVariable('\'a')
                     )
                 ),
@@ -3561,8 +3556,8 @@ nth ([3,4,5], 3);
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0)
+                        new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
+                        new Type.CustomType('list', [new Type.TypeVariable('\'a')])
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -3575,8 +3570,8 @@ nth ([3,4,5], 3);
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
-                        new Type.CustomType('bool', [], 0)
+                        new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
+                        new Type.CustomType('bool')
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -3590,10 +3585,10 @@ nth ([3,4,5], 3);
                     '\'a',
                     new Type.FunctionType(
                         new Type.RecordType(new Map([
-                            ['1',new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0)],
-                            ['2',new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0)]
+                            ['1',new Type.CustomType('list', [new Type.TypeVariable('\'a')])],
+                            ['2',new Type.CustomType('list', [new Type.TypeVariable('\'a')])]
                         ])),
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0)
+                        new Type.CustomType('list', [new Type.TypeVariable('\'a')])
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -3607,10 +3602,10 @@ nth ([3,4,5], 3);
                     '\'\'a',
                     new Type.FunctionType(
                         new Type.RecordType(new Map([
-                            ['1',new Type.CustomType('list', [new Type.TypeVariable('\'\'a')], 0)],
-                            ['2',new Type.CustomType('list', [new Type.TypeVariable('\'\'a')], 0)]
+                            ['1',new Type.CustomType('list', [new Type.TypeVariable('\'\'a')])],
+                            ['2',new Type.CustomType('list', [new Type.TypeVariable('\'\'a')])]
                         ])),
-                        new Type.CustomType('list', [new Type.TypeVariable('\'\'a')], 0)
+                        new Type.CustomType('list', [new Type.TypeVariable('\'\'a')])
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -3624,8 +3619,8 @@ nth ([3,4,5], 3);
                     '\'a',
                     new Type.FunctionType(
                         new Type.RecordType(new Map([
-                            ['1',new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0)],
-                            ['2',new Type.CustomType('int', [], 0)]
+                            ['1',new Type.CustomType('list', [new Type.TypeVariable('\'a')])],
+                            ['2',new Type.CustomType('int')]
                         ])),
                         new Type.TypeVariable('\'a')
                     )
@@ -3669,8 +3664,8 @@ fun test [] = 0
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0)
+                        new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
+                        new Type.CustomType('list', [new Type.TypeVariable('\'a')])
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -3723,7 +3718,7 @@ fun or (false, false) = false
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
+                        new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
                         new Type.CustomType('int')
                     )
                 ),
@@ -3737,7 +3732,7 @@ fun or (false, false) = false
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
+                        new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
                         new Type.CustomType('int')
                     )
                 ),
@@ -3751,7 +3746,7 @@ fun or (false, false) = false
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
+                        new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
                         new Type.CustomType('bool')
                     )
                 ),
@@ -3764,10 +3759,10 @@ fun or (false, false) = false
             expect(state.getStaticValue('power')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1',new Type.CustomType('int', [], 0)],
-                        ['2',new Type.CustomType('int', [], 0)]
+                        ['1',new Type.CustomType('int')],
+                        ['2',new Type.CustomType('int')]
                     ])),
-                    new Type.CustomType('int', [], 0)
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -3778,10 +3773,10 @@ fun or (false, false) = false
             expect(state.getStaticValue('potenz')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1',new Type.CustomType('int', [], 0)],
-                        ['2',new Type.CustomType('int', [], 0)]
+                        ['1',new Type.CustomType('int')],
+                        ['2',new Type.CustomType('int')]
                     ])),
-                    new Type.CustomType('int', [], 0)
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -3823,7 +3818,7 @@ test [1,2];
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
+                        new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
                         new Type.CustomType('int')
                     )
                 ),
@@ -3834,7 +3829,7 @@ test [1,2];
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('SomethingWrong')[0]).toEqualWithType(new Val.ExceptionConstructor('SomethingWrong', undefined));
             expect(state.getStaticValue('SomethingWrong')).toEqualWithType([
-                new Type.CustomType('exn', [], 0),
+                new Type.CustomType('exn'),
                 State.IdentifierStatus.EXCEPTION_CONSTRUCTOR
             ]);
         }],
@@ -3845,7 +3840,7 @@ test [1,2];
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0),
+                        new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
                         new Type.CustomType('int')
                     )
                 ),
@@ -3875,8 +3870,8 @@ fun test xs y = case rev xs
             expect(state.getDynamicValue('it')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('bool', [], 0),
-                    new Type.CustomType('bool', [], 0)
+                    new Type.CustomType('bool'),
+                    new Type.CustomType('bool')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -3886,10 +3881,10 @@ fun test xs y = case rev xs
             expect(state.getDynamicValue('test')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('test')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('int', [], 0)], 31),
+                    new Type.CustomType('list', [new Type.CustomType('int')]),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 0),
-                        new Type.CustomType('bool', [], 0)
+                        new Type.CustomType('int'),
+                        new Type.CustomType('bool')
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -3946,9 +3941,9 @@ fun or (x:bool) = fn (y:bool) =>
             expect(state.getDynamicValue('or')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('or')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('bool', [], 10),
+                    new Type.CustomType('bool'),
                     new Type.FunctionType(
-                        new Type.CustomType('bool', [], 24),
+                        new Type.CustomType('bool'),
                         new Type.CustomType('bool')
                     ),
                 ),
@@ -4226,9 +4221,9 @@ val ys = rev xs;
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
                         ['1', new Type.CustomType('int')],
-                        ['2', new Type.CustomType('list', [new Type.CustomType('int', [], 0)])]
+                        ['2', new Type.CustomType('list', [new Type.CustomType('int')])]
                     ])),
-                    new Type.CustomType('list', [new Type.CustomType('int', [], 0)])
+                    new Type.CustomType('list', [new Type.CustomType('int')])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -4238,8 +4233,8 @@ val ys = rev xs;
             expect(state.getDynamicValue('isort')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('isort')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('int', [], 0)]),
-                    new Type.CustomType('list', [new Type.CustomType('int', [], 0)])
+                    new Type.CustomType('list', [new Type.CustomType('int')]),
+                    new Type.CustomType('list', [new Type.CustomType('int')])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -4256,7 +4251,7 @@ val ys = rev xs;
                                 ['1', new Type.TypeVariable('\'a')],
                                 ['2', new Type.TypeVariable('\'a')]
                             ]), true),
-                            new Type.CustomType('order', [], -1)
+                            new Type.CustomType('order')
                         ),
                         new Type.FunctionType(
                             new Type.CustomType('list', [new Type.TypeVariable('\'a')]),
@@ -4287,7 +4282,7 @@ val ys = rev xs;
             }
             expect(state.getDynamicValue('ys')[0]).toEqualWithType(createList(res));
             expect(state.getStaticValue('ys')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('int')], 42),
+                new Type.CustomType('list', [new Type.CustomType('int')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -4324,8 +4319,8 @@ pisort Real.compare [5.0, 2.0, 2.0, 13.0, 4.0, 9.0];
             expect(state.getDynamicValue('it')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('int', [], 58)]),
-                    new Type.CustomType('list', [new Type.CustomType('int', [], 58)])
+                    new Type.CustomType('list', [new Type.CustomType('int')]),
+                    new Type.CustomType('list', [new Type.CustomType('int')])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -4347,7 +4342,7 @@ pisort Real.compare [5.0, 2.0, 2.0, 13.0, 4.0, 9.0];
                 new Type.CustomType(
                     'list',
                     [
-                        new Type.CustomType('int', [], 58)
+                        new Type.CustomType('int')
                     ]
                 )
             , 0]);
@@ -4366,7 +4361,7 @@ pisort Real.compare [5.0, 2.0, 2.0, 13.0, 4.0, 9.0];
                 new Type.CustomType(
                     'list',
                     [
-                        new Type.CustomType('real', [], 86)
+                        new Type.CustomType('real')
                     ]
                 )
             , 0]);
@@ -4419,15 +4414,15 @@ pisort (lex Int.compare) [[4,1], [], [4], [4,1,~8]];
                             new Type.RecordType(new Map([
                                 ['1', new Type.TypeVariable('\'a')],
                                 ['2', new Type.TypeVariable('\'a')]
-                            ]), true, 25),
-                            new Type.CustomType('order', [], 33)
-                        , 30),
+                            ]), true),
+                            new Type.CustomType('order')
+                        ),
                         new Type.FunctionType(
                             new Type.RecordType(new Map([
                                 ['1', new Type.TypeVariable('\'a')],
                                 ['2', new Type.TypeVariable('\'a')]
                             ])),
-                            new Type.CustomType('order', [], 33)
+                            new Type.CustomType('order')
                         )
                     )
                 ),
@@ -4451,7 +4446,7 @@ pisort (lex Int.compare) [[4,1], [], [4], [4,1,~8]];
                 new Type.CustomType(
                     'list',
                     [
-                        new Type.CustomType('int', [], 58)
+                        new Type.CustomType('int')
                     ]
                 )
             , 0]);
@@ -4467,15 +4462,15 @@ pisort (lex Int.compare) [[4,1], [], [4], [4,1,~8]];
                             new Type.RecordType(new Map([
                                 ['1', new Type.TypeVariable('\'a')],
                                 ['2', new Type.TypeVariable('\'a')]
-                            ]), true, 22),
-                            new Type.CustomType('order', [], 30)
-                        , 27),
+                            ]), true),
+                            new Type.CustomType('order')
+                        ),
                         new Type.FunctionType(
                             new Type.RecordType(new Map([
                                 ['1', new Type.CustomType('list', [new Type.TypeVariable('\'a')])],
                                 ['2', new Type.CustomType('list', [new Type.TypeVariable('\'a')])]
                             ])),
-                            new Type.CustomType('order', [], -1)
+                            new Type.CustomType('order')
                         )
                     )
                 ),
@@ -4491,7 +4486,7 @@ pisort (lex Int.compare) [[4,1], [], [4], [4,1,~8]];
                createList([new Val.Integer(4),new Val.Integer(1),new Val.Integer(-8)])
            ]));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('list', [new Type.CustomType('int', [], 58)])]),
+                new Type.CustomType('list', [new Type.CustomType('list', [new Type.CustomType('int')])]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -4535,10 +4530,10 @@ fun msort [] = []
             expect(state.getStaticValue('merge')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1',new Type.CustomType('list', [new Type.CustomType('int', [], 0)])],
-                        ['2',new Type.CustomType('list', [new Type.CustomType('int', [], 0)])]
+                        ['1',new Type.CustomType('list', [new Type.CustomType('int')])],
+                        ['2',new Type.CustomType('list', [new Type.CustomType('int')])]
                     ])),
-                    new Type.CustomType('list', [new Type.CustomType('int', [], 0)])
+                    new Type.CustomType('list', [new Type.CustomType('int')])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -4548,8 +4543,8 @@ fun msort [] = []
             expect(state.getDynamicValue('msort')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('msort')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('int', [], 0)]),
-                    new Type.CustomType('list', [new Type.CustomType('int', [], 0)])
+                    new Type.CustomType('list', [new Type.CustomType('int')]),
+                    new Type.CustomType('list', [new Type.CustomType('int')])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -4636,16 +4631,16 @@ area (Triangle(6.0, 6.0, Math.sqrt 72.0));
             expect(state.getDynamicValue('Circle')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('Circle')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('real', [], 27),
-                    new Type.CustomType('shape', [], -1)
+                    new Type.CustomType('real'),
+                    new Type.CustomType('shape')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Square')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('Square')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('real', [], 44),
-                    new Type.CustomType('shape', [], -1)
+                    new Type.CustomType('real'),
+                    new Type.CustomType('shape')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -4653,11 +4648,11 @@ area (Triangle(6.0, 6.0, Math.sqrt 72.0));
             expect(state.getStaticValue('Triangle')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('real', [], 63)],
-                        ['2', new Type.CustomType('real', [], 70)],
-                        ['3', new Type.CustomType('real', [], 77)]
-                    ]), true, 68),
-                    new Type.CustomType('shape', [], -1)
+                        ['1', new Type.CustomType('real')],
+                        ['2', new Type.CustomType('real')],
+                        ['3', new Type.CustomType('real')]
+                    ]), true),
+                    new Type.CustomType('shape')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -4666,7 +4661,7 @@ area (Triangle(6.0, 6.0, Math.sqrt 72.0));
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.ConstructedValue('Circle', new Val.Real(4)));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('shape', [], -1),
+                new Type.CustomType('shape'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -4674,7 +4669,7 @@ area (Triangle(6.0, 6.0, Math.sqrt 72.0));
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.ConstructedValue('Square', new Val.Real(3)));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('shape', [], -1),
+                new Type.CustomType('shape'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -4688,7 +4683,7 @@ area (Triangle(6.0, 6.0, Math.sqrt 72.0));
                 ]))
             ));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('shape', [], -1),
+                new Type.CustomType('shape'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -4697,7 +4692,7 @@ area (Triangle(6.0, 6.0, Math.sqrt 72.0));
             expect(state.getDynamicValue('area')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('area')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('shape', [], -1),
+                    new Type.CustomType('shape'),
                     new Type.CustomType('real')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -4738,37 +4733,37 @@ datatype order = LESS | EQUAL | GREATER;
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('Monday')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('Monday')).toEqualWithType([
-                new Type.CustomType('day', [], -1),
+                new Type.CustomType('day'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Tuesday')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('Tuesday')).toEqualWithType([
-                new Type.CustomType('day', [], -1),
+                new Type.CustomType('day'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Wednesday')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('Wednesday')).toEqualWithType([
-                new Type.CustomType('day', [], -1),
+                new Type.CustomType('day'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Thursday')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('Thursday')).toEqualWithType([
-                new Type.CustomType('day', [], -1),
+                new Type.CustomType('day'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Friday')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('Friday')).toEqualWithType([
-                new Type.CustomType('day', [], -1),
+                new Type.CustomType('day'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Saturday')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('Saturday')).toEqualWithType([
-                new Type.CustomType('day', [], -1),
+                new Type.CustomType('day'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Sunday')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('Sunday')).toEqualWithType([
-                new Type.CustomType('day', [], -1),
+                new Type.CustomType('day'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
         }],
@@ -4777,7 +4772,7 @@ datatype order = LESS | EQUAL | GREATER;
             expect(state.getDynamicValue('weekend')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('weekend')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('day', [], -1),
+                    new Type.CustomType('day'),
                     new Type.CustomType('bool')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -4828,12 +4823,12 @@ fun mirror (Point(x,y)) = Point(x,~y);
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
                         ['1', new Type.RecordType(new Map([
-                            ['1', new Type.CustomType('real', [], 13)],
-                            ['2', new Type.CustomType('real', [], 20)]
-                        ]), true, 18)],
-                        ['2', new Type.CustomType('real', [], 36)]
-                    ]), true, 34),
-                    new Type.CustomType('object', [], -1)
+                            ['1', new Type.CustomType('real')],
+                            ['2', new Type.CustomType('real')]
+                        ]), true)],
+                        ['2', new Type.CustomType('real')]
+                    ]), true),
+                    new Type.CustomType('object')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -4842,19 +4837,19 @@ fun mirror (Point(x,y)) = Point(x,~y);
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
                         ['1', new Type.RecordType(new Map([
-                            ['1', new Type.CustomType('real', [], 13)],
-                            ['2', new Type.CustomType('real', [], 20)]
-                        ]), true, 18)],
+                            ['1', new Type.CustomType('real')],
+                            ['2', new Type.CustomType('real')]
+                        ]), true)],
                         ['2', new Type.RecordType(new Map([
-                            ['1', new Type.CustomType('real', [], 13)],
-                            ['2', new Type.CustomType('real', [], 20)]
-                        ]), true, 18)],
+                            ['1', new Type.CustomType('real')],
+                            ['2', new Type.CustomType('real')]
+                        ]), true)],
                         ['3', new Type.RecordType(new Map([
-                            ['1', new Type.CustomType('real', [], 13)],
-                            ['2', new Type.CustomType('real', [], 20)]
-                        ]), true, 18)]
-                    ]), true, 61),
-                    new Type.CustomType('object', [], -1)
+                            ['1', new Type.CustomType('real')],
+                            ['2', new Type.CustomType('real')]
+                        ]), true)]
+                    ]), true),
+                    new Type.CustomType('object')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -4865,13 +4860,13 @@ fun mirror (Point(x,y)) = Point(x,~y);
             expect(state.getStaticValue('mirror')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('real', [], 13)],
-                        ['2', new Type.CustomType('real', [], 20)]
-                    ]), true, ),
+                        ['1', new Type.CustomType('real')],
+                        ['2', new Type.CustomType('real')]
+                    ]), true),
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('real', [], 13)],
-                        ['2', new Type.CustomType('real', [], 20)]
-                    ]), true, )
+                        ['1', new Type.CustomType('real')],
+                        ['2', new Type.CustomType('real')]
+                    ]), true)
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -4882,10 +4877,10 @@ fun mirror (Point(x,y)) = Point(x,~y);
             expect(state.getStaticValue('Point')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('real', [], 26)],
-                        ['2', new Type.CustomType('real', [], 33)]
-                    ]), true, 31),
-                    new Type.CustomType('point', [], -1)
+                        ['1', new Type.CustomType('real')],
+                        ['2', new Type.CustomType('real')]
+                    ]), true),
+                    new Type.CustomType('point')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -4897,7 +4892,7 @@ fun mirror (Point(x,y)) = Point(x,~y);
                 ['2', new Val.Real(3)]
             ])), 0));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('point', [], -1),
+                new Type.CustomType('point'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -4906,8 +4901,8 @@ fun mirror (Point(x,y)) = Point(x,~y);
             expect(state.getDynamicValue('mirror')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('mirror')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('point', [], -1),
-                    new Type.CustomType('point', [], -1)
+                    new Type.CustomType('point'),
+                    new Type.CustomType('point')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -4932,16 +4927,16 @@ val e = M(A(M(C 2, V "x"), V "y"), A(V "x", C 3));
             expect(state.getDynamicValue('C')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('C')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 20),
-                    new Type.CustomType('exp', [], -1)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('V')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('V')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 11),
-                    new Type.CustomType('exp', [], -1)
+                    new Type.CustomType('string'),
+                    new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -4949,10 +4944,10 @@ val e = M(A(M(C 2, V "x"), V "y"), A(V "x", C 3));
             expect(state.getStaticValue('A')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('exp', [], 42)],
-                        ['2', new Type.CustomType('exp', [], 48)]
-                    ]), true, 46),
-                    new Type.CustomType('exp', [], -1)
+                        ['1', new Type.CustomType('exp')],
+                        ['2', new Type.CustomType('exp')]
+                    ]), true),
+                    new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -4960,10 +4955,10 @@ val e = M(A(M(C 2, V "x"), V "y"), A(V "x", C 3));
             expect(state.getStaticValue('M')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('exp', [], 59)],
-                        ['2', new Type.CustomType('exp', [], 65)]
-                    ]), true, 63),
-                    new Type.CustomType('exp', [], -1)
+                        ['1', new Type.CustomType('exp')],
+                        ['2', new Type.CustomType('exp')]
+                    ]), true),
+                    new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -4994,7 +4989,7 @@ val e = M(A(M(C 2, V "x"), V "y"), A(V "x", C 3));
                 ])), 0)]
             ])), 0));
             expect(state.getStaticValue('e')).toEqualWithType([
-                new Type.CustomType('exp', [], -1),
+                new Type.CustomType('exp'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -5032,9 +5027,9 @@ fun subexps e = e::
             expect(state.getDynamicValue('components')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('components')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('exp', [], -1),
+                    new Type.CustomType('exp'),
                     new Type.CustomType('list', [
-                        new Type.CustomType('exp', [], 42)
+                        new Type.CustomType('exp')
                     ])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -5048,7 +5043,7 @@ fun subexps e = e::
             ]));
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.CustomType('list', [
-                     new Type.CustomType('exp', [], 42)
+                     new Type.CustomType('exp')
                 ]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -5058,9 +5053,9 @@ fun subexps e = e::
             expect(state.getDynamicValue('subexps')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('subexps')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('exp', [], -1),
+                    new Type.CustomType('exp'),
                     new Type.CustomType('list', [
-                        new Type.CustomType('exp', [], -1)
+                        new Type.CustomType('exp')
                     ])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -5119,7 +5114,7 @@ eval env e;
             expect(state.getStaticValue('env')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.CustomType('string'),
-                    new Type.CustomType('int', [])
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -5130,12 +5125,12 @@ eval env e;
             expect(state.getStaticValue('eval')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.FunctionType(
-                        new Type.CustomType('string', [], 11),
-                        new Type.CustomType('int', [], 20)
+                        new Type.CustomType('string'),
+                        new Type.CustomType('int')
                     ),
                     new Type.FunctionType(
-                        new Type.CustomType('exp', [], -1),
-                        new Type.CustomType('int', [], 20)
+                        new Type.CustomType('exp'),
+                        new Type.CustomType('int')
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -5144,7 +5139,7 @@ eval env e;
         ['eval env e;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(104));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 20), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), 0]);
         }]
     ]);
 });
@@ -5192,7 +5187,7 @@ test (Newer 13);
             expect(state.getDynamicValue('Newer')[0]).toEqualWithType(new Val.ExceptionConstructor('Newer', 1));
             expect(state.getStaticValue('Newer')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 19),
+                    new Type.CustomType('int'),
                     new Type.CustomType('exn')
                 ),
                 State.IdentifierStatus.EXCEPTION_CONSTRUCTOR
@@ -5210,7 +5205,7 @@ test (Newer 13);
                     ['1', new Type.CustomType('exn')],
                     ['2', new Type.CustomType('exn')],
                     ['3', new Type.FunctionType(
-                        new Type.CustomType('int', [], 19),
+                        new Type.CustomType('int'),
                         new Type.CustomType('exn')
                     )]
                 ])),
@@ -5222,8 +5217,8 @@ test (Newer 13);
             expect(state.getDynamicValue('test')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('test')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('exn', [], ),
-                    new Type.CustomType('int', [], )
+                    new Type.CustomType('exn'),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -5269,7 +5264,7 @@ fun f x y = if x then y else raise New;
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.CustomType('bool', [], 0),
+                        new Type.CustomType('bool'),
                         new Type.FunctionType(
                             new Type.TypeVariable('\'a'),
                             new Type.TypeVariable('\'a')
@@ -5327,7 +5322,7 @@ fun adjoin env env' x = env' x handle Unbound => env x;
         ['(raise Newer 7) handle Newer x => x;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(7));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 19), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), 0]);
         }],
         ['fun test f = f() handle Newer x => x | Overflow => ~1;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -5336,9 +5331,9 @@ fun adjoin env env' x = env' x handle Unbound => env x;
                 new Type.FunctionType(
                     new Type.FunctionType(
                         new Type.RecordType(new Map()),
-                        new Type.CustomType('int', [], 19)
+                        new Type.CustomType('int')
                     ),
-                    new Type.CustomType('int', [], 19)
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -5346,15 +5341,15 @@ fun adjoin env env' x = env' x handle Unbound => env x;
         ['test (fn () => raise Newer 6);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(6));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 19), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), 0]);
         }],
         ['fun fac n = if n<1 then 1 else n*fac(n-1);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('fac')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('fac')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', []),
-                    new Type.CustomType('int', [])
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -5366,7 +5361,7 @@ fun adjoin env env' x = env' x handle Unbound => env x;
         ['test (fn () => fac 15);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(-1));
-            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int', [], 19), 0]);
+            expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), 0]);
         }],
         ['fun adjoin env env\' x = env\' x handle Unbound => env x;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(state.getDynamicValue('adjoin')).not.toEqualWithType(undefined); // TODO exact value
@@ -5431,10 +5426,10 @@ testOverflow 100000 100000;
             expect(state.getDynamicValue('testOverflow')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('testOverflow')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 0)
+                    new Type.CustomType('int')
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 0)
-                        new Type.CustomType('bool', [], 0)
+                        new Type.CustomType('int')
+                        new Type.CustomType('bool')
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -5497,8 +5492,8 @@ datatype 'a mylist = Nil | Cons of 'a * 'a mylist;
             expect(state.getDynamicValue('Nil')[0]).toEqualWithType(new Val.ValueConstructor('Nil', 0));
             expect(state.getStaticValue('Nil')).toEqualWithType([
                 new Type.TypeVariableBind('\'a', new Type.CustomType('mylist', [
-                    new Type.TypeVariable('\'a', 9)
-                ], -1)),
+                    new Type.TypeVariable('\'a')
+                ])),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Cons')[0]).toEqualWithType(new Val.ValueConstructor('Cons', 1));
@@ -5506,10 +5501,10 @@ datatype 'a mylist = Nil | Cons of 'a * 'a mylist;
                 new Type.TypeVariableBind('\'a',
                     new Type.FunctionType(
                         new Type.RecordType(new Map([
-                            ['1', new Type.TypeVariable('\'a', 35)],
-                            ['2', new Type.CustomType('mylist', [new Type.TypeVariable('\'a', 40)], 40)]
-                        ]), true, 38),
-                        new Type.CustomType('mylist', [new Type.TypeVariable('\'a', 9)], -1)
+                            ['1', new Type.TypeVariable('\'a')],
+                            ['2', new Type.CustomType('mylist', [new Type.TypeVariable('\'a')])]
+                        ]), true),
+                        new Type.CustomType('mylist', [new Type.TypeVariable('\'a')])
                     )
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
@@ -5615,8 +5610,8 @@ val t3 = T[T[t2], t1, t2]; */
             expect(state.getDynamicValue('T')[0]).toEqualWithType(new Val.ValueConstructor('T', 1));
             expect(state.getStaticValue('T')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('tree', [], 21)], 21),
-                    new Type.CustomType('tree', [], -1)
+                    new Type.CustomType('list', [new Type.CustomType('tree')]),
+                    new Type.CustomType('tree')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -5626,7 +5621,7 @@ val t3 = T[T[t2], t1, t2]; */
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('t1')[0]).toEqualWithType(t1);
             expect(state.getStaticValue('t1')).toEqualWithType([
-                new Type.CustomType('tree', [], -1),
+                new Type.CustomType('tree'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -5634,7 +5629,7 @@ val t3 = T[T[t2], t1, t2]; */
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('t2')[0]).toEqualWithType(t2);
             expect(state.getStaticValue('t2')).toEqualWithType([
-                new Type.CustomType('tree', [], -1),
+                new Type.CustomType('tree'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -5642,7 +5637,7 @@ val t3 = T[T[t2], t1, t2]; */
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('t3')[0]).toEqualWithType(t3);
             expect(state.getStaticValue('t3')).toEqualWithType([
-                new Type.CustomType('tree', [], -1),
+                new Type.CustomType('tree'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -5683,7 +5678,7 @@ dst t3 3;
             expect(state.getDynamicValue('arity')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('arity')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -5699,10 +5694,10 @@ dst t3 3;
             expect(state.getDynamicValue('dst')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('dst')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', []),
-                        new Type.CustomType('tree', [], 21)
+                        new Type.CustomType('int'),
+                        new Type.CustomType('tree')
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -5712,7 +5707,7 @@ dst t3 3;
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(t2);
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('tree', [], 21),
+                new Type.CustomType('tree'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]));
         }],
@@ -5741,16 +5736,16 @@ fun shape (C _) = T[]
             expect(state.getDynamicValue('C')[0]).toEqualWithType(new Val.ValueConstructor('C', 1));
             expect(state.getStaticValue('C')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 20),
-                    new Type.CustomType('exp', [], -1)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('V')[0]).toEqualWithType(new Val.ValueConstructor('V', 1));
             expect(state.getStaticValue('V')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 31),
-                    new Type.CustomType('exp', [], -1)
+                    new Type.CustomType('string'),
+                    new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -5758,10 +5753,10 @@ fun shape (C _) = T[]
             expect(state.getStaticValue('A')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1',new Type.CustomType('exp', [], 45)],
-                        ['2',new Type.CustomType('exp', [], 49)]
-                    ]), true, 48),
-                    new Type.CustomType('exp', [], -1)
+                        ['1',new Type.CustomType('exp')],
+                        ['2',new Type.CustomType('exp')]
+                    ]), true),
+                    new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -5769,10 +5764,10 @@ fun shape (C _) = T[]
             expect(state.getStaticValue('M')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1',new Type.CustomType('exp', [], 60)],
-                        ['2',new Type.CustomType('exp', [], 64)]
-                    ]), true, 63),
-                    new Type.CustomType('exp', [], -1)
+                        ['1',new Type.CustomType('exp')],
+                        ['2',new Type.CustomType('exp')]
+                    ]), true),
+                    new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -5782,8 +5777,8 @@ fun shape (C _) = T[]
             expect(state.getDynamicValue('shape')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('shape')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('exp', [], -1),
-                    new Type.CustomType('tree', [], -1)
+                    new Type.CustomType('exp'),
+                    new Type.CustomType('tree')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -5824,10 +5819,10 @@ compareTree(T[T[T[T[T[]]]]], t3);
             expect(state.getStaticValue('compareTree')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1',new Type.CustomType('tree', [], -1)],
-                        ['2',new Type.CustomType('tree', [], -1)]
+                        ['1',new Type.CustomType('tree')],
+                        ['2',new Type.CustomType('tree')]
                     ])),
-                    new Type.CustomType('order', [], -1)
+                    new Type.CustomType('order')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -5836,7 +5831,7 @@ compareTree(T[T[T[T[T[]]]]], t3);
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.ConstructedValue('LESS', undefined));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('order', [], -1),
+                new Type.CustomType('order'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -5844,7 +5839,7 @@ compareTree(T[T[T[T[T[]]]]], t3);
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.ConstructedValue('GREATER', undefined));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('order', [], -1),
+                new Type.CustomType('order'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -5893,9 +5888,9 @@ fun linear (T nil) = true
             expect(state.getDynamicValue('subtree')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('subtree')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.FunctionType(
-                        new Type.CustomType('tree', [], -1),
+                        new Type.CustomType('tree'),
                         new Type.CustomType('bool')
                     )
                 ),
@@ -5917,10 +5912,10 @@ fun linear (T nil) = true
             expect(state.getDynamicValue('count')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('count')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.FunctionType(
-                        new Type.CustomType('tree', [], -1),
-                        new Type.CustomType('int', [])
+                        new Type.CustomType('tree'),
+                        new Type.CustomType('int')
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -5936,7 +5931,7 @@ fun linear (T nil) = true
             expect(state.getDynamicValue('linear')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('linear')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.CustomType('bool')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -5984,10 +5979,10 @@ ast t3 [1,2];
             expect(state.getDynamicValue('ast')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('ast')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.FunctionType(
-                        new Type.CustomType('list', [new Type.CustomType('int')], 0),
-                        new Type.CustomType('tree', [], -1)
+                        new Type.CustomType('list', [new Type.CustomType('int')]),
+                        new Type.CustomType('tree')
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -5997,7 +5992,7 @@ ast t3 [1,2];
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(t1);
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('tree', [], -1),
+                new Type.CustomType('tree'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -6005,7 +6000,7 @@ ast t3 [1,2];
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(t2);
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('tree', [], -1),
+                new Type.CustomType('tree'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -6050,7 +6045,7 @@ depth t3;
             expect(state.getDynamicValue('size')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('size')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -6066,7 +6061,7 @@ depth t3;
             expect(state.getDynamicValue('depth')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('depth')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -6101,11 +6096,11 @@ val size = fold (foldl op+ 1);
                     '\'a',
                     new Type.FunctionType(
                         new Type.FunctionType(
-                            new Type.CustomType('list', [new Type.TypeVariable('\'a')], 0)
+                            new Type.CustomType('list', [new Type.TypeVariable('\'a')])
                             new Type.TypeVariable('\'a')
                         ),
                         new Type.FunctionType(
-                            new Type.CustomType('tree', [], -1)
+                            new Type.CustomType('tree')
                             new Type.TypeVariable('\'a')
                         )
                    )
@@ -6118,7 +6113,7 @@ val size = fold (foldl op+ 1);
             expect(state.getDynamicValue('size')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('size')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -6144,7 +6139,7 @@ fun post (T ts) = List.concat (map post ts) @ [length ts];
             expect(state.getDynamicValue('pre')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('pre')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.CustomType('list', [new Type.CustomType('int')])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -6155,7 +6150,7 @@ fun post (T ts) = List.concat (map post ts) @ [length ts];
             expect(state.getDynamicValue('post')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('post')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.CustomType('list', [new Type.CustomType('int')])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -6188,7 +6183,7 @@ fun balanced t = (depthb t ; true) handle Unbalanced => false;
             expect(state.getDynamicValue('depth\'')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('depth\'')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -6224,7 +6219,7 @@ fun balanced t = (depthb t ; true) handle Unbalanced => false;
             expect(state.getDynamicValue('depthb')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('depthb')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -6235,7 +6230,7 @@ fun balanced t = (depthb t ; true) handle Unbalanced => false;
             expect(state.getDynamicValue('balanced')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('balanced')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.CustomType('bool')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -6270,7 +6265,7 @@ and member x (T ys) = List.exists (eqset x) ys;
             expect(state.getDynamicValue('strict')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('strict')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('tree', [], -1)], 0),
+                    new Type.CustomType('list', [new Type.CustomType('tree')]),
                     new Type.CustomType('bool')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -6281,7 +6276,7 @@ and member x (T ys) = List.exists (eqset x) ys;
             expect(state.getDynamicValue('directed')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('directed')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.CustomType('bool')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -6292,9 +6287,9 @@ and member x (T ys) = List.exists (eqset x) ys;
             expect(state.getDynamicValue('eqset')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('eqset')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.FunctionType(
-                        new Type.CustomType('tree', [], -1),
+                        new Type.CustomType('tree'),
                         new Type.CustomType('bool')
                     )
                 ),
@@ -6303,9 +6298,9 @@ and member x (T ys) = List.exists (eqset x) ys;
             expect(state.getDynamicValue('subset')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('subset')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.FunctionType(
-                        new Type.CustomType('tree', [], -1),
+                        new Type.CustomType('tree'),
                         new Type.CustomType('bool')
                     )
                 ),
@@ -6314,9 +6309,9 @@ and member x (T ys) = List.exists (eqset x) ys;
             expect(state.getDynamicValue('member')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('member')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.FunctionType(
-                        new Type.CustomType('tree', [], -1),
+                        new Type.CustomType('tree'),
                         new Type.CustomType('bool')
                     )
                 ),
@@ -6388,14 +6383,14 @@ sameshape t2 (L(1, [L(2,[]), L(7,[]), L(7,[])]));
                     '\'a',
                     new Type.FunctionType(
                         new Type.RecordType(new Map([
-                            ['1', new Type.TypeVariable('\'a', 23)],
+                            ['1', new Type.TypeVariable('\'a')],
                             ['2', new Type.CustomType('list', [
                                 new Type.CustomType('ltr', [
-                                    new Type.TypeVariable('\'a', 28)
-                                ], 28)
-                            ], 28)]
-                        ]), true, 26),
-                        new Type.CustomType('ltr', [new Type.TypeVariable('\'a', 9)], -1)
+                                    new Type.TypeVariable('\'a')
+                                ])
+                            ])]
+                        ]), true),
+                        new Type.CustomType('ltr', [new Type.TypeVariable('\'a')])
                     )
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
@@ -6405,7 +6400,7 @@ sameshape t2 (L(1, [L(2,[]), L(7,[]), L(7,[])]));
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('t1')[0]).toEqualWithType(t1);
             expect(state.getStaticValue('t1')).toEqualWithType([
-                new Type.CustomType('ltr', [new Type.CustomType('int')], -1),
+                new Type.CustomType('ltr', [new Type.CustomType('int')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -6413,7 +6408,7 @@ sameshape t2 (L(1, [L(2,[]), L(7,[]), L(7,[])]));
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('t2')[0]).toEqualWithType(t2);
             expect(state.getStaticValue('t2')).toEqualWithType([
-                new Type.CustomType('ltr', [new Type.CustomType('int')], -1),
+                new Type.CustomType('ltr', [new Type.CustomType('int')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -6421,7 +6416,7 @@ sameshape t2 (L(1, [L(2,[]), L(7,[]), L(7,[])]));
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('t3')[0]).toEqualWithType(t3);
             expect(state.getStaticValue('t3')).toEqualWithType([
-                new Type.CustomType('ltr', [new Type.CustomType('int')], -1),
+                new Type.CustomType('ltr', [new Type.CustomType('int')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -6432,7 +6427,7 @@ sameshape t2 (L(1, [L(2,[]), L(7,[]), L(7,[])]));
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.CustomType('ltr', [new Type.TypeVariable('\'a', 9)], -1),
+                        new Type.CustomType('ltr', [new Type.TypeVariable('\'a')]),
                         new Type.TypeVariable('\'a')
                     )
                 ),
@@ -6446,8 +6441,8 @@ sameshape t2 (L(1, [L(2,[]), L(7,[]), L(7,[])]));
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.CustomType('ltr', [new Type.TypeVariable('\'a', 9)], -1),
-                        new Type.CustomType('tree', [], -1)
+                        new Type.CustomType('ltr', [new Type.TypeVariable('\'a')]),
+                        new Type.CustomType('tree')
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -6461,7 +6456,7 @@ sameshape t2 (L(1, [L(2,[]), L(7,[]), L(7,[])]));
                 new Val.ConstructedValue('T', createList([]), 0)
             ]), 0));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('tree', [], -1),
+                new Type.CustomType('tree'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -6474,9 +6469,9 @@ sameshape t2 (L(1, [L(2,[]), L(7,[]), L(7,[])]));
                         new Type.TypeVariableBind(
                         '\'b',
                         new Type.FunctionType(
-                            new Type.CustomType('ltr', [new Type.TypeVariable('\'a', 9)], -1),
+                            new Type.CustomType('ltr', [new Type.TypeVariable('\'a')]),
                             new Type.FunctionType(
-                                new Type.CustomType('ltr', [new Type.TypeVariable('\'b', 9)], -1),
+                                new Type.CustomType('ltr', [new Type.TypeVariable('\'b')]),
                                 new Type.CustomType('bool')
                             )
                         )
@@ -6532,76 +6527,76 @@ val e1 = Opr(Leq, Id"n", Con(IC 0));
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('False')[0]).toEqualWithType(new Val.ValueConstructor('False', 0));
             expect(state.getStaticValue('False')).toEqualWithType([
-                new Type.CustomType('con', [], -1),
+                new Type.CustomType('con'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('True')[0]).toEqualWithType(new Val.ValueConstructor('True', 0));
             expect(state.getStaticValue('True')).toEqualWithType([
-                new Type.CustomType('con', [], -1),
+                new Type.CustomType('con'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('IC')[0]).toEqualWithType(new Val.ValueConstructor('IC', 1));
             expect(state.getStaticValue('IC')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 36)
-                    new Type.CustomType('con', [], -1)
+                    new Type.CustomType('int')
+                    new Type.CustomType('con')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Add')[0]).toEqualWithType(new Val.ValueConstructor('Add', 0));
             expect(state.getStaticValue('Add')).toEqualWithType([
-                new Type.CustomType('opr', [], -1),
+                new Type.CustomType('opr'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Sub')[0]).toEqualWithType(new Val.ValueConstructor('Sub', 0));
             expect(state.getStaticValue('Sub')).toEqualWithType([
-                new Type.CustomType('opr', [], -1),
+                new Type.CustomType('opr'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Mul')[0]).toEqualWithType(new Val.ValueConstructor('Mul', 0));
             expect(state.getStaticValue('Mul')).toEqualWithType([
-                new Type.CustomType('opr', [], -1),
+                new Type.CustomType('opr'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Leq')[0]).toEqualWithType(new Val.ValueConstructor('Leq', 0));
             expect(state.getStaticValue('Leq')).toEqualWithType([
-                new Type.CustomType('opr', [], -1),
+                new Type.CustomType('opr'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Bool')[0]).toEqualWithType(new Val.ValueConstructor('Bool', 0));
             expect(state.getStaticValue('Bool')).toEqualWithType([
-                new Type.CustomType('ty', [], -1),
+                new Type.CustomType('ty'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Int')[0]).toEqualWithType(new Val.ValueConstructor('Int', 0));
             expect(state.getStaticValue('Int')).toEqualWithType([
-                new Type.CustomType('ty', [], -1),
+                new Type.CustomType('ty'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Arrow')[0]).toEqualWithType(new Val.ValueConstructor('Arrow', 1));
             expect(state.getStaticValue('Arrow')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1',new Type.CustomType('ty', [], 200)],
-                        ['2',new Type.CustomType('ty', [], 205)]
-                    ]), true, 203),
-                    new Type.CustomType('ty', [], -1)
+                        ['1',new Type.CustomType('ty')],
+                        ['2',new Type.CustomType('ty')]
+                    ]), true),
+                    new Type.CustomType('ty')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Con')[0]).toEqualWithType(new Val.ValueConstructor('Con', 1));
             expect(state.getStaticValue('Con')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('con', [], 273),
-                    new Type.CustomType('exp', [], -1)
+                    new Type.CustomType('con'),
+                    new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Id')[0]).toEqualWithType(new Val.ValueConstructor('Id', 1));
             expect(state.getStaticValue('Id')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 66),
-                    new Type.CustomType('exp', [], -1)
+                    new Type.CustomType('string'),
+                    new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -6609,11 +6604,11 @@ val e1 = Opr(Leq, Id"n", Con(IC 0));
             expect(state.getStaticValue('Opr')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1',new Type.CustomType('opr', [], 333)],
-                        ['2',new Type.CustomType('exp', [], 339)],
-                        ['3',new Type.CustomType('exp', [], 345)]
-                    ]), true, 337),
-                    new Type.CustomType('exp', [], -1)
+                        ['1',new Type.CustomType('opr')],
+                        ['2',new Type.CustomType('exp')],
+                        ['3',new Type.CustomType('exp')]
+                    ]), true),
+                    new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -6621,11 +6616,11 @@ val e1 = Opr(Leq, Id"n", Con(IC 0));
             expect(state.getStaticValue('If')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1',new Type.CustomType('exp', [], 386)],
-                        ['2',new Type.CustomType('exp', [], 392)],
-                        ['3',new Type.CustomType('exp', [], 398)]
-                    ]), true, 390),
-                    new Type.CustomType('exp', [], -1)
+                        ['1',new Type.CustomType('exp')],
+                        ['2',new Type.CustomType('exp')],
+                        ['3',new Type.CustomType('exp')]
+                    ]), true),
+                    new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -6633,11 +6628,11 @@ val e1 = Opr(Leq, Id"n", Con(IC 0));
             expect(state.getStaticValue('Abs')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1',new Type.CustomType('string', [], 66)],
-                        ['2',new Type.CustomType('ty', [], 436)],
-                        ['3',new Type.CustomType('exp', [], 441)]
-                    ]), true, 434),
-                    new Type.CustomType('exp', [], -1)
+                        ['1',new Type.CustomType('string')],
+                        ['2',new Type.CustomType('ty')],
+                        ['3',new Type.CustomType('exp')]
+                    ]), true),
+                    new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -6645,10 +6640,10 @@ val e1 = Opr(Leq, Id"n", Con(IC 0));
             expect(state.getStaticValue('App')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1',new Type.CustomType('exp', [], 474)],
-                        ['2',new Type.CustomType('exp', [], 480)],
-                    ]), true, 478),
-                    new Type.CustomType('exp', [], -1)
+                        ['1',new Type.CustomType('exp')],
+                        ['2',new Type.CustomType('exp')],
+                    ]), true),
+                    new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -6661,7 +6656,7 @@ val e1 = Opr(Leq, Id"n", Con(IC 0));
                 new Val.ConstructedValue('Con', new Val.ConstructedValue('IC', new Val.Integer(0), 0), 0)
             ]), 0));
             expect(state.getStaticValue('e1')).toEqualWithType([
-                new Type.CustomType('exp', [], -1),
+                new Type.CustomType('exp'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -6781,15 +6776,15 @@ elab' empty (Id "x");
             expect(state.getDynamicValue('Unbound')[0]).toEqualWithType(new Val.ExceptionConstructor('Unbound', 1));
             expect(state.getStaticValue('Unbound')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 66),
-                    new Type.CustomType('exn', [], 0)
+                    new Type.CustomType('string'),
+                    new Type.CustomType('exn')
                 ),
                 State.IdentifierStatus.EXCEPTION_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('empty')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('empty')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 66),
+                    new Type.CustomType('string'),
                     new Type.AnyType()
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -6823,28 +6818,28 @@ elab' empty (Id "x");
             expect(state.getDynamicValue('Error')[0]).toEqualWithType(new Val.ExceptionConstructor('Error', 1));
             expect(state.getStaticValue('Error')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 163),
-                    new Type.CustomType('exn', [], 0)
+                    new Type.CustomType('string'),
+                    new Type.CustomType('exn')
                 ),
                 State.IdentifierStatus.EXCEPTION_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('elabCon')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('elabCon')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('con', [], -1),
-                    new Type.CustomType('ty', [], -1)
+                    new Type.CustomType('con'),
+                    new Type.CustomType('ty')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
             expect(state.getDynamicValue('elabOpr')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('elabOpr')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('opr', [], -1),
+                    new Type.CustomType('opr'),
                     new Type.FunctionType(
-                        new Type.CustomType('ty', [], -1),
+                        new Type.CustomType('ty'),
                         new Type.FunctionType(
-                            new Type.CustomType('ty', [], -1),
-                            new Type.CustomType('ty', [], -1)
+                            new Type.CustomType('ty'),
+                            new Type.CustomType('ty')
                         )
                     )
                 ),
@@ -6854,12 +6849,12 @@ elab' empty (Id "x");
             expect(state.getStaticValue('elab')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.FunctionType(
-                        new Type.CustomType('string', [], 66),
-                        new Type.CustomType('ty', [], 436),
+                        new Type.CustomType('string'),
+                        new Type.CustomType('ty'),
                     ),
                     new Type.FunctionType(
-                        new Type.CustomType('exp', [], -1),
-                        new Type.CustomType('ty', [], -1),
+                        new Type.CustomType('exp'),
+                        new Type.CustomType('ty'),
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -6870,8 +6865,8 @@ elab' empty (Id "x");
             expect(state.getDynamicValue('f')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('f')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 66),
-                    new Type.CustomType('ty', [], -1),
+                    new Type.CustomType('string'),
+                    new Type.CustomType('ty'),
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -6880,7 +6875,7 @@ elab' empty (Id "x");
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.ConstructedValue('Bool', undefined, 0));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('ty', [], -1),
+                new Type.CustomType('ty'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -6888,7 +6883,7 @@ elab' empty (Id "x");
             expect(hasThrown).toEqual(true);
             expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Unbound', new Val.StringValue('z')));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('ty', [], -1),
+                new Type.CustomType('ty'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -6897,8 +6892,8 @@ elab' empty (Id "x");
             expect(state.getDynamicValue('f')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('f')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 66),
-                    new Type.CustomType('ty', [], -1),
+                    new Type.CustomType('string'),
+                    new Type.CustomType('ty'),
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -6915,7 +6910,7 @@ elab' empty (Id "x");
                 ]), 0)
             ]) 0));
             expect(state.getStaticValue('e')).toEqualWithType([
-                new Type.CustomType('exp', [], -1),
+                new Type.CustomType('exp'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -6926,7 +6921,7 @@ elab' empty (Id "x");
                 new Val.ConstructedValue('Bool', undefined, 0)
             ]), 0));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('ty', [], -1),
+                new Type.CustomType('ty'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -6935,16 +6930,16 @@ elab' empty (Id "x");
             expect(state.getDynamicValue('T')[0]).toEqualWithType(new Val.ValueConstructor('T', 1));
             expect(state.getStaticValue('T')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('ty', [], 21),
-                    new Type.CustomType('elab', [], -1)
+                    new Type.CustomType('ty'),
+                    new Type.CustomType('elab')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('SE')[0]).toEqualWithType(new Val.ValueConstructor('SE', 1));
             expect(state.getStaticValue('SE')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 32),
-                    new Type.CustomType('elab', [], -1)
+                    new Type.CustomType('string'),
+                    new Type.CustomType('elab')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -6955,12 +6950,12 @@ elab' empty (Id "x");
             expect(state.getStaticValue('elab\'')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.FunctionType(
-                        new Type.CustomType('string', [], 66)
-                        new Type.CustomType('ty', [], 436)
+                        new Type.CustomType('string')
+                        new Type.CustomType('ty')
                     ),
                     new Type.FunctionType(
-                        new Type.CustomType('exp', [], -1)
-                        new Type.CustomType('elab', [], -1)
+                        new Type.CustomType('exp')
+                        new Type.CustomType('elab')
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -6979,7 +6974,7 @@ elab' empty (Id "x");
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.ConstructedValue('SE', new Val.StringValue("Error T App2"), 0));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('elab', [], -1),
+                new Type.CustomType('elab'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -6987,7 +6982,7 @@ elab' empty (Id "x");
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.ConstructedValue('SE', new Val.StringValue("Unbound x"), 0));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('elab', [], -1),
+                new Type.CustomType('elab'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -7099,8 +7094,8 @@ eval f e;
             expect(state.getDynamicValue('IV')[0]).toEqualWithType(new Val.ValueConstructor('IV', 1));
             expect(state.getStaticValue('IV')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 27),
-                    new Type.CustomType('value', [], -1)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('value')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -7108,34 +7103,34 @@ eval f e;
             expect(state.getStaticValue('Proc')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1',new Type.CustomType('string', [], 66)],
-                        ['2',new Type.CustomType('exp', [], 48)],
+                        ['1',new Type.CustomType('string')],
+                        ['2',new Type.CustomType('exp')],
                         ['3',new Type.FunctionType(
-                            new Type.CustomType('string', [], 66),
-                            new Type.CustomType('value', [], 54)
-                        , 17)]
-                    ]), true, 46),
-                    new Type.CustomType('value', [], -1)
+                            new Type.CustomType('string'),
+                            new Type.CustomType('value')
+                        )]
+                    ]), true),
+                    new Type.CustomType('value')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
                 ]);
             expect(state.getDynamicValue('evalCon')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('evalCon')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('con', [], -1),
-                    new Type.CustomType('value', [], -1)
+                    new Type.CustomType('con'),
+                    new Type.CustomType('value')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
             expect(state.getDynamicValue('evalOpr')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('evalOpr')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('opr', [], -1),
+                    new Type.CustomType('opr'),
                     new Type.FunctionType(
-                        new Type.CustomType('value', [], -1),
+                        new Type.CustomType('value'),
                         new Type.FunctionType(
-                            new Type.CustomType('value', [], -1),
-                            new Type.CustomType('value', [], -1)
+                            new Type.CustomType('value'),
+                            new Type.CustomType('value')
                         )
                     )
                 ),
@@ -7145,13 +7140,12 @@ eval f e;
             expect(state.getStaticValue('eval')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.FunctionType(
-                        new Type.CustomType('string', [], 66),
-                        new Type.CustomType('value', [], 54),
-                        17
+                        new Type.CustomType('string'),
+                        new Type.CustomType('value')
                     ),
                     new Type.FunctionType(
-                        new Type.CustomType('exp', [], -1),
-                        new Type.CustomType('value', [], -1)
+                        new Type.CustomType('exp'),
+                        new Type.CustomType('value')
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -7162,8 +7156,8 @@ eval f e;
             expect(state.getDynamicValue('f')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('f')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 66),
-                    new Type.CustomType('value', [], -1)
+                    new Type.CustomType('string'),
+                    new Type.CustomType('value')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -7176,7 +7170,7 @@ eval f e;
                 new Val.ConstructedValue('Con', new Val.ConstructedValue('IC', new Val.Integer(7), 0), 0),
             ]), 0));
             expect(state.getStaticValue('e')).toEqualWithType([
-                new Type.CustomType('exp', [], -1),
+                new Type.CustomType('exp'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -7184,7 +7178,7 @@ eval f e;
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.ConstructedValue('IV', new Val.Integer(1), 0));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('value', [], -1),
+                new Type.CustomType('value'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -7229,41 +7223,41 @@ lex (explode " intbool->int ");
             expect(state.getDynamicValue('Error')[0]).toEqualWithType(new Val.ExceptionConstructor('Error', 1));
             expect(state.getStaticValue('Error')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 19),
-                    new Type.CustomType('exn', [], 0)
+                    new Type.CustomType('string'),
+                    new Type.CustomType('exn')
                 ),
                 State.IdentifierStatus.EXCEPTION_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('BOOL')[0]).toEqualWithType(new Val.ValueConstructor('BOOL', 0));
             expect(state.getStaticValue('BOOL')).toEqualWithType([
-                new Type.CustomType('token', [], -1),
+                new Type.CustomType('token'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('INT')[0]).toEqualWithType(new Val.ValueConstructor('INT', 0));
             expect(state.getStaticValue('INT')).toEqualWithType([
-                new Type.CustomType('token', [], -1),
+                new Type.CustomType('token'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('ARROW')[0]).toEqualWithType(new Val.ValueConstructor('ARROW', 0));
             expect(state.getStaticValue('ARROW')).toEqualWithType([
-                new Type.CustomType('token', [], -1),
+                new Type.CustomType('token'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('LPAR')[0]).toEqualWithType(new Val.ValueConstructor('LPAR', 0));
             expect(state.getStaticValue('LPAR')).toEqualWithType([
-                new Type.CustomType('token', [], -1),
+                new Type.CustomType('token'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('RPAR')[0]).toEqualWithType(new Val.ValueConstructor('RPAR', 0));
             expect(state.getStaticValue('RPAR')).toEqualWithType([
-                new Type.CustomType('token', [], -1),
+                new Type.CustomType('token'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('lex')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('lex')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.CustomType('list', [new Type.CustomType('char')]),
-                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)])
+                    new Type.CustomType('list', [new Type.CustomType('token')])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -7280,7 +7274,7 @@ lex (explode " intbool->int ");
                 new Val.ConstructedValue('INT', undefined, 0)
             ]));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('token', [], -1)]),
+                new Type.CustomType('list', [new Type.CustomType('token')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -7293,7 +7287,7 @@ lex (explode " intbool->int ");
                 new Val.ConstructedValue('INT', undefined, 0)
             ]));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('token', [], -1)]),
+                new Type.CustomType('list', [new Type.CustomType('token')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -7337,7 +7331,7 @@ parse (rep (C(B A, C(A, A))));
             expect(state.getDynamicValue('Error')[0]).toEqualWithType(new Val.ExceptionConstructor('Error', 1));
             expect(state.getStaticValue('Error')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 19),
+                    new Type.CustomType('string'),
                     new Type.CustomType('exn')
                 ),
                 State.IdentifierStatus.EXCEPTION_CONSTRUCTOR
@@ -7380,14 +7374,14 @@ parse (rep (C(B A, C(A, A))));
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('A')[0]).toEqualWithType(new Val.ValueConstructor('A', 0));
             expect(state.getStaticValue('A')).toEqualWithType([
-                new Type.CustomType('tree', [], -1),
+                new Type.CustomType('tree'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('B')[0]).toEqualWithType(new Val.ValueConstructor('B', 1));
             expect(state.getStaticValue('B')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], 25),
-                    new Type.CustomType('tree', [], -1)
+                    new Type.CustomType('tree'),
+                    new Type.CustomType('tree')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -7395,10 +7389,10 @@ parse (rep (C(B A, C(A, A))));
             expect(state.getStaticValue('C')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1',new Type.CustomType('tree', [], 37)],
-                        ['2',new Type.CustomType('tree', [], 44)]
-                    ]), true, 42),
-                    new Type.CustomType('tree', [], -1)
+                        ['1',new Type.CustomType('tree')],
+                        ['2',new Type.CustomType('tree')]
+                    ]), true),
+                    new Type.CustomType('tree')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -7408,7 +7402,7 @@ parse (rep (C(B A, C(A, A))));
             expect(state.getDynamicValue('rep')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('rep')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('tree', [], -1),
+                    new Type.CustomType('tree'),
                     new Type.CustomType('list', [new Type.CustomType('int')])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -7436,7 +7430,7 @@ parse (rep (C(B A, C(A, A))));
                 new Type.FunctionType(
                     new Type.CustomType('list', [new Type.CustomType('int')]),
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('tree', [], -1)],
+                        ['1', new Type.CustomType('tree')],
                         ['2', new Type.CustomType('list', [new Type.CustomType('int')])]
                     ]))
                 ),
@@ -7454,7 +7448,7 @@ parse (rep (C(B A, C(A, A))));
             ]);
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.RecordType(new Map([
-                     ['1', new Type.CustomType('tree', [], -1)],
+                     ['1', new Type.CustomType('tree')],
                      ['2', new Type.CustomType('list', [new Type.CustomType('int')])]
                 ])),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -7474,7 +7468,7 @@ parse (rep (C(B A, C(A, A))));
             ]);
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.RecordType(new Map([
-                     ['1', new Type.CustomType('tree', [], -1)],
+                     ['1', new Type.CustomType('tree')],
                      ['2', new Type.CustomType('list', [new Type.CustomType('int')])]
                 ])),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -7603,16 +7597,16 @@ and pty (BOOL::tr) = (Bool,tr)
             expect(state.getDynamicValue('ty')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('ty')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
-                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)
+                    new Type.CustomType('list', [new Type.CustomType('token')]),
+                    new Type.CustomType('list', [new Type.CustomType('token')])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
             expect(state.getDynamicValue('pty')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('pty')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
-                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)
+                    new Type.CustomType('list', [new Type.CustomType('token')]),
+                    new Type.CustomType('list', [new Type.CustomType('token')])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -7623,7 +7617,7 @@ and pty (BOOL::tr) = (Bool,tr)
                 new Val.ConstructedValue('RPAR', undefined, 0)
             ]));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
+                new Type.CustomType('list', [new Type.CustomType('token')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -7649,10 +7643,10 @@ and pty (BOOL::tr) = (Bool,tr)
             expect(state.getDynamicValue('ty')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('ty')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
+                    new Type.CustomType('list', [new Type.CustomType('token')]),
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('ty', [], -1)],
-                        ['2', new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)]
+                        ['1', new Type.CustomType('ty')],
+                        ['2', new Type.CustomType('list', [new Type.CustomType('token')])]
                     ]), true, 0)
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -7660,10 +7654,10 @@ and pty (BOOL::tr) = (Bool,tr)
             expect(state.getDynamicValue('pty')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('pty')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
+                    new Type.CustomType('list', [new Type.CustomType('token')]),
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('ty', [], -1)],
-                        ['2', new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)]
+                        ['1', new Type.CustomType('ty')],
+                        ['2', new Type.CustomType('list', [new Type.CustomType('token')])]
                     ]), true, 0)
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -7698,8 +7692,8 @@ and pty (BOOL::tr) = (Bool,tr)
             );
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.RecordType(new Map([
-                     ['1', new Type.CustomType('ty', [], -1)],
-                     ['2', new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)]
+                     ['1', new Type.CustomType('ty')],
+                     ['2', new Type.CustomType('list', [new Type.CustomType('token')])]
                 ]), true, 0)
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -7718,7 +7712,7 @@ and pty (BOOL::tr) = (Bool,tr)
                 ]), 0),
             ]), 0));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('ty', [], -1),
+                new Type.CustomType('ty'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -7732,7 +7726,7 @@ and pty (BOOL::tr) = (Bool,tr)
                 ]), 0),
             ]), 0));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('ty', [], -1),
+                new Type.CustomType('ty'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -7748,10 +7742,10 @@ and pty (BOOL::tr) = (Bool,tr)
             expect(state.getDynamicValue('ty')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('ty')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
+                    new Type.CustomType('list', [new Type.CustomType('token')]),
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('ty', [], -1)],
-                        ['2', new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)]
+                        ['1', new Type.CustomType('ty')],
+                        ['2', new Type.CustomType('list', [new Type.CustomType('token')])]
                     ]), true, 0)
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -7759,10 +7753,10 @@ and pty (BOOL::tr) = (Bool,tr)
             expect(state.getDynamicValue('pty')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('pty')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
+                    new Type.CustomType('list', [new Type.CustomType('token')]),
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('ty', [], -1)],
-                        ['2', new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)]
+                        ['1', new Type.CustomType('ty')],
+                        ['2', new Type.CustomType('list', [new Type.CustomType('token')])]
                     ]), true, 0)
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -7833,64 +7827,64 @@ lexInt ~1 34 (explode "72 Katzen");
             expect(state.getDynamicValue('Error')[0]).toEqualWithType(new Val.ExceptionConstructor('Error', 1));
             expect(state.getStaticValue('Error')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 19),
-                    new Type.CustomType('exn', [], 0)
+                    new Type.CustomType('string'),
+                    new Type.CustomType('exn')
                 ),
                 State.IdentifierStatus.EXCEPTION_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('ADD')[0]).toEqualWithType(new Val.ValueConstructor('ADD', 0));
             expect(state.getStaticValue('ADD')).toEqualWithType([
-                new Type.CustomType('token', [], -1),
+                new Type.CustomType('token'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('MUL')[0]).toEqualWithType(new Val.ValueConstructor('MUL', 0));
             expect(state.getStaticValue('MUL')).toEqualWithType([
-                new Type.CustomType('token', [], -1),
+                new Type.CustomType('token'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('LPAR')[0]).toEqualWithType(new Val.ValueConstructor('LPAR', 0));
             expect(state.getStaticValue('LPAR')).toEqualWithType([
-                new Type.CustomType('token', [], -1),
+                new Type.CustomType('token'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('RPAR')[0]).toEqualWithType(new Val.ValueConstructor('RPAR', 0));
             expect(state.getStaticValue('RPAR')).toEqualWithType([
-                new Type.CustomType('token', [], -1),
+                new Type.CustomType('token'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('ICON')[0]).toEqualWithType(new Val.ValueConstructor('ICON', 1));
             expect(state.getStaticValue('ICON')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 77)
-                    new Type.CustomType('token', [], -1)
+                    new Type.CustomType('int')
+                    new Type.CustomType('token')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('ID')[0]).toEqualWithType(new Val.ValueConstructor('ID', 1));
             expect(state.getStaticValue('ID')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 89)
-                    new Type.CustomType('token', [], -1)
+                    new Type.CustomType('string')
+                    new Type.CustomType('token')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('lex')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('lex')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('char', [], 0)], 0)
-                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)
+                    new Type.CustomType('list', [new Type.CustomType('char')])
+                    new Type.CustomType('list', [new Type.CustomType('token')])
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
             expect(state.getDynamicValue('lexInt')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('lexInt')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 77),
+                    new Type.CustomType('int'),
                     new Type.FunctionType(
-                        new Type.CustomType('int', [], 77)
+                        new Type.CustomType('int')
                         new Type.FunctionType(
-                            new Type.CustomType('list', [new Type.CustomType('char', [], 0)], 0)
-                            new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)
+                            new Type.CustomType('list', [new Type.CustomType('char')])
+                            new Type.CustomType('list', [new Type.CustomType('token')])
                         )
                     )
                 ),
@@ -7899,10 +7893,10 @@ lexInt ~1 34 (explode "72 Katzen");
             expect(state.getDynamicValue('lexId')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('lexId')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('char')], 31),
+                    new Type.CustomType('list', [new Type.CustomType('char')]),
                     new Type.FunctionType(
-                        new Type.CustomType('list', [new Type.CustomType('char')], 0)
-                        new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)
+                        new Type.CustomType('list', [new Type.CustomType('char')])
+                        new Type.CustomType('list', [new Type.CustomType('token')])
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -7915,7 +7909,7 @@ lexInt ~1 34 (explode "72 Katzen");
                 new Val.ConstructedValue('ICON', new Val.Integer(1), 0)
             ]));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
+                new Type.CustomType('list', [new Type.CustomType('token')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -7926,7 +7920,7 @@ lexInt ~1 34 (explode "72 Katzen");
                 new Val.ConstructedValue('ID', new Val.StringValue('two'), 0)
             ]));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
+                new Type.CustomType('list', [new Type.CustomType('token')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -7936,7 +7930,7 @@ lexInt ~1 34 (explode "72 Katzen");
                 new Val.ConstructedValue('ID', new Val.StringValue('onetwo'), 0),
             ]));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
+                new Type.CustomType('list', [new Type.CustomType('token')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -7947,7 +7941,7 @@ lexInt ~1 34 (explode "72 Katzen");
                 new Val.ConstructedValue('ICON', new Val.Integer(5), 0)
             ]));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
+                new Type.CustomType('list', [new Type.CustomType('token')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -7958,7 +7952,7 @@ lexInt ~1 34 (explode "72 Katzen");
                 new Val.ConstructedValue('ICON', new Val.Integer(5), 0)
             ]));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
+                new Type.CustomType('list', [new Type.CustomType('token')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -7969,7 +7963,7 @@ lexInt ~1 34 (explode "72 Katzen");
                 new Val.ConstructedValue('ID', new Val.StringValue('Katzen'), 0)
             ]));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
+                new Type.CustomType('list', [new Type.CustomType('token')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -7980,7 +7974,7 @@ lexInt ~1 34 (explode "72 Katzen");
                 new Val.ConstructedValue('ID', new Val.StringValue('Katzen'), 0)
             ]));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
+                new Type.CustomType('list', [new Type.CustomType('token')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -8092,16 +8086,16 @@ parse exp (lex (explode "2*x+y+(z+u)"));
             expect(state.getDynamicValue('Con')[0]).toEqualWithType(new Val.ValueConstructor('Con', 1));
             expect(state.getStaticValue('Con')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 22),
-                    new Type.CustomType('exp', [], -1)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('exp')
                 )
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('Id')[0]).toEqualWithType(new Val.ValueConstructor('Id', 1));
             expect(state.getStaticValue('Id')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 34),
-                    new Type.CustomType('exp', [], -1)
+                    new Type.CustomType('string'),
+                    new Type.CustomType('exp')
                 )
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -8109,10 +8103,10 @@ parse exp (lex (explode "2*x+y+(z+u)"));
             expect(state.getStaticValue('Sum')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('exp', [], 50)],
-                        ['2', new Type.CustomType('exp', [], 56)]
-                    ]), true, 54)
-                    new Type.CustomType('exp', [], -1)
+                        ['1', new Type.CustomType('exp')],
+                        ['2', new Type.CustomType('exp')]
+                    ]), true)
+                    new Type.CustomType('exp')
                 )
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -8120,20 +8114,20 @@ parse exp (lex (explode "2*x+y+(z+u)"));
             expect(state.getStaticValue('Pro')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('exp', [], 71)],
-                        ['2', new Type.CustomType('exp', [], 77)]
-                    ]), true, 75)
-                    new Type.CustomType('exp', [], -1)
+                        ['1', new Type.CustomType('exp')],
+                        ['2', new Type.CustomType('exp')]
+                    ]), true)
+                    new Type.CustomType('exp')
                 )
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('exp')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('exp')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
+                    new Type.CustomType('list', [new Type.CustomType('token')]),
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('exp', [], 50)],
-                        ['2', new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)]
+                        ['1', new Type.CustomType('exp')],
+                        ['2', new Type.CustomType('list', [new Type.CustomType('token')])]
                     ]))
                 )
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -8141,10 +8135,10 @@ parse exp (lex (explode "2*x+y+(z+u)"));
             expect(state.getDynamicValue('mexp')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('mexp')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
+                    new Type.CustomType('list', [new Type.CustomType('token')]),
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('exp', [], 71)],
-                        ['2', new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)]
+                        ['1', new Type.CustomType('exp')],
+                        ['2', new Type.CustomType('list', [new Type.CustomType('token')])]
                     ]))
                 )
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -8152,10 +8146,10 @@ parse exp (lex (explode "2*x+y+(z+u)"));
             expect(state.getDynamicValue('pexp')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('pexp')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0),
+                    new Type.CustomType('list', [new Type.CustomType('token')]),
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('exp', [], 50)],
-                        ['2', new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)]
+                        ['1', new Type.CustomType('exp')],
+                        ['2', new Type.CustomType('list', [new Type.CustomType('token')])]
                     ])),
                 )
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -8178,8 +8172,8 @@ parse exp (lex (explode "2*x+y+(z+u)"));
             ]));
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.RecordType(new Map([
-                    ['1', new Type.CustomType('exp', [], 71)],
-                    ['2', new Type.CustomType('list', [new Type.CustomType('token', [], -1)], 0)]
+                    ['1', new Type.CustomType('exp')],
+                    ['2', new Type.CustomType('list', [new Type.CustomType('token')])]
                 ])),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -8200,7 +8194,7 @@ parse exp (lex (explode "2*x+y+(z+u)"));
                 ]), 0)
             ]), 0));
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('exp', [], 50),
+                new Type.CustomType('exp'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -8219,102 +8213,102 @@ datatype token = ARROW | LPAR | RPAR | COLON (* : *)
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('ARROW')[0]).toEqualWithType(new Val.ValueConstructor('ARROW', 0));
             expect(state.getStaticValue('ARROW')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('LPAR')[0]).toEqualWithType(new Val.ValueConstructor('LPAR', 0));
             expect(state.getStaticValue('LPAR')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('RPAR')[0]).toEqualWithType(new Val.ValueConstructor('RPAR', 0));
             expect(state.getStaticValue('RPAR')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('COLON')[0]).toEqualWithType(new Val.ValueConstructor('COLON', 0));
             expect(state.getStaticValue('COLON')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('DARROW')[0]).toEqualWithType(new Val.ValueConstructor('DARROW', 0));
             expect(state.getStaticValue('DARROW')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('LEQ')[0]).toEqualWithType(new Val.ValueConstructor('LEQ', 0));
             expect(state.getStaticValue('LEQ')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('ADD')[0]).toEqualWithType(new Val.ValueConstructor('ADD', 0));
             expect(state.getStaticValue('ADD')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('SUB')[0]).toEqualWithType(new Val.ValueConstructor('SUB', 0));
             expect(state.getStaticValue('SUB')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('MUL')[0]).toEqualWithType(new Val.ValueConstructor('MUL', 0));
             expect(state.getStaticValue('MUL')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('BOOL')[0]).toEqualWithType(new Val.ValueConstructor('BOOL', 0));
             expect(state.getStaticValue('BOOL')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('INT')[0]).toEqualWithType(new Val.ValueConstructor('INT', 0));
             expect(state.getStaticValue('INT')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('IF')[0]).toEqualWithType(new Val.ValueConstructor('IF', 0));
             expect(state.getStaticValue('IF')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('THEN')[0]).toEqualWithType(new Val.ValueConstructor('THEN', 0));
             expect(state.getStaticValue('THEN')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('ELSE')[0]).toEqualWithType(new Val.ValueConstructor('ELSE', 0));
             expect(state.getStaticValue('ELSE')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('FN')[0]).toEqualWithType(new Val.ValueConstructor('FN', 0));
             expect(state.getStaticValue('FN')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('FALSE')[0]).toEqualWithType(new Val.ValueConstructor('FALSE', 0));
             expect(state.getStaticValue('FALSE')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('TRUE')[0]).toEqualWithType(new Val.ValueConstructor('TRUE', 0));
             expect(state.getStaticValue('TRUE')).toEqualWithType([
-                new Type.CustomType('token', [], -1)
+                new Type.CustomType('token')
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('ICON')[0]).toEqualWithType(new Val.ValueConstructor('ICON', 1));
             expect(state.getStaticValue('ICON')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 157),
-                    new Type.CustomType('token', [], -1)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('token')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('ID')[0]).toEqualWithType(new Val.ValueConstructor('ID', 1));
             expect(state.getStaticValue('ID')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string', [], 169),
-                    new Type.CustomType('token', [], -1)
+                    new Type.CustomType('string'),
+                    new Type.CustomType('token')
                 )
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -8337,11 +8331,11 @@ fun f(n:int, a:int) : int = if n=0 then a else f(n-1, a*n);
                 new Type.FunctionType(
                     new Type.RecordType(
                         new Map([
-                            ['1', new Type.CustomType('int', [], 8)],
-                            ['2', new Type.CustomType('int', [], 15)]
+                            ['1', new Type.CustomType('int')],
+                            ['2', new Type.CustomType('int')]
                         ])
                     ),
-                    new Type.CustomType('int', [], 15)
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -8364,12 +8358,12 @@ fun q (n:int) : int = ifi(n=0, q(n-1), n);
                 new Type.FunctionType(
                     new Type.RecordType(
                         new Map([
-                            ['1', new Type.CustomType('bool', [], 11)],
-                            ['2', new Type.CustomType('int', [], 19)],
-                            ['3', new Type.CustomType('int', [], 26)]
+                            ['1', new Type.CustomType('bool')],
+                            ['2', new Type.CustomType('int')],
+                            ['3', new Type.CustomType('int')]
                         ])
                     ),
-                    new Type.CustomType('int', [], 19)
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -8379,8 +8373,8 @@ fun q (n:int) : int = ifi(n=0, q(n-1), n);
             expect(state.getDynamicValue('p')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('p')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
-                    new Type.CustomType('int', [], 9)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -8407,8 +8401,8 @@ val x = g 5;
             expect(state.getDynamicValue('f')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('f')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('bool', [], 9),
-                    new Type.CustomType('int', [], 0)
+                    new Type.CustomType('bool'),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -8417,7 +8411,7 @@ val x = g 5;
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('x')[0]).toEqualWithType(new Val.Integer(35));
             expect(state.getStaticValue('x')).toEqualWithType([
-                new Type.CustomType('int', [], 0),
+                new Type.CustomType('int'),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -8426,8 +8420,8 @@ val x = g 5;
             expect(state.getDynamicValue('g')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('g')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
-                    new Type.CustomType('bool', [], 0)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('bool')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -8460,8 +8454,8 @@ fun g (y:int) : int = if y<x then 0 else y+g(y-1);
             expect(state.getDynamicValue('f')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('f')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
-                    new Type.CustomType('int', [], 0)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -8471,8 +8465,8 @@ fun g (y:int) : int = if y<x then 0 else y+g(y-1);
             expect(state.getDynamicValue('g')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('g')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 9),
-                    new Type.CustomType('int', [], 0)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -8490,8 +8484,8 @@ it("aufg3.6", () => {
             expect(state.getDynamicValue('it')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('bool', [], 21),
-                    new Type.CustomType('int', [], 7)
+                    new Type.CustomType('bool'),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -8514,8 +8508,8 @@ end;
             expect(state.getDynamicValue('it')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('int', [], 53),
-                    new Type.CustomType('int', [], 60)
+                    new Type.CustomType('int'),
+                    new Type.CustomType('int')
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
@@ -8536,7 +8530,7 @@ fun 'a pif (x:bool, y:'a, z:'a) = if x then y else z;
                     '\'a',
                     new Type.FunctionType(
                         new Type.RecordType(new Map([
-                            ['1', new Type.CustomType('bool', [], 14)],
+                            ['1', new Type.CustomType('bool')],
                             ['2', new Type.TypeVariable('\'a')],
                             ['3', new Type.TypeVariable('\'a')],
                         ])),
@@ -8753,7 +8747,7 @@ val ys = rev xs;
             }
             expect(state.getDynamicValue('xs')[0]).toEqualWithType(createList(res));
             expect(state.getStaticValue('xs')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('int', [], 0)], 0),
+                new Type.CustomType('list', [new Type.CustomType('int')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -8765,7 +8759,7 @@ val ys = rev xs;
             }
             expect(state.getDynamicValue('ys')[0]).toEqualWithType(createList(res));
             expect(state.getStaticValue('ys')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('int', [], 0)], 42),
+                new Type.CustomType('list', [new Type.CustomType('int')]),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }]
@@ -8781,14 +8775,14 @@ datatype nat = O | S of nat;
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('O')[0]).toEqualWithType(new Val.ValueConstructor('O', 0));
             expect(state.getStaticValue('O')).toEqualWithType([
-                new Type.CustomType('nat', [], -1),
+                new Type.CustomType('nat'),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('S')[0]).toEqualWithType(new Val.ValueConstructor('S', 1));
             expect(state.getStaticValue('S')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('nat', [], 24),
-                    new Type.CustomType('nat', [], -1)
+                    new Type.CustomType('nat'),
+                    new Type.CustomType('nat')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -8807,16 +8801,16 @@ datatype integer = N of nat | P of nat;
             expect(state.getDynamicValue('N')[0]).toEqualWithType(new Val.ValueConstructor('N', 1));
             expect(state.getStaticValue('N')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('nat', [], 52),
-                    new Type.CustomType('integer', [], -1)
+                    new Type.CustomType('nat'),
+                    new Type.CustomType('integer')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
             expect(state.getDynamicValue('P')[0]).toEqualWithType(new Val.ValueConstructor('P', 1));
             expect(state.getStaticValue('P')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('nat', [], 63),
-                    new Type.CustomType('integer', [], -1)
+                    new Type.CustomType('nat'),
+                    new Type.CustomType('integer')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
             ]);
@@ -8836,8 +8830,8 @@ datatype 'a entry = I of 'a | F of 'a;
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.TypeVariable('\'a', 25),
-                        new Type.CustomType('entry', [new Type.TypeVariable('\'a', 9)], -1)
+                        new Type.TypeVariable('\'a'),
+                        new Type.CustomType('entry', [new Type.TypeVariable('\'a')])
                     )
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
@@ -8847,8 +8841,8 @@ datatype 'a entry = I of 'a | F of 'a;
                 new Type.TypeVariableBind(
                     '\'a',
                     new Type.FunctionType(
-                        new Type.TypeVariable('\'a', 35),
-                        new Type.CustomType('entry', [new Type.TypeVariable('\'a', 9)], -1)
+                        new Type.TypeVariable('\'a'),
+                        new Type.CustomType('entry', [new Type.TypeVariable('\'a')])
                     )
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
