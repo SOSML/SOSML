@@ -65,7 +65,13 @@ export class ValueDeclaration extends Declaration {
                 isRec = true;
 
                 for (let j = i; j < this.valueBinding.length; ++j) {
-                    let r = (<ValueIdentifier> this.valueBinding[j].pattern).name.getText();
+                    let pat = this.valueBinding[j].pattern;
+
+                    while (pat instanceof TypedExpression) {
+                        pat = <Pattern & Expression> pat.expression;
+                    }
+
+                    let r = (<ValueIdentifier> pat).name.getText();
                     result.push([r, new TypeVariableBind('\'a', new TypeVariableBind('\'b',
                         new FunctionType(new TypeVariable('\'a'), new TypeVariable('\'b'))))]);
                 }

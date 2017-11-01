@@ -1898,14 +1898,20 @@ export class Parser {
                 let curbnd = this.parseValueBinding();
                 if (curbnd.isRecursive) {
                     isRec = true;
+
+                    let cpat = curbnd.pattern;
+                    while (cpat instanceof TypedExpression) {
+                        cpat = <PatternExpression> (<TypedExpression> cpat).expression;
+                    }
+
                     if (!(curbnd.expression instanceof Lambda)) {
                         throw new ParserError('Using "rec" requires binding a lambda.',
                             curbnd.position);
                     }
-                    if (!(curbnd.pattern instanceof ValueIdentifier)
-                        && !(curbnd.pattern instanceof Wildcard)) {
+                    if (!(cpat instanceof ValueIdentifier)
+                        && !(cpat instanceof Wildcard)) {
                         throw new ParserError('Using "rec" requires binding to a single identifier'
-                            + ' and not "' + curbnd.pattern.toString(0, true) + '".',
+                            + ' and not "' + cpat.toString(0, true) + '".',
                             curbnd.position);
                     }
                 }
