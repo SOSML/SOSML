@@ -1506,6 +1506,7 @@ export class CustomType extends Type {
 
             let ok = true;
 
+            /*
             if (ths2.qualifiedName !== undefined && (<CustomType> oth).qualifiedName !== undefined) {
                 if ((<LongIdentifierToken> ths2.qualifiedName).qualifiers.length
                     === (<LongIdentifierToken> (<CustomType> oth).qualifiedName).qualifiers.length) {
@@ -1520,6 +1521,7 @@ export class CustomType extends Type {
                     ok = false;
                 }
             }
+             */
 
             if (ok) {
                 let res: Type[] = [];
