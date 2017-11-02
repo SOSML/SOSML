@@ -1501,41 +1501,19 @@ export class CustomType extends Type {
         let ths2 = <CustomType> ths;
 
         if (oth instanceof CustomType && ths2.name === (<CustomType> oth).name
-            && ths2.typeArguments.length === (<CustomType> oth).typeArguments.length
             && ths2.id === (<CustomType> oth).id) {
 
-            let ok = true;
-
-            /*
-            if (ths2.qualifiedName !== undefined && (<CustomType> oth).qualifiedName !== undefined) {
-                if ((<LongIdentifierToken> ths2.qualifiedName).qualifiers.length
-                    === (<LongIdentifierToken> (<CustomType> oth).qualifiedName).qualifiers.length) {
-                    for (let i = 0; i < (<LongIdentifierToken> ths2.qualifiedName).qualifiers.length; ++i) {
-                        if ((<LongIdentifierToken> ths2.qualifiedName).qualifiers[i].getText()
-                            !== (<LongIdentifierToken> (<CustomType> oth).qualifiedName).qualifiers[i].getText()) {
-                            ok = false;
-                            break;
-                        }
-                    }
-                } else {
-                    ok = false;
-                }
+            let res: Type[] = [];
+            let tybnd = tyVarBnd;
+            for (let i = 0; i < (<CustomType> ths).typeArguments.length; ++i) {
+                let tmp = (<CustomType> ths).typeArguments[i].merge(state,
+                    tybnd, oth.typeArguments[i]);
+                res.push(tmp[0]);
+                tybnd = tmp[1];
             }
-             */
 
-            if (ok) {
-                let res: Type[] = [];
-                let tybnd = tyVarBnd;
-                for (let i = 0; i < (<CustomType> ths).typeArguments.length; ++i) {
-                    let tmp = (<CustomType> ths).typeArguments[i].merge(state,
-                        tybnd, oth.typeArguments[i]);
-                    res.push(tmp[0]);
-                    tybnd = tmp[1];
-                }
-
-                return [new CustomType(ths2.name, res, ths2.position, ths2.qualifiedName,
-                    ths2.opaque, ths2.id), tybnd];
-            }
+            return [new CustomType(ths2.name, res, ths2.position, ths2.qualifiedName,
+                ths2.opaque, ths2.id), tybnd];
         }
 
         // Merging didn't work
