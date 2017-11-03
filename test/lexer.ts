@@ -334,9 +334,10 @@ it('integer constants hexadecimal wellformed', () => {
     let testcase_pos_leadingzero: string = '0x000004F';
     let testcase_neg_leadingzero: string = '~0x00a';
     let testcase_bigzero: string = '0x00000';
-    let testcase_all_chars1: string = '0x0123456789';
-    let testcase_all_chars2: string = '0xabcdef';
-    let testcase_all_chars3: string = '0xABCDEF';
+    let testcase_all_chars1: string = '0x01234';
+    let testcase_all_chars2: string = '0x56789';
+    let testcase_all_chars3: string = '0xabcdef';
+    let testcase_all_chars4: string = '0xABCDEF';
 
     expect(Lexer.lex(testcase_pos)).toEqualWithType([
         new Token.IntegerConstantToken(testcase_pos, 0, 0x4a)
@@ -354,13 +355,16 @@ it('integer constants hexadecimal wellformed', () => {
         new Token.IntegerConstantToken(testcase_bigzero, 0, 0)
     ]);
     expect(Lexer.lex(testcase_all_chars1)).toEqualWithType([
-        new Token.IntegerConstantToken(testcase_all_chars1, 0, 0x123456789)
+        new Token.IntegerConstantToken(testcase_all_chars1, 0, 0x1234)
     ]);
     expect(Lexer.lex(testcase_all_chars2)).toEqualWithType([
-        new Token.IntegerConstantToken(testcase_all_chars2, 0, 0xabcdef)
+        new Token.IntegerConstantToken(testcase_all_chars2, 0, 0x56789)
     ]);
     expect(Lexer.lex(testcase_all_chars3)).toEqualWithType([
         new Token.IntegerConstantToken(testcase_all_chars3, 0, 0xabcdef)
+    ]);
+    expect(Lexer.lex(testcase_all_chars4)).toEqualWithType([
+        new Token.IntegerConstantToken(testcase_all_chars4, 0, 0xabcdef)
     ]);
 });
 

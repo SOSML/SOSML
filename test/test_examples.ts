@@ -4270,7 +4270,19 @@ val ys = rev xs;
             }
             expect(state.getDynamicValue('xs')[0]).toEqualWithType(createList(res));
             expect(state.getStaticValue('xs')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('int')]),
+                new Type.CustomType(
+                    'list',
+                    [new Type.CustomType('int')],
+                    0,
+                    new Token.LongIdentifierToken(
+                        'List.tabulate',
+                        9,
+                        [
+                            new Token.AlphanumericIdentifierToken("List", 9)
+                        ],
+                        new Token.AlphanumericIdentifierToken("tabulate", 14)
+                    )
+                ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
@@ -8747,7 +8759,19 @@ val ys = rev xs;
             }
             expect(state.getDynamicValue('xs')[0]).toEqualWithType(createList(res));
             expect(state.getStaticValue('xs')).toEqualWithType([
-                new Type.CustomType('list', [new Type.CustomType('int')]),
+                new Type.CustomType(
+                    'list',
+                    [new Type.CustomType('int')],
+                    0,
+                    new Token.LongIdentifierToken(
+                        'List.tabulate',
+                        9,
+                        [
+                            new Token.AlphanumericIdentifierToken("List", 9)
+                        ],
+                        new Token.AlphanumericIdentifierToken("tabulate", 14)
+                    )
+                ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
         }],
