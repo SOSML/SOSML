@@ -1187,8 +1187,29 @@ export class DatatypeReplicationSpecification extends Specification {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        // TODO
-        throw new Error('ニャ－');
+        let res: TypeInformation | undefined = undefined;
+
+        if (this.oldname instanceof LongIdentifierToken) {
+            let st = state.getAndResolveStaticStructure(<LongIdentifierToken> this.oldname);
+            if (st !== undefined) {
+                res = (<StaticBasis> st).getType(
+                    (<LongIdentifierToken> this.oldname).id.getText());
+            }
+        } else {
+            res = state.getStaticType(this.oldname.getText());
+        }
+        if (res === undefined) {
+            throw new ElaborationError(this.position,
+                'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
+        }
+
+        let tp = res.type.instantiate(state, tyVarBnd);
+
+        let stbas = new StaticBasis({}, {}, {}, {}, {});
+        stbas.setType(this.name.getText(), new FunctionType(new CustomType(this.name.getText(),
+            (<CustomType> tp).typeArguments, 0, (this.oldname instanceof LongIdentifierToken)
+            ? this.oldname : undefined), tp), [], res.arity);
+        return [stbas, [], tyVarBnd, nextName];
     }
 
     computeInterface(state: State): DynamicInterface {
@@ -1225,8 +1246,30 @@ export class ExceptionSpecification extends Specification {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        // TODO
-        throw new Error('ニャ－');
+        let stbas = new StaticBasis({}, {}, {}, {}, {});
+
+        for (let i = 0; i < this.exceptionDescription.length; ++i) {
+            if (this.exceptionDescription[i][1] !== undefined) {
+                let tp = (<Type> this.exceptionDescription[i][1]).simplify().instantiate(
+                    state, new Map<string, [Type, boolean]>());
+                let tyvars: string[] = [];
+                tp.getTypeVariables().forEach((dom: Type[], val: string) => {
+                    tyvars.push(val);
+                });
+                if (tyvars.length > 0) {
+                    throw ElaborationError.getUnguarded(this.position, tyvars);
+                }
+
+                stbas.setValue(this.exceptionDescription[i][0].getText(),
+                    new FunctionType(tp, new CustomType('exn')).normalize()[0],
+                    IdentifierStatus.EXCEPTION_CONSTRUCTOR);
+            } else {
+                stbas.setValue(this.exceptionDescription[i][0].getText(),
+                    new CustomType('exn').normalize()[0], IdentifierStatus.EXCEPTION_CONSTRUCTOR);
+            }
+        }
+
+        return [stbas, [], tyVarBnd, nextName];
     }
 
     computeInterface(state: State): DynamicInterface {
