@@ -13,8 +13,8 @@
     "citest": "jest --coverage --expand --verbose",
     "cilint": "tslint -c tslint.json 'src/**/*.ts'",
     "test": "jest --notify --watch",
-    "build": "webpack --env=dev",
-    "dist": "webpack --env=prod"
+    "build": "echo \"export let BRANCH_NAME = \\\"`git rev-parse --abbrev-ref HEAD`\\\";\nexport let COMMIT_HASH = \\\"`git rev-parse --short HEAD`\\\";\nexport let BUILD_DATE = \\\"`date --utc`\\\";\" > ./src/version.ts; webpack --env=dev",
+    "dist": "echo \"export let BRANCH_NAME = \\\"`git rev-parse --abbrev-ref HEAD`\\\";\nexport let COMMIT_HASH = \\\"`git rev-parse --short HEAD`\\\";\nexport let BUILD_DATE = \\\"`date --utc`\\\";\" > ./src/version.ts; webpack --env=prod"
   },
   "author": "SOSML Team",
   "repository": {

@@ -176,7 +176,9 @@ export class Domain {
                         fnd = fnd.set(j, true);
                     }
                 }
-                throw new ElaborationError(position, 'Pizza…');
+                throw new ElaborationError(position,
+                    'I\'m not interested in ordinary people\'s bugs. But, if any of you are aliens, '
+                    + 'time-travelers, or espers, please come see me. That is all!');
             }
             if (!nonex) {
                 let missing: string[] = [];

@@ -4,6 +4,7 @@ import { CharValue, Real, Integer, PredefinedFunction, Value, RecordValue,
          ExceptionConstructor, MAXINT, MININT, ValueConstructor } from './values';
 import { InternalInterpreterError } from './errors';
 import * as Interpreter from './main';
+import { COMMIT_HASH, BRANCH_NAME, BUILD_DATE } from './version';
 
 
 let intType = new CustomType('int');
@@ -612,6 +613,15 @@ export let STDLIB: {
                 fun compare (x, y: real) = if x < y then LESS else if x > y then GREATER else EQUAL;
             end;`,
         'requires': undefined },
+    'Version': {
+        'native': undefined,
+        'code': `structure Version = struct
+            val branch      = "` + BRANCH_NAME + `";
+            val commit      = "` + COMMIT_HASH + `";
+            val buildDate   = "` + BUILD_DATE + `";
+        end;`,
+        'requires': undefined
+    }
 };
 
 export function loadModule(state: State, name: string, options: {[name: string]: any }): State {
