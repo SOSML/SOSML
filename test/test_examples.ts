@@ -8328,6 +8328,122 @@ datatype token = ARROW | LPAR | RPAR | COLON (* : *)
     ]);
 });
 
+it("14.1", () => {
+    /*
+structure S = struct
+val a = 4
+fun f x = x+1
+end;
+
+S.a;
+S.f(2*S.a + S.a);
+
+structure S = struct
+val a = 4
+exception E
+datatype t = A | B
+structure T = struct val a = a+3 end
+end;
+
+S.T.a;
+fun switch S.A = S.B
+| switch S.B = S.A;
+    */
+    run_test([
+        [`
+structure S = struct
+val a = 4
+fun f x = x+1
+end;`, (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(state.getDynamicStructure('S')).not.toEqualWithType(undefined);
+        }],
+        [`S.a;`, (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(state.getDynamicValue('it')).toEqualWithType([
+                new Val.Integer(
+                    4
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
+            expect(state.getStaticValue('it')).toEqualWithType([
+                new Type.CustomType(
+                    'int'
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ])
+        }],
+        [`S.f(2*S.a + S.a);`, (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(state.getDynamicValue('it')).toEqualWithType([
+                new Val.Integer(
+                    13
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
+            expect(state.getStaticValue('it')).toEqualWithType([
+                new Type.CustomType(
+                    'int'
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ])
+        }],
+        [`
+structure S = struct
+val a = 4
+exception E
+datatype t = A | B
+structure T = struct val a = a+3 end
+end;
+
+`, (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(state.getDynamicStructure('S')).not.toEqualWithType(undefined);
+        }],
+        [`S.T.a;`, (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(state.getDynamicValue('it')).toEqualWithType([
+                new Val.Integer(
+                    7
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ]);
+            expect(state.getStaticValue('it')).toEqualWithType([
+                new Type.CustomType(
+                    'int'
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ])
+        }],
+        [`
+fun switch S.A = S.B
+| switch S.B = S.A;`, (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(state.getDynamicValue('switch')).not.toEqualWithType();
+            expect(state.getStaticValue('switch')).toEqualWithType([
+                new Type.FunctionType(
+                    new Type.CustomType(
+                        't',
+                        [],
+                        0,
+                        new Token.LongIdentifierToken(
+                            "S.A",
+                            12,
+                            [new Token.AlphanumericIdentifierToken("S", 12)],
+                            new Token.AlphanumericIdentifierToken("A", 14)
+                        )
+                    ),
+                    new Type.CustomType(
+                        't',
+                        [],
+                        0,
+                        new Token.LongIdentifierToken(
+                            "S.B",
+                            18,
+                            [new Token.AlphanumericIdentifierToken("S", 18)],
+                            new Token.AlphanumericIdentifierToken("B", 20)
+                        )
+                    )
+                ),
+                State.IdentifierStatus.VALUE_VARIABLE
+            ])
+        }],
+   ]);
+
 //TODO Chapter 14
 //We can't check this until the module language is implemented
 
