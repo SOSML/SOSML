@@ -1582,7 +1582,7 @@ export class CustomType extends Type {
         let result: string = '';
         if (this.typeArguments.length > 1
             || (this.typeArguments.length === 1 && (this.typeArguments[0] instanceof FunctionType
-            || this.typeArguments[0] instanceof RecordType))) {
+                || (this.typeArguments[0] instanceof RecordType && this.typeArguments[0].toString() !== 'unit')))) {
             result += '(';
         }
         for (let i = 0; i < this.typeArguments.length; ++i) {
@@ -1593,7 +1593,7 @@ export class CustomType extends Type {
         }
         if (this.typeArguments.length > 1
             || (this.typeArguments.length === 1 && (this.typeArguments[0] instanceof FunctionType
-            || this.typeArguments[0] instanceof RecordType))) {
+            || (this.typeArguments[0] instanceof RecordType && this.typeArguments[0].toString() !== 'unit')))) {
             result += ')';
         }
         if (this.typeArguments.length > 0) {
