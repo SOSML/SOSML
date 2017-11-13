@@ -128,6 +128,18 @@ export function interpret(nextInstruction: string,
                 }
             }
 
+            // For every new bound functor, try to find its type
+            for (let i in curState.dynamicBasis.functorEnvironment) {
+                if (Object.prototype.hasOwnProperty.call(
+                    curState.dynamicBasis.functorEnvironment, i)) {
+
+                    let tp = state.getStaticFunctor(i, curState.id);
+                    if (tp !== undefined) {
+                        curState.setStaticFunctor(i, tp);
+                    }
+                }
+            }
+
 
         }
         if (state.parent === undefined) {
