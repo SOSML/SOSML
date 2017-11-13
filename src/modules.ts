@@ -869,8 +869,15 @@ export class FunctorDeclaration extends Declaration {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
               nextName: string = '\'*t0'): [State, Warning[], Map<string, [Type, boolean]>, string] {
-        // TODO
-        return [state, [new Warning(this.position, 'Skipped elaborating functor.\n')], tyVarBnd, nextName];
+
+        let warns: Warning[] = [];
+        for (let i = 0; i < this.functorBinding.length; ++i) {
+            let tmp: Warning[] = [];
+            [state, tmp, tyVarBnd, nextName] = this.functorBinding[i].elaborate(state, tyVarBnd, nextName);
+            warns = warns.concat(tmp);
+        }
+
+        return [state, warns, tyVarBnd, nextName];
     }
 
     evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
@@ -987,6 +994,17 @@ export class FunctorBinding {
         return new FunctorBinding(this.position, this.name, this.signatureName,
             <Expression & Signature> this.signatureBinding.simplify(),
             <Expression & Structure> this.binding.simplify());
+    }
+
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
+              nextName: string = '\'*t0'): [State, Warning[], Map<string, [Type, boolean]>, string] {
+
+        let sig = this.signatureBinding.elaborate(state, tyVarBnd, nextName);
+        let nstate = state.getNestedState(state.id);
+        nstate.setStaticStructure(this.signatureName.getText(), sig[0]);
+        let str = this.binding.elaborate(nstate, sig[2], sig[3]);
+        state.setStaticFunctor(this.name.getText(), [sig[0], str[0]]);
+        return [state, sig[1].concat(str[1]), str[2], str[3]];
     }
 
     evaluate(state: State): State {
