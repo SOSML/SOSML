@@ -1307,7 +1307,12 @@ export class Parser {
 
         if (this.checkIdentifierOrLongToken(curTok)) {
             ++this.position;
-            return new CustomType(curTok.getText(), [], curTok.position);
+            if (curTok instanceof LongIdentifierToken) {
+                return new CustomType((<LongIdentifierToken> curTok).id.getText(), [],
+                    curTok.position, curTok);
+            } else {
+                return new CustomType(curTok.getText(), [], curTok.position);
+            }
         }
 
         if (this.checkKeywordToken(curTok, '{')) {
