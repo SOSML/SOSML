@@ -499,6 +499,7 @@ export class FunctorApplication extends Expression implements Structure {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
+        // TODO
         throw new Error('ニャ－');
     }
 
