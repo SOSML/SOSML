@@ -145,8 +145,8 @@ export class TransparentConstraint extends Expression implements Structure {
             <Expression & Signature> this.signatureExpression.simplify());
     }
 
-    restrict(sig: StaticBasis, str: StaticBasis, state: State,
-             tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    static restrict(sig: StaticBasis, str: StaticBasis, state: State,
+             tyVarBnd: Map<string, [Type, boolean]>, nextName: string, position: number):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let res = new StaticBasis({}, {}, {}, {}, {});
 
@@ -158,14 +158,14 @@ export class TransparentConstraint extends Expression implements Structure {
         for (let i in sig.typeEnvironment) {
             if (sig.typeEnvironment.hasOwnProperty(i)) {
                 if (!str.typeEnvironment.hasOwnProperty(i)) {
-                    throw new ElaborationError(this.position,
+                    throw new ElaborationError(position,
                         'Signature mismatch: Unimplemented type "' + i + '".');
                 }
                 let sg = <TypeInformation> sig.typeEnvironment[i];
                 let st = <TypeInformation> str.typeEnvironment[i];
 
                 if (sg.arity !== st.arity) {
-                    throw new ElaborationError(this.position,
+                    throw new ElaborationError(position,
                         'Signature mismatch: Implementation of type "' + i
                         + '" has the wrong arity.');
                 }
@@ -184,7 +184,7 @@ export class TransparentConstraint extends Expression implements Structure {
                     if (!(e instanceof Array)) {
                         throw e;
                     }
-                    throw new ElaborationError(this.position,
+                    throw new ElaborationError(position,
                         'Signature mismatch: Wrong implementation of type "' + i + '": ' + e[0]);
                 }
             }
@@ -193,7 +193,7 @@ export class TransparentConstraint extends Expression implements Structure {
         for (let i in sig.valueEnvironment) {
             if (sig.valueEnvironment.hasOwnProperty(i)) {
                 if (!str.valueEnvironment.hasOwnProperty(i)) {
-                    throw new ElaborationError(this.position,
+                    throw new ElaborationError(position,
                         'Signature mismatch: Unimplemented value "' + i + '".');
                 }
                 let sg = <[Type, IdentifierStatus]> sig.valueEnvironment[i];
@@ -248,7 +248,7 @@ export class TransparentConstraint extends Expression implements Structure {
                     if (!(e instanceof Array)) {
                         throw e;
                     }
-                    throw new ElaborationError(this.position,
+                    throw new ElaborationError(position,
                         'Signature mismatch: Wrong implementation of type "' + i + '": ' + e[0]);
                 }
             }
@@ -257,18 +257,18 @@ export class TransparentConstraint extends Expression implements Structure {
         for (let i in sig.structureEnvironment) {
             if (sig.structureEnvironment.hasOwnProperty(i)) {
                 if (!str.structureEnvironment.hasOwnProperty(i)) {
-                    throw new ElaborationError(this.position,
+                    throw new ElaborationError(position,
                         'Unimplemented structure "' + i + '".');
                 }
 
                 try {
-                    let tmp = this.restrict(<StaticBasis> sig.getStructure(i),
-                        <StaticBasis> str.getStructure(i), nstate, tyVarBnd, nextName);
+                    let tmp = TransparentConstraint.restrict(<StaticBasis> sig.getStructure(i),
+                        <StaticBasis> str.getStructure(i), nstate, tyVarBnd, nextName, position);
                     res.setStructure(i, tmp[0]);
                     tyVarBnd = tmp[2];
                     nextName = tmp[3];
                 } catch (e) {
-                    throw new ElaborationError(this.position,
+                    throw new ElaborationError(position,
                         'Signature Mismatch: Wrong implementation of structure "' + i + '": '
                         + e.message);
                 }
@@ -283,7 +283,7 @@ export class TransparentConstraint extends Expression implements Structure {
         let str = this.structureExpression.elaborate(state, tyVarBnd, nextName);
         let sig = this.signatureExpression.elaborate(state, str[2], str[3]);
 
-        return this.restrict(sig[0], str[0], state, sig[2], sig[3]);
+        return TransparentConstraint.restrict(sig[0], str[0], state, sig[2], sig[3], this.position);
     }
 
     computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
