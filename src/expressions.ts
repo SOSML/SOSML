@@ -958,7 +958,12 @@ export class FunctionApplication extends Expression implements Pattern {
 
         let f = this.func.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
         state.valueIdentifierId = f[5];
-        let arg = this.argument.getType(state, f[4], f[2], f[3], forceRebind);
+
+        let nf4 = new Map<string, [Type, boolean]>();
+        f[4].forEach((val: [Type, boolean], key: string) => {
+            nf4 = nf4.set(key, val);
+        });
+        let arg = this.argument.getType(state, nf4, f[2], f[3], forceRebind);
 
         arg[4].forEach((val: [Type, boolean], key: string) => {
             f[4] = f[4].set(key, val);
