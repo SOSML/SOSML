@@ -4,7 +4,7 @@ import { CharValue, Real, Integer, PredefinedFunction, Value, RecordValue,
          ExceptionConstructor, MAXINT, MININT, ValueConstructor } from './values';
 import { InternalInterpreterError } from './errors';
 import * as Interpreter from './main';
-import { COMMIT_HASH, BRANCH_NAME, BUILD_DATE } from './version';
+import { COMMIT_HASH, BRANCH_NAME, BUILD_DATE, COMMIT_MESSAGE } from './version';
 
 
 let intType = new CustomType('int');
@@ -619,6 +619,7 @@ export let STDLIB: {
             val branch      = "` + BRANCH_NAME + `";
             val commit      = "` + COMMIT_HASH + `";
             val buildDate   = "` + BUILD_DATE + `";
+            val message     = "` + COMMIT_MESSAGE + `";
         end;`,
         'requires': undefined
     }
