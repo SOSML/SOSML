@@ -923,6 +923,10 @@ export class RecordType extends Type {
                             other.instantiate(state, tybnd)];
                     }
                 });
+            } else {
+                this.elements.forEach((val: Type, key: string) => {
+                    rt = rt.set(key, val.instantiate(state, tybnd));
+                });
             }
 
             return [new RecordType(rt, this.complete || other.complete, this.position), tybnd];
