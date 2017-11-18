@@ -36,16 +36,14 @@ Correctly lexing, parsing, elaborating and interpreting any SML core language pr
   * [x] `ref`, `!`, and `:=`
   * [x] _something_ structure related
   * [x] _something_ signature related
-  * [ ] _anything_ functor related
+  * [x] _something_ functor related
 * Supported standard library constructs
-  * Math library `Math.sqrt`, `Math.sin`, `Math.cos`, `Math.asin`, `Math.acos`, `Math.exp`, `Math.pow`,
-    `Math.ln`, `Math.log10`, `Math.pi`, and `Math.e`
+  * Math library
   * Char library `ord`, `chr`, `Char.isLower`, `Char.isUpper`, `Char.isDigit`, `Char.isAlpha`
   * Int library `Int.minInt`, `Int.maxInt`, and `Int.compare`
   * Real library `Real.compare`, `Real.fromInt`, `Real.round`, `Real.floor`, and `Real.ceil`
-  * `order`, `option`
-  * List library `hd`, `tl`, `null`, `map`, `@`, `length`, `rev`, `List.concat`, `foldl`, `foldr`
-    `List.tabulate`, `List.exists`, `List.all`, `List.filter`, `List.collate`, `List.nth`
+  * Option Library
+  * List and Listsort libraries
 
 ## Building and installation
 The dependencies of this package must be installed to test or build.
