@@ -11,7 +11,7 @@ let intType = new CustomType('int');
 let realType = new CustomType('real');
 // let wordType = new CustomType('word');
 // let boolType = new CustomType('bool');
-let stringType = new CustomType('string');
+// let stringType = new CustomType('string');
 let charType = new CustomType('char');
 
 
