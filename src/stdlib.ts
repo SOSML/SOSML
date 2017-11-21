@@ -624,8 +624,8 @@ export let STDLIB: {
         'code': `structure String : sig
             (* eqtype string *)
             (* eqtype char *)
-            (* val size : string -> int *)
-            (* val sub : string * int -> char *)
+            val size : string -> int
+            val sub : string * int -> char
             (* val extract   : string * int * int option -> string *)
             (* val substring : string * int * int -> string *)
             val ^ : string * string -> string
@@ -653,7 +653,9 @@ export let STDLIB: {
             (* val fromString : String.string -> string option *)
 
             end = struct
-                fun op^ (a, b) = a ^ b;
+                fun size s = List.length (explode s)
+                fun sub (s,i) = List.nth (explode s, i)
+                val op^ = op^;
 
                 fun cc2 b ([], y) = y
                   | cc2 b (x::xs, y) = cc2 b (xs, y^b^x);
