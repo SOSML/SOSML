@@ -369,7 +369,7 @@ export let STDLIB: {
                 val ord = ord;
                 val chr = chr;
             end;`,
-        'requires': undefined },
+        'requires': ['Int'] },
     'Int': {
         'native': undefined,
         'code': `structure Int = struct
@@ -622,13 +622,12 @@ export let STDLIB: {
     'String': {
         'native': undefined,
         'code': `structure String : sig
-            eqtype string
-            eqtype char
-            val maxSize : int
-            val size : string -> int
-            val sub : string * int -> char
-            val extract   : string * int * int option -> string
-            val substring : string * int * int -> string
+            (* eqtype string *)
+            (* eqtype char *)
+            (* val size : string -> int *)
+            (* val sub : string * int -> char *)
+            (* val extract   : string * int * int option -> string *)
+            (* val substring : string * int * int -> string *)
             val ^ : string * string -> string
             val concat : string list -> string
             val concatWith : string -> string list -> string
@@ -637,11 +636,11 @@ export let STDLIB: {
             val explode : string -> char list
             val map : (char -> char) -> string -> string
             val translate : (char -> string) -> string -> string
-            val tokens : (char -> bool) -> string -> string list
-            val fields : (char -> bool) -> string -> string list
-            val isPrefix    : string -> string -> bool
-            val isSubstring : string -> string -> bool
-            val isSuffix    : string -> string -> bool
+            (* val tokens : (char -> bool) -> string -> string list *)
+            (* val fields : (char -> bool) -> string -> string list *)
+            (* val isPrefix    : string -> string -> bool *)
+            (* val isSubstring : string -> string -> bool *)
+            (* val isSuffix    : string -> string -> bool *)
             val compare : string * string -> order
             val collate : (char * char -> order)
                             -> string * string -> order
@@ -650,31 +649,42 @@ export let STDLIB: {
             val >  : string * string -> bool
             val >= : string * string -> bool
 
-            val toString : string -> String.string
-            val scan       : (char, 'a) StringCvt.reader
-                               -> (string, 'a) StringCvt.reader
-            val fromString : String.string -> string option
-            val toCString : string -> String.string
-            val fromCString : String.string -> string option
+            (* val toString : string -> String.string *)
+            (* val fromString : String.string -> string option *)
 
             end = struct
-                type string = string;
-                type char = char;
+                fun op^ (a, b) = a ^ b;
 
-                fun cmp ([], []) = EQUAL
-                  | cmp ([], _) = LESS
-                  | cmp (_, []) = GREATER
-                  | cmp (x::xs, y::ys) = let
-                        val tmp = Char.compare (x, y);
-                    in
-                        if tmp <> EQUAL then tmp else cmp (xs, ys)
-                    end;
+                fun cc2 b ([], y) = y
+                  | cc2 b (x::xs, y) = cc2 (xs, y^b^x);
+                fun concat a = cc2 "" (x, "");
+                fun concatWith b a = cc2 b (x, "");
 
-                fun collate (a, b) = cmp (explode a, explode b);
+                fun str c = implode [c];
                 val implode = implode;
                 val explode = explode;
+                fun map f s = implode(List.map f (explode s));
+                fun translate f s = concat(List.map f (explode s));
+
+
+                fun cmp f ([], []) = EQUAL
+                  | cmp f ([], _) = LESS
+                  | cmp f (_, []) = GREATER
+                  | cmp f (x::xs, y::ys) = let
+                        val tmp = f (x, y);
+                    in
+                        if tmp <> EQUAL then tmp else cmp f (xs, ys)
+                    end;
+
+                fun collate f (a, b) = cmp f (explode a, explode b);
+                fun compare (a, b) = cmp Char.compare (explode a, explode b);
+
+                fun op< (a, b) = compare (a, b) = LESS;
+                fun op> (a, b) = compare (a, b) = GREATER;
+                fun op<= (a, b) = compare (a, b) <> GREATER;
+                fun op>= (a, b) = compare (a, b) <> LESS;
             end;`,
-        'requires': ['Char']
+        'requires': ['Char', 'List']
     },
     'Version': {
         'native': undefined,
