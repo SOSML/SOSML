@@ -655,7 +655,7 @@ export let STDLIB: {
             end = struct
                 fun size s = List.length (explode s)
                 fun sub (s,i) = List.nth (explode s, i)
-                fun op^ (a, b) = a ^ b;
+                val op^ = op^;
 
                 fun cc2 b ([], y) = y
                   | cc2 b (x::xs, y) = cc2 b (xs, y^b^x);
