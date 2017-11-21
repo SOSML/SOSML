@@ -656,9 +656,9 @@ export let STDLIB: {
                 fun op^ (a, b) = a ^ b;
 
                 fun cc2 b ([], y) = y
-                  | cc2 b (x::xs, y) = cc2 (xs, y^b^x);
-                fun concat a = cc2 "" (x, "");
-                fun concatWith b a = cc2 b (x, "");
+                  | cc2 b (x::xs, y) = cc2 b (xs, y^b^x);
+                fun concat a = cc2 "" (a, "");
+                fun concatWith b a = cc2 b (a, "");
 
                 fun str c = implode [c];
                 val implode = implode;
