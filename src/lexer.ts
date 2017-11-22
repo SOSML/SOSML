@@ -126,10 +126,10 @@ class Lexer {
         }
         let v: int = parseInt(value, hexadecimal ? 16 : 10);
         if (v > MAXINT) {
-            throw new LexerError(this.position, '"' + v + '", whoa, it\'s over "' + MAXINT +'".');
+            throw new LexerError(this.position, '"' + v + '", whoa, it\'s over "' + MAXINT + '".');
         } else if (v < MININT) {
             throw new LexerError(this.position, '"' + v
-                + '", whoa, it\'s ounder "' + MININT +'".');
+                + '", whoa, it\'s ounder "' + MININT + '".');
         }
         if (word) {
             return new WordConstantToken(token, this.tokenStart, v);

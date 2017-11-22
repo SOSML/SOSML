@@ -134,19 +134,8 @@ export class StructureIdentifier extends Expression implements Structure {
 
 export class TransparentConstraint extends Expression implements Structure {
 // strexp : sigexp
-    constructor(public position: number, public structureExpression: Expression & Structure,
-                public signatureExpression: Expression & Signature) {
-        super();
-    }
-
-    simplify(): TransparentConstraint {
-        return new TransparentConstraint(this.position,
-            <Expression & Structure> this.structureExpression.simplify(),
-            <Expression & Signature> this.signatureExpression.simplify());
-    }
-
     static restrict(sig: StaticBasis, str: StaticBasis, state: State,
-             tyVarBnd: Map<string, [Type, boolean]>, nextName: string, position: number):
+                    tyVarBnd: Map<string, [Type, boolean]>, nextName: string, position: number):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let res = new StaticBasis({}, {}, {}, {}, {});
 
@@ -278,6 +267,17 @@ export class TransparentConstraint extends Expression implements Structure {
         return [res, [], tyVarBnd, nextName];
     }
 
+    constructor(public position: number, public structureExpression: Expression & Structure,
+                public signatureExpression: Expression & Signature) {
+        super();
+    }
+
+    simplify(): TransparentConstraint {
+        return new TransparentConstraint(this.position,
+            <Expression & Structure> this.structureExpression.simplify(),
+            <Expression & Signature> this.signatureExpression.simplify());
+    }
+
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let str = this.structureExpression.elaborate(state, tyVarBnd, nextName);
@@ -306,19 +306,8 @@ export class TransparentConstraint extends Expression implements Structure {
 
 export class OpaqueConstraint extends Expression implements Structure {
 // strexp :> sigexp
-    constructor(public position: number, public structureExpression: Expression & Structure,
-                public signatureExpression: Expression & Signature) {
-        super();
-    }
-
-    simplify(): OpaqueConstraint {
-        return new OpaqueConstraint(this.position,
-            <Expression & Structure> this.structureExpression.simplify(),
-            <Expression & Signature> this.signatureExpression.simplify());
-    }
-
     static restrict(sig: StaticBasis, str: StaticBasis, state: State,
-             tyVarBnd: Map<string, [Type, boolean]>, nextName: string, position: number):
+                    tyVarBnd: Map<string, [Type, boolean]>, nextName: string, position: number):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
 
         let res = new StaticBasis({}, {}, {}, {}, {});
@@ -456,6 +445,17 @@ export class OpaqueConstraint extends Expression implements Structure {
         }
 
         return [res, [], tyVarBnd, nextName];
+    }
+
+    constructor(public position: number, public structureExpression: Expression & Structure,
+                public signatureExpression: Expression & Signature) {
+        super();
+    }
+
+    simplify(): OpaqueConstraint {
+        return new OpaqueConstraint(this.position,
+            <Expression & Structure> this.structureExpression.simplify(),
+            <Expression & Signature> this.signatureExpression.simplify());
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):

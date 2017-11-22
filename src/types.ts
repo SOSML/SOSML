@@ -302,6 +302,13 @@ export abstract class Type {
         return this;
     }
 
+    replace(sc: Type, tg: Type): Type {
+        if (sc.equals(this)) {
+            return tg;
+        }
+        return this;
+    }
+
     // Normalizes a type. Free type variables need to get new names **across** different decls.
     // removes all positions in types
     normalize(nextFree: number = 0, options: { [name: string]: any } = {}): [Type, number] {
@@ -853,6 +860,18 @@ export class RecordType extends Type {
         return new RecordType(newElements, this.complete, this.position);
     }
 
+    replace(sc: Type, tg: Type): Type {
+        if (sc.equals(this)) {
+            return tg;
+        }
+        let newElements: Map<string, Type> = new Map<string, Type>();
+        this.elements.forEach((type: Type, key: string) => {
+            newElements.set(key, type.replace(sc, tg));
+        });
+        return new RecordType(newElements, this.complete, this.position);
+    }
+
+
     flatten(repl: Map<string, Type>): Type {
         let newElements: Map<string, Type> = new Map<string, Type>();
         this.elements.forEach((type: Type, key: string) => {
@@ -1088,6 +1107,14 @@ export class FunctionType extends Type {
 
     flatten(repl: Map<string, Type>): Type {
         return new FunctionType(this.parameterType.flatten(repl), this.returnType.flatten(repl), this.position);
+    }
+
+    replace(sc: Type, tg: Type): Type {
+        if (this.equals(sc)) {
+            return tg;
+        }
+        return new FunctionType(this.parameterType.replace(sc, tg),
+            this.returnType.replace(sc, tg), this.position);
     }
 
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
@@ -1387,6 +1414,18 @@ export class CustomType extends Type {
         let res: Type[] = [];
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].makeFree());
+        }
+        return new CustomType(this.name, res, this.position,
+            this.qualifiedName, this.opaque, this.id);
+    }
+
+    replace(sc: Type, tg: Type): Type {
+        if (this.equals(sc)) {
+            return tg;
+        }
+        let res: Type[] = [];
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            res.push(this.typeArguments[i].replace(sc, tg));
         }
         return new CustomType(this.name, res, this.position,
             this.qualifiedName, this.opaque, this.id);
