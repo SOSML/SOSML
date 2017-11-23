@@ -311,6 +311,20 @@ function addListLib(state: State): State {
     return state;
 }
 
+function addStringLib(state: State): State {
+    let dres = new DynamicBasis({}, {}, {}, {}, {});
+    let sres = new StaticBasis({}, {}, {}, {}, {});
+
+    sres.setType('string', new CustomType('string', []), [], 0, true);
+    dres.setType('string', []);
+    sres.setType('char', new CustomType('char', []), [], 0, true);
+    dres.setType('char', []);
+
+    state.setDynamicStructure('String', dres);
+    state.setStaticStructure('String', sres);
+    return state;
+}
+
 export let STDLIB: {
     [name: string]: {
         'native': ((state: State) => State) | undefined, /* callback for native parts */
@@ -619,42 +633,43 @@ export let STDLIB: {
                 fun compare (x, y: real) = if x < y then LESS else if x > y then GREATER else EQUAL;
             end;`,
         'requires': undefined },
-    'String': {
-        'native': undefined,
+    'String': { /* Complete % useless stuff */
+        'native': addStringLib,
         'code': `structure String : sig
-            (* eqtype string *)
-            (* eqtype char *)
-            val size : string -> int
-            val sub : string * int -> char
-            (* val extract   : string * int * int option -> string *)
-            (* val substring : string * int * int -> string *)
-            val ^ : string * string -> string
-            val concat : string list -> string
-            val concatWith : string -> string list -> string
-            val str : char -> string
-            val implode : char list -> string
-            val explode : string -> char list
-            val map : (char -> char) -> string -> string
-            val translate : (char -> string) -> string -> string
-            (* val tokens : (char -> bool) -> string -> string list *)
-            (* val fields : (char -> bool) -> string -> string list *)
-            (* val isPrefix    : string -> string -> bool *)
-            (* val isSubstring : string -> string -> bool *)
-            (* val isSuffix    : string -> string -> bool *)
-            val compare : string * string -> order
-            val collate : (char * char -> order)
-                            -> string * string -> order
-            val <  : string * string -> bool
-            val <= : string * string -> bool
-            val >  : string * string -> bool
-            val >= : string * string -> bool
-
-            (* val toString : string -> String.string *)
-            (* val fromString : String.string -> string option *)
-
+                eqtype string
+                eqtype char
+                val size : string -> int
+                val sub : string * int -> char
+                val extract   : string * int * int option -> string
+                val substring : string * int * int -> string
+                val ^ : string * string -> string
+                val concat : string list -> string
+                val concatWith : string -> string list -> string
+                val str : char -> string
+                val implode : char list -> string
+                val explode : string -> char list
+                val map : (char -> char) -> string -> string
+                val translate : (char -> string) -> string -> string
+                val tokens : (char -> bool) -> string -> string list
+                val fields : (char -> bool) -> string -> string list
+                val isPrefix    : string -> string -> bool
+                val isSubstring : string -> string -> bool
+                val isSuffix    : string -> string -> bool
+                val compare : string * string -> order
+                val collate : (char * char -> order)
+                                -> string * string -> order
+                val <  : string * string -> bool
+                val <= : string * string -> bool
+                val >  : string * string -> bool
+                val >= : string * string -> bool
             end = struct
-                fun size s = List.length (explode s)
-                fun sub (s,i) = List.nth (explode s, i)
+                open String;
+
+                fun size s = List.length (explode s);
+                fun sub (s,i) = List.nth (explode s, i);
+                fun extract (s, i, NONE) = implode (List.drop (explode s, i))
+                  | extract (s, i, SOME j) = implode (List.take (List.drop (explode s, i), j));
+                fun substring (s, i, j) = extract (s, i, SOME j);
                 val op^ = op^;
 
                 fun cc2 b ([], y) = y
@@ -678,8 +693,30 @@ export let STDLIB: {
                         if tmp <> EQUAL then tmp else cmp f (xs, ys)
                     end;
 
-                fun collate f (a, b) = cmp f (explode a, explode b);
+                fun matchPrefix ([], _) = true
+                  | matchPrefix (_, []) = false
+                  | matchPrefix (x::xs, y::ys) = if x <> y then false else matchPrefix (xs, ys);
+
+                fun matchSubstring ([], _) = true
+                  | matchSubstring (_, []) = false
+                  | matchSubstring (x, y as _::ys) = if matchPrefix (x, y) then true
+                    else matchSubstring (x, ys);
+
+                fun getFields (f, [], tmp, x) = (implode tmp) :: x
+                  | getFields (f, (r::rs), tmp, x) = if f r then
+                        getFields (f, rs, [], (implode tmp)::x)
+                    else
+                        getFields (f, rs, r::tmp, x);
+
+                fun tokens f s = List.filter (fn t => t <> "") (getFields (f, rev (explode s), [], []));
+                fun fields f s = getFields (f, rev (explode s), [], []);
+
+                fun isPrefix a b = matchPrefix (explode a, explode b);
+                fun isSubstring a b = matchSubstring (explode a, explode b);
+                fun isSuffix a b = matchPrefix (rev (explode a), rev (explode b));
+
                 fun compare (a, b) = cmp Char.compare (explode a, explode b);
+                fun collate f (a, b) = cmp f (explode a, explode b);
 
                 fun op< (a, b) = compare (a, b) = LESS;
                 fun op> (a, b) = compare (a, b) = GREATER;

@@ -988,8 +988,15 @@ export class FunctionApplication extends Expression implements Pattern {
         if (f[0] instanceof FunctionType) {
             try {
                 let tp = (<FunctionType> f[0]).parameterType.merge(state, f[4], arg[0]);
-                return [(<FunctionType> f[0]).returnType.instantiate(state, tp[1]),
-                    f[1].concat(arg[1]), arg[2], arg[3], tp[1], arg[5]];
+
+                let restp = (<FunctionType> f[0]).returnType;
+                if ((<FunctionType> f[0]).parameterType instanceof RecordType
+                    && (!(<RecordType> (<FunctionType> f[0]).parameterType).complete)) {
+                    restp = restp.replace((<FunctionType> f[0]).parameterType, tp[0]);
+                }
+
+                return [restp.instantiate(state, tp[1]), f[1].concat(arg[1]), arg[2],
+                    arg[3], tp[1], arg[5]];
             } catch (e) {
                 if (!(e instanceof Array)) {
                     throw e;
