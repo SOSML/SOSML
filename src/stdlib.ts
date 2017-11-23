@@ -1,6 +1,6 @@
 import { State, IdentifierStatus, DynamicBasis, StaticBasis } from './state';
 import { TypeVariable, TypeVariableBind, FunctionType, CustomType, TupleType } from './types';
-import { CharValue, Real, Integer, PredefinedFunction, Value, RecordValue,
+import { CharValue, Real, Integer, PredefinedFunction,  StringValue, Value, RecordValue,
          ExceptionConstructor, MAXINT, MININT, ValueConstructor } from './values';
 import { InternalInterpreterError } from './errors';
 import * as Interpreter from './main';
@@ -11,7 +11,7 @@ let intType = new CustomType('int');
 let realType = new CustomType('real');
 // let wordType = new CustomType('word');
 // let boolType = new CustomType('bool');
-// let stringType = new CustomType('string');
+let stringType = new CustomType('string');
 let charType = new CustomType('char');
 
 
@@ -289,6 +289,26 @@ function addRealLib(state: State): State {
     return state;
 }
 
+function addIntLib(state: State): State {
+    let dres = new DynamicBasis({}, {}, {}, {}, {});
+    let sres = new StaticBasis({}, {}, {}, {}, {});
+
+    dres.setValue('toString', new PredefinedFunction('toString', (val: Value) => {
+        if (val instanceof Integer) {
+            let str = new StringValue((<Integer> val).toString());
+            return [str, false, []];
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('toString', new FunctionType(intType, stringType), IdentifierStatus.VALUE_VARIABLE);
+
+    state.setDynamicStructure('Int', dres);
+    state.setStaticStructure('Int', sres);
+
+    return state;
+}
+
 function addListLib(state: State): State {
     let dres = new DynamicBasis({}, {}, {}, {}, {});
     let sres = new StaticBasis({}, {}, {}, {}, {});
@@ -385,8 +405,9 @@ export let STDLIB: {
             end;`,
         'requires': ['Int'] },
     'Int': {
-        'native': undefined,
+        'native': addIntLib,
         'code': `structure Int = struct
+                open Int;
                 fun compare (x, y: int) = if x < y then LESS else if x > y then GREATER else EQUAL;
 
                 val minInt = SOME ~` + -MININT + `;
