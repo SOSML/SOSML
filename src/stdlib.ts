@@ -295,7 +295,7 @@ function addIntLib(state: State): State {
 
     dres.setValue('toString', new PredefinedFunction('toString', (val: Value) => {
         if (val instanceof Integer) {
-            let str = new StringValue((<Integer> val).toString());
+            let str = new StringValue((<Integer> val).toString(undefined));
             return [str, false, []];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
