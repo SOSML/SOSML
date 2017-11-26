@@ -283,7 +283,17 @@ function addRealLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('ceil', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicStructure('Real', dres);
+    dres.setValue('toString', new PredefinedFunction('toString', (val: Value) => {
+        if (val instanceof Real) {
+            let str = new StringValue((<Real> val).toString(undefined));
+            return [str, false, []];
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('toString', new FunctionType(realType, stringType), IdentifierStatus.VALUE_VARIABLE);
+
+   state.setDynamicStructure('Real', dres);
     state.setStaticStructure('Real', sres);
 
     return state;
