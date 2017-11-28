@@ -1618,7 +1618,11 @@ export class CustomType extends Type {
                 return false;
             }
         }
-        return true;
+        let ti = state.getStaticType(this.name);
+        if (ti === undefined) {
+            return true;
+        }
+        return ti.allowsEquality;
     }
 
     toString(): string {

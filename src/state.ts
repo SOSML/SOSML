@@ -246,7 +246,7 @@ export class StaticBasis {
         this.valueEnvironment[name] = undefined;
     }
 
-    setType(name: string, type: Type, constructors: string[], arity: number, admitsEquality: boolean = false) {
+    setType(name: string, type: Type, constructors: string[], arity: number, admitsEquality: boolean = true) {
         this.typeEnvironment[name] = new TypeInformation(type, constructors, arity, admitsEquality);
     }
 

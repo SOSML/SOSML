@@ -293,7 +293,7 @@ function addRealLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('toString', new FunctionType(realType, stringType), IdentifierStatus.VALUE_VARIABLE);
 
-   state.setDynamicStructure('Real', dres);
+    state.setDynamicStructure('Real', dres);
     state.setStaticStructure('Real', sres);
 
     return state;

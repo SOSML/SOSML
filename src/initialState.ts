@@ -33,15 +33,15 @@ function intWordBind(type: Type): Type {
     return new TypeVariableBind('\'iw', type, [new CustomType('int'), new CustomType('word')]).propagate();
 }
 function intRealBind(type: Type): Type {
-    return new TypeVariableBind('\'ir', type, [new CustomType('int'), new CustomType('real')]).propagate();
+    return new TypeVariableBind('\'ir', type, [new CustomType('int'), realType]).propagate();
 }
 function intWordRealBind(type: Type): Type {
     return new TypeVariableBind('\'iwr', type, [new CustomType('int'), new CustomType('word'),
-        new CustomType('real')]).propagate();
+        realType]).propagate();
 }
 function anyBind(type: Type): Type {
     return new TypeVariableBind('\'any', type, [new CustomType('int'), new CustomType('word'),
-        new CustomType('real'), new CustomType('string'), new CustomType('char')]).propagate();
+        realType, new CustomType('string'), new CustomType('char')]).propagate();
 }
 
 let initialState: State = new State(
@@ -54,9 +54,9 @@ let initialState: State = new State(
             'bool':     new TypeInformation(new CustomType('bool'),  ['true', 'false'], 0, true),
             'int':      new TypeInformation(new CustomType('int'),   [], 0, true),
             'word':     new TypeInformation(new CustomType('word'),  [], 0, true),
-            'real':     new TypeInformation(new CustomType('real'),  [], 0, false),
-            'string':   new TypeInformation(new CustomType('string'), [], 0, false),
-            'char':     new TypeInformation(new CustomType('char'),  [], 0, false),
+            'real':     new TypeInformation(realType,  [], 0, false),
+            'string':   new TypeInformation(new CustomType('string'), [], 0, true),
+            'char':     new TypeInformation(new CustomType('char'),  [], 0, true),
             'list':     new TypeInformation(new CustomType('list', [typeVar]), ['nil', '::'], 1, true),
             'array':    new TypeInformation(new CustomType('array', [typeVar]), [], 1, true),
             'ref':      new TypeInformation(new CustomType('ref', [typeVar]), ['ref'], 1, true),
