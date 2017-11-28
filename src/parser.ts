@@ -2170,6 +2170,10 @@ export class Parser {
         }
 
         if (topLevel) {
+            if (this.position > 0 && !this.checkKeywordToken(this.tokens[this.position - 1], ';')) {
+                throw new ParserError('A single top-level expression must be separated '
+                    + 'from preceeding declarations by a ";".', this.position);
+            }
             let exp = this.parseExpression();
             let valbnd = new ValueBinding(curTok.position, false,
                 new ValueIdentifier(-1, new AlphanumericIdentifierToken('it', -1)), exp);
