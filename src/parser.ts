@@ -1149,8 +1149,22 @@ export class Parser {
          *  pat ::= atpat
          *          [op] longvid atpat      FunctionApplication(pos, func, argument)
          */
+        let oldpos = this.position;
         let curTok = this.currentToken();
         let res = this.parseAtomicPattern();
+
+        if (res instanceof ValueIdentifier
+            && (this.state.getInfixStatus((<ValueIdentifier> res).name) !== undefined)
+            && (this.state.getInfixStatus((<ValueIdentifier> res).name).infix)) {
+            let opPrf = (oldpos > 0 && this.checkKeywordToken(this.tokens[oldpos - 1], 'op'))
+                || this.checkKeywordToken(curTok, 'op');
+            if (!opPrf) {
+                throw new ParserError(
+                    'Even Tunafishman can\'t save you from the "company" if you forget an "op".',
+                    curTok.position);
+            }
+        }
+
         while (true) {
             let oldPos = this.position;
             let nextTok = this.currentToken();
