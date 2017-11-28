@@ -1480,7 +1480,7 @@ export class Match {
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
-            forceRebind: boolean = false, checkEx: boolean = true):
+            forceRebind: boolean = false, checkEx: boolean = false):
     [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         let restp: Type = new FunctionType(new AnyType(), new AnyType());
