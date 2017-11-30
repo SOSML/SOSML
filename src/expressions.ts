@@ -1336,7 +1336,8 @@ export class RaiseException extends Expression {
         let res = this.expression.getType(state, tyVarBnd, nextName, tyVars, forceRebind);
         try {
             let mg = res[0].merge(state, tyVarBnd, new CustomType('exn'));
-            return [new AnyType(), res[1], res[2], res[3], mg[1], res[5]];
+            // TODO This is a really sloppy way to set a new "nextName"
+            return [new TypeVariable(res[2]), res[1], res[2] + '0', res[3], mg[1], res[5]];
         } catch (e) {
             if (!(e instanceof Array)) {
                 throw e;
