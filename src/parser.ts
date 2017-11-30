@@ -1164,6 +1164,9 @@ export class Parser {
                     curTok.position);
             }
         }
+        if (res instanceof Wildcard) {
+            throw new ParserError('You cannot apply a pattern to a wildcard.', curTok.position);
+        }
 
         while (true) {
             let oldPos = this.position;

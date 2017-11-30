@@ -6795,9 +6795,11 @@ elab' empty (Id "x");
             ]);
             expect(state.getDynamicValue('empty')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('empty')).toEqualWithType([
-                new Type.FunctionType(
-                    new Type.CustomType('string'),
-                    new Type.AnyType()
+                new Type.TypeVariableBind('\'a',
+                    new Type.FunctionType(
+                        new Type.CustomType('string'),
+                        new Type.TypeVariable('\'a')
+                    ),
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
