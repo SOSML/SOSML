@@ -500,6 +500,17 @@ export class Record extends Expression implements Pattern {
                 throw new ElaborationError(this.position,
                     'Label "' + name + '" occurs more than once in the same record.');
             }
+
+            if (exp instanceof ValueIdentifier) {
+                let tm = state.getStaticValue((<ValueIdentifier> exp).name.getText());
+                if (tm !== undefined && tm[1] !== IdentifierStatus.VALUE_VARIABLE
+                    && tm[0] instanceof FunctionType) {
+                    throw new ElaborationError(exp.position,
+                        'Unary constructor in the pattern needs an argument.');
+                }
+            }
+
+
             let tmp = exp.getType(state, bnds, nextName, tyVars, forceRebind);
 
             warns = warns.concat(tmp[1]);
@@ -1490,6 +1501,16 @@ export class Match {
         let keep = new Map<string, [Type, boolean]>();
 
         for (let i = 0; i < this.matches.length; ++i) {
+
+            if (this.matches[i][0] instanceof ValueIdentifier) {
+                let tm = state.getStaticValue((<ValueIdentifier> this.matches[i][0]).name.getText());
+                if (tm !== undefined && tm[1] !== IdentifierStatus.VALUE_VARIABLE
+                    && tm[0] instanceof FunctionType) {
+                    throw new ElaborationError(this.matches[i][0].position,
+                        'Unary constructor in the pattern needs an argument.');
+                }
+            }
+
             let nmap = new Map<string, [Type, boolean]>();
             bnds.forEach((val: [Type, boolean], key: string) => {
                 nmap = nmap.set(key, val);
