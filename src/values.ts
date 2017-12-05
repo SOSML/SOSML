@@ -668,7 +668,8 @@ export class ConstructedValue extends Value {
             }
         }
 
-        let result: string = this.constructorName;
+        let result: string = '';
+        result += this.constructorName;
         pc.charactersLeft -= this.constructorName.length + 1;
         if (this.id > 0) {
             let idtext = '/' + this.id;
@@ -677,7 +678,22 @@ export class ConstructedValue extends Value {
         }
         if (this.argument) {
             if (pc.charactersLeft > 0) {
-                result += ' ' + this.argument.pcToString(state, pc);
+                result += ' ';
+                if (this.argument instanceof ConstructedValue
+                    && (<ConstructedValue> this.argument).argument) {
+                    result += '(';
+                } else if (this.argument instanceof ExceptionValue
+                    && (<ExceptionValue> this.argument).argument) {
+                    result += '(';
+                }
+                result += this.argument.pcToString(state, pc);
+                if (this.argument instanceof ConstructedValue
+                    && (<ConstructedValue> this.argument).argument) {
+                    result += ')';
+                } else if (this.argument instanceof ExceptionValue
+                    && (<ExceptionValue> this.argument).argument) {
+                    result += ')';
+                }
             } else {
                 result += ' …';
             }
