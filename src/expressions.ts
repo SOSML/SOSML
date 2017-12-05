@@ -501,7 +501,7 @@ export class Record extends Expression implements Pattern {
                     'Label "' + name + '" occurs more than once in the same record.');
             }
 
-            if (exp instanceof ValueIdentifier) {
+            if (exp instanceof ValueIdentifier && forceRebind) {
                 let tm = state.getStaticValue((<ValueIdentifier> exp).name.getText());
                 if (tm !== undefined && tm[1] !== IdentifierStatus.VALUE_VARIABLE
                     && tm[0] instanceof FunctionType) {
