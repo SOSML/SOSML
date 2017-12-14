@@ -423,6 +423,7 @@ export let STDLIB: {
                 val minInt = SOME ~` + -MININT + `;
                 val maxInt = SOME ` + MAXINT + `;
                 fun max (x, y) = if x < y then y else x : int;
+                fun min (x, y) = if x > y then y else x : int;
             end;`,
         'requires': ['Option'] },
     'List': { /* complete */
