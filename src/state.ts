@@ -102,23 +102,38 @@ export class DynamicBasis {
     }
 
     getValue(name: string): [Value, IdentifierStatus] | undefined {
-        return this.valueEnvironment[name];
+        if (this.valueEnvironment.hasOwnProperty(name)) {
+            return this.valueEnvironment[name];
+        }
+        return undefined;
     }
 
     getType(name: string): string[] | undefined {
-        return this.typeEnvironment[name];
+        if (this.typeEnvironment.hasOwnProperty(name)) {
+            return this.typeEnvironment[name];
+        }
+        return undefined;
     }
 
     getStructure(name: string): DynamicBasis | undefined {
-        return this.structureEnvironment[name];
+        if (this.structureEnvironment.hasOwnProperty(name)) {
+            return this.structureEnvironment[name];
+        }
+        return undefined;
     }
 
     getSignature(name: string): DynamicInterface | undefined {
-        return this.signatureEnvironment[name];
+        if (this.signatureEnvironment.hasOwnProperty(name)) {
+            return this.signatureEnvironment[name];
+        }
+        return undefined;
     }
 
     getFunctor(name: string): DynamicFunctorInformation | undefined {
-        return this.functorEnvironment[name];
+        if (this.functorEnvironment.hasOwnProperty(name)) {
+            return this.functorEnvironment[name];
+        }
+        return undefined;
     }
 
     setValue(name: string, value: Value, is: IdentifierStatus): void {
@@ -211,30 +226,45 @@ export class DynamicBasis {
 
 export class StaticBasis {
     constructor(public typeEnvironment: StaticTypeEnvironment,
-                public valueEnvironment: StaticValueEnvironment,
-                public structureEnvironment: StaticStructureEnvironment,
-                public signatureEnvironment: StaticSignatureEnvironment,
-                public functorEnvironment: StaticFunctorEnvironment) {
+        public valueEnvironment: StaticValueEnvironment,
+        public structureEnvironment: StaticStructureEnvironment,
+        public signatureEnvironment: StaticSignatureEnvironment,
+        public functorEnvironment: StaticFunctorEnvironment) {
     }
 
     getValue(name: string): [Type, IdentifierStatus] | undefined {
-        return this.valueEnvironment[name];
+        if (this.valueEnvironment.hasOwnProperty(name)) {
+            return this.valueEnvironment[name];
+        }
+        return undefined;
     }
 
     getType(name: string): TypeInformation | undefined {
-        return this.typeEnvironment[name];
+        if (this.typeEnvironment.hasOwnProperty(name)) {
+            return this.typeEnvironment[name];
+        }
+        return undefined;
     }
 
     getStructure(name: string): StaticBasis | undefined {
-        return this.structureEnvironment[name];
+        if (this.structureEnvironment.hasOwnProperty(name)) {
+            return this.structureEnvironment[name];
+        }
+        return undefined;
     }
 
     getSignature(name: string): StaticBasis | undefined {
-        return this.signatureEnvironment[name];
+        if (this.signatureEnvironment.hasOwnProperty(name)) {
+            return this.signatureEnvironment[name];
+        }
+        return undefined;
     }
 
     getFunctor(name: string): [StaticBasis, StaticBasis] | undefined {
-        return this.functorEnvironment[name];
+        if (this.functorEnvironment.hasOwnProperty(name)) {
+            return this.functorEnvironment[name];
+        }
+        return undefined;
     }
 
 
@@ -313,18 +343,18 @@ export class State {
 
     // The states' ids are non-decreasing; a single declaration uses the same ids
     constructor(public id: number,
-                public parent: State | undefined,
-                public staticBasis: StaticBasis,
-                public dynamicBasis: DynamicBasis,
-                public memory: Memory,
-                public freeTypeVariables: FreeTypeVariableInformation
-                    = [0, new Map<string, [Type, boolean]>()],
-                private infixEnvironment: InfixEnvironment = {},
-                public valueIdentifierId: { [name: string]: number } = {},
-                public warns: Warning[] = [],
-                public insideLocalDeclBody: boolean = false,
-                public localDeclStart: boolean = false,
-                public loadedModules: string[] = []) {
+        public parent: State | undefined,
+        public staticBasis: StaticBasis,
+        public dynamicBasis: DynamicBasis,
+        public memory: Memory,
+        public freeTypeVariables: FreeTypeVariableInformation
+        = [0, new Map<string, [Type, boolean]>()],
+        private infixEnvironment: InfixEnvironment = {},
+        public valueIdentifierId: { [name: string]: number } = {},
+        public warns: Warning[] = [],
+        public insideLocalDeclBody: boolean = false,
+        public localDeclStart: boolean = false,
+        public loadedModules: string[] = []) {
     }
 
     getNestedState(newId: number|undefined = undefined) {
@@ -372,9 +402,9 @@ export class State {
             }
         }
         return res;
-   }
+    }
 
-   getMemoryChanges(stopId: number): [number, Value][] {
+    getMemoryChanges(stopId: number): [number, Value][] {
         if (this.id <= stopId) {
             return [];
         }
@@ -660,7 +690,7 @@ export class State {
         }
     }
 
-   setStaticValue(name: string, type: Type, is: IdentifierStatus, atId: number|undefined = undefined) {
+    setStaticValue(name: string, type: Type, is: IdentifierStatus, atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
             this.staticBasis.setValue(name, type, is);
         } else if (atId > this.id || this.parent === undefined) {
@@ -671,7 +701,7 @@ export class State {
     }
 
     setStaticType(name: string, type: Type, constructors: string[], arity: number,
-                  atId: number|undefined = undefined) {
+        atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
             this.staticBasis.setType(name, type, constructors, arity);
         } else if (atId > this.id || this.parent === undefined) {
@@ -764,20 +794,20 @@ export class State {
 
 
     setInfixStatus(id: Token, precedence: number,
-                   rightAssociative: boolean,
-                   infix: boolean,
-                   atId: number|undefined = undefined): void {
-        if (atId === undefined || atId === this.id) {
-            if (id.isVid() || id instanceof LongIdentifierToken) {
-                this.infixEnvironment[id.getText()]
-                    = new InfixStatus(infix, precedence, rightAssociative);
+        rightAssociative: boolean,
+        infix: boolean,
+        atId: number|undefined = undefined): void {
+            if (atId === undefined || atId === this.id) {
+                if (id.isVid() || id instanceof LongIdentifierToken) {
+                    this.infixEnvironment[id.getText()]
+                        = new InfixStatus(infix, precedence, rightAssociative);
+                }
+            } else if (atId > this.id || this.parent === undefined) {
+                throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+            } else {
+                this.parent.setInfixStatus(id, precedence, rightAssociative, infix, atId);
             }
-        } else if (atId > this.id || this.parent === undefined) {
-            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
-        } else {
-            this.parent.setInfixStatus(id, precedence, rightAssociative, infix, atId);
         }
-    }
 
     setValueIdentifierId(name: string, setTo: number, atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
