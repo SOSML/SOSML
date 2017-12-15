@@ -707,7 +707,8 @@ export let STDLIB: {
                 fun cc2 b ([], y) = y
                   | cc2 b (x::xs, y) = cc2 b (xs, y^b^x);
                 fun concat a = cc2 "" (a, "");
-                fun concatWith b a = cc2 b (a, "");
+                fun concatWith b [] = ""
+                  | concatWith b (a::c) = a ^ (cc2 b (c, ""));
 
                 fun str c = implode [c];
                 val implode = implode;
