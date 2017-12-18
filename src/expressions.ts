@@ -931,7 +931,9 @@ export class FunctionApplication extends Expression implements Pattern {
         } else if (v instanceof ExceptionValue) {
             if (this.func instanceof ValueIdentifier
                 && (<ValueIdentifier> this.func).name.getText()
-                === (<ExceptionValue> v).constructorName) {
+                === (<ExceptionValue> v).constructorName
+                && state.getValueIdentifierId((<ExceptionValue> v).constructorName)
+                === (<ExceptionValue> v).id + 1) {
                 if ((<ExceptionValue> v).argument !== undefined) {
                     return (<PatternExpression> this.argument).matches(
                         state, <Value> (<ExceptionValue> v).argument);
