@@ -6,7 +6,7 @@ import { State, IdentifierStatus } from './state';
 import { InternalInterpreterError, EvaluationError, Warning } from './errors';
 import { int, char, IdentifierToken } from './tokens';
 import { Match } from './expressions';
-import { EvaluationStack } from './evaluator';
+import { EvaluationStack, EvaluationParameters } from './evaluator';
 
 export let MAXINT = 1073741823;
 export let MININT = -1073741824;
@@ -777,7 +777,7 @@ export class ExceptionValue extends Value {
 
 export class PredefinedFunction extends Value {
     constructor(public name: string,
-                public apply: (arg: Value|undefined) => [Value, boolean, Warning[]]) {
+                public apply: (arg: Value|undefined, params: EvaluationParameters) => [Value, boolean, Warning[]]) {
         super();
     }
 

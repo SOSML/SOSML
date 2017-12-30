@@ -4,6 +4,7 @@ import { FunctionType, CustomType, TupleType, Type, TypeVariable, TypeVariableBi
 import { CharValue, Real, Integer, StringValue, PredefinedFunction, Word, ConstructedValue,
          ValueConstructor, ExceptionConstructor, BoolValue, Value, RecordValue } from './values';
 import { InternalInterpreterError, Warning } from './errors';
+import { EvaluationParameters } from './evaluator';
 
 // Initial static basis (see SML Definition, appendix C through E)
 
@@ -136,7 +137,7 @@ let initialState: State = new State(
             'exn':      [],
         },
         {
-            'div':      [new PredefinedFunction('div', (val: Value) => {
+            'div':      [new PredefinedFunction('div', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -156,7 +157,7 @@ let initialState: State = new State(
                 throw new InternalInterpreterError(-1,
                     'Called "div" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
-            'mod':      [new PredefinedFunction('mod', (val: Value) => {
+            'mod':      [new PredefinedFunction('mod', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -176,7 +177,7 @@ let initialState: State = new State(
                 throw new InternalInterpreterError(-1,
                     'Called "mod" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
-            '*':        [new PredefinedFunction('*', (val: Value) => {
+            '*':        [new PredefinedFunction('*', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -204,7 +205,7 @@ let initialState: State = new State(
                 throw new InternalInterpreterError(-1,
                     'Called "*" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
-            '/':        [new PredefinedFunction('/', (val: Value) => {
+            '/':        [new PredefinedFunction('/', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -219,7 +220,7 @@ let initialState: State = new State(
                 throw new InternalInterpreterError(-1,
                     'Called "/" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
-            '+':        [new PredefinedFunction('+', (val: Value) => {
+            '+':        [new PredefinedFunction('+', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -247,7 +248,7 @@ let initialState: State = new State(
                 throw new InternalInterpreterError(-1,
                     'Called "+" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
-            '-':        [new PredefinedFunction('-', (val: Value) => {
+            '-':        [new PredefinedFunction('-', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -276,7 +277,7 @@ let initialState: State = new State(
                     'Called "-" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
 
-            '<':        [new PredefinedFunction('<', (val: Value) => {
+            '<':        [new PredefinedFunction('<', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -298,7 +299,7 @@ let initialState: State = new State(
                 throw new InternalInterpreterError(-1,
                     'Called "<" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
-            '>':        [new PredefinedFunction('<', (val: Value) => {
+            '>':        [new PredefinedFunction('<', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -320,7 +321,7 @@ let initialState: State = new State(
                 throw new InternalInterpreterError(-1,
                     'Called ">" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
-            '<=':       [new PredefinedFunction('<', (val: Value) => {
+            '<=':       [new PredefinedFunction('<', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -343,7 +344,7 @@ let initialState: State = new State(
                 throw new InternalInterpreterError(-1,
                     'Called "<=" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
-            '>=':       [new PredefinedFunction('<', (val: Value) => {
+            '>=':       [new PredefinedFunction('<', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -364,7 +365,7 @@ let initialState: State = new State(
                 throw new InternalInterpreterError(-1,
                     'Called ">=" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
-            '=':        [new PredefinedFunction('=', (val: Value) => {
+            '=':        [new PredefinedFunction('=', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -374,7 +375,7 @@ let initialState: State = new State(
                 throw new InternalInterpreterError(-1,
                     'Called "=" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
-            '<>':       [new PredefinedFunction('=', (val: Value) => {
+            '<>':       [new PredefinedFunction('=', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -395,7 +396,7 @@ let initialState: State = new State(
             'Bind':     [new ExceptionConstructor('Bind'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
             'Div':      [new ExceptionConstructor('Div'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
             'Overflow': [new ExceptionConstructor('Overflow'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
-            '^':        [new PredefinedFunction('^', (val: Value) => {
+            '^':        [new PredefinedFunction('^', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
                     let val2 = (<RecordValue> val).getValue('2');
@@ -407,21 +408,21 @@ let initialState: State = new State(
                 throw new InternalInterpreterError(-1,
                     'Called "^" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
-            'explode':  [new PredefinedFunction('explode', (val: Value) => {
+            'explode':  [new PredefinedFunction('explode', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof StringValue) {
                     return [(<StringValue> val).explode(), false, []];
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
-            'implode':  [new PredefinedFunction('implode', (val: Value) => {
+            'implode':  [new PredefinedFunction('implode', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof ConstructedValue) {
                     return [StringValue.implode(val), false, []];
                 }
                 throw new InternalInterpreterError(-1,
                     'Called "implode" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
-            '~':        [new PredefinedFunction('~', (val: Value) => {
+            '~':        [new PredefinedFunction('~', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof Integer) {
                     let result = (<Integer> val).negate();
                     if (result.hasOverflow()) {
@@ -438,7 +439,7 @@ let initialState: State = new State(
                 throw new InternalInterpreterError(-1,
                     'Called "~" on something weird.');
             }), IdentifierStatus.VALUE_VARIABLE],
-            'abs':        [new PredefinedFunction('~', (val: Value) => {
+            'abs':        [new PredefinedFunction('~', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof Integer) {
                     if ((<Integer> val).value >= 0) {
                         return [val, false, []];
@@ -461,7 +462,7 @@ let initialState: State = new State(
                 throw new InternalInterpreterError(-1,
                     'Called "~" on something weird.');
             }), IdentifierStatus.VALUE_VARIABLE],
-            'print':        [new PredefinedFunction('print', (val: Value) => {
+            'print':        [new PredefinedFunction('print', (val: Value, params: EvaluationParameters) => {
                 let warns: Warning[] = [];
                 if (val instanceof StringValue) {
                     warns.push(new Warning(-2, (<StringValue> val).value));
@@ -470,7 +471,7 @@ let initialState: State = new State(
                 }
                 return [new RecordValue(), false, warns];
             }), IdentifierStatus.VALUE_VARIABLE],
-            'printLn':        [new PredefinedFunction('printLn', (val: Value) => {
+            'printLn':        [new PredefinedFunction('printLn', (val: Value, params: EvaluationParameters) => {
                 let warns: Warning[] = [];
                 if (val instanceof StringValue) {
                     warns.push(new Warning(-2, (<StringValue> val).value + '\n'));

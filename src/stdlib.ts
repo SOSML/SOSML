@@ -2,10 +2,11 @@ import { State, IdentifierStatus, DynamicBasis, StaticBasis } from './state';
 import { TypeVariable, TypeVariableBind, FunctionType, CustomType, TupleType } from './types';
 import { CharValue, Real, Integer, PredefinedFunction,  StringValue, Value, RecordValue,
     ExceptionConstructor, MAXINT, MININT, ValueConstructor, VectorValue,
-    ConstructedValue } from './values';
+    ConstructedValue, ArrayValue } from './values';
 import { InternalInterpreterError } from './errors';
 import * as Interpreter from './main';
 import { COMMIT_HASH, BRANCH_NAME, BUILD_DATE, COMMIT_MESSAGE } from './version';
+import { EvaluationParameters } from './evaluator';
 
 
 let intType = new CustomType('int');
@@ -15,12 +16,149 @@ let realType = new CustomType('real');
 let stringType = new CustomType('string');
 let charType = new CustomType('char');
 
+function addArrayLib(state: State): State {
+    let dres = new DynamicBasis({}, {}, {}, {}, {});
+    let sres = new StaticBasis({}, {}, {}, {}, {});
+
+    let arrayType = new CustomType('array', [new TypeVariable('\'a')]);
+    let listType = new CustomType('list', [new TypeVariable('\'a')]);
+
+    sres.setType('array', arrayType, [], 1, true);
+    dres.setType('array', []);
+
+    dres.setValue('array', new PredefinedFunction('array', (val: Value, params: EvaluationParameters) => {
+
+        if (val instanceof RecordValue && val.entries.size === 2) {
+            let cnt = val.getValue('1');
+            let value = val.getValue('2');
+
+            if (cnt instanceof Integer) {
+                let c = cnt.value;
+                if (c < 0) {
+                    return [new ExceptionConstructor('Size').construct(), true, []];
+                }
+
+                let arr = new ArrayValue(params.modifiable.memory[0] + 1, c);
+                // we need to waste one cell so that no two arrays can be the same
+                params.modifiable.setNewCell(arr);
+
+                for (let i = 0; i < c; ++i) {
+                    params.modifiable.setNewCell(value);
+                }
+
+                return [arr, false, []];
+            } else {
+                throw new InternalInterpreterError(-1, 'std type mismatch');
+            }
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('array',
+        new FunctionType(new TupleType([intType, new TypeVariable('\'a')]).simplify(), arrayType),
+        IdentifierStatus.VALUE_VARIABLE);
+
+    dres.setValue('fromList', new PredefinedFunction('fromList', (val: Value, params: EvaluationParameters) => {
+        let arr = new ArrayValue(params.modifiable.memory[0] + 1, 0);
+        params.modifiable.setNewCell(arr); // we need to waste one cell so that no two arrays can be the same
+
+        if (val instanceof ConstructedValue) {
+            let list: ConstructedValue = val;
+            while (list.constructorName !== 'nil') {
+                if (list.constructorName !== '::') {
+                    throw new InternalInterpreterError(-1, 'std type mismatch');
+                }
+                let arg = list.argument;
+                if (arg instanceof RecordValue && arg.entries.size === 2) {
+                    let a1 = arg.getValue('1');
+                    let a2 = arg.getValue('2');
+                    if (a1 instanceof Value && a2 instanceof ConstructedValue) {
+                        params.modifiable.setNewCell(a1);
+                        arr.length++;
+                        list = a2;
+                    } else {
+                        throw new InternalInterpreterError(-1, 'std type mismatch');
+                    }
+                } else {
+                    throw new InternalInterpreterError(-1, 'std type mismatch');
+                }
+            }
+
+            return [arr, false, []];
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('fromList', new FunctionType(listType, arrayType), IdentifierStatus.VALUE_VARIABLE);
+
+    dres.setValue('sub', new PredefinedFunction('sub', (val: Value, params: EvaluationParameters) => {
+        if (val instanceof RecordValue && val.entries.size === 2) {
+            let arr = val.getValue('1');
+            let index = val.getValue('2');
+
+            if (arr instanceof ArrayValue && index instanceof Integer) {
+                let ind = index.value;
+                if (ind < 0 || ind >= arr.length) {
+                    return [new ExceptionConstructor('Subscript').construct(), true, []];
+                }
+
+                return [(<Value> params.modifiable.getCell(arr.address + ind)), false, []];
+            } else {
+                throw new InternalInterpreterError(-1, 'std type mismatch');
+            }
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('sub',
+        new FunctionType(new TupleType([arrayType, intType]).simplify(), new TypeVariable('\'a')),
+        IdentifierStatus.VALUE_VARIABLE);
+
+    dres.setValue('update', new PredefinedFunction('update', (val: Value, params: EvaluationParameters) => {
+        if (val instanceof RecordValue && val.entries.size === 3) {
+            let arr = val.getValue('1');
+            let index = val.getValue('2');
+            let value = val.getValue('3');
+
+            if (arr instanceof ArrayValue && index instanceof Integer) {
+                let ind = index.value;
+                if (ind < 0 || ind >= arr.length) {
+                    return [new ExceptionConstructor('Subscript').construct(), true, []];
+                }
+
+                params.modifiable.setCell(arr.address + ind, value);
+                return [new RecordValue(), false, []];
+            } else {
+                throw new InternalInterpreterError(-1, 'std type mismatch');
+            }
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('update',
+        new FunctionType(new TupleType([arrayType, intType, new TypeVariable('\'a')]), new TupleType([])).simplify(),
+        IdentifierStatus.VALUE_VARIABLE);
+
+    dres.setValue('length', new PredefinedFunction('length', (val: Value, params: EvaluationParameters) => {
+        if (val instanceof ArrayValue) {
+            let res = new Integer(val.length);
+            return [res, false, []];
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('length', new FunctionType(arrayType, intType), IdentifierStatus.VALUE_VARIABLE);
+
+    state.setDynamicStructure('Array', dres);
+    state.setStaticStructure('Array', sres);
+    return state;
+}
 
 function addMathLib(state: State): State {
     let dres = new DynamicBasis({}, {}, {}, {}, {});
     let sres = new StaticBasis({}, {}, {}, {}, {});
 
-    dres.setValue('sqrt', new PredefinedFunction('sqrt', (val: Value) => {
+    dres.setValue('sqrt', new PredefinedFunction('sqrt', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             if (value < 0) {
@@ -33,7 +171,7 @@ function addMathLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('sqrt', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('sin', new PredefinedFunction('sin', (val: Value) => {
+    dres.setValue('sin', new PredefinedFunction('sin', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.sin(value)), false, []];
@@ -43,7 +181,7 @@ function addMathLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('sin', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('cos', new PredefinedFunction('cos', (val: Value) => {
+    dres.setValue('cos', new PredefinedFunction('cos', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.cos(value)), false, []];
@@ -53,7 +191,7 @@ function addMathLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('cos', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('tan', new PredefinedFunction('tan', (val: Value) => {
+    dres.setValue('tan', new PredefinedFunction('tan', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.tan(value)), false, []];
@@ -63,7 +201,7 @@ function addMathLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('tan', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('asin', new PredefinedFunction('asin', (val: Value) => {
+    dres.setValue('asin', new PredefinedFunction('asin', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.asin(value)), false, []];
@@ -73,7 +211,7 @@ function addMathLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('asin', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('acos', new PredefinedFunction('acos', (val: Value) => {
+    dres.setValue('acos', new PredefinedFunction('acos', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.acos(value)), false, []];
@@ -83,7 +221,7 @@ function addMathLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('acos', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('atan', new PredefinedFunction('atan', (val: Value) => {
+    dres.setValue('atan', new PredefinedFunction('atan', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.atan(value)), false, []];
@@ -93,7 +231,7 @@ function addMathLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('atan', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('atan2', new PredefinedFunction('atan2', (val: Value) => {
+    dres.setValue('atan2', new PredefinedFunction('atan2', (val: Value, params: EvaluationParameters) => {
         if (val instanceof RecordValue) {
             let val1 = (<RecordValue> val).getValue('1');
             let val2 = (<RecordValue> val).getValue('2');
@@ -111,7 +249,7 @@ function addMathLib(state: State): State {
     sres.setValue('atan2', new FunctionType(new TupleType([realType, realType]), realType).simplify(),
         IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('exp', new PredefinedFunction('exp', (val: Value) => {
+    dres.setValue('exp', new PredefinedFunction('exp', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.exp(value)), false, []];
@@ -121,7 +259,7 @@ function addMathLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('exp', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('pow', new PredefinedFunction('pow', (val: Value) => {
+    dres.setValue('pow', new PredefinedFunction('pow', (val: Value, params: EvaluationParameters) => {
         if (val instanceof RecordValue) {
             let val1 = (<RecordValue> val).getValue('1');
             let val2 = (<RecordValue> val).getValue('2');
@@ -139,7 +277,7 @@ function addMathLib(state: State): State {
     sres.setValue('pow', new FunctionType(new TupleType([realType, realType]), realType).simplify(),
         IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('ln', new PredefinedFunction('ln', (val: Value) => {
+    dres.setValue('ln', new PredefinedFunction('ln', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.log(value)), false, []];
@@ -149,7 +287,7 @@ function addMathLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('ln', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('log10', new PredefinedFunction('log10', (val: Value) => {
+    dres.setValue('log10', new PredefinedFunction('log10', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.log10(value)), false, []];
@@ -159,7 +297,7 @@ function addMathLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('log10', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('sinh', new PredefinedFunction('sinh', (val: Value) => {
+    dres.setValue('sinh', new PredefinedFunction('sinh', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.sinh(value)), false, []];
@@ -169,7 +307,7 @@ function addMathLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('sinh', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('cosh', new PredefinedFunction('cosh', (val: Value) => {
+    dres.setValue('cosh', new PredefinedFunction('cosh', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.cosh(value)), false, []];
@@ -179,7 +317,7 @@ function addMathLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('cosh', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('tanh', new PredefinedFunction('tanh', (val: Value) => {
+    dres.setValue('tanh', new PredefinedFunction('tanh', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             return [new Real(Math.tanh(value)), false, []];
@@ -202,7 +340,7 @@ function addMathLib(state: State): State {
 }
 
 function addCharLib(state: State): State {
-    state.setDynamicValue('ord', new PredefinedFunction('ord', (val: Value) => {
+    state.setDynamicValue('ord', new PredefinedFunction('ord', (val: Value, params: EvaluationParameters) => {
         if (val instanceof CharValue) {
             let value = (<CharValue> val).value;
             return [new Integer(value.charCodeAt(0)), false, []];
@@ -212,7 +350,7 @@ function addCharLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     state.setStaticValue('ord', new FunctionType(charType, intType), IdentifierStatus.VALUE_VARIABLE);
 
-    state.setDynamicValue('chr', new PredefinedFunction('chr', (val: Value) => {
+    state.setDynamicValue('chr', new PredefinedFunction('chr', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Integer) {
             let value = (<Integer> val).value;
             if (value < 0 || value > 255) {
@@ -232,7 +370,7 @@ function addRealLib(state: State): State {
     let dres = new DynamicBasis({}, {}, {}, {}, {});
     let sres = new StaticBasis({}, {}, {}, {}, {});
 
-    dres.setValue('fromInt', new PredefinedFunction('fromInt', (val: Value) => {
+    dres.setValue('fromInt', new PredefinedFunction('fromInt', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Integer) {
             let value = (<Integer> val).value;
             return [new Real(value), false, []];
@@ -242,7 +380,7 @@ function addRealLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('fromInt', new FunctionType(intType, realType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('round', new PredefinedFunction('round', (val: Value) => {
+    dres.setValue('round', new PredefinedFunction('round', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             let integer = new Integer(Math.round(value));
@@ -256,7 +394,7 @@ function addRealLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('round', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('floor', new PredefinedFunction('floor', (val: Value) => {
+    dres.setValue('floor', new PredefinedFunction('floor', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             let integer = new Integer(Math.floor(value));
@@ -270,7 +408,7 @@ function addRealLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('floor', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('ceil', new PredefinedFunction('ceil', (val: Value) => {
+    dres.setValue('ceil', new PredefinedFunction('ceil', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             let integer = new Integer(Math.ceil(value));
@@ -284,7 +422,7 @@ function addRealLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('ceil', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('toString', new PredefinedFunction('toString', (val: Value) => {
+    dres.setValue('toString', new PredefinedFunction('toString', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Real) {
             let str = new StringValue((<Real> val).toString(undefined));
             return [str, false, []];
@@ -304,7 +442,7 @@ function addIntLib(state: State): State {
     let dres = new DynamicBasis({}, {}, {}, {}, {});
     let sres = new StaticBasis({}, {}, {}, {}, {});
 
-    dres.setValue('toString', new PredefinedFunction('toString', (val: Value) => {
+    dres.setValue('toString', new PredefinedFunction('toString', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Integer) {
             let str = new StringValue((<Integer> val).toString(undefined));
             return [str, false, []];
@@ -366,7 +504,7 @@ function addVectorLib(state: State): State {
     sres.setType('vector', vectorType, [], 1, true);
     dres.setType('vector', []);
 
-    dres.setValue('fromList', new PredefinedFunction('fromList', (val: Value) => {
+    dres.setValue('fromList', new PredefinedFunction('fromList', (val: Value, params: EvaluationParameters) => {
         let vec = new VectorValue([]);
 
         if (val instanceof ConstructedValue) {
@@ -397,7 +535,7 @@ function addVectorLib(state: State): State {
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('fromList', new FunctionType(listType, vectorType), IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('sub', new PredefinedFunction('sub', (val: Value) => {
+    dres.setValue('sub', new PredefinedFunction('sub', (val: Value, params: EvaluationParameters) => {
         if (val instanceof RecordValue && val.entries.size === 2) {
             let vec = val.getValue('1');
             let index = val.getValue('2');
@@ -420,7 +558,7 @@ function addVectorLib(state: State): State {
         new FunctionType(new TupleType([vectorType, intType]).simplify(), new TypeVariable('\'a')),
         IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('update', new PredefinedFunction('update', (val: Value) => {
+    dres.setValue('update', new PredefinedFunction('update', (val: Value, params: EvaluationParameters) => {
         if (val instanceof RecordValue && val.entries.size === 3) {
             let vec = val.getValue('1');
             let index = val.getValue('2');
@@ -446,7 +584,7 @@ function addVectorLib(state: State): State {
         new FunctionType(new TupleType([vectorType, intType, new TypeVariable('\'a')]).simplify(), vectorType),
         IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('length', new PredefinedFunction('length', (val: Value) => {
+    dres.setValue('length', new PredefinedFunction('length', (val: Value, params: EvaluationParameters) => {
         if (val instanceof VectorValue) {
             let res = new Integer(val.entries.length);
             return [res, false, []];
@@ -486,37 +624,39 @@ export let STDLIB: {
             fun ref (a : \'A): \'A ref = ref a;`,
         'requires': undefined },
     'Array': {
-        'native': undefined,
+        'native': addArrayLib,
         'code': `structure Array :> sig
-(*           (* eqtype 'a array = 'a array *)
-           (* type 'a vector = 'a Vector.vector *)
-            val maxLen : int
+            (* eqtype 'a array = 'a array *)
+            (* type 'a vector = 'a Vector.vector *)
+            (* val maxLen : int *)
             val array : int * 'a -> 'a array
             val fromList : 'a list -> 'a array
             val tabulate : int * (int -> 'a) -> 'a array
             val length : 'a array -> int
             val sub : 'a array * int -> 'a
             val update : 'a array * int * 'a -> unit
-           (* val vector : 'a array -> 'a vector *)
-            val copy    : {src : 'a array, dst : 'a array, di : int} -> unit
-           (* val copyVec : {src : 'a vector, dst : 'a array, di : int} -> unit *)
-            val appi : (int * 'a -> unit) -> 'a array -> unit
-            val app  : ('a -> unit) -> 'a array -> unit
-            val modifyi : (int * 'a -> 'a) -> 'a array -> unit
-            val modify  : ('a -> 'a) -> 'a array -> unit
-            val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
-            val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
-            val foldl  : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
-            val foldr  : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
-            val findi : (int * 'a -> bool) -> 'a array -> (int * 'a) option
-            val find  : ('a -> bool) -> 'a array -> 'a option
-            val exists : ('a -> bool) -> 'a array -> bool
-            val all : ('a -> bool) -> 'a array -> bool
-            val collate : ('a * 'a -> order) -> 'a array * 'a array -> order
-*)        end = struct
+            (* val vector : 'a array -> 'a vector *)
+            (* val copy    : {src : 'a array, dst : 'a array, di : int} -> unit *)
+            (* val copyVec : {src : 'a vector, dst : 'a array, di : int} -> unit *)
+            (* val appi : (int * 'a -> unit) -> 'a array -> unit *)
+            (* val app  : ('a -> unit) -> 'a array -> unit *)
+            (* val modifyi : (int * 'a -> 'a) -> 'a array -> unit *)
+            (* val modify  : ('a -> 'a) -> 'a array -> unit *)
+            (* val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b *)
+            (* val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b *)
+            (* val foldl  : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b *)
+            (* val foldr  : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b *)
+            (* val findi : (int * 'a -> bool) -> 'a array -> (int * 'a) option *)
+            (* val find  : ('a -> bool) -> 'a array -> 'a option *)
+            (* val exists : ('a -> bool) -> 'a array -> bool *)
+            (* val all : ('a -> bool) -> 'a array -> bool *)
+            (* val collate : ('a * 'a -> order) -> 'a array * 'a array -> order *)
+        end = struct
+            open Array;
+            fun tabulate (n, f) = fromList (List.tabulate (n, f));
             (* TODO *)
         end;`,
-        'requires': ['Option']
+        'requires': ['Option', 'List', 'Vector']
     },
     'Char': {
         'native': addCharLib,
