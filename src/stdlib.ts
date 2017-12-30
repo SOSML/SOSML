@@ -379,6 +379,39 @@ export let STDLIB: {
             fun op := ((a, b) : (\'A ref * \'A)): unit = a := b;
             fun ref (a : \'A): \'A ref = ref a;`,
         'requires': undefined },
+    'Array': {
+        'native': undefined,
+        'code': `structure Array :> sig
+(*           (* eqtype 'a array = 'a array *)
+           (* type 'a vector = 'a Vector.vector *)
+            val maxLen : int
+            val array : int * 'a -> 'a array
+            val fromList : 'a list -> 'a array
+            val tabulate : int * (int -> 'a) -> 'a array
+            val length : 'a array -> int
+            val sub : 'a array * int -> 'a
+            val update : 'a array * int * 'a -> unit
+           (* val vector : 'a array -> 'a vector *)
+            val copy    : {src : 'a array, dst : 'a array, di : int} -> unit
+           (* val copyVec : {src : 'a vector, dst : 'a array, di : int} -> unit *)
+            val appi : (int * 'a -> unit) -> 'a array -> unit
+            val app  : ('a -> unit) -> 'a array -> unit
+            val modifyi : (int * 'a -> 'a) -> 'a array -> unit
+            val modify  : ('a -> 'a) -> 'a array -> unit
+            val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
+            val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
+            val foldl  : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
+            val foldr  : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
+            val findi : (int * 'a -> bool) -> 'a array -> (int * 'a) option
+            val find  : ('a -> bool) -> 'a array -> 'a option
+            val exists : ('a -> bool) -> 'a array -> bool
+            val all : ('a -> bool) -> 'a array -> bool
+            val collate : ('a * 'a -> order) -> 'a array * 'a array -> order
+*)        end = struct
+            (* TODO *)
+        end;`,
+        'requires': ['Option']
+    },
     'Char': {
         'native': addCharLib,
         'code':  `structure Char = struct
@@ -540,15 +573,13 @@ export let STDLIB: {
         'requires': ['Option'] },
     'Listsort': { /* complete */
         'native': undefined,
-        'code': `signature LISTSORT = sig
+        'code': `structure Listsort :> sig
                 val sort: ('a * 'a -> order) -> 'a list -> 'a list;
                 val sorted: ('a * 'a -> order) -> 'a list -> bool;
                 val mergeUniq: ('a * 'a -> order) -> 'a list * 'a list -> 'a list;
                 val merge: ('a * 'a -> order) -> 'a list * 'a list -> 'a list;
                 val eqclasses: ('a * 'a -> order) -> 'a list -> 'a list list;
-            end;
-
-            structure Listsort :> LISTSORT = struct
+            end = struct
               fun take ordr x1 xr []       = x1 :: xr
                 | take ordr x1 xr (y1::yr) = (case ordr(x1, y1) of
                     LESS    => x1 :: take ordr y1 yr xr
@@ -667,7 +698,7 @@ export let STDLIB: {
         'requires': undefined },
     'String': { /* Complete % useless stuff */
         'native': addStringLib,
-        'code': `structure String : sig
+        'code': `structure String :> sig
                 eqtype string
                 eqtype char
                 val size : string -> int
@@ -757,6 +788,35 @@ export let STDLIB: {
                 fun op>= (a, b) = compare (a, b) <> LESS;
             end;`,
         'requires': ['Char', 'List']
+    },
+    'Vector': {
+        'native': undefined,
+        'code': `structure Vector :> sig
+(*           (* eqtype 'a vector = 'a vector *)
+            val maxLen : int
+            val fromList : 'a list -> 'a vector
+            val tabulate : int * (int -> 'a) -> 'a vector
+            val length : 'a vector -> int
+            val sub : 'a vector * int -> 'a
+            val update : 'a vector * int * 'a -> 'a vector
+            val concat : 'a vector list -> 'a vector
+            val appi : (int * 'a -> unit) -> 'a vector -> unit
+            val app  : ('a -> unit) -> 'a vector -> unit
+            val mapi : (int * 'a -> 'b) -> 'a vector -> 'b vector
+            val map  : ('a -> 'b) -> 'a vector -> 'b vector
+            val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+            val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+            val foldl  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+            val foldr  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+            val findi : (int * 'a -> bool) -> 'a vector -> (int * 'a) option
+            val find  : ('a -> bool) -> 'a vector -> 'a option
+            val exists : ('a -> bool) -> 'a vector -> bool
+            val all : ('a -> bool) -> 'a vector -> bool
+            val collate : ('a * 'a -> order) -> 'a vector * 'a vector -> order
+*)        end = struct
+
+        end;`,
+        'requires': ['Option']
     },
     'Version': {
         'native': undefined,
