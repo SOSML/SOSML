@@ -1,7 +1,8 @@
 import { State, IdentifierStatus, DynamicBasis, StaticBasis } from './state';
 import { TypeVariable, TypeVariableBind, FunctionType, CustomType, TupleType } from './types';
 import { CharValue, Real, Integer, PredefinedFunction,  StringValue, Value, RecordValue,
-         ExceptionConstructor, MAXINT, MININT, ValueConstructor } from './values';
+    ExceptionConstructor, MAXINT, MININT, ValueConstructor, VectorValue,
+    ConstructedValue } from './values';
 import { InternalInterpreterError } from './errors';
 import * as Interpreter from './main';
 import { COMMIT_HASH, BRANCH_NAME, BUILD_DATE, COMMIT_MESSAGE } from './version';
@@ -352,6 +353,111 @@ function addStringLib(state: State): State {
 
     state.setDynamicStructure('String', dres);
     state.setStaticStructure('String', sres);
+    return state;
+}
+
+function addVectorLib(state: State): State {
+    let dres = new DynamicBasis({}, {}, {}, {}, {});
+    let sres = new StaticBasis({}, {}, {}, {}, {});
+
+    let vectorType = new CustomType('vector', [new TypeVariable('\'a')]);
+    let listType = new CustomType('list', [new TypeVariable('\'a')]);
+
+    sres.setType('vector', vectorType, [], 1, true);
+    dres.setType('vector', []);
+
+    dres.setValue('fromList', new PredefinedFunction('fromList', (val: Value) => {
+        let vec = new VectorValue([]);
+
+        if (val instanceof ConstructedValue) {
+            let list: ConstructedValue = val;
+            while (list.constructorName !== 'nil') {
+                if (list.constructorName !== '::') {
+                    throw new InternalInterpreterError(-1, 'std type mismatch');
+                }
+                let arg = list.argument;
+                if (arg instanceof RecordValue && arg.entries.size === 2) {
+                    let a1 = arg.getValue('1');
+                    let a2 = arg.getValue('2');
+                    if (a1 instanceof Value && a2 instanceof ConstructedValue) {
+                        vec.entries.push(a1);
+                        list = a2;
+                    } else {
+                        throw new InternalInterpreterError(-1, 'std type mismatch');
+                    }
+                } else {
+                    throw new InternalInterpreterError(-1, 'std type mismatch');
+                }
+            }
+
+            return [vec, false, []];
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('fromList', new FunctionType(listType, vectorType), IdentifierStatus.VALUE_VARIABLE);
+
+    dres.setValue('sub', new PredefinedFunction('sub', (val: Value) => {
+        if (val instanceof RecordValue && val.entries.size === 2) {
+            let vec = val.getValue('1');
+            let index = val.getValue('2');
+
+            if (vec instanceof VectorValue && index instanceof Integer) {
+                let ind = index.value;
+                if (ind < 0 || ind >= vec.entries.length) {
+                    return [new ExceptionConstructor('Subscript').construct(), true, []];
+                }
+
+                return [vec.entries[ind], false, []];
+            } else {
+                throw new InternalInterpreterError(-1, 'std type mismatch');
+            }
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('sub',
+        new FunctionType(new TupleType([vectorType, intType]).simplify(), new TypeVariable('\'a')),
+        IdentifierStatus.VALUE_VARIABLE);
+
+    dres.setValue('update', new PredefinedFunction('update', (val: Value) => {
+        if (val instanceof RecordValue && val.entries.size === 3) {
+            let vec = val.getValue('1');
+            let index = val.getValue('2');
+            let value = val.getValue('3');
+
+            if (vec instanceof VectorValue && index instanceof Integer) {
+                let ind = index.value;
+                if (ind < 0 || ind >= vec.entries.length) {
+                    return [new ExceptionConstructor('Subscript').construct(), true, []];
+                }
+
+                let res = new VectorValue(vec.entries.slice());
+                res.entries[ind] = value;
+                return [res, false, []];
+            } else {
+                throw new InternalInterpreterError(-1, 'std type mismatch');
+            }
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('update',
+        new FunctionType(new TupleType([vectorType, intType, new TypeVariable('\'a')]).simplify(), vectorType),
+        IdentifierStatus.VALUE_VARIABLE);
+
+    dres.setValue('length', new PredefinedFunction('length', (val: Value) => {
+        if (val instanceof VectorValue) {
+            let res = new Integer(val.entries.length);
+            return [res, false, []];
+        } else {
+            throw new InternalInterpreterError(-1, 'std type mismatch');
+        }
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('length', new FunctionType(vectorType, intType), IdentifierStatus.VALUE_VARIABLE);
+
+    state.setDynamicStructure('Vector', dres);
+    state.setStaticStructure('Vector', sres);
     return state;
 }
 
@@ -790,33 +896,34 @@ export let STDLIB: {
         'requires': ['Char', 'List']
     },
     'Vector': {
-        'native': undefined,
+        'native': addVectorLib,
         'code': `structure Vector :> sig
-(*           (* eqtype 'a vector = 'a vector *)
-            val maxLen : int
+            (* eqtype 'a vector = 'a vector *)
+            (* val maxLen : int *)
             val fromList : 'a list -> 'a vector
             val tabulate : int * (int -> 'a) -> 'a vector
             val length : 'a vector -> int
             val sub : 'a vector * int -> 'a
             val update : 'a vector * int * 'a -> 'a vector
-            val concat : 'a vector list -> 'a vector
-            val appi : (int * 'a -> unit) -> 'a vector -> unit
-            val app  : ('a -> unit) -> 'a vector -> unit
-            val mapi : (int * 'a -> 'b) -> 'a vector -> 'b vector
-            val map  : ('a -> 'b) -> 'a vector -> 'b vector
-            val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
-            val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
-            val foldl  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
-            val foldr  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
-            val findi : (int * 'a -> bool) -> 'a vector -> (int * 'a) option
-            val find  : ('a -> bool) -> 'a vector -> 'a option
-            val exists : ('a -> bool) -> 'a vector -> bool
-            val all : ('a -> bool) -> 'a vector -> bool
-            val collate : ('a * 'a -> order) -> 'a vector * 'a vector -> order
-*)        end = struct
-
-        end;`,
-        'requires': ['Option']
+            (* val concat : 'a vector list -> 'a vector *)
+            (* val appi : (int * 'a -> unit) -> 'a vector -> unit *)
+            (* val app  : ('a -> unit) -> 'a vector -> unit *)
+            (* val mapi : (int * 'a -> 'b) -> 'a vector -> 'b vector *)
+            (* val map  : ('a -> 'b) -> 'a vector -> 'b vector *)
+            (* val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b *)
+            (* val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b *)
+            (* val foldl  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b *)
+            (* val foldr  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b *)
+            (* val findi : (int * 'a -> bool) -> 'a vector -> (int * 'a) option *)
+            (* val find  : ('a -> bool) -> 'a vector -> 'a option *)
+            (* val exists : ('a -> bool) -> 'a vector -> bool *)
+            (* val all : ('a -> bool) -> 'a vector -> bool *)
+            (* val collate : ('a * 'a -> order) -> 'a vector * 'a vector -> order *)
+        end = struct
+            open Vector;
+            fun tabulate (n, f) = fromList (List.tabulate (n, f));
+        end; `,
+        'requires': ['Option', 'List']
     },
     'Version': {
         'native': undefined,

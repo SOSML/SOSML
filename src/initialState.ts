@@ -59,7 +59,7 @@ let initialState: State = new State(
             'char':     new TypeInformation(new CustomType('char'),  [], 0, true),
             'list':     new TypeInformation(new CustomType('list', [typeVar]), ['nil', '::'], 1, true),
             'array':    new TypeInformation(new CustomType('array', [typeVar]), [], 1, true),
-            'vector'    new TypeInformation(new CustomType('vector', [typeVar]), [], 1, true),
+            'vector':   new TypeInformation(new CustomType('vector', [typeVar]), [], 1, true),
             'ref':      new TypeInformation(new CustomType('ref', [typeVar]), ['ref'], 1, true),
             'exn':      new TypeInformation(new CustomType('exn'), [], 0, false)
         },
