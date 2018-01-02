@@ -1176,7 +1176,7 @@ export class FunctionApplication extends Expression implements Pattern {
                     'hasThrown': false,
                 };
             } else if (funcVal.value instanceof PredefinedFunction) {
-                let res = (<PredefinedFunction> funcVal.value).apply(argVal.value);
+                let res = (<PredefinedFunction> funcVal.value).apply(argVal.value, params);
                 for (let warn of res[2]) {
                     modifiable.addWarning(warn);
                 }
