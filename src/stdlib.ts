@@ -819,7 +819,7 @@ export let STDLIB: {
         'requires': ['Option'] },
     'Listsort': { /* complete */
         'native': undefined,
-        'code': `structure Listsort :> sig
+        'code': `structure Listsort : sig
                 val sort: ('a * 'a -> order) -> 'a list -> 'a list;
                 val sorted: ('a * 'a -> order) -> 'a list -> bool;
                 val mergeUniq: ('a * 'a -> order) -> 'a list * 'a list -> 'a list;
@@ -944,7 +944,7 @@ export let STDLIB: {
         'requires': undefined },
     'String': { /* Complete % useless stuff */
         'native': addStringLib,
-        'code': `structure String :> sig
+        'code': `structure String : sig
                 eqtype string
                 eqtype char
                 val size : string -> int
