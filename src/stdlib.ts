@@ -619,9 +619,9 @@ export let STDLIB: {
 
             fun not true = false | not false = true;
 
-            fun ! (a : \'A ref): \'A = ! a;
+            (* fun ! (a : \'A ref): \'A = ! a;
             fun op := ((a, b) : (\'A ref * \'A)): unit = a := b;
-            fun ref (a : \'A): \'A ref = ref a;`,
+            fun ref (a : \'A): \'A ref = ref a; *)`,
         'requires': undefined },
     'Array': {
         'native': addArrayLib,
