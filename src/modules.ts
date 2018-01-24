@@ -1092,7 +1092,7 @@ export class TypeSpecification extends Specification {
         for (let i = 0; i < this.typeDescription.length; ++i) {
             res.setType(this.typeDescription[i][1].getText(),
                 new CustomType(this.typeDescription[i][1].getText(), this.typeDescription[i][0]),
-                [], this.typeDescription[i][0].length);
+                [], this.typeDescription[i][0].length, false);
         }
         return [res, [], tyVarBnd, nextName];
     }
