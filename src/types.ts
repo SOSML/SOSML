@@ -1568,6 +1568,20 @@ export class CustomType extends Type {
     }
 
     makeEqType(state: State, tyVarBnd: Map<string, [Type, boolean]>): [Type, Map<string, [Type, boolean]>] {
+
+        let tp = state.getStaticType(this.name);
+        if (this.qualifiedName !== undefined) {
+            let rsv = state.getAndResolveStaticStructure(this.qualifiedName);
+            if (rsv !== undefined) {
+                tp = rsv.getType(this.name);
+            } else {
+                tp = undefined;
+            }
+        }
+        if (tp !== undefined && !tp.allowsEquality) {
+            return [this, tyVarBnd];
+        }
+
         let res: Type[] = [];
         for (let i = 0; i < this.typeArguments.length; ++i) {
             let tmp = this.typeArguments[i].makeEqType(state, tyVarBnd);
@@ -1613,16 +1627,25 @@ export class CustomType extends Type {
     }
 
     admitsEquality(state: State): boolean {
+        let tp = state.getStaticType(this.name);
+        if (this.qualifiedName !== undefined) {
+            let rsv = state.getAndResolveStaticStructure(this.qualifiedName);
+            if (rsv !== undefined) {
+                tp = rsv.getType(this.name);
+            } else {
+                tp = undefined;
+            }
+        }
+
         for (let i = 0; i < this.typeArguments.length; ++i) {
             if (!this.typeArguments[i].admitsEquality(state)) {
                 return false;
             }
         }
-        let ti = state.getStaticType(this.name);
-        if (ti === undefined) {
+        if (tp === undefined) {
             return true;
         }
-        return ti.allowsEquality;
+        return tp.allowsEquality;
     }
 
     toString(): string {
