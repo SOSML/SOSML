@@ -101,7 +101,8 @@ export class ValueDeclaration extends Declaration {
         });
         let ncp = nextName;
         let ids = state.valueIdentifierId;
-        for (let l = 0; l < 4; ++l) {
+        let numit = this.valueBinding.length - i + 1;
+        for (let l = 0; l < numit * numit + 1; ++l) {
             warns = wcp;
             bnds = new Map<string, [Type, boolean]>();
             bcp.forEach((val: [Type, boolean], key: string) => {
@@ -109,23 +110,30 @@ export class ValueDeclaration extends Declaration {
             });
             nextName = ncp;
             state.valueIdentifierId = ids;
+
+            let haschange = false;
+
             for (let j = i; j < this.valueBinding.length; ++j) {
                 let val = this.valueBinding[j].getType(this.typeVariableSequence, state, bnds, nextName, isTopLevel);
                 warns = warns.concat(val[1]);
                 bnds = val[2];
                 nextName = val[3];
                 state.valueIdentifierId = val[4];
+
                 for (let k = 0; k < val[0].length; ++k) {
-                    if (l === 3) {
-                        // TODO find a better way to check for circularity
-                        let oldtp = state.getStaticValue(val[0][k][0]);
-                        if (oldtp === undefined || !oldtp[0].normalize()[0].equals(val[0][k][1].normalize()[0])) {
-                            throw new ElaborationError(this.position,
-                                'My brain trembles; too much circularity.');
-                        }
+                    let oldtp = state.getStaticValue(val[0][k][0]);
+                    if (oldtp === undefined || !oldtp[0].normalize()[0].equals(val[0][k][1].normalize()[0])) {
+                        haschange = true;
                     }
                     state.setStaticValue(val[0][k][0], val[0][k][1], IdentifierStatus.VALUE_VARIABLE);
                 }
+            }
+
+            if (!haschange) {
+                break;
+            } else if (l === numit * numit) {
+                throw new ElaborationError(this.position,
+                    'My brain trembles; too much circularity.');
             }
         }
 
