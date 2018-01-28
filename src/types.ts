@@ -1136,9 +1136,10 @@ export class FunctionType extends Type {
         if (other instanceof TypeVariable || other instanceof AnyType) {
             return other.merge(state, tyVarBnd, this);
         }
-        if (other instanceof FunctionType) {
-            let p = this.parameterType.merge(state, tyVarBnd, other.parameterType);
-            let r = this.returnType.merge(state, p[1], other.returnType);
+        let o = other.instantiate(state, tyVarBnd);
+        if (o instanceof FunctionType) {
+            let p = this.parameterType.merge(state, tyVarBnd, o.parameterType);
+            let r = this.returnType.merge(state, p[1], o.returnType);
 
             return [new FunctionType(p[0], r[0], this.position), r[1]];
         }
