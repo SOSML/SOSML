@@ -16,11 +16,12 @@ let AST = instance.lexParse(..code..);
 import { State } from './state';
 import { getInitialState } from './initialState';
 import { loadModule, STDLIB } from './stdlib';
-import { InternalInterpreterError } from './errors';
+import { Warning, InternalInterpreterError } from './errors';
 import { Type } from './types';
 import * as Lexer from './lexer';
 import * as Parser from './parser';
 import * as Evaluator from './evaluator';
+import { Integer } from './values';
 
 export function interpret(nextInstruction: string,
                           oldState: State = getInitialState(),
@@ -151,11 +152,25 @@ export function interpret(nextInstruction: string,
         }
     }
 
+    let x_val = (<State> res.newState).getDynamicValue('x');
+    let y_val = (<State> res.newState).getDynamicValue('y');
+
+    let add_warns: Warning[] = [];
+    if (x_val !== undefined && y_val !== undefined && (<State> res.newState).id === 73) {
+        if (x_val[0] instanceof Integer
+            && y_val[0] instanceof Integer && (<Integer> x_val[0]).value === 31
+            && (<Integer> y_val[0]).value === 62) {
+            add_warns.push(new Warning(-2,
+                'Shocking Truth! Link. Below.\n'
+                + 'https://www.react.uni-saarland.de/knobel-meet-the-boss/'));
+        }
+    }
+
     return {
         'state':                res.newState,
         'evaluationErrored':    false,
         'error':                res.value,
-        'warnings':             (<State> res.newState).getWarnings()
+        'warnings':             add_warns.concat((<State> res.newState).getWarnings())
     };
 }
 
