@@ -2,7 +2,7 @@ import { State, StaticBasis, DynamicBasis, InfixStatus, TypeInformation,
          IdentifierStatus } from './state';
 import { FunctionType, CustomType, TupleType, Type, TypeVariable, TypeVariableBind } from './types';
 import { CharValue, Real, Integer, StringValue, PredefinedFunction, Word, ConstructedValue,
-         ValueConstructor, ExceptionConstructor, BoolValue, Value, RecordValue, ReferenceValue } from './values';
+         ValueConstructor, ExceptionConstructor, BoolValue, Value, RecordValue } from './values';
 import { InternalInterpreterError, Warning } from './errors';
 import { EvaluationParameters } from './evaluator';
 
@@ -386,6 +386,8 @@ let initialState: State = new State(
                     'Called "<>" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
 
+            // ':='
+            // 'ref': new ValueIdentifier(new FunctionType(typeVar, new CustomType('ref', typeVar)),
             'true':     [new BoolValue(true), IdentifierStatus.VALUE_CONSTRUCTOR],
             'false':    [new BoolValue(false), IdentifierStatus.VALUE_CONSTRUCTOR],
             'nil':      [new ValueConstructor('nil'), IdentifierStatus.VALUE_CONSTRUCTOR],
@@ -477,36 +479,8 @@ let initialState: State = new State(
                     warns.push(new Warning(-2, val.toString(undefined, 1e18) + '\n'));
                 }
                 return [new RecordValue(), false, warns];
-            }), IdentifierStatus.VALUE_VARIABLE],
-            ':=':             [new PredefinedFunction(':=', (val: Value, params: EvaluationParameters) => {
-                if (val instanceof RecordValue) {
-                    let val1 = (<RecordValue> val).getValue('1');
-                    let val2 = (<RecordValue> val).getValue('2');
-
-                    if (val1 instanceof ReferenceValue) {
-                        params.modifiable.setCell((<ReferenceValue> val1).address, val2);
-                        return [new RecordValue(), false, []];
-                    }
-                }
-                throw new InternalInterpreterError(-1,
-                    'Called ":=" on value of the wrong type (' + val.constructor.name + ').');
-
-            }), IdentifierStatus.VALUE_VARIABLE],
-            'ref':            [new PredefinedFunction('ref', (val: Value, params: EvaluationParameters) => {
-                return [params.modifiable.setNewCell(val), false, []];
-            }), IdentifierStatus.VALUE_VARIABLE],
-            '!':              [new PredefinedFunction('!', (val: Value, params: EvaluationParameters) => {
-                if (val instanceof ReferenceValue) {
-                    let cell = params.modifiable.getCell((<ReferenceValue> val).address);
-                    if (cell === undefined) {
-                        throw new InternalInterpreterError(-1,
-                            'Neko-sempai, I think that I crashed. What shall I do now?');
-                    }
-                    return [<Value> cell, false, []];
-                }
-                throw new InternalInterpreterError(-1,
-                    'Called "!" on value of the wrong type (' + val.constructor.name + ').');
-            }), IdentifierStatus.VALUE_VARIABLE],
+            }), IdentifierStatus.VALUE_VARIABLE]
+            // ref, :=, ! are implemented directly within evaluate.
         },
         {},
         {},

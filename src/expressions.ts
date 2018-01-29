@@ -1044,6 +1044,70 @@ export class FunctionApplication extends Expression implements Pattern {
 
         let step: number = params.step;
 
+
+        if (this.func instanceof ValueIdentifier) {
+            if (this.func.name.getText() === 'ref'
+                || this.func.name.getText() === ':='
+                || this.func.name.getText() === '!') {
+                if (step === -1) {
+                    params.step = step + 1;
+                    params.state = state;
+                    callStack.push({'next': this, 'params': params});
+                    callStack.push({
+                        'next': this.argument,
+                        'params': {'state': state, 'modifiable': modifiable, 'recResult': undefined}
+                    });
+                    return;
+                }
+
+                let aVal = params.recResult;
+                if (aVal === undefined
+                    || aVal.value === undefined) {
+                    throw new InternalInterpreterError(-1, 'How is this undefined?');
+                }
+                if (aVal.hasThrown) {
+                    return {
+                        'newState': undefined,
+                        'value': aVal.value,
+                        'hasThrown': true,
+                    };
+                }
+                let val = <Value> aVal.value;
+
+                if (this.func.name.getText() === 'ref') {
+                    let res: ReferenceValue = modifiable.setNewCell(val);
+
+                    return {
+                        'newState': undefined,
+                        'value': res,
+                        'hasThrown': false,
+                    };
+                } else if (this.func.name.getText() === ':=') {
+                    if ((!(val instanceof RecordValue))
+                        || (!((<RecordValue> val).getValue('1') instanceof ReferenceValue))) {
+                        throw new EvaluationError(this.position, 'That\'s not how ":=" works.');
+                    }
+                    modifiable.setCell((<ReferenceValue> (<RecordValue> val).getValue('1')).address,
+                        (<RecordValue> val).getValue('2'));
+                    return {
+                        'newState': undefined,
+                        'value': new RecordValue(),
+                        'hasThrown': false,
+                    };
+                } else if (this.func.name.getText() === '!') {
+                    if (!(val instanceof ReferenceValue)) {
+                        throw new EvaluationError(this.position,
+                            'You cannot dereference "' + this.argument + '".');
+                    }
+                    return {
+                        'newState': undefined,
+                        'value': modifiable.getCell((<ReferenceValue> val).address),
+                        'hasThrown': false,
+                    };
+                }
+            }
+        }
+
         if (step === -1) {
             params.step = step + 1;
             params.state = state;
