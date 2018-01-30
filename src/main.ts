@@ -156,7 +156,8 @@ export function interpret(nextInstruction: string,
     let y_val = (<State> res.newState).getDynamicValue('y');
 
     let add_warns: Warning[] = [];
-    if (x_val !== undefined && y_val !== undefined && (<State> res.newState).id === 73) {
+    if (x_val !== undefined && y_val !== undefined
+        && (<State> res.newState).id === 76) {
         if (x_val[0] instanceof Integer
             && y_val[0] instanceof Integer && (<Integer> x_val[0]).value === 31
             && (<Integer> y_val[0]).value === 62) {
