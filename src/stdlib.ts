@@ -635,17 +635,17 @@ export let STDLIB: {
             val length : 'a array -> int
             val sub : 'a array * int -> 'a
             val update : 'a array * int * 'a -> unit
-            (* val vector : 'a array -> 'a vector *)
+            val vector : 'a array -> 'a vector
             (* val copy    : {src : 'a array, dst : 'a array, di : int} -> unit *)
             (* val copyVec : {src : 'a vector, dst : 'a array, di : int} -> unit *)
             (* val appi : (int * 'a -> unit) -> 'a array -> unit *)
             (* val app  : ('a -> unit) -> 'a array -> unit *)
             (* val modifyi : (int * 'a -> 'a) -> 'a array -> unit *)
             (* val modify  : ('a -> 'a) -> 'a array -> unit *)
-            (* val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b *)
-            (* val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b *)
-            (* val foldl  : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b *)
-            (* val foldr  : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b *)
+            val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
+            val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
+            val foldl  : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
+            val foldr  : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
             (* val findi : (int * 'a -> bool) -> 'a array -> (int * 'a) option *)
             (* val find  : ('a -> bool) -> 'a array -> 'a option *)
             (* val exists : ('a -> bool) -> 'a array -> bool *)
@@ -654,7 +654,28 @@ export let STDLIB: {
         end = struct
             open Array;
             fun tabulate (n, f) = fromList (List.tabulate (n, f));
-            (* TODO *)
+
+            fun vector arr = Vector.tabulate (length arr, fn i => sub (arr, i));
+
+            fun foldli f init arr = let
+                val len = length arr
+                fun loop (i, b) =
+                    if i = len then b
+                    else loop (i + 1, f (i, sub (arr, i), b))
+                in
+                    loop (0, init)
+                end;
+            fun foldri f init arr = let
+                val len = length arr
+                fun loop (i, b) =
+                    if i = ~1 then b
+                    else loop (i - 1, f (i, sub (arr, i), b))
+                in
+                    loop (len - 1, init)
+                end;
+            fun foldl f init arr = foldli (fn (_, a, x) => f(a, x)) init arr;
+            fun foldr f init arr = foldri (fn (_, a, x) => f(a, x)) init arr;
+
         end;`,
         'requires': ['Option', 'List', 'Vector']
     },
@@ -1046,14 +1067,14 @@ export let STDLIB: {
             val sub : 'a vector * int -> 'a
             val update : 'a vector * int * 'a -> 'a vector
             (* val concat : 'a vector list -> 'a vector *)
-            (* val appi : (int * 'a -> unit) -> 'a vector -> unit *)
-            (* val app  : ('a -> unit) -> 'a vector -> unit *)
-            (* val mapi : (int * 'a -> 'b) -> 'a vector -> 'b vector *)
-            (* val map  : ('a -> 'b) -> 'a vector -> 'b vector *)
-            (* val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b *)
-            (* val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b *)
-            (* val foldl  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b *)
-            (* val foldr  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b *)
+            val appi : (int * 'a -> unit) -> 'a vector -> unit
+            val app  : ('a -> unit) -> 'a vector -> unit
+            val mapi : (int * 'a -> 'b) -> 'a vector -> 'b vector
+            val map  : ('a -> 'b) -> 'a vector -> 'b vector
+            val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+            val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+            val foldl  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+            val foldr  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
             (* val findi : (int * 'a -> bool) -> 'a vector -> (int * 'a) option *)
             (* val find  : ('a -> bool) -> 'a vector -> 'a option *)
             (* val exists : ('a -> bool) -> 'a vector -> bool *)
@@ -1062,6 +1083,31 @@ export let STDLIB: {
         end = struct
             open Vector;
             fun tabulate (n, f) = fromList (List.tabulate (n, f));
+
+            fun foldli f init vec = let
+                val len = length vec
+                fun loop (i, b) =
+                    if i = len then b
+                    else loop (i + 1, f (i, sub (vec, i), b))
+                in
+                    loop (0, init)
+                end;
+            fun foldri f init vec = let
+                val len = length vec
+                fun loop (i, b) =
+                    if i = ~1 then b
+                    else loop (i - 1, f (i, sub (vec, i), b))
+                in
+                    loop (len - 1, init)
+                end;
+            fun foldl f init vec = foldli (fn (_, a, x) => f(a, x)) init vec;
+            fun foldr f init vec = foldri (fn (_, a, x) => f(a, x)) init vec;
+
+            fun appi f vec = List.app f (foldri (fn (i,a,l) => (i,a)::l) [] vec);
+            fun app  f vec = List.app f (foldr (fn (a,l) => a::l) [] vec);
+            fun mapi f vec = fromList (List.map f (foldri (fn (i,a,l) => (i,a)::l) [] vec));
+            fun map  f vec = fromList (List.map f (foldr (fn (a,l) => a::l) [] vec));
+
         end; `,
         'requires': ['Option', 'List']
     },
