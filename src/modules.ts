@@ -508,9 +508,26 @@ export class FunctorApplication extends Expression implements Structure {
                 'Undefined functor "' + this.functorId.getText() + '".');
         }
 
-        OpaqueConstraint.restrict(fun[0], str[0], state, tyVarBnd, nextName, this.position);
+        let fn = new StaticBasis({}, {}, {}, {}, {});
+        fn.extend(fun[1]);
 
-        return [fun[1], str[1], str[2], str[3]];
+        let res = fn.extend(TransparentConstraint.restrict(fun[0],
+            str[0], state, tyVarBnd, nextName, this.position)[0]);
+
+        for (let i in res.valueEnvironment) {
+            if (res.valueEnvironment.hasOwnProperty(i)) {
+                let tmp = res.valueEnvironment[i];
+
+                if (tmp !== undefined && tmp[0] !== undefined) {
+                    let tst = state.getNestedState(state.id);
+                    tst.staticBasis = res;
+
+                    res.valueEnvironment[i] = [tmp[0].instantiate(tst, str[2]), tmp[1]];
+                }
+            }
+        }
+
+        return [res, str[1], str[2], str[3]];
     }
 
     computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
