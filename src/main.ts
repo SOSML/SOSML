@@ -163,7 +163,7 @@ export function interpret(nextInstruction: string,
             && (<Integer> y_val[0]).value === 62) {
             add_warns.push(new Warning(-2,
                 'Shocking Truth! Link. Below.\n'
-                + 'https://www.react.uni-saarland.de/knobel-meet-the-boss/'));
+                + 'https://www.react.uni-saarland.de/kNobel-meet-the-boss/'));
         }
     }
 
