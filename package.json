@@ -24,8 +24,8 @@
   "devDependencies": {
     "@types/jest": "^19.2.3",
     "@types/node": "^7.0.22",
-    "jest": "^20.0.4",
-    "ts-jest": "^20.0.4",
+    "jest": "^22.4.3",
+    "ts-jest": "^22.4.3",
     "ts-loader": "^2.1.0",
     "tslint": "^5.3.2",
     "typescript": "2.3.4",
