@@ -19,9 +19,9 @@ Correctly lexing, parsing, elaborating and interpreting any SML core language pr
   * [x] local declarations (`local val x = 42; in val y = x + 2; end;`)
   * [x] declaring operators as infix, nonfix, left, and right associative via `infix`, `infixr`, and `nonfix`
   * [x] `open` declarations
-  * [x] _structure declarations_ (`structure S = struct end;`)
-  * [x] _signature declarations_ (`signature S = sig end;`)
-  * [x] _functor declarations_ (`functor F = struct end;`)
+  * [x] structure declarations (`structure S = struct end;`)
+  * [x] signature declarations (`signature S = sig end;`)
+  * [x] functor declarations (`functor F = struct end;`)
 * Supported expressions (This list is non-exhaustive)
   * [x] tuple (`(1, 2, 3)`), records (`{a = 1, b = 2}`), and lists (`[1, 2, 3]`)
   * [x] application expressions (`f x`)
@@ -34,16 +34,19 @@ Correctly lexing, parsing, elaborating and interpreting any SML core language pr
   * [x] `while` loops
   * [x] `print`
   * [x] `ref`, `!`, and `:=`
-  * [x] _something_ structure related
-  * [x] _something_ signature related
-  * [x] _something_ functor related
+  * [x] structures
+  * [x] signatures 
+  * [x] functors
 * Supported standard library constructs
   * Math library
   * Char library `ord`, `chr`, `Char.isLower`, `Char.isUpper`, `Char.isDigit`, `Char.isAlpha`
   * Int library `Int.minInt`, `Int.maxInt`, and `Int.compare`
   * Real library `Real.compare`, `Real.fromInt`, `Real.round`, `Real.floor`, and `Real.ceil`
-  * Option Library
+  * Option library
   * List and Listsort libraries
+  * Vector library `fromList`, `tabulate`, `length`, `sub`, `update`, `app`, `map`, `foldl`, `foldr`
+  * Array library `fromList`, `tabulate`, `length`, `sub`, `update`, `vector`, `foldl`, `foldr`
+  * String library
 
 ## Building and installation
 The dependencies of this package must be installed to test or build.
