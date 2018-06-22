@@ -37,7 +37,7 @@ Correctly lexing, parsing, elaborating and interpreting any SML core language pr
   * [x] structures
   * [x] signatures 
   * [x] functors
-* Supported standard library constructs
+* Supported standard library constructs (Note that all available libraries are loaded per default, currently SOSML has not implemented any user-space loading of modules.)
   * Math library
   * Char library `ord`, `chr`, `Char.isLower`, `Char.isUpper`, `Char.isDigit`, `Char.isAlpha`
   * Int library `Int.minInt`, `Int.maxInt`, and `Int.compare`
@@ -74,17 +74,11 @@ npm test
 ```
 This runs all tests located in the `test` directory.
 
-## Writing your own tests
+## Contributing
 
-To write your own tests, create a new file in the `test` directory. You can write multiple tests into the same file. The testing framework used is
-[Jest](https://facebook.github.io/jest/).
+We welcome you to open an Issue for any error you may find, and we will try to fix it ASAP. 
+Further, if you want additional parts of the Standard Library or other features in general implemented, 
+feel free to open a new Issue. 
 
-Example test:
-```javascript
-it("adds up 1 and 2 to 3", () => {
-    const sum = require("../src/sum");
-
-    expect(sum(1,2)).toBe(3);
-});
-```
-Consult the Jest documentation for details on how to write tests.
+If you want to contribute via writing code, you may check the Issues page for any unresolved problems 
+or unimplemented features and then submit a pull request after solving that problem or implementing that feature.
