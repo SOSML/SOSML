@@ -19,9 +19,9 @@ Correctly lexing, parsing, elaborating and interpreting any SML core language pr
   * [x] local declarations (`local val x = 42; in val y = x + 2; end;`)
   * [x] declaring operators as infix, nonfix, left, and right associative via `infix`, `infixr`, and `nonfix`
   * [x] `open` declarations
-  * [x] _structure declarations_ (`structure S = struct end;`)
-  * [x] _signature declarations_ (`signature S = sig end;`)
-  * [x] _functor declarations_ (`functor F = struct end;`)
+  * [x] structure declarations (`structure S = struct end;`)
+  * [x] signature declarations (`signature S = sig end;`)
+  * [x] functor declarations (`functor F = struct end;`)
 * Supported expressions (This list is non-exhaustive)
   * [x] tuple (`(1, 2, 3)`), records (`{a = 1, b = 2}`), and lists (`[1, 2, 3]`)
   * [x] application expressions (`f x`)
@@ -34,16 +34,19 @@ Correctly lexing, parsing, elaborating and interpreting any SML core language pr
   * [x] `while` loops
   * [x] `print`
   * [x] `ref`, `!`, and `:=`
-  * [x] _something_ structure related
-  * [x] _something_ signature related
-  * [x] _something_ functor related
-* Supported standard library constructs
+  * [x] structures
+  * [x] signatures 
+  * [x] functors
+* Supported standard library constructs (Note that all available libraries are loaded per default, currently SOSML has not implemented any user-space loading of modules.)
   * Math library
   * Char library `ord`, `chr`, `Char.isLower`, `Char.isUpper`, `Char.isDigit`, `Char.isAlpha`
   * Int library `Int.minInt`, `Int.maxInt`, and `Int.compare`
   * Real library `Real.compare`, `Real.fromInt`, `Real.round`, `Real.floor`, and `Real.ceil`
-  * Option Library
+  * Option library
   * List and Listsort libraries
+  * Vector library `fromList`, `tabulate`, `length`, `sub`, `update`, `app`, `map`, `foldl`, `foldr`
+  * Array library `fromList`, `tabulate`, `length`, `sub`, `update`, `vector`, `foldl`, `foldr`
+  * String library
 
 ## Building and installation
 The dependencies of this package must be installed to test or build.
@@ -71,17 +74,11 @@ npm test
 ```
 This runs all tests located in the `test` directory.
 
-## Writing your own tests
+## Contributing
 
-To write your own tests, create a new file in the `test` directory. You can write multiple tests into the same file. The testing framework used is
-[Jest](https://facebook.github.io/jest/).
+We welcome you to open an Issue for any error you may find, and we will try to fix it ASAP. 
+Further, if you want additional parts of the Standard Library or other features in general implemented, 
+feel free to open a new Issue. 
 
-Example test:
-```javascript
-it("adds up 1 and 2 to 3", () => {
-    const sum = require("../src/sum");
-
-    expect(sum(1,2)).toBe(3);
-});
-```
-Consult the Jest documentation for details on how to write tests.
+If you want to contribute via writing code, you may check the Issues page for any unresolved problems 
+or unimplemented features and then submit a pull request after solving that problem or implementing that feature.
