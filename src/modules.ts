@@ -757,8 +757,35 @@ export class TypeRealisation extends Expression implements Signature {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        // TODO
-        throw new Error('ニャ－');
+        let sig = this.signatureExpression.elaborate(state, tyVarBnd, nextName);
+
+        let tmpst = state.getNestedState(0);
+        tmpst.staticBasis = sig[0];
+
+        let res: TypeInformation | undefined = undefined;
+        let st: StaticBasis | undefined = sig[0];
+        let nm = this.name.getText();
+        if (this.name instanceof LongIdentifierToken) {
+            st = tmpst.getAndResolveStaticStructure(<LongIdentifierToken> this.name);
+
+            if (st !== undefined) {
+                res = (<StaticBasis> st).getType(
+                    (<LongIdentifierToken> this.name).id.getText());
+                nm = (<LongIdentifierToken> this.name).id.getText();
+            }
+        } else {
+            res = tmpst.getStaticType(this.name.getText());
+        }
+
+        if (res === undefined || st === undefined) {
+            throw new ElaborationError(this.position, 'Undefined type "'
+                + this.name.getText() + '".');
+        }
+
+        // TODO: TEST THIS!
+        st.setType(nm, new FunctionType(res.type, this.type), [],
+            this.tyvarseq.length, res.allowsEquality);
+        return sig;
     }
 
     computeInterface(state: State): DynamicInterface {
@@ -1349,8 +1376,22 @@ export class StructureSpecification extends Specification {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        // TODO
-        throw new Error('ニャ－');
+
+        let stbas = new StaticBasis({}, {}, {}, {}, {});
+        let warns: Warning[] = []
+        let tv = tyVarBnd;
+        let nN = nextName;
+
+        for (let i = 0; i < this.structureDescription.length; ++i) {
+            let sig = this.structureDescription[i][1].elaborate(state, tv, nN);
+            warns.concat(sig[1]);
+            tv = sig[2];
+            nN = sig[3];
+            stbas.setStructure(this.structureDescription[i][0].getText(), sig[0]);
+        }
+
+        // TODO: Test this!
+        return [stbas, warns, tv, nN];
     }
 
     computeInterface(state: State): DynamicInterface {
@@ -1473,8 +1514,48 @@ export class SharingSpecification extends Specification {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        // TODO
-        throw new Error('ニャ－');
+        let spec = this.specification.elaborate(state, tyVarBnd, nextName);
+
+        let tmpst = state.getNestedState(0);
+        tmpst.staticBasis = spec[0];
+
+        let tps: TypeInformation[] = [];
+        let sts: StaticBasis[] = [];
+        let nms: string[] = [];
+        let eq = false;
+        for (let i = 0; i < this.typeNames.length; ++i) {
+            let res: TypeInformation | undefined = undefined;
+            let st: StaticBasis | undefined = spec[0];
+            let nm = this.typeNames[i].getText();
+            if (this.typeNames[i] instanceof LongIdentifierToken) {
+                st = tmpst.getAndResolveStaticStructure(<LongIdentifierToken> this.typeNames[i]);
+
+                if (st !== undefined) {
+                    res = (<StaticBasis> st).getType(
+                        (<LongIdentifierToken> this.typeNames[i]).id.getText());
+                    nm = (<LongIdentifierToken> this.typeNames[i]).id.getText();
+                }
+            } else {
+                res = tmpst.getStaticType(this.typeNames[i].getText());
+            }
+
+            if (res === undefined || st === undefined) {
+                throw new ElaborationError(this.position, 'Undefined type "'
+                    + this.typeNames[i].getText() + '".');
+            }
+
+            eq = eq || res.allowsEquality;
+            tps.push(res);
+            sts.push(st);
+            nms.push(nm);
+        }
+
+        // TODO: TEST THIS!
+        for (let i = 1; i < this.typeNames.length; ++i) {
+            sts[i].setType(nms[i], new FunctionType(tps[i].type, tps[0].type), [], 0, eq);
+        }
+
+        return spec;
     }
 
     computeInterface(state: State): DynamicInterface {
