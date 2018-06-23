@@ -1480,7 +1480,8 @@ export class Parser {
                     isBad = true;
                 }
                 if (isBad) {
-                    throw new ParserError('／人◕ ‿‿ ◕人＼', pat.position);
+                    throw new ParserError('Nyaboron is sad. Did you forget a function name?',
+                        pat.position);
                 }
 
                 nm = <ValueIdentifier> pat;
