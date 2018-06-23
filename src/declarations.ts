@@ -56,14 +56,11 @@ export class ValueDeclaration extends Declaration {
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         let result: [string, Type][] = [];
 
-        let isRec = false;
         let warns: Warning[] = [];
         let bnds = tyVarBnd;
         let i = 0;
         for (; i < this.valueBinding.length; ++i) {
             if (this.valueBinding[i].isRecursive) {
-                isRec = true;
-
                 for (let j = i; j < this.valueBinding.length; ++j) {
                     let pat = this.valueBinding[j].pattern;
 
@@ -1234,10 +1231,8 @@ export class DatatypeBinding {
             -1, undefined, false, id);
         nstate.setStaticType(this.name.getText(), restp, [], this.typeVariableSequence.length);
         for (let i = 0; i < this.type.length; ++i) {
-            let numArg: number = 0;
             let tp: Type = restp;
             if (this.type[i][1] !== undefined) {
-                numArg = 1;
                 tp = new FunctionType((<Type> this.type[i][1]).instantiate(
                     nstate, new Map<string, [Type, boolean]>()), tp);
             }

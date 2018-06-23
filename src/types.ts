@@ -204,7 +204,7 @@ export class Domain {
                         rs = '\n';
                     }
                     nonex = false;
-                    res.push(new Warning(position, 'Pattern matching is non-exhaustive.' + res));
+                    res.push(new Warning(position, 'Pattern matching is non-exhaustive.' + rs));
                 }
             }
         }
