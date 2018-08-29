@@ -534,7 +534,49 @@ export class Record extends Expression implements Pattern {
         return new Record(this.position, this.complete, newEntries);
     }
 
+    isTuple(): boolean {
+        let etr = new Map<string, Expression>();
+        let isTuple = this.entries.length !== 1 && this.complete;
+        for (let i = 0; i < this.entries.length; ++i) {
+            etr.set(this.entries[i][0], this.entries[i][1]);
+        }
+        for (let i = 1; i <= this.entries.length; ++i) {
+            if (!etr.has('' + i)) {
+                isTuple = false;
+            }
+        }
+        return isTuple;
+    }
+
     toString(): string {
+        let etr = new Map<string, Expression>();
+        let isTuple = this.entries.length !== 1 && this.complete;
+        for (let i = 0; i < this.entries.length; ++i) {
+            etr.set(this.entries[i][0], this.entries[i][1]);
+        }
+        for (let i = 1; i <= this.entries.length; ++i) {
+            if (!etr.has('' + i)) {
+                isTuple = false;
+            }
+        }
+
+        if (isTuple) {
+            let res: string = '(';
+            for (let i = 1; i <= this.entries.length; ++i) {
+                if (i > 1) {
+                    res += ', ';
+                }
+                let sub = etr.get('' + i);
+                if (sub !== undefined) {
+                    res += sub;
+                } else {
+                    throw new InternalInterpreterError(-1,
+                        'How did we loose this value? It was there before. I promise…');
+                }
+            }
+            return res + ')';
+        }
+
         let result: string = '{';
         let first: boolean = true;
         for (let i = 0; i < this.entries.length; ++i) {
@@ -639,52 +681,6 @@ export class LocalDeclarationExpression extends Expression {
         });
 
         let res = this.declaration.elaborate(nstate, nvbnd, nextName);
-
-            /*
-        nextName = res[3];
-        let names = new Set<string>();
-        tyVarBnd.forEach((val: [Type, boolean], key: string) => {
-            if (key[1] === '*' && key[2] === '*') {
-                names.add(key);
-            }
-        });
-        while (true) {
-            let change = false;
-            let nnames = new Set<string>();
-            names.forEach((val: string) => {
-                if (res[2].has(val)) {
-                    res[2].get(val)[0].instantiate(nstate, res[2]).getTypeVariables().forEach((v: string) => {
-                        if (!names.has(v)) {
-                            change = true;
-                            nnames.add(v);
-                            console.nog(v);
-                        }
-                    });
-                }
-            });
-            nnames.forEach((val: string) => {
-                names.add(val);
-            });
-            if (!change) {
-                break;
-            }
-        }
-        let nbnds = new Map<string, [Type, boolean]>();
-        res[2].forEach((val: [Type, boolean], key: string) => {
-            //            if (names.has(key)) {
-                nbnds = nbnds.set(key, [val[0].instantiate(res[0], res[2]), val[1]]);
-                // }
-        });
-        for (let i = 0; i < chg.length; ++i) {
-            if ((<[Type, boolean]> tyVarBnd.get(chg[i][0]))[0].equals(
-                (<[Type, boolean]> res[2].get(chg[i][0]))[0])) {
-                // Make sure we're not using some type of some rebound identifier
-                let tmp = chg[i][1][0].merge(nstate, tyVarBnd,
-                    chg[i][1][0].instantiate(nstate, res[2]));
-                tyVarBnd = tmp[1];
-            }
-        }
-                */
 
         let r2 = this.expression.getType(res[0], res[2], res[3], tyVars, forceRebind);
         return [r2[0], res[1].concat(r2[1]), r2[2], r2[3], r2[4], r2[5]];
@@ -832,7 +828,8 @@ export class FunctionApplication extends Expression implements Pattern {
 // function argument
     constructor(public position: number,
                 public func: Expression,
-                public argument: Expression|PatternExpression) { super(); }
+                public argument: Expression|PatternExpression,
+                public unsimp: Expression | undefined = undefined) { super(); }
 
     getExplicitTypeVariables(): Set<TypeVariable> {
         let res = new Set<TypeVariable>();
@@ -1030,9 +1027,20 @@ export class FunctionApplication extends Expression implements Pattern {
     }
 
     toString(): string {
-        let res = '( ' +  this.func;
+        if (this.argument instanceof Record && (<Record> this.argument).isTuple()
+            && (<Record> this.argument).entries.length === 2) {
+
+            return '(' + (<Record> this.argument).getEntry('1') + ' ' +
+                this.func + ' ' + (<Record> this.argument).getEntry('2') + ')';
+        }
+
+        if (this.unsimp)
+            return '' + this.unsimp;
+
+
+        let res = '(' +  this.func;
         res += ' ' + this.argument;
-        return res + ' )';
+        return res + ')';
     }
 
     compute(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
@@ -1944,6 +1952,7 @@ export class InfixExpression extends Expression implements Pattern {
                 if (p1 < p2) {
                     return -1;
                 }
+
             }
             return 0;
         });
@@ -2135,12 +2144,14 @@ export class RecordSelector extends Expression {
 
 export class CaseAnalysis extends Expression {
     // case expression of match
-    constructor(public position: number, public expression: Expression, public match: Match) { super(); }
+    constructor(public position: number, public expression: Expression,
+        public match: Match, public unsimp: Expression | undefined = undefined) { super(); }
 
     simplify(): FunctionApplication {
         return new FunctionApplication(this.position, new Lambda(this.position,
             this.match.simplify()),
-            this.expression.simplify());
+            this.expression.simplify(),
+            this.unsimp ? this.unsimp : this);
     }
 
     toString(): string {
@@ -2156,11 +2167,12 @@ export class Conditional extends Expression {
     simplify(): FunctionApplication {
         let match: Match = new Match(this.position, [[trueConstant, this.consequence],
             [falseConstant, this.alternative]]);
-        return new CaseAnalysis(this.position, this.condition, match).simplify();
+        return new CaseAnalysis(this.position, this.condition, match, this).simplify();
     }
 
     toString(): string {
-        return 'if ' + this.condition + ' then ' + this.consequence + ' else ' + this.alternative;
+        return 'if ' + this.condition.simplify() + ' then ' + this.consequence.simplify()
+            + ' else ' + this.alternative.simplify();
     }
 }
 
