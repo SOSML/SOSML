@@ -616,68 +616,72 @@ function addEvalLib(state: State): State {
         if (val instanceof StringValue) {
             let str = (<StringValue> val).value;
 
-            let tkn = Lexer.lex(str + ';', {});
-            let p = new Parser.Parser(tkn, params.state, params.state.id, {});
-            let ast = p.parseExpression();
+            try {
+                let tkn = Lexer.lex(str + ';', {});
+                let p = new Parser.Parser(tkn, params.state, params.state.id, {});
+                let ast = p.parseExpression();
 
-            ast = ast.simplify();
-            let callStack: EvaluationStack = [];
-            callStack.push({'next': ast, 'params': {'state': params.state.getNestedState(),
-                'modifiable': params.state.getNestedState(),
-                'recResult': undefined}});
+                ast = ast.simplify();
+                let callStack: EvaluationStack = [];
+                callStack.push({'next': ast, 'params': {'state': params.state.getNestedState(),
+                    'modifiable': params.state.getNestedState(),
+                    'recResult': undefined}});
 
-            let lastResult: EvaluationResult | undefined = undefined;
-            let debug = '';
+                let lastResult: EvaluationResult | undefined = undefined;
+                let debug = '';
 
-            let repl = new Map<string, string>();
+                let repl = new Map<string, string>();
 
-            while (callStack.length > 0) {
-                let next = callStack.pop();
-                if (next === undefined) {
-                    throw new InternalInterpreterError(-1, 'バトル、バトルしたい！');
-                }
-                let target = next.next;
-                let params = next.params;
-                params.recResult = lastResult;
-                if (target instanceof Declaration) {
-                    lastResult = target.evaluate(params, callStack);
-                } else {
-                    lastResult = target.compute(params, callStack);
-                }
-
-                let str = next.next.toString();
-                if (params.step === 1 && !str.includes('__arg')) {
-
-                    if (lastResult && lastResult.value) {
-                        debug += str + ' → ' + lastResult.value.toString(params.state) + '\n';
+                while (callStack.length > 0) {
+                    let next = callStack.pop();
+                    if (next === undefined) {
+                        throw new InternalInterpreterError(-1, 'バトル、バトルしたい！');
+                    }
+                    let target = next.next;
+                    let params = next.params;
+                    params.recResult = lastResult;
+                    if (target instanceof Declaration) {
+                        lastResult = target.evaluate(params, callStack);
                     } else {
-                        let nrepl = new Map<string, string>();
-                        repl.forEach((value: string, key: string) => {
-                            if (str.includes(key)) {
-                                str = str.replace(key, value);
-                            } else {
-                                nrepl.set(key, value);
-                            }
-                        });
-                        repl = nrepl;
+                        lastResult = target.compute(params, callStack);
+                    }
 
-                        debug += str + '\n';
+                    let str = next.next.toString();
+                    if (params.step === 1 && !str.includes('__arg')) {
+
+                        if (lastResult && lastResult.value) {
+                            debug += str + ' → ' + lastResult.value.toString(params.state) + '\n';
+                        } else {
+                            let nrepl = new Map<string, string>();
+                            repl.forEach((value: string, key: string) => {
+                                if (str.includes(key)) {
+                                    str = str.replace(key, value);
+                                } else {
+                                    nrepl.set(key, value);
+                                }
+                            });
+                            repl = nrepl;
+
+                            debug += str + '\n';
+                        }
+                    }
+                    if (lastResult && lastResult.value
+                        && lastResult.value.toString(params.state) !== 'fn') {
+                        if (!(next.next instanceof ValueIdentifier
+                            || next.next instanceof Record)) {
+                            repl.set(next.next.toString(), lastResult.value.toString(params.state));
+                        }
                     }
                 }
-                if (lastResult && lastResult.value
-                    && lastResult.value.toString(params.state) !== 'fn') {
-                    if (!(next.next instanceof ValueIdentifier
-                        || next.next instanceof Record)) {
-                        repl.set(next.next.toString(), lastResult.value.toString(params.state));
-                    }
+                if (lastResult !== undefined && lastResult.value !== undefined) {
+                    debug += lastResult.value.toString(undefined) + '\n';
                 }
+                return [new RecordValue(), false, [
+                    new Warning(-2, debug)
+                ]];
+            } catch (e) {
+                return [new RecordValue(), false, [new Warning(e.position, e.message)]];
             }
-            if (lastResult !== undefined && lastResult.value !== undefined) {
-                debug += lastResult.value.toString(undefined) + '\n';
-            }
-            return [new RecordValue(), false, [
-                new Warning(-2, debug)
-            ]];
         } else {
             throw new InternalInterpreterError(-1, 'std type mismatch');
         }
