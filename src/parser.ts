@@ -1160,7 +1160,8 @@ export class Parser {
                 || this.checkKeywordToken(curTok, 'op');
             if (!opPrf) {
                 throw new ParserError(
-                    'Even Tunafishman can\'t save you from the "company" if you forget an "op".',
+                    'Infix operator "' + res
+                    + '" appeared in non-infix context without "op".',
                     curTok.position);
             }
         }
