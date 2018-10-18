@@ -683,7 +683,7 @@ function addEvalLib(state: State): State {
                 return [new RecordValue(), false, [new Warning(e.position, e.message)]];
             }
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError(-1, 'This std type mismatch reigns supreme!');
         }
         }), IdentifierStatus.VALUE_VARIABLE);
 
