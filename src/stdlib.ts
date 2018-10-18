@@ -3,14 +3,10 @@ import { TypeVariable, TypeVariableBind, FunctionType, CustomType, TupleType } f
 import { CharValue, Real, Integer, PredefinedFunction,  StringValue, Value, RecordValue,
     ExceptionConstructor, MAXINT, MININT, ValueConstructor, VectorValue,
     ConstructedValue, ArrayValue } from './values';
-import { Warning, InternalInterpreterError } from './errors';
+import { InternalInterpreterError } from './errors';
 import * as Interpreter from './main';
 import { COMMIT_HASH, BRANCH_NAME, BUILD_DATE, COMMIT_MESSAGE } from './version';
-import { EvaluationStack, EvaluationParameters, EvaluationResult } from './evaluator';
-import * as Lexer from './lexer';
-import * as Parser from './parser';
-import { Declaration } from './declarations';
-import { ValueIdentifier, Record } from './expressions';
+import { EvaluationParameters } from './evaluator';
 
 
 let intType = new CustomType('int');
@@ -588,8 +584,7 @@ function addVectorLib(state: State): State {
         new FunctionType(new TupleType([vectorType, intType, new TypeVariable('\'a')]).simplify(), vectorType),
         IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('length', new PredefinedFunction('length', (val: Value,
-        params: EvaluationParameters) => {
+    dres.setValue('length', new PredefinedFunction('length', (val: Value, params: EvaluationParameters) => {
         if (val instanceof VectorValue) {
             let res = new Integer(val.entries.length);
             return [res, false, []];
@@ -604,97 +599,6 @@ function addVectorLib(state: State): State {
     return state;
 }
 
-function addEvalLib(state: State): State {
-    let dres = new DynamicBasis({}, {}, {}, {}, {});
-    let sres = new StaticBasis({}, {}, {}, {}, {});
-
-
-
-    // Evaluates a given program and returns the result
-    dres.setValue('evalExp', new PredefinedFunction('symbolic_eval', (val:Value,
-        params: EvaluationParameters) => {
-        if (val instanceof StringValue) {
-            let str = (<StringValue> val).value;
-
-            try {
-                let tkn = Lexer.lex(str + ';', {});
-                let p = new Parser.Parser(tkn, params.state, params.state.id, {});
-                let ast = p.parseExpression();
-
-                ast = ast.simplify();
-                let callStack: EvaluationStack = [];
-                callStack.push({'next': ast, 'params': {'state': params.state.getNestedState(),
-                    'modifiable': params.state.getNestedState(),
-                    'recResult': undefined}});
-
-                let lastResult: EvaluationResult | undefined = undefined;
-                let debug = '';
-
-                let repl = new Map<string, string>();
-
-                while (callStack.length > 0) {
-                    let next = callStack.pop();
-                    if (next === undefined) {
-                        throw new InternalInterpreterError(-1, 'バトル、バトルしたい！');
-                    }
-                    let target = next.next;
-                    let params = next.params;
-                    params.recResult = lastResult;
-                    if (target instanceof Declaration) {
-                        lastResult = target.evaluate(params, callStack);
-                    } else {
-                        lastResult = target.compute(params, callStack);
-                    }
-
-                    let str = next.next.toString();
-                    if (params.step === 1 && !str.includes('__arg')) {
-
-                        if (lastResult && lastResult.value) {
-                            debug += str + ' → ' + lastResult.value.toString(params.state) + '\n';
-                        } else {
-                            let nrepl = new Map<string, string>();
-                            repl.forEach((value: string, key: string) => {
-                                if (str.includes(key)) {
-                                    str = str.replace(key, value);
-                                } else {
-                                    nrepl.set(key, value);
-                                }
-                            });
-                            repl = nrepl;
-
-                            debug += str + '\n';
-                        }
-                    }
-                    if (lastResult && lastResult.value
-                        && lastResult.value.toString(params.state) !== 'fn') {
-                        if (!(next.next instanceof ValueIdentifier
-                            || next.next instanceof Record)) {
-                            repl.set(next.next.toString(), lastResult.value.toString(params.state));
-                        }
-                    }
-                }
-                if (lastResult !== undefined && lastResult.value !== undefined) {
-                    debug += lastResult.value.toString(undefined) + '\n';
-                }
-                return [new RecordValue(), false, [
-                    new Warning(-2, debug)
-                ]];
-            } catch (e) {
-                return [new RecordValue(), false, [new Warning(e.position, e.message)]];
-            }
-        } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
-        }
-        }), IdentifierStatus.VALUE_VARIABLE);
-
-    sres.setValue('evalExp', new FunctionType(stringType,
-        new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE);
-
-    state.setDynamicStructure('Eval', dres);
-    state.setStaticStructure('Eval', sres);
-    return state;
-}
-
 export let STDLIB: {
     [name: string]: {
         'native': ((state: State) => State) | undefined, /* callback for native parts */
@@ -704,8 +608,7 @@ export let STDLIB: {
 } = {
     '__Base': {
         'native': undefined,
-        'code': `
-            fun o (f,g) x = f (g x);
+        'code': `fun o (f,g) x = f (g x);
             infix 3 o;
             datatype order = LESS | EQUAL | GREATER;
 
@@ -811,10 +714,6 @@ export let STDLIB: {
                 val chr = chr;
             end;`,
         'requires': ['Int'] },
-    'Eval': {
-        'native': addEvalLib,
-        'code': undefined,
-        'requires': undefined },
     'Int': {
         'native': addIntLib,
         'code': `structure Int = struct
