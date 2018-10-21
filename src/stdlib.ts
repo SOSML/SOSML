@@ -3,14 +3,10 @@ import { TypeVariable, TypeVariableBind, FunctionType, CustomType, TupleType } f
 import { CharValue, Real, Integer, PredefinedFunction,  StringValue, Value, RecordValue,
     ExceptionConstructor, MAXINT, MININT, ValueConstructor, VectorValue,
     ConstructedValue, ArrayValue } from './values';
-import { Warning, InternalInterpreterError } from './errors';
+import { InternalInterpreterError } from './errors';
 import * as Interpreter from './main';
 import { COMMIT_HASH, BRANCH_NAME, BUILD_DATE, COMMIT_MESSAGE } from './version';
-import { EvaluationStack, EvaluationParameters, EvaluationResult } from './evaluator';
-import * as Lexer from './lexer';
-import * as Parser from './parser';
-import { Declaration } from './declarations';
-import { ValueIdentifier, Record } from './expressions';
+import { EvaluationParameters } from './evaluator';
 
 
 let intType = new CustomType('int');
@@ -588,8 +584,7 @@ function addVectorLib(state: State): State {
         new FunctionType(new TupleType([vectorType, intType, new TypeVariable('\'a')]).simplify(), vectorType),
         IdentifierStatus.VALUE_VARIABLE);
 
-    dres.setValue('length', new PredefinedFunction('length', (val: Value,
-        params: EvaluationParameters) => {
+    dres.setValue('length', new PredefinedFunction('length', (val: Value, params: EvaluationParameters) => {
         if (val instanceof VectorValue) {
             let res = new Integer(val.entries.length);
             return [res, false, []];
@@ -704,8 +699,7 @@ export let STDLIB: {
 } = {
     '__Base': {
         'native': undefined,
-        'code': `
-            fun o (f,g) x = f (g x);
+        'code': `fun o (f,g) x = f (g x);
             infix 3 o;
             datatype order = LESS | EQUAL | GREATER;
 
@@ -811,10 +805,6 @@ export let STDLIB: {
                 val chr = chr;
             end;`,
         'requires': ['Int'] },
-    'Eval': {
-        'native': addEvalLib,
-        'code': undefined,
-        'requires': undefined },
     'Int': {
         'native': addIntLib,
         'code': `structure Int = struct
