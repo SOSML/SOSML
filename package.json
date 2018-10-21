@@ -29,7 +29,8 @@
     "ts-loader": "^2.1.0",
     "tslint": "^5.3.2",
     "typescript": "^2.8",
-    "webpack": "^2.6.0"
+    "webpack": "^2.6.0",
+    "request": "^2.88.0"
   },
   "jest": {
     "transform": {
