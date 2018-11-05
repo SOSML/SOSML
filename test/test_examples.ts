@@ -8444,7 +8444,8 @@ fun switch S.A = S.B
                 State.IdentifierStatus.VALUE_VARIABLE
             ])
         }],
-   ]);
+    ]);
+});
 
 //TODO Chapter 14
 //We can't check this until the module language is implemented
