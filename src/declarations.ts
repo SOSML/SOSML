@@ -1079,9 +1079,12 @@ export class ValueBinding {
 
         for (let i = 0; i < res[0].length; ++i) {
             res[0][i][1] = res[0][i][1].instantiate(state, res[2]);
-            if (!isTopLevel) {
-                res[2] = res[2].set('\'**' + res[0][i][0], [res[0][i][1], false]);
-            }
+            // if (!isTopLevel) { // TODO: Do we need this, why?
+                // console.log(this + '' );
+                // console.log(res[2]);
+                // res[2] = res[2].set('\'**' + res[0][i][0], [res[0][i][1], false]);
+                // console.log(res);
+            // }
             let tv = res[0][i][1].getTypeVariables();
             let free = res[0][i][1].getTypeVariables(true);
             let done = new Set<string>();
