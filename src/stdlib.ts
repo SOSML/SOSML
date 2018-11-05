@@ -3,10 +3,14 @@ import { TypeVariable, TypeVariableBind, FunctionType, CustomType, TupleType } f
 import { CharValue, Real, Integer, PredefinedFunction,  StringValue, Value, RecordValue,
     ExceptionConstructor, MAXINT, MININT, ValueConstructor, VectorValue,
     ConstructedValue, ArrayValue } from './values';
-import { InternalInterpreterError } from './errors';
+import { InternalInterpreterError, Warning } from './errors';
 import * as Interpreter from './main';
 import { COMMIT_HASH, BRANCH_NAME, BUILD_DATE, COMMIT_MESSAGE } from './version';
-import { EvaluationParameters } from './evaluator';
+import { EvaluationStack, EvaluationParameters, EvaluationResult } from './evaluator';
+import * as Lexer from './lexer';
+import * as Parser from './parser';
+import { Declaration } from './declarations';
+import { ValueIdentifier, Record } from './expressions';
 
 
 let intType = new CustomType('int');
@@ -805,6 +809,10 @@ export let STDLIB: {
                 val chr = chr;
             end;`,
         'requires': ['Int'] },
+    'Eval': {
+        'native': addEvalLib,
+        'code': undefined,
+        'requires': undefined },
     'Int': {
         'native': addIntLib,
         'code': `structure Int = struct
