@@ -128,7 +128,7 @@ export class ValueDeclaration extends Declaration {
 
             if (!haschange) {
                 break;
-            } else if (l === numit * numit) {
+            } else if (l === numit * numit + 1) {
                 throw new ElaborationError(this.position,
                     'My brain trembles; too much circularity.');
             }
