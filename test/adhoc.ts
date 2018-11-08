@@ -144,6 +144,8 @@ function run( stuff: string, moreStuff: string[ ] = [ ], evaluate: boolean = tru
     });
 }
 
+run('List.nth;');
+//*
 // run('fun imod f (x,v) = x := f(!x,v) imod op+;');
 // run('fun imod f (x,v) = x := f(!x,v);', ['imod op+;']);
 
