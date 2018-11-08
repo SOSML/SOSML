@@ -1096,8 +1096,10 @@ export class ValueBinding {
                             (<[TypeVariable, boolean]> res[2].get('$' + ntys[j].name))[0].domain);
                     }
                     res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1], dm);
-                    (<TypeVariableBind> res[0][i][1]).isFree = valuePoly || free.has(ntys[j].name);
-                    hasFree = hasFree || valuePoly || free.has(ntys[j].name);
+                    (<TypeVariableBind> res[0][i][1]).isFree
+                        res[0][i][1].domain.length == 0 && (valuePoly || free.has(ntys[j].name));
+                    hasFree = hasFree || (<TypeVariableBind> res[0][i][1]).isFree;
+
                     done.add(ntys[j].name);
                 }
             }
@@ -1114,8 +1116,10 @@ export class ValueBinding {
             });
             for (let j = ntys.length - 1; j >= 0; --j) {
                 res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1], ntys[j].domain);
-                (<TypeVariableBind> res[0][i][1]).isFree = valuePoly || free.has(ntys[j].name);
-                hasFree = hasFree || valuePoly || free.has(ntys[j].name);
+                (<TypeVariableBind> res[0][i][1]).isFree =
+                    res[0][i][1].domain.length == 0 && (valuePoly || free.has(ntys[j].name));
+
+                hasFree = hasFree || (<TypeVariableBind> res[0][i][1]).isFree;
             }
         }
 
