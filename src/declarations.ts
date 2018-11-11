@@ -128,7 +128,7 @@ export class ValueDeclaration extends Declaration {
 
             if (!haschange) {
                 break;
-            } else if (l === numit * numit + 1) {
+            } else if (l === numit * numit) {
                 throw new ElaborationError(this.position,
                     'My brain trembles; too much circularity.');
             }
@@ -1079,12 +1079,9 @@ export class ValueBinding {
 
         for (let i = 0; i < res[0].length; ++i) {
             res[0][i][1] = res[0][i][1].instantiate(state, res[2]);
-            // if (!isTopLevel) { // TODO: Do we need this, why?
-                // console.log(this + '' );
-                // console.log(res[2]);
-                // res[2] = res[2].set('\'**' + res[0][i][0], [res[0][i][1], false]);
-                // console.log(res);
-            // }
+            if (!isTopLevel) {
+                res[2] = res[2].set('\'**' + res[0][i][0], [res[0][i][1], false]);
+            }
             let tv = res[0][i][1].getTypeVariables();
             let free = res[0][i][1].getTypeVariables(true);
             let done = new Set<string>();
@@ -1096,8 +1093,10 @@ export class ValueBinding {
                             (<[TypeVariable, boolean]> res[2].get('$' + ntys[j].name))[0].domain);
                     }
                     res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1], dm);
-                    (<TypeVariableBind> res[0][i][1]).isFree = valuePoly || free.has(ntys[j].name);
-                    hasFree = hasFree || valuePoly || free.has(ntys[j].name);
+                    (<TypeVariableBind> res[0][i][1]).isFree
+                        res[0][i][1].domain.length == 0 && (valuePoly || free.has(ntys[j].name));
+                    hasFree = hasFree || (<TypeVariableBind> res[0][i][1]).isFree;
+
                     done.add(ntys[j].name);
                 }
             }
@@ -1114,8 +1113,10 @@ export class ValueBinding {
             });
             for (let j = ntys.length - 1; j >= 0; --j) {
                 res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1], ntys[j].domain);
-                (<TypeVariableBind> res[0][i][1]).isFree = valuePoly || free.has(ntys[j].name);
-                hasFree = hasFree || valuePoly || free.has(ntys[j].name);
+                (<TypeVariableBind> res[0][i][1]).isFree =
+                    res[0][i][1].domain.length == 0 && (valuePoly || free.has(ntys[j].name));
+
+                hasFree = hasFree || (<TypeVariableBind> res[0][i][1]).isFree;
             }
         }
 
