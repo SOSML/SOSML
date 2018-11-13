@@ -597,53 +597,13 @@ export class LocalDeclarationExpression extends Expression {
 
         let res = this.declaration.elaborate(nstate, nvbnd, nextName);
 
-            /*
-        nextName = res[3];
-        let names = new Set<string>();
-        tyVarBnd.forEach((val: [Type, boolean], key: string) => {
-            if (key[1] === '*' && key[2] === '*') {
-                names.add(key);
-            }
-        });
-        while (true) {
-            let change = false;
-            let nnames = new Set<string>();
-            names.forEach((val: string) => {
-                if (res[2].has(val)) {
-                    res[2].get(val)[0].instantiate(nstate, res[2]).getTypeVariables().forEach((v: string) => {
-                        if (!names.has(v)) {
-                            change = true;
-                            nnames.add(v);
-                            console.nog(v);
-                        }
-                    });
-                }
-            });
-            nnames.forEach((val: string) => {
-                names.add(val);
-            });
-            if (!change) {
-                break;
-            }
-        }
-        let nbnds = new Map<string, [Type, boolean]>();
+        let nvbnd2 = new Map<string, [Type, boolean]>();
         res[2].forEach((val: [Type, boolean], key: string) => {
-            //            if (names.has(key)) {
-                nbnds = nbnds.set(key, [val[0].instantiate(res[0], res[2]), val[1]]);
-                // }
-        });
-        for (let i = 0; i < chg.length; ++i) {
-            if ((<[Type, boolean]> tyVarBnd.get(chg[i][0]))[0].equals(
-                (<[Type, boolean]> res[2].get(chg[i][0]))[0])) {
-                // Make sure we're not using some type of some rebound identifier
-                let tmp = chg[i][1][0].merge(nstate, tyVarBnd,
-                    chg[i][1][0].instantiate(nstate, res[2]));
-                tyVarBnd = tmp[1];
+            if (key[1] !== '*' || key[2] !== '*') {
+                nvbnd2 = nvbnd2.set(key, val);
             }
-        }
-                */
-
-        let r2 = this.expression.getType(res[0], res[2], res[3], tyVars, forceRebind);
+        });
+        let r2 = this.expression.getType(res[0], nvbnd2, res[3], tyVars, forceRebind);
         return [r2[0], res[1].concat(r2[1]), r2[2], r2[3], r2[4], r2[5]];
     }
 
