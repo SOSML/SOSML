@@ -198,8 +198,8 @@ export class Parser {
                         }
                     }
                 } else {
-                    throw new IncompleteError(nextCurTok.position,
-                        'Expected ",", ";" or ")" but got \"' + nextCurTok.getText() + '\".');
+                    throw new ParserError('Expected ",", ";" or ")" but got \"'
+                        + nextCurTok.getText() + '\".', nextCurTok.position);
                 }
                 results.push(this.parseExpression());
             }
@@ -1160,7 +1160,8 @@ export class Parser {
                 || this.checkKeywordToken(curTok, 'op');
             if (!opPrf) {
                 throw new ParserError(
-                    'Even Tunafishman can\'t save you from the "company" if you forget an "op".',
+                    'Infix operator "' + res
+                    + '" appeared in non-infix context without "op".',
                     curTok.position);
             }
         }
