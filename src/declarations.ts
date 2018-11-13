@@ -88,6 +88,12 @@ export class ValueDeclaration extends Declaration {
         }
 
         for (let j = 0; j < result.length; ++j) {
+            if (!options || options.allowSuccessorML !== true) {
+                if (!result[j][1].isResolved()) {
+                    throw new ElaborationError(this.position,
+                        'Unresolved record type. (Is that a goblin?)');
+                }
+            }
             state.setStaticValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
         }
 
@@ -122,6 +128,14 @@ export class ValueDeclaration extends Declaration {
                     if (oldtp === undefined || !oldtp[0].normalize()[0].equals(val[0][k][1].normalize()[0])) {
                         haschange = true;
                     }
+
+                    if (!options || options.allowSuccessorML !== true) {
+                        if (!val[0][k][1].isResolved()) {
+                            throw new ElaborationError(this.position,
+                                'Unresolved record type. (Is that a goblin?)');
+                        }
+                    }
+
                     state.setStaticValue(val[0][k][0], val[0][k][1], IdentifierStatus.VALUE_VARIABLE);
                 }
             }
