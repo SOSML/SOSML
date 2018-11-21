@@ -1031,7 +1031,7 @@ export class Parser {
         if (this.checkKeywordToken(curTok, 'op')) {
             ++this.position;
             let nextCurTok = this.currentToken();
-            this.assertIdentifierOrLongToken(nextCurTok);
+            this.assertVidOrLongToken(nextCurTok);
             (<IdentifierToken|LongIdentifierToken> nextCurTok).opPrefixed = true;
             ++this.position;
 
