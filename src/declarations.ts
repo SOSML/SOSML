@@ -1281,8 +1281,6 @@ export class DatatypeBinding {
             ve.push([this.type[i][0].getText(), tp]);
             connames.push(this.type[i][0].getText());
         }
-        console.log(restp);
-        console.log(allowsEquality);
         nstate.setStaticType(this.name.getText(), restp, [], this.typeVariableSequence.length,
             allowsEquality);
         return [ve, restp, [this.name.getText(), connames]];

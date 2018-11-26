@@ -1227,7 +1227,6 @@ export class CustomType extends Type {
         if (tp === undefined) {
             return true;
         }
-        console.log(tp);
         return tp.allowsEquality;
     }
 
