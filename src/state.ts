@@ -276,7 +276,7 @@ export class StaticBasis {
         this.valueEnvironment[name] = undefined;
     }
 
-    setType(name: string, type: Type, constructors: string[], arity: number, admitsEquality: boolean = true) {
+    setType(name: string, type: Type, constructors: string[], arity: number, admitsEquality: boolean) {
         this.typeEnvironment[name] = new TypeInformation(type, constructors, arity, admitsEquality);
     }
 
@@ -701,13 +701,14 @@ export class State {
     }
 
     setStaticType(name: string, type: Type, constructors: string[], arity: number,
-        atId: number|undefined = undefined) {
+        allowsEquality: boolean, atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
-            this.staticBasis.setType(name, type, constructors, arity);
+            this.staticBasis.setType(name, type, constructors, arity, allowsEquality);
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
-            (<State> this.parent).setStaticType(name, type, constructors, arity, atId);
+            (<State> this.parent).setStaticType(name, type, constructors, arity,
+                allowsEquality, atId);
         }
     }
 
