@@ -277,7 +277,8 @@ export class TypeDeclaration extends Declaration {
                 new FunctionType(new CustomType(this.typeBinding[i].name.getText(),
                     this.typeBinding[i].typeVariableSequence),
                     this.typeBinding[i].type.instantiate(state, tyVarBnd)), [],
-                this.typeBinding[i].typeVariableSequence.length);
+                    this.typeBinding[i].typeVariableSequence.length,
+                    true);
         }
 
         return [state, [], tyVarBnd, nextName];
@@ -347,6 +348,7 @@ export class DatatypeDeclaration extends Declaration {
         // I'm assuming the withtype is empty
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
             let res = this.datatypeBinding[i].getType(state, isTopLevel);
+            let allowsEq = true;
 
             for (let j = 0; j < res[0].length; ++j) {
                 if (!State.allowsRebind(res[0][j][0])) {
@@ -354,9 +356,10 @@ export class DatatypeDeclaration extends Declaration {
                         + res[0][j][0] + '".');
                 }
                 state.setStaticValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
+                allowsEq = allowsEq && res[0][j][1].admitsEquality(state);
             }
             state.setStaticType(res[2][0], res[1], res[2][1],
-                this.datatypeBinding[i].typeVariableSequence.length);
+                this.datatypeBinding[i].typeVariableSequence.length, allowsEq);
             state.incrementValueIdentifierId(res[2][0]);
         }
 
@@ -445,7 +448,7 @@ export class DatatypeReplication extends Declaration {
 
         state.setStaticType(this.name.getText(), new FunctionType(new CustomType(this.name.getText(),
             (<CustomType> tp).typeArguments, 0, (this.oldname instanceof LongIdentifierToken)
-            ? this.oldname : undefined), tp), [], res.arity);
+            ? this.oldname : undefined), tp), [], res.arity, res.allowsEquality);
         return [state, [], tyVarBnd, nextName];
    }
 
@@ -1247,12 +1250,14 @@ export class DatatypeBinding {
 
         let restp = new CustomType(this.name.getText(), this.typeVariableSequence,
             -1, undefined, false, id);
-        nstate.setStaticType(this.name.getText(), restp, [], this.typeVariableSequence.length);
+        let allowsEquality = true;
         for (let i = 0; i < this.type.length; ++i) {
             let tp: Type = restp;
             if (this.type[i][1] !== undefined) {
-                tp = new FunctionType((<Type> this.type[i][1]).instantiate(
-                    nstate, new Map<string, [Type, boolean]>()), tp);
+                let curtp = (<Type> this.type[i][1]).instantiate(nstate,
+                    new Map<string, [Type, boolean]>());
+                tp = new FunctionType(curtp, tp);
+                allowsEquality = allowsEquality && curtp.admitsEquality(nstate);
             }
 
             let tvs = new Set<string>();
@@ -1276,6 +1281,10 @@ export class DatatypeBinding {
             ve.push([this.type[i][0].getText(), tp]);
             connames.push(this.type[i][0].getText());
         }
+        console.log(restp);
+        console.log(allowsEquality);
+        nstate.setStaticType(this.name.getText(), restp, [], this.typeVariableSequence.length,
+            allowsEquality);
         return [ve, restp, [this.name.getText(), connames]];
     }
 

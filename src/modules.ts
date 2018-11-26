@@ -1281,7 +1281,7 @@ export class DatatypeReplicationSpecification extends Specification {
         let stbas = new StaticBasis({}, {}, {}, {}, {});
         stbas.setType(this.name.getText(), new FunctionType(new CustomType(this.name.getText(),
             (<CustomType> tp).typeArguments, 0, (this.oldname instanceof LongIdentifierToken)
-            ? this.oldname : undefined), tp), [], res.arity);
+            ? this.oldname : undefined), tp), [], res.arity, res.allowsEquality);
         return [stbas, [], tyVarBnd, nextName];
     }
 
