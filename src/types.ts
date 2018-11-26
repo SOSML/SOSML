@@ -1072,7 +1072,7 @@ export class CustomType extends Type {
                 let ntype = <FunctionType> tp.type.replaceTypeVariables(repl);
                 let mt = this.merge(state, tyVarBnd, ntype.parameterType, true);
                 let newstate = state.getNestedState(state.id);
-                newstate.setStaticType(this.name, ntype.returnType, [], -1);
+                newstate.setStaticType(this.name, ntype.returnType, [], -1, tp.allowsEquality);
                 return ntype.returnType.instantiate(newstate, mt[1]);
             } catch (e) {
                 if (!(e instanceof Array)) {
@@ -1227,6 +1227,7 @@ export class CustomType extends Type {
         if (tp === undefined) {
             return true;
         }
+        console.log(tp);
         return tp.allowsEquality;
     }
 
