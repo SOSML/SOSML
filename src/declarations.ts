@@ -1246,6 +1246,8 @@ export class DatatypeBinding {
         let id = state.getValueIdentifierId(this.name.getText());
         nstate.incrementValueIdentifierId(this.name.getText());
 
+        let idlesstp = new CustomType(this.name.getText(), this.typeVariableSequence,
+            -1, undefined, false, 0);
         let restp = new CustomType(this.name.getText(), this.typeVariableSequence,
             -1, undefined, false, id);
         nstate.setStaticType(this.name.getText(), restp, [], this.typeVariableSequence.length,
@@ -1254,7 +1256,7 @@ export class DatatypeBinding {
             let tp: Type = restp;
             if (this.type[i][1] !== undefined) {
                 let curtp = (<Type> this.type[i][1]).instantiate(nstate,
-                    new Map<string, [Type, boolean]>());
+                    new Map<string, [Type, boolean]>()).replace(idlesstp, restp);
                 tp = new FunctionType(curtp, tp);
             }
 
