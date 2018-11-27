@@ -348,7 +348,6 @@ export class DatatypeDeclaration extends Declaration {
         // I'm assuming the withtype is empty
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
             let res = this.datatypeBinding[i].getType(state, isTopLevel);
-            let allowsEq = true;
 
             for (let j = 0; j < res[0].length; ++j) {
                 if (!State.allowsRebind(res[0][j][0])) {
@@ -356,10 +355,9 @@ export class DatatypeDeclaration extends Declaration {
                         + res[0][j][0] + '".');
                 }
                 state.setStaticValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
-                allowsEq = allowsEq && res[0][j][1].admitsEquality(state);
             }
             state.setStaticType(res[2][0], res[1], res[2][1],
-                this.datatypeBinding[i].typeVariableSequence.length, allowsEq);
+                this.datatypeBinding[i].typeVariableSequence.length, true);
             state.incrementValueIdentifierId(res[2][0]);
         }
 
@@ -1250,14 +1248,14 @@ export class DatatypeBinding {
 
         let restp = new CustomType(this.name.getText(), this.typeVariableSequence,
             -1, undefined, false, id);
-        let allowsEquality = true;
+        nstate.setStaticType(this.name.getText(), restp, [], this.typeVariableSequence.length,
+            true);
         for (let i = 0; i < this.type.length; ++i) {
             let tp: Type = restp;
             if (this.type[i][1] !== undefined) {
                 let curtp = (<Type> this.type[i][1]).instantiate(nstate,
                     new Map<string, [Type, boolean]>());
                 tp = new FunctionType(curtp, tp);
-                allowsEquality = allowsEquality && curtp.admitsEquality(nstate);
             }
 
             let tvs = new Set<string>();
@@ -1281,8 +1279,6 @@ export class DatatypeBinding {
             ve.push([this.type[i][0].getText(), tp]);
             connames.push(this.type[i][0].getText());
         }
-        nstate.setStaticType(this.name.getText(), restp, [], this.typeVariableSequence.length,
-            allowsEquality);
         return [ve, restp, [this.name.getText(), connames]];
     }
 
