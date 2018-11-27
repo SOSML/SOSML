@@ -1006,7 +1006,7 @@ export class CustomType extends Type {
         let res: Type[] = [];
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].replace(sc, tg));
-        }datatype tree = T of tree list;
+        }
         return new CustomType(this.name, res, this.position,
             this.qualifiedName, this.opaque, this.id);
     }
@@ -1250,7 +1250,7 @@ export class CustomType extends Type {
                 if (!id.startsWith('\'\'')) {
                     rep = rep.set(id, '\'' + id);
                 }
-            };
+            });
             partp = partp.replaceTypeVariables(rep);
             if (!partp.admitsEquality(nstate)) {
                  return false;
