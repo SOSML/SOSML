@@ -487,8 +487,6 @@ export class TypeVariable extends Type {
             } else {
                 let otv = oth.getTypeVariables();
                 if (otv.has((<TypeVariable> ths).name)) {
-                    // console.log(otv);
-                    // console.log(ths);
                     throw new ElaborationError(-1,
                         'Type clash. An expression of type "' + (<TypeVariable> ths).normalize()[0]
                         + '" cannot have type "' + oth.normalize()[0] + '" because of circularity.');
@@ -1008,7 +1006,7 @@ export class CustomType extends Type {
         let res: Type[] = [];
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].replace(sc, tg));
-        }
+        }datatype tree = T of tree list;
         return new CustomType(this.name, res, this.position,
             this.qualifiedName, this.opaque, this.id);
     }
@@ -1219,15 +1217,46 @@ export class CustomType extends Type {
             }
         }
 
-        for (let i = 0; i < this.typeArguments.length; ++i) {
-            if (!this.typeArguments[i].admitsEquality(state)) {
-                return false;
-            }
-        }
         if (tp === undefined) {
             return true;
         }
-        console.log(tp);
+
+        let nstate = state.getNestedState(state.id);
+        nstate.setStaticType(this.name, this, [], this.typeArguments.length, true);
+
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            if (!this.typeArguments[i].admitsEquality(nstate)) {
+                return false;
+            }
+        }
+
+        for (let i = 0; i < tp.constructors.length; ++i) {
+            let curtp = state.getStaticValue(tp.constructors[i]);
+            if (curtp === undefined) {
+                continue;
+            }
+            let ctp = curtp[0];
+            while (ctp instanceof TypeVariableBind) {
+                ctp = (<TypeVariableBind> ctp).type;
+            }
+            if (ctp instanceof CustomType) { // Constructor without argument, nothing to check
+                continue;
+            }
+            // Current constructor takes arguments; check that they admit equality
+            let partp: Type = (<FunctionType> ctp).parameterType;
+            let re = partp.getTypeVariables();
+            let rep = new Map<string, string>();
+            re.forEach((dom: Type[], id: string) => {
+                if (!id.startsWith('\'\'')) {
+                    rep = rep.set(id, '\'' + id);
+                }
+            };
+            partp = partp.replaceTypeVariables(rep);
+            if (!partp.admitsEquality(nstate)) {
+                 return false;
+            }
+        }
+
         return tp.allowsEquality;
     }
 
