@@ -4,6 +4,7 @@
   "description": "An interpreter for Standard ML written in TypeScript.",
   "files": [
     "build/interpreter.min.js",
+    "build/sosml_cli.js",
     "build/*.d.ts"
   ],
   "main": "build/interpreter.min.js",
@@ -14,7 +15,8 @@
     "cilint": "tslint -c tslint.json 'src/**/*.ts'",
     "test": "jest --notify --watch",
     "build": "echo \"export let BRANCH_NAME = \\\"`git rev-parse --abbrev-ref HEAD`\\\";\nexport let COMMIT_HASH = \\\"`git rev-parse --short HEAD`\\\";\nexport let BUILD_DATE = \\\"`date --utc`\\\";\nexport let COMMIT_MESSAGE = \\\"`git log --format=%B -n 1 HEAD`\\\";\" > ./src/version.ts; webpack --env=dev",
-    "dist": "echo \"export let BRANCH_NAME = \\\"`git rev-parse --abbrev-ref HEAD`\\\";\nexport let COMMIT_HASH = \\\"`git rev-parse --short HEAD`\\\";\nexport let BUILD_DATE = \\\"`date --utc`\\\";\nexport let COMMIT_MESSAGE = \\\"`git log --format=%B -n 1 HEAD`\\\";\" > ./src/version.ts; webpack --env=prod"
+    "dist": "echo \"export let BRANCH_NAME = \\\"`git rev-parse --abbrev-ref HEAD`\\\";\nexport let COMMIT_HASH = \\\"`git rev-parse --short HEAD`\\\";\nexport let BUILD_DATE = \\\"`date --utc`\\\";\nexport let COMMIT_MESSAGE = \\\"`git log --format=%B -n 1 HEAD`\\\";\" > ./src/version.ts; webpack --env=prod",
+    "cli": "echo \"export let BRANCH_NAME = \\\"`git rev-parse --abbrev-ref HEAD`\\\";\nexport let COMMIT_HASH = \\\"`git rev-parse --short HEAD`\\\";\nexport let BUILD_DATE = \\\"`date --utc`\\\";\nexport let COMMIT_MESSAGE = \\\"`git log --format=%B -n 1 HEAD`\\\";\" > ./src/version.ts; webpack --env=cli"
   },
   "author": "SOSML Team",
   "repository": {
