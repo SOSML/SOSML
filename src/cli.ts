@@ -12,7 +12,7 @@ function printBasis( state: any, dynamicBasis: any, staticBasis: any, indent: nu
     }
     let out = '';
     let fullst = 'ＳＯＳさん＞　';
-    let emptyst = ' ';
+    let emptyst = '　　　　　＞　';
     let stsym = indent === 0 ? fullst : emptyst;
 
     if( dynamicBasis === undefined ) {
@@ -194,8 +194,8 @@ rl.on( 'line', ( line: string ) => {
         let res = interpret( tmp, state, opts );
 
         if( res.evaluationErrored ) {
-            out += 'ＳＯＳさん＞　申し訳ございませんが、御問題がありました：\x1b[30;47;1m'
-                + res.error + '\x1b[39;49;0m';
+            out += 'ＳＯＳさん＞　申し訳ございませんが、御問題がありました：\n'
+                +  '　　　　　＞　\x1b[31;40;1m' + res.error + '\x1b[39;49;0m\n';
             tmp = '';
         } else {
             out += printBasis( res.state,
@@ -217,8 +217,8 @@ rl.on( 'line', ( line: string ) => {
         console.log( out );
     } catch (e) {
         if( !( e instanceof IncompleteError ) ) {
-            console.log( 'ＳＯＳさん＞　申し訳ございませんが、御問題がありました：\x1b[31;40;1m'
-                + e + '\x1b[39;49;0m' );
+            console.log( 'ＳＯＳさん＞　申し訳ございませんが、御問題がありました：\n'
+                + '　　　　　＞　\x1b[31;40;1m' + e + '\x1b[39;49;0m\n' );
             tmp = '';
         }
     }
