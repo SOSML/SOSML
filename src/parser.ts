@@ -6,7 +6,7 @@ import { Expression, Tuple, Constant, ValueIdentifier, Wildcard,
          ConjunctivePattern, DisjunctivePattern, PatternGuard, NestedMatch } from './expressions';
 import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } from './types';
 import { InternalInterpreterError, IncompleteError, ParserError } from './errors';
-import { Token, KeywordToken, IdentifierToken, ConstantToken,
+import { Token, KeywordToken, IdentifierToken, ConstantToken, RealConstantToken,
          TypeVariableToken, LongIdentifierToken, IntegerConstantToken,
          AlphanumericIdentifierToken, NumericToken } from './tokens';
 import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
@@ -1114,6 +1114,11 @@ export class Parser {
                 results.push(this.parsePattern());
             }
         } else if (curTok instanceof ConstantToken) {
+            if (curTok instanceof RealConstantToken) {
+                throw new ParserError('I am not interested in real constants such as "'
+                    + curTok.getText() + '" appearing in patterns.', curTok.position);
+            }
+
             ++this.position;
             return new Constant(curTok.position, curTok);
         } else if (curTok instanceof IdentifierToken
