@@ -634,7 +634,7 @@ export class LocalDeclarationExpression extends Expression {
                 nvbnd = nvbnd.set('!' + key, val);
             }
 
-            val[0].getTypeVariables().forEach((v: [Type, boolean], k: string) => {
+            val[0].getTypeVariables().forEach((v: Type[], k: string) => {
                 if (!k.includes('*')) {
                     nvbnd = nvbnd.set('!' + k, val);
                 }
