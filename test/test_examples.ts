@@ -5599,10 +5599,11 @@ end;
             expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.Integer(-1));
             //expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType('int'), 0]);
         }],
-        ['fun findDouble compare xs = let exception Double of \'a fun compare\' (x,y) = case compare (x,y) of EQUAL => raise Double x | v => v in (List.sort compare\' xs ; NONE) handle Double x => SOME x end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['fun findDouble compare (xs: \'a list)  = let exception Double of \'a fun compare\' (x,y) = case compare (x,y) of EQUAL => raise Double x | v => v in (List.sort compare\' xs ; NONE) handle Double x => SOME x end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('findDouble')).not.toEqualWithType(undefined); // TODO exact value
             //expect(state.getStaticValue('findDouble')).toEqualWithType(TODO);
+            // TODO: remove explicit type from xs
         }]
     ]);
 });
