@@ -1358,7 +1358,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
             }
 
             state.setStaticValue(this.name.getText(),
-                new FunctionType(tp, new CustomType('exn')).normalize()[0],
+                new FunctionType(tp.makeFree(), new CustomType('exn')).normalize()[0],
                 IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         } else {
             state.setStaticValue(this.name.getText(), new CustomType('exn').normalize()[0],
