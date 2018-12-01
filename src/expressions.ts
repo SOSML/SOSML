@@ -41,6 +41,10 @@ export abstract class Expression {
             'You humans can\'t seem to write bug-free code. What an inferior species.');
     }
 
+    assertUniqueBinding(state: State): Set<string> {
+        return new Set<string>();
+    }
+
     abstract simplify(): Expression;
 }
 
@@ -54,6 +58,8 @@ export interface Pattern {
     matches(state: State, v: Value): [string, Value][] | undefined;
     simplify(): PatternExpression;
     toString(indentation: number, oneLine: boolean): string;
+
+    assertUniqueBinding(state: State): Set<string>;
 }
 
 export type PatternExpression = Pattern & Expression;
@@ -184,7 +190,7 @@ export class ValueIdentifier extends Expression implements Pattern {
         while (res[0] instanceof TypeVariableBind) {
             if ((<TypeVariableBind> res[0]).isFree) {
                 frees = frees.add((<TypeVariableBind> res[0]).name);
-                repl.set((<TypeVariableBind> res[0]).name, (<TypeVariableBind> res[0]).name);
+                repl = repl.set((<TypeVariableBind> res[0]).name, (<TypeVariableBind> res[0]).name);
             } else {
                 vars = vars.add((<TypeVariableBind> res[0]).name);
             }
@@ -323,6 +329,19 @@ export class ValueIdentifier extends Expression implements Pattern {
             'value': res[0],
             'hasThrown': false,
         };
+    }
+
+    assertUniqueBinding(state: State): Set<string> {
+        let stt = state.getStaticValue(this.name.getText());
+        if (stt !== undefined && stt[1] !== IdentifierStatus.VALUE_VARIABLE) {
+            return new Set<string>();
+        }
+        let dyt = state.getDynamicValue(this.name.getText());
+        if (dyt !== undefined && dyt[1] !== IdentifierStatus.VALUE_VARIABLE) {
+            return new Set<string>();
+        }
+
+        return new Set<string>().add(this.name.getText());
     }
 }
 
@@ -555,6 +574,24 @@ export class Record extends Expression implements Pattern {
             'hasThrown': false,
         };
     }
+
+    assertUniqueBinding(state: State): Set<string> {
+        let seen = new Set<string>();
+
+        for (let i = 0; i < this.entries.length; ++i) {
+            let cur = this.entries[i][1].assertUniqueBinding(state);
+
+            cur.forEach((v: string) => {
+                if (seen.has(v)) {
+                    throw new ParserError('Don\'t try to rebind "' + v + '" "' + v + '" in the'
+                        + ' same pattern... Sorry, I stuttered.', this.position);
+                }
+                seen = seen.add(v);
+            });
+        }
+
+        return seen;
+    }
 }
 
 export class LocalDeclarationExpression extends Expression {
@@ -658,6 +695,12 @@ export class LocalDeclarationExpression extends Expression {
             'hasThrown': nres.hasThrown,
         };
     }
+
+    assertUniqueBinding(state: State): Set<string> {
+        this.declaration.assertUniqueBinding(state);
+        this.expression.assertUniqueBinding(state);
+        return new Set<string>();
+    }
 }
 
 export class TypedExpression extends Expression implements Pattern {
@@ -737,6 +780,10 @@ export class TypedExpression extends Expression implements Pattern {
 
     compute(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
         return this.expression.compute(params, callStack);
+    }
+
+    assertUniqueBinding(state: State): Set<string> {
+        return this.expression.assertUniqueBinding(state);
     }
 }
 
@@ -1102,6 +1149,17 @@ export class FunctionApplication extends Expression implements Pattern {
             };
         }
     }
+
+    assertUniqueBinding(state: State): Set<string> {
+        let fuc = this.func.assertUniqueBinding(state);
+        let res = this.argument.assertUniqueBinding(state);
+        if (this.func instanceof ValueIdentifier) {
+            if (fuc.size === 0) { // Constructor
+                return res;
+            }
+        }
+        return new Set<string>();
+    }
 }
 
 export class HandleException extends Expression {
@@ -1218,6 +1276,12 @@ export class HandleException extends Expression {
             'hasThrown': res.hasThrown,
         };
     }
+
+    assertUniqueBinding(state: State): Set<string> {
+        this.expression.assertUniqueBinding(state);
+        this.match.assertUniqueBinding(state);
+        return new Set<string>();
+    }
 }
 
 export class RaiseException extends Expression {
@@ -1286,6 +1350,11 @@ export class RaiseException extends Expression {
             'hasThrown': true,
         };
     }
+
+    assertUniqueBinding(state: State): Set<string> {
+        this.expression.assertUniqueBinding(state);
+        return new Set<string>();
+    }
 }
 
 export class Lambda extends Expression {
@@ -1328,6 +1397,11 @@ export class Lambda extends Expression {
             'value': new FunctionValue(nstate, [], this.match),
             'hasThrown': false,
         };
+    }
+
+    assertUniqueBinding(state: State): Set<string> {
+        this.match.assertUniqueBinding(state);
+        return new Set<string>();
     }
 }
 
@@ -1472,6 +1546,14 @@ export class Match {
         }
         return new Match(this.position, newMatches);
     }
+
+    assertUniqueBinding(state: State): Set<string> {
+        for (let i = 0; i < this.matches.length; ++i) {
+            this.matches[i][0].assertUniqueBinding(state);
+            this.matches[i][1].assertUniqueBinding(state);
+        }
+        return new Set<string>();
+    }
 }
 
 // Pure Patterns
@@ -1517,6 +1599,10 @@ export class Wildcard extends Expression implements Pattern {
 
     toString(): string {
         return '_';
+    }
+
+    assertUniqueBinding(state: State): Set<string> {
+        return new Set<string>();
     }
 }
 
@@ -1615,6 +1701,26 @@ export class LayeredPattern extends Expression implements Pattern {
     toString(): string {
         return this.identifier.getText() + ' as ' + this.pattern;
     }
+
+    assertUniqueBinding(state: State): Set<string> {
+        let res = this.pattern.assertUniqueBinding(state);
+
+        let stt = state.getStaticValue(this.identifier.getText());
+        if (stt !== undefined && stt[1] !== IdentifierStatus.VALUE_VARIABLE) {
+            return res;
+        }
+        let dyt = state.getDynamicValue(this.identifier.getText());
+        if (dyt !== undefined && dyt[1] !== IdentifierStatus.VALUE_VARIABLE) {
+            return res;
+        }
+
+        if (res.has(this.identifier.getText())) {
+            throw new ParserError('No matter from which end you start eating this pattern,'
+                + 'rebinding "' + this.identifier.getText() + '" is still a bad idea.',
+                this.position);
+        }
+        return res.add(this.identifier.getText());
+    }
 }
 
 // Successor ML
@@ -1675,6 +1781,11 @@ export class ConjunctivePattern extends Expression implements Pattern {
 
         return (<[string, Value][]> r1).concat(r2);
     }
+
+    assertUniqueBinding(state: State): Set<string> {
+        // TODO
+        return new Set<string>();
+    }
 }
 
 export class DisjunctivePattern extends Expression implements Pattern {
@@ -1720,6 +1831,11 @@ export class DisjunctivePattern extends Expression implements Pattern {
         }
         return this.right.matches(state, v);
     }
+
+    assertUniqueBinding(state: State): Set<string> {
+        // TODO
+        return new Set<string>();
+    }
 }
 
 export class NestedMatch extends Expression implements Pattern {
@@ -1757,6 +1873,11 @@ export class NestedMatch extends Expression implements Pattern {
 
         // TODO
         throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+    }
+
+    assertUniqueBinding(state: State): Set<string> {
+        // TODO
+        return new Set<string>();
     }
 }
 

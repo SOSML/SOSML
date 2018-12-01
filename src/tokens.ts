@@ -45,7 +45,7 @@ export class RealConstantToken extends ConstantToken {
     }
 
     getText(): string {
-        return '' + this.value;
+        return this.text;
     }
     isValidRecordLabel(): boolean { return false; }
 }
