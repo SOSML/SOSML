@@ -30,6 +30,10 @@ export abstract class Declaration {
     simplify(): Declaration {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
+
+    assertUniqueBinding(state: State): Set<string> {
+        return new Set<string>();
+    }
 }
 
 // Declaration subclasses
@@ -38,6 +42,14 @@ export class ValueDeclaration extends Declaration {
     constructor(public position: number, public typeVariableSequence: TypeVariable[],
                 public valueBinding: ValueBinding[], public id: number = 0) {
         super();
+    }
+
+    assertUniqueBinding(state: State): Set<string> {
+        for (let i = 0; i < this.valueBinding.length; ++i) {
+            this.valueBinding[i].pattern.assertUniqueBinding(state);
+            this.valueBinding[i].expression.assertUniqueBinding(state);
+        }
+        return new Set<string>();
     }
 
     simplify(): ValueDeclaration {
@@ -524,6 +536,12 @@ export class LocalDeclaration extends Declaration {
         super();
     }
 
+    assertUniqueBinding(state: State): Set<string> {
+        this.declaration.assertUniqueBinding(state);
+        this.body.assertUniqueBinding(state);
+        return new Set<string>();
+    }
+
     simplify(): LocalDeclaration {
         return new LocalDeclaration(this.position, this.declaration.simplify(), this.body.simplify(), this.id);
     }
@@ -722,6 +740,13 @@ export class SequentialDeclaration extends Declaration {
 // declaration1 <;> declaration2
     constructor(public position: number, public declarations: Declaration[], public id: number = 0) {
         super();
+    }
+
+    assertUniqueBinding(state: State): Set<string> {
+        for (let i = 0; i < this.declarations.length; ++i) {
+            this.declarations[i].assertUniqueBinding(state);
+        }
+        return new Set<string>();
     }
 
     simplify(): SequentialDeclaration {
