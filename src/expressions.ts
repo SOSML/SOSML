@@ -630,6 +630,15 @@ export class LocalDeclarationExpression extends Expression {
         let nvbnd = new Map<string, [Type, boolean]>();
         tyVarBnd.forEach((val: [Type, boolean], key: string) => {
             nvbnd = nvbnd.set(key, val);
+            if (!key.includes('*')) {
+                nvbnd = nvbnd.set('!' + key, val);
+            }
+
+            val[0].getTypeVariables().forEach((v: [Type, boolean], k: string) => {
+                if (!k.includes('*')) {
+                    nvbnd = nvbnd.set('!' + k, val);
+                }
+            });
         });
 
         let res = this.declaration.elaborate(nstate, nvbnd, nextName);
