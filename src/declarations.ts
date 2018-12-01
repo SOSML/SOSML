@@ -513,14 +513,9 @@ export class ExceptionDeclaration extends Declaration {
         let knownTypeVars = new Set<string>();
 
         tyVarBnd.forEach((val: [Type, boolean], key: string) => {
-            if (!key.includes('*')) {
-                knownTypeVars = knownTypeVars.add(key);
+            if (key.includes('!')) {
+                knownTypeVars = knownTypeVars.add(key.substring(1));
             }
-            val[0].getTypeVariables().forEach((val: Type[], k: string) => {
-                if (!k.includes('*')) {
-                    knownTypeVars = knownTypeVars.add(k);
-                }
-            });
         });
 
         for (let i = 0; i < this.bindings.length; ++i) {
