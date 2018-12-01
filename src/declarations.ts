@@ -516,7 +516,7 @@ export class ExceptionDeclaration extends Declaration {
             if (!key.includes('*')) {
                 knownTypeVars = knownTypeVars.add(key);
             }
-            let tpvars = val[0].getTypeVariables().forEach((val: Type[], k: string) => {
+            val[0].getTypeVariables().forEach((val: Type[], k: string) => {
                 if (!k.includes('*')) {
                     knownTypeVars = knownTypeVars.add(k);
                 }
@@ -1349,7 +1349,7 @@ export class DatatypeBinding {
 
 export interface ExceptionBinding {
     evaluate(state: State): void;
-    elaborate(state: State, isTopLevel: boolean, options: { [name: string]: any }): State;
+    elaborate(state: State, isTopLevel: boolean, knownTypeVars: Set<string>, options: { [name: string]: any }): State;
 }
 
 export class DirectExceptionBinding implements ExceptionBinding {
