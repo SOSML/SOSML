@@ -509,9 +509,22 @@ export class ExceptionDeclaration extends Declaration {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
               isTopLevel: boolean, options: { [name: string]: any }):
-        [State, Warning[], Map<string, [Type, boolean]>, string] {
+    [State, Warning[], Map<string, [Type, boolean]>, string] {
+        let knownTypeVars = new Set<string>();
+
+        tyVarBnd.forEach((val: [Type, boolean], key: string) => {
+            if (!key.includes('*')) {
+                knownTypeVars = knownTypeVars.add(key);
+            }
+            let tpvars = val[0].getTypeVariables().forEach((val: Type[], k: string) => {
+                if (!k.includes('*')) {
+                    knownTypeVars = knownTypeVars.add(k);
+                }
+            });
+        });
+
         for (let i = 0; i < this.bindings.length; ++i) {
-            state = this.bindings[i].elaborate(state, isTopLevel, options);
+            state = this.bindings[i].elaborate(state, isTopLevel, knownTypeVars, options);
         }
         return [state, [], tyVarBnd, nextName];
     }
@@ -1346,22 +1359,24 @@ export class DirectExceptionBinding implements ExceptionBinding {
                 public type: Type | undefined) {
     }
 
-    elaborate(state: State, isTopLevel: boolean, options: { [name: string]: any }): State {
+    elaborate(state: State, isTopLevel: boolean, knownTypeVars: Set<string>, options: { [name: string]: any }): State {
         if (this.type !== undefined) {
             let tp = this.type.simplify().instantiate(state, new Map<string, [Type, boolean]>());
             let tyvars: string[] = [];
             tp.getTypeVariables().forEach((dom: Type[], val: string) => {
-                tyvars.push(val);
+                if (!knownTypeVars.has(val)) {
+                    tyvars.push(val);
+                }
             });
-            if (isTopLevel && tyvars.length > 0) {
+            if (/* isTopLevel && */ tyvars.length > 0) {
                 throw ElaborationError.getUnguarded(this.position, tyvars);
             }
 
             state.setStaticValue(this.name.getText(),
-                new FunctionType(tp.makeFree(), new CustomType('exn')).normalize()[0],
+                new FunctionType(tp.makeFree(), new CustomType('exn')),
                 IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         } else {
-            state.setStaticValue(this.name.getText(), new CustomType('exn').normalize()[0],
+            state.setStaticValue(this.name.getText(), new CustomType('exn'),
                 IdentifierStatus.EXCEPTION_CONSTRUCTOR);
         }
         return state;
