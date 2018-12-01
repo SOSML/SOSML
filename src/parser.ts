@@ -1448,6 +1448,7 @@ export class Parser {
             return res;
         }
         let pat = this.parsePattern();
+        pat.simplify().assertUniqueBinding(this.state);
         this.assertKeywordToken(this.currentToken(), '=');
         ++this.position;
         return new ValueBinding(curTok.position, false, pat, this.parseExpression());
@@ -1585,6 +1586,8 @@ export class Parser {
                     'Different function names in different cases ("' + nm.name.getText()
                     + '" vs. "' + name.name.getText() + '")', curTok.position);
             }
+
+            new Tuple(-1, args).simplify().assertUniqueBinding(this.state);
 
             result.push([args, ty, this.parseExpression()]);
             if (this.checkKeywordToken(this.currentToken(), '|')) {

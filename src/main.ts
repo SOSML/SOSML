@@ -36,8 +36,9 @@ export function interpret(nextInstruction: string,
 
     let ast = Parser.parse(tkn, state, options);
 
-    state = oldState.getNestedState();
     ast = ast.simplify();
+
+    state = oldState.getNestedState();
 
     if (options.disableElaboration === true) {
         let tmp = Evaluator.evaluate(oldState.getNestedState(), ast /* , options */);
