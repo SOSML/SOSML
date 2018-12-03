@@ -1084,16 +1084,21 @@ export class ValueBinding {
             nextName: string, isTopLevel: boolean):
             [[string, Type][], Warning[], Map<string, [Type, boolean]>, string, IdCnt] {
         let nstate = state.getNestedState(state.id);
-        let tp = this.expression.getType(nstate, tyVarBnd, nextName);
+        let newBnds = new Map<string, [Type, boolean]>();
+        tyVarBnd.forEach((t: [Type, boolean], n: string) => {
+            newBnds = newBnds.set(n, t);
+        });
+
+        let tp = this.expression.getType(nstate, newBnds, nextName);
         let res = this.pattern.matchType(nstate, tp[4], tp[0]);
 
         let noBind = new Set<string>();
-        res[2].forEach((val: [Type, boolean], key: string) => {
-            noBind.add(key);
-            val[0].getTypeVariables().forEach((dom: Type[], v: string) => {
-                noBind.add(v);
-            });
-        });
+                // tyVarBnd.forEach((val: [Type, boolean], key: string) => {
+                // noBind.add(key);
+                //val[0].getTypeVariables().forEach((dom: Type[], v: string) => {
+                // noBind.add(v);
+                // });
+                //});
 
         if (res === undefined) {
             throw new ElaborationError(this.position,
@@ -1359,11 +1364,11 @@ export class DirectExceptionBinding implements ExceptionBinding {
             let tp = this.type.simplify().instantiate(state, new Map<string, [Type, boolean]>());
             let tyvars: string[] = [];
             tp.getTypeVariables().forEach((dom: Type[], val: string) => {
-                if (!knownTypeVars.has(val)) {
+                //                if (!knownTypeVars.has(val)) {
                     tyvars.push(val);
-                }
+                // }
             });
-            if (/* isTopLevel && */ tyvars.length > 0) {
+            if (isTopLevel && tyvars.length > 0) {
                 throw ElaborationError.getUnguarded(this.position, tyvars);
             }
 

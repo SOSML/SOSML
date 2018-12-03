@@ -611,7 +611,7 @@ export class LocalDeclarationExpression extends Expression {
     }
 
     isSafe(state: State): boolean {
-        return this.expression.isSafe(state);
+        return false;
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
@@ -620,13 +620,33 @@ export class LocalDeclarationExpression extends Expression {
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         let nstate = state.getNestedState(state.id);
+        let nvbnd = new Map<string, [Type, boolean]>();
         tyVarBnd.forEach((val: [Type, boolean], key: string) => {
             if (key[1] === '*' && key[2] === '*') {
-                nstate.setStaticValue(key.substring(3),
-                    val[0].instantiate(state, tyVarBnd), IdentifierStatus.VALUE_VARIABLE);
+                let newName = key.substring(3);
+                let newType = val[0].instantiate(state, tyVarBnd);
+                // Pass on everything about occuring type variables
+                // console.log(newType + ' ' + newType.getTypeVariables());
+
+                // Put this param type into the state
+                /*
+                let norm = newType.normalize(nstate.freeTypeVariables[0]);
+                nstate.freeTypeVariables[0] = norm[1];
+
+                let newtyvars = norm[0].getTypeVariables(false);
+                newType = norm[0];
+                newtyvars.forEach((tp: Type[], name: string) => {
+                    newType = new TypeVariableBind(name, newType, tp);
+                });
+
+                console.log(newName + ' > ' + newType);
+                 */
+             nstate.setStaticValue(newName, newType, IdentifierStatus.VALUE_VARIABLE);
             }
+            nvbnd = nvbnd.set(key, val);
         });
 
+            /*
         let nvbnd = new Map<string, [Type, boolean]>();
         tyVarBnd.forEach((val: [Type, boolean], key: string) => {
             nvbnd = nvbnd.set(key, val);
@@ -640,15 +660,18 @@ export class LocalDeclarationExpression extends Expression {
                 }
             });
         });
+             */
 
         let res = this.declaration.elaborate(nstate, nvbnd, nextName);
 
         let nvbnd2 = new Map<string, [Type, boolean]>();
         res[2].forEach((val: [Type, boolean], key: string) => {
-            if (key[1] !== '*' || key[2] !== '*') {
+            // if (key[1] !== '*' || key[2] !== '*') {
                 nvbnd2 = nvbnd2.set(key, val);
-            }
+            //} else {
+            // }
         });
+            // console.log(res[0].getStaticChanges(state.id));
         let r2 = this.expression.getType(res[0], nvbnd2, res[3], tyVars, forceRebind);
         return [r2[0], res[1].concat(r2[1]), r2[2], r2[3], r2[4], r2[5]];
     }
@@ -1306,7 +1329,7 @@ export class RaiseException extends Expression {
     }
 
     isSafe(state: State): boolean {
-        return this.expression.isSafe(state);
+        return false;
     }
 
     toString(): string {
