@@ -31,7 +31,7 @@ export abstract class Declaration {
         throw new InternalInterpreterError( -1, 'Not yet implemented.');
     }
 
-    assertUniqueBinding(state: State): Set<string> {
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
         return new Set<string>();
     }
 }
@@ -44,10 +44,10 @@ export class ValueDeclaration extends Declaration {
         super();
     }
 
-    assertUniqueBinding(state: State): Set<string> {
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
         for (let i = 0; i < this.valueBinding.length; ++i) {
-            this.valueBinding[i].pattern.assertUniqueBinding(state);
-            this.valueBinding[i].expression.assertUniqueBinding(state);
+            this.valueBinding[i].pattern.assertUniqueBinding(state, conn);
+            this.valueBinding[i].expression.assertUniqueBinding(state, conn);
         }
         return new Set<string>();
     }
@@ -544,9 +544,9 @@ export class LocalDeclaration extends Declaration {
         super();
     }
 
-    assertUniqueBinding(state: State): Set<string> {
-        this.declaration.assertUniqueBinding(state);
-        this.body.assertUniqueBinding(state);
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
+        this.declaration.assertUniqueBinding(state, conn);
+        this.body.assertUniqueBinding(state, conn);
         return new Set<string>();
     }
 
@@ -750,9 +750,9 @@ export class SequentialDeclaration extends Declaration {
         super();
     }
 
-    assertUniqueBinding(state: State): Set<string> {
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
         for (let i = 0; i < this.declarations.length; ++i) {
-            this.declarations[i].assertUniqueBinding(state);
+            this.declarations[i].assertUniqueBinding(state, conn);
         }
         return new Set<string>();
     }
