@@ -27,6 +27,7 @@ import { State } from './state';
 
 export class Parser {
     private position: number = 0; // position of the next not yet parsed token
+    private newcons: Set<string> = new Set<string>(); // new constructor names that appear
 
     constructor(private tokens: Token[], private state: State, private currentId: number,
                 private options: { [name: string]: any }) {
@@ -238,6 +239,10 @@ export class Parser {
 
             let nstate = this.state;
             this.state = this.state.getNestedState(this.state.id);
+            let oldcon = new Set<string>();
+            this.newcons.forEach((v: string) => {
+                oldcon = oldcon.add(v);
+            });
 
             let dec = this.parseDeclaration();
             this.assertKeywordToken(this.currentToken(), 'in');
@@ -259,6 +264,7 @@ export class Parser {
             ++this.position;
 
             this.state = nstate;
+            this.newcons = oldcon;
 
             if (res.length >= 2) {
                 return new LocalDeclarationExpression(curTok.position, dec,
@@ -1448,7 +1454,7 @@ export class Parser {
             return res;
         }
         let pat = this.parsePattern();
-        pat.simplify().assertUniqueBinding(this.state);
+        pat.simplify().assertUniqueBinding(this.state, this.newcons);
         this.assertKeywordToken(this.currentToken(), '=');
         ++this.position;
         return new ValueBinding(curTok.position, false, pat, this.parseExpression());
@@ -1587,7 +1593,7 @@ export class Parser {
                     + '" vs. "' + name.name.getText() + '")', curTok.position);
             }
 
-            new Tuple(-1, args).simplify().assertUniqueBinding(this.state);
+            new Tuple(-1, args).simplify().assertUniqueBinding(this.state, this.newcons);
 
             result.push([args, ty, this.parseExpression()]);
             if (this.checkKeywordToken(this.currentToken(), '|')) {
@@ -1664,6 +1670,7 @@ export class Parser {
 
         while (true) {
             let name = this.parseOpIdentifierToken();
+            this.newcons = this.newcons.add(name.getText());
             if (this.checkKeywordToken(this.currentToken(), 'of')) {
                 ++this.position;
                 let ty = this.parseType();
@@ -2044,6 +2051,10 @@ export class Parser {
 
             let nstate = this.state;
             this.state = this.state.getNestedState(this.state.id);
+            let oldcon = new Set<string>();
+            this.newcons.forEach((v: string) => {
+                oldcon = oldcon.add(v);
+            });
 
             let datbind = this.parseDatatypeBindingSeq();
             let tybind: TypeBinding[]|undefined = undefined;
@@ -2058,6 +2069,7 @@ export class Parser {
             ++this.position;
 
             this.state = nstate;
+            this.newcons = oldcon;
 
             return new AbstypeDeclaration(curTok.position, datbind, tybind, dec, curId);
         } else if (this.checkKeywordToken(curTok, 'exception')) {
@@ -2077,6 +2089,10 @@ export class Parser {
 
             let nstate = this.state;
             this.state = this.state.getNestedState(this.state.id);
+            let oldcon = new Set<string>();
+            this.newcons.forEach((v: string) => {
+                oldcon = oldcon.add(v);
+            });
 
             let dec: Declaration = this.parseDeclaration(false, strDec);
             this.assertKeywordToken(this.currentToken(), 'in');
@@ -2086,6 +2102,7 @@ export class Parser {
             ++this.position;
 
             this.state = nstate;
+            this.newcons = oldcon;
 
             return new LocalDeclaration(curTok.position, dec, dec2, curId);
         } else if (this.checkKeywordToken(curTok, 'open')) {

@@ -41,7 +41,7 @@ export abstract class Expression {
             'You humans can\'t seem to write bug-free code. What an inferior species.');
     }
 
-    assertUniqueBinding(state: State): Set<string> {
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
         return new Set<string>();
     }
 
@@ -59,7 +59,7 @@ export interface Pattern {
     simplify(): PatternExpression;
     toString(indentation: number, oneLine: boolean): string;
 
-    assertUniqueBinding(state: State): Set<string>;
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string>;
 }
 
 export type PatternExpression = Pattern & Expression;
@@ -331,7 +331,11 @@ export class ValueIdentifier extends Expression implements Pattern {
         };
     }
 
-    assertUniqueBinding(state: State): Set<string> {
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
+        if (conn.has(this.name.getText())) {
+            return new Set<string>();
+        }
+
         let stt = state.getStaticValue(this.name.getText());
         if (stt !== undefined && stt[1] !== IdentifierStatus.VALUE_VARIABLE) {
             return new Set<string>();
@@ -575,11 +579,11 @@ export class Record extends Expression implements Pattern {
         };
     }
 
-    assertUniqueBinding(state: State): Set<string> {
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
         let seen = new Set<string>();
 
         for (let i = 0; i < this.entries.length; ++i) {
-            let cur = this.entries[i][1].assertUniqueBinding(state);
+            let cur = this.entries[i][1].assertUniqueBinding(state, conn);
 
             cur.forEach((v: string) => {
                 if (seen.has(v)) {
@@ -728,9 +732,9 @@ export class LocalDeclarationExpression extends Expression {
         };
     }
 
-    assertUniqueBinding(state: State): Set<string> {
-        this.declaration.assertUniqueBinding(state);
-        this.expression.assertUniqueBinding(state);
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
+        this.declaration.assertUniqueBinding(state, conn);
+        this.expression.assertUniqueBinding(state, conn);
         return new Set<string>();
     }
 }
@@ -814,8 +818,8 @@ export class TypedExpression extends Expression implements Pattern {
         return this.expression.compute(params, callStack);
     }
 
-    assertUniqueBinding(state: State): Set<string> {
-        return this.expression.assertUniqueBinding(state);
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
+        return this.expression.assertUniqueBinding(state, conn);
     }
 }
 
@@ -1182,9 +1186,9 @@ export class FunctionApplication extends Expression implements Pattern {
         }
     }
 
-    assertUniqueBinding(state: State): Set<string> {
-        let fuc = this.func.assertUniqueBinding(state);
-        let res = this.argument.assertUniqueBinding(state);
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
+        let fuc = this.func.assertUniqueBinding(state, conn);
+        let res = this.argument.assertUniqueBinding(state, conn);
         if (this.func instanceof ValueIdentifier) {
             if (fuc.size === 0) { // Constructor
                 return res;
@@ -1309,9 +1313,9 @@ export class HandleException extends Expression {
         };
     }
 
-    assertUniqueBinding(state: State): Set<string> {
-        this.expression.assertUniqueBinding(state);
-        this.match.assertUniqueBinding(state);
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
+        this.expression.assertUniqueBinding(state, conn);
+        this.match.assertUniqueBinding(state, conn);
         return new Set<string>();
     }
 }
@@ -1383,8 +1387,8 @@ export class RaiseException extends Expression {
         };
     }
 
-    assertUniqueBinding(state: State): Set<string> {
-        this.expression.assertUniqueBinding(state);
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
+        this.expression.assertUniqueBinding(state, conn);
         return new Set<string>();
     }
 }
@@ -1431,8 +1435,8 @@ export class Lambda extends Expression {
         };
     }
 
-    assertUniqueBinding(state: State): Set<string> {
-        this.match.assertUniqueBinding(state);
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
+        this.match.assertUniqueBinding(state, conn);
         return new Set<string>();
     }
 }
@@ -1579,10 +1583,10 @@ export class Match {
         return new Match(this.position, newMatches);
     }
 
-    assertUniqueBinding(state: State): Set<string> {
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
         for (let i = 0; i < this.matches.length; ++i) {
-            this.matches[i][0].assertUniqueBinding(state);
-            this.matches[i][1].assertUniqueBinding(state);
+            this.matches[i][0].assertUniqueBinding(state, conn);
+            this.matches[i][1].assertUniqueBinding(state, conn);
         }
         return new Set<string>();
     }
@@ -1633,7 +1637,7 @@ export class Wildcard extends Expression implements Pattern {
         return '_';
     }
 
-    assertUniqueBinding(state: State): Set<string> {
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
         return new Set<string>();
     }
 }
@@ -1734,8 +1738,8 @@ export class LayeredPattern extends Expression implements Pattern {
         return this.identifier.getText() + ' as ' + this.pattern;
     }
 
-    assertUniqueBinding(state: State): Set<string> {
-        let res = this.pattern.assertUniqueBinding(state);
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
+        let res = this.pattern.assertUniqueBinding(state, conn);
 
         let stt = state.getStaticValue(this.identifier.getText());
         if (stt !== undefined && stt[1] !== IdentifierStatus.VALUE_VARIABLE) {
@@ -1814,7 +1818,7 @@ export class ConjunctivePattern extends Expression implements Pattern {
         return (<[string, Value][]> r1).concat(r2);
     }
 
-    assertUniqueBinding(state: State): Set<string> {
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
         // TODO
         return new Set<string>();
     }
@@ -1864,7 +1868,7 @@ export class DisjunctivePattern extends Expression implements Pattern {
         return this.right.matches(state, v);
     }
 
-    assertUniqueBinding(state: State): Set<string> {
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
         // TODO
         return new Set<string>();
     }
@@ -1907,7 +1911,7 @@ export class NestedMatch extends Expression implements Pattern {
         throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
     }
 
-    assertUniqueBinding(state: State): Set<string> {
+    assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
         // TODO
         return new Set<string>();
     }
