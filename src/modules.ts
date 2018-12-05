@@ -57,7 +57,7 @@ export class StructureExpression extends Expression implements Structure {
             let tmp = params.recResult;
             if (tmp === undefined
                 || tmp.newState === undefined) {
-                throw new InternalInterpreterError(-1, 'How is this undefined?');
+                throw new InternalInterpreterError(-1, 'RAINBOW!');
             }
             let nstate = <State> tmp.newState;
 
@@ -633,7 +633,7 @@ export class LocalDeclarationStructureExpression extends Expression implements S
         let res = <EvaluationResult> params.ldseRes;
         if (res === undefined
             || res.newState === undefined) {
-            throw new InternalInterpreterError(-1, 'How is this undefined?');
+            throw new InternalInterpreterError(-1, 'Anpan.');
         }
         // braced so linter does not complain about shadowing
         {
