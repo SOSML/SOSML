@@ -927,6 +927,8 @@ export class Parser {
         let res: [PatternExpression, Expression][] = [];
         while (true) {
             let pat = this.parsePattern();
+            pat.simplify().assertUniqueBinding(this.state, this.newcons);
+
             this.assertKeywordToken(this.currentToken(), '=>');
             ++this.position;
             let exp = this.parseExpression();
