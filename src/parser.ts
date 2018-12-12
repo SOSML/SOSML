@@ -1493,6 +1493,12 @@ export class Parser {
                 }
                 if (!(pat instanceof ValueIdentifier)) {
                     isBad = true;
+                } else {
+                    // Check if the computed name is not already used
+                    let rs = pat.simplify().assertUniqueBinding(this.state, this.newcons);
+                    if (!rs.has((<ValueIdentifier> pat).name.getText())) {
+                        throw new ParserError('I won\'t let poorly named functions disturb my Happy Sugar Life.', pat.position);
+                }
                 }
                 if (isBad) {
                     throw new ParserError('Nyaboron is sad. Did you forget a function name?',
@@ -1500,6 +1506,7 @@ export class Parser {
                 }
 
                 nm = <ValueIdentifier> pat;
+
                 for (let i = revArgs.length - 1; i >= 0; --i) {
                     args.push(revArgs[i]);
                 }
