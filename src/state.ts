@@ -226,10 +226,10 @@ export class DynamicBasis {
 
 export class StaticBasis {
     constructor(public typeEnvironment: StaticTypeEnvironment,
-        public valueEnvironment: StaticValueEnvironment,
-        public structureEnvironment: StaticStructureEnvironment,
-        public signatureEnvironment: StaticSignatureEnvironment,
-        public functorEnvironment: StaticFunctorEnvironment) {
+                public valueEnvironment: StaticValueEnvironment,
+                public structureEnvironment: StaticStructureEnvironment,
+                public signatureEnvironment: StaticSignatureEnvironment,
+                public functorEnvironment: StaticFunctorEnvironment) {
     }
 
     getValue(name: string): [Type, IdentifierStatus] | undefined {
@@ -343,18 +343,18 @@ export class State {
 
     // The states' ids are non-decreasing; a single declaration uses the same ids
     constructor(public id: number,
-        public parent: State | undefined,
-        public staticBasis: StaticBasis,
-        public dynamicBasis: DynamicBasis,
-        public memory: Memory,
-        public freeTypeVariables: FreeTypeVariableInformation
-        = [0, new Map<string, [Type, boolean]>()],
-        private infixEnvironment: InfixEnvironment = {},
-        public valueIdentifierId: { [name: string]: number } = {},
-        public warns: Warning[] = [],
-        public insideLocalDeclBody: boolean = false,
-        public localDeclStart: boolean = false,
-        public loadedModules: string[] = []) {
+                public parent: State | undefined,
+                public staticBasis: StaticBasis,
+                public dynamicBasis: DynamicBasis,
+                public memory: Memory,
+                public freeTypeVariables: FreeTypeVariableInformation
+                = [0, new Map<string, [Type, boolean]>()],
+                private infixEnvironment: InfixEnvironment = {},
+                public valueIdentifierId: { [name: string]: number } = {},
+                public warns: Warning[] = [],
+                public insideLocalDeclBody: boolean = false,
+                public localDeclStart: boolean = false,
+                public loadedModules: string[] = []) {
     }
 
     getNestedState(newId: number|undefined = undefined) {
@@ -795,9 +795,9 @@ export class State {
 
 
     setInfixStatus(id: Token, precedence: number,
-        rightAssociative: boolean,
-        infix: boolean,
-        atId: number|undefined = undefined): void {
+                   rightAssociative: boolean,
+                   infix: boolean,
+                   atId: number|undefined = undefined): void {
             if (atId === undefined || atId === this.id) {
                 if (id.isVid() || id instanceof LongIdentifierToken) {
                     this.infixEnvironment[id.getText()]
