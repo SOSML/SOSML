@@ -846,7 +846,7 @@ export class FunctionApplication extends Expression implements Pattern {
             return false;
         }
         let f = state.getStaticValue((<ValueIdentifier> this.func).name.getText());
-        if (f === undefined) {
+        if (f === undefined || (<ValueIdentifier> this.func).name.getText() === 'ref') {
             return false;
         }
         return f[1] !== IdentifierStatus.VALUE_VARIABLE;
