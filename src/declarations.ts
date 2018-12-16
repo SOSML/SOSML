@@ -1107,7 +1107,15 @@ export class ValueBinding {
         }
 
         let ntys: TypeVariable[] = [];
+        let seennames: Set<string> = new Set<string>();
         for (let i = 0; i < tyVarSeq.length; ++i) {
+            if (seennames.has(tyVarSeq[i].name)) {
+                throw new ElaborationError(tyVarSeq[i].position,
+                    'I will not let a duplicate type variable name "' + tyVarSeq[i].name
+                    + '" disturb my Happy Sugar Life.');
+            }
+            seennames = seennames.add(tyVarSeq[i].name);
+
             let nt = tyVarSeq[i].instantiate(state, res[2]);
             if (!(nt instanceof TypeVariable) || (<TypeVariable> nt).domain.length > 0
                 || tyVarSeq[i].admitsEquality(state) !== nt.admitsEquality(state)) {
@@ -1300,6 +1308,11 @@ export class DatatypeBinding {
 
             let tvs = new Set<string>();
             for (let j = 0; j < this.typeVariableSequence.length; ++j) {
+                if (tvs.has(this.typeVariableSequence[j].name)) {
+                    throw new ElaborationError(this.typeVariableSequence[j].position,
+                        'I\'m not interested in duplicate type variable names such as "'
+                        + this.typeVariableSequence[j] + '".');
+                }
                 tvs = tvs.add(this.typeVariableSequence[j].name);
             }
             let ungar: string[] = [];
