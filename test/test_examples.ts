@@ -4834,10 +4834,7 @@ fun mirror (Point(x,y)) = Point(x,~y);
             expect(state.getStaticValue('Circle')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1', new Type.RecordType(new Map([
-                            ['1', new Type.CustomType('real')],
-                            ['2', new Type.CustomType('real')]
-                        ]), true)],
+                        ['1', new Type.CustomType('point')],
                         ['2', new Type.CustomType('real')]
                     ]), true),
                     new Type.CustomType('object')
@@ -4848,18 +4845,9 @@ fun mirror (Point(x,y)) = Point(x,~y);
             expect(state.getStaticValue('Triangle')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1', new Type.RecordType(new Map([
-                            ['1', new Type.CustomType('real')],
-                            ['2', new Type.CustomType('real')]
-                        ]), true)],
-                        ['2', new Type.RecordType(new Map([
-                            ['1', new Type.CustomType('real')],
-                            ['2', new Type.CustomType('real')]
-                        ]), true)],
-                        ['3', new Type.RecordType(new Map([
-                            ['1', new Type.CustomType('real')],
-                            ['2', new Type.CustomType('real')]
-                        ]), true)]
+                        ['1', new Type.CustomType('point')],
+                        ['2', new Type.CustomType('point')],
+                        ['3', new Type.CustomType('point')]
                     ]), true),
                     new Type.CustomType('object')
                 ),
@@ -4947,7 +4935,7 @@ val e = M(A(M(C 2, V "x"), V "y"), A(V "x", C 3));
             expect(state.getDynamicValue('V')).not.toEqualWithType(undefined); // TODO exact value
             expect(state.getStaticValue('V')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string'),
+                    new Type.CustomType('var'),
                     new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
@@ -6608,7 +6596,7 @@ val e1 = Opr(Leq, Id"n", Con(IC 0));
             expect(state.getDynamicValue('Id')[0]).toEqualWithType(new Val.ValueConstructor('Id', 1));
             expect(state.getStaticValue('Id')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('string'),
+                    new Type.CustomType('id'),
                     new Type.CustomType('exp')
                 ),
                 State.IdentifierStatus.VALUE_CONSTRUCTOR
@@ -6641,7 +6629,7 @@ val e1 = Opr(Leq, Id"n", Con(IC 0));
             expect(state.getStaticValue('Abs')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1',new Type.CustomType('string')],
+                        ['1',new Type.CustomType('id')],
                         ['2',new Type.CustomType('ty')],
                         ['3',new Type.CustomType('exp')]
                     ]), true),
@@ -7118,12 +7106,11 @@ eval f e;
             expect(state.getStaticValue('Proc')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1',new Type.CustomType('string')],
+                        ['1',new Type.CustomType('id')],
                         ['2',new Type.CustomType('exp')],
-                        ['3',new Type.FunctionType(
-                            new Type.CustomType('string'),
+                        ['3',new Type.CustomType('env', [
                             new Type.CustomType('value')
-                        )]
+                        ])],
                     ]), true),
                     new Type.CustomType('value')
                 ),
