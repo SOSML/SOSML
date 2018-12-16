@@ -278,8 +278,12 @@ export class ValueIdentifier extends Expression implements Pattern {
         if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
             return [[this.name.getText(), v]];
         }
-        if (v.equals(res[0])) {
-            return [];
+        try {
+            if (v.equals(res[0])) {
+                return [];
+            }
+        } catch (e) { // This is dirty. It may have been possible to rebind after all
+            return [[this.name.getText(), v]];
         }
         return undefined;
     }
@@ -1485,7 +1489,7 @@ export class Match {
             restp = restp.instantiate(state, bnds);
             bnds.forEach((val: [Type, boolean], key: string) => {
                 if (key[1] !== '*' || key[2] !== '*') {
-                    nmap = nmap.set(key, [val[0].instantiate(state, bnds), val[1]]);
+                    nmap = nmap.set(key, val);
                 } else {
                     keep = keep.set(key, val);
                 }
@@ -1538,6 +1542,7 @@ export class Wildcard extends Expression implements Pattern {
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
+            //       return [new AnyType(), [], nextName, tyVars, tyVarBnd, state.valueIdentifierId];
         let cur = (+nextName.substring(3)) + 1;
         let nm = '';
         for (; ; ++cur) {
