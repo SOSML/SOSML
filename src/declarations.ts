@@ -1301,8 +1301,7 @@ export class DatatypeBinding {
         for (let i = 0; i < this.type.length; ++i) {
             let tp: Type = restp;
             if (this.type[i][1] !== undefined) {
-                let curtp = (<Type> this.type[i][1]).instantiate(nstate,
-                    new Map<string, [Type, boolean]>()).replace(idlesstp, restp);
+                let curtp = (<Type> this.type[i][1]).replace(idlesstp, restp);
                 tp = new FunctionType(curtp, tp);
             }
 
