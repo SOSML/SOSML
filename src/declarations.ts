@@ -358,6 +358,8 @@ export class DatatypeDeclaration extends Declaration {
               isTopLevel: boolean, options: { [name: string]: any }):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         // I'm assuming the withtype is empty
+
+        let tocheck: Type[] = [];
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
             let res = this.datatypeBinding[i].getType(state, isTopLevel);
 
@@ -367,10 +369,15 @@ export class DatatypeDeclaration extends Declaration {
                         + res[0][j][0] + '".');
                 }
                 state.setStaticValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
+                tocheck.push(res[0][j][1]);
             }
             state.setStaticType(res[2][0], res[1], res[2][1],
                 this.datatypeBinding[i].typeVariableSequence.length, true);
             state.incrementValueIdentifierId(res[2][0]);
+        }
+
+        for (let i = 0; i < tocheck.length; ++i) {
+            tocheck[i].instantiate(state, new Map<string, [Type, boolean]>());
         }
 
         return [state, [], tyVarBnd, nextName];
