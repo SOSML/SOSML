@@ -1129,7 +1129,7 @@ export class Parser {
 
             ++this.position;
             return new Constant(curTok.position, curTok);
-        } else if (curTok instanceof IdentifierToken
+        } else if ((curTok.isVid() && curTok.getText() !== '=')
             || curTok instanceof LongIdentifierToken) {
             ++this.position;
 
@@ -1145,6 +1145,11 @@ export class Parser {
                     }
                     this.assertKeywordToken(newTok, 'as');
                     ++this.position;
+
+                    if (curTok instanceof KeywordToken) { // StarToken
+                        curTok = new IdentifierToken(curTok.getText(), curTok.position);
+                    }
+
                     return new LayeredPattern(curTok.position, <IdentifierToken> curTok, tp, this.parsePattern());
                 }
             } catch (f) {
@@ -1545,7 +1550,7 @@ export class Parser {
                         this.position = oldPos;
                         let left = this.parseAtomicPattern();
 
-                        this.assertIdentifierOrLongToken(this.currentToken());
+                        this.assertVidOrLongToken(this.currentToken());
                         nm = new ValueIdentifier(this.currentToken().position, this.currentToken());
 
                         if (this.state.getInfixStatus(this.currentToken()) === undefined
@@ -1563,6 +1568,7 @@ export class Parser {
                         let right = this.parseAtomicPattern();
                         args.push(new Tuple(-1, [left, right]));
                     } catch (f) {
+                        console.log(f);
                         // It wasn't infix at all, but simply wrong.
                         throw e;
                     }
