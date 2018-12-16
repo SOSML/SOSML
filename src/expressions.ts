@@ -278,8 +278,12 @@ export class ValueIdentifier extends Expression implements Pattern {
         if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
             return [[this.name.getText(), v]];
         }
-        if (v.equals(res[0])) {
-            return [];
+        try {
+            if (v.equals(res[0])) {
+                return [];
+            }
+        } catch (e) { // This is dirty. It may have been possible to rebind after all
+            return [[this.name.getText(), v]];
         }
         return undefined;
     }
