@@ -36,8 +36,9 @@ export function interpret(nextInstruction: string,
 
     let ast = Parser.parse(tkn, state, options);
 
-    state = oldState.getNestedState();
     ast = ast.simplify();
+
+    state = oldState.getNestedState();
 
     if (options.disableElaboration === true) {
         let tmp = Evaluator.evaluate(oldState.getNestedState(), ast /* , options */);
@@ -55,6 +56,14 @@ export function interpret(nextInstruction: string,
     let elab = ast.elaborate(state, new Map<string, [Type, boolean]>(), '\'*t0', true, options);
     state = elab[0];
 
+    if (options.disableEvaluation === true) {
+        return {
+            'state':                state,
+            'evaluationErrored':    false,
+            'error':                undefined,
+            'warnings':             state.getWarnings()
+        };
+    }
     // Use a fresh state to be able to piece types and values together
     let res = Evaluator.evaluate(oldState.getNestedState(), ast /* , options */);
     if (res === undefined) {
@@ -99,7 +108,7 @@ export function interpret(nextInstruction: string,
 
                     let tp = state.getStaticType(i, curState.id);
                     if (tp !== undefined) {
-                        curState.setStaticType(i, tp.type, tp.constructors, tp.arity);
+                        curState.setStaticType(i, tp.type, tp.constructors, tp.arity, tp.allowsEquality);
                     }
                 }
             }

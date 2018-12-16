@@ -226,10 +226,10 @@ export class DynamicBasis {
 
 export class StaticBasis {
     constructor(public typeEnvironment: StaticTypeEnvironment,
-        public valueEnvironment: StaticValueEnvironment,
-        public structureEnvironment: StaticStructureEnvironment,
-        public signatureEnvironment: StaticSignatureEnvironment,
-        public functorEnvironment: StaticFunctorEnvironment) {
+                public valueEnvironment: StaticValueEnvironment,
+                public structureEnvironment: StaticStructureEnvironment,
+                public signatureEnvironment: StaticSignatureEnvironment,
+                public functorEnvironment: StaticFunctorEnvironment) {
     }
 
     getValue(name: string): [Type, IdentifierStatus] | undefined {
@@ -276,7 +276,7 @@ export class StaticBasis {
         this.valueEnvironment[name] = undefined;
     }
 
-    setType(name: string, type: Type, constructors: string[], arity: number, admitsEquality: boolean = true) {
+    setType(name: string, type: Type, constructors: string[], arity: number, admitsEquality: boolean) {
         this.typeEnvironment[name] = new TypeInformation(type, constructors, arity, admitsEquality);
     }
 
@@ -343,18 +343,18 @@ export class State {
 
     // The states' ids are non-decreasing; a single declaration uses the same ids
     constructor(public id: number,
-        public parent: State | undefined,
-        public staticBasis: StaticBasis,
-        public dynamicBasis: DynamicBasis,
-        public memory: Memory,
-        public freeTypeVariables: FreeTypeVariableInformation
-        = [0, new Map<string, [Type, boolean]>()],
-        private infixEnvironment: InfixEnvironment = {},
-        public valueIdentifierId: { [name: string]: number } = {},
-        public warns: Warning[] = [],
-        public insideLocalDeclBody: boolean = false,
-        public localDeclStart: boolean = false,
-        public loadedModules: string[] = []) {
+                public parent: State | undefined,
+                public staticBasis: StaticBasis,
+                public dynamicBasis: DynamicBasis,
+                public memory: Memory,
+                public freeTypeVariables: FreeTypeVariableInformation
+                = [0, new Map<string, [Type, boolean]>()],
+                private infixEnvironment: InfixEnvironment = {},
+                public valueIdentifierId: { [name: string]: number } = {},
+                public warns: Warning[] = [],
+                public insideLocalDeclBody: boolean = false,
+                public localDeclStart: boolean = false,
+                public loadedModules: string[] = []) {
     }
 
     getNestedState(newId: number|undefined = undefined) {
@@ -701,13 +701,14 @@ export class State {
     }
 
     setStaticType(name: string, type: Type, constructors: string[], arity: number,
-        atId: number|undefined = undefined) {
+        allowsEquality: boolean, atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
-            this.staticBasis.setType(name, type, constructors, arity);
+            this.staticBasis.setType(name, type, constructors, arity, allowsEquality);
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
         } else {
-            (<State> this.parent).setStaticType(name, type, constructors, arity, atId);
+            (<State> this.parent).setStaticType(name, type, constructors, arity,
+                allowsEquality, atId);
         }
     }
 
@@ -794,9 +795,9 @@ export class State {
 
 
     setInfixStatus(id: Token, precedence: number,
-        rightAssociative: boolean,
-        infix: boolean,
-        atId: number|undefined = undefined): void {
+                   rightAssociative: boolean,
+                   infix: boolean,
+                   atId: number|undefined = undefined): void {
             if (atId === undefined || atId === this.id) {
                 if (id.isVid() || id instanceof LongIdentifierToken) {
                     this.infixEnvironment[id.getText()]

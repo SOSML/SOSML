@@ -1,227 +1,6 @@
-import { ElaborationError, Warning } from './errors';
-import { State, StaticBasis, DynamicBasis } from './state';
+import { ElaborationError } from './errors';
+import { State } from './state';
 import { LongIdentifierToken } from './tokens';
-import { Pattern, Expression, ValueIdentifier, Record, LayeredPattern, Wildcard,
-         FunctionApplication, TypedExpression } from './expressions';
-
-export class Domain {
-    constructor(public entries: string[] | Map<string, Domain> | undefined) {
-    }
-
-    getSize(): number {
-        if (this.entries instanceof Array) {
-            return this.entries.length;
-        }
-        if (this.entries === undefined) {
-            return 1;
-        }
-        let res = 1;
-        this.entries.forEach((val: Domain) => {
-            res *= val.getSize();
-        });
-        return res;
-    }
-
-    isInfinite(): boolean {
-        if (this.entries === undefined) {
-            return true;
-        }
-        if (this.entries instanceof Map) {
-            let good = false;
-            this.entries.forEach((val: Domain, key: string) => {
-                good = good || val.isInfinite();
-            });
-            return good;
-        }
-        return false;
-    }
-
-    getValues(): string[] {
-        if (this.entries instanceof Array) {
-            return this.entries;
-        }
-        if (this.entries instanceof Map) {
-            // This stuff here is rather fragile; it may break if you look at it . . .
-            let res: string[] = [];
-            this.entries.forEach((val: Domain, key: string) => {
-                if (!val.isInfinite()) {
-                    let cur = val.getValues();
-                    let nres: string[] = [];
-                    if (res.length === 0) {
-                        res = cur;
-                    } else {
-                        for (let i of res) {
-                            for (let j of cur) {
-                                nres.push(i + ' * ' + j);
-                            }
-                        }
-                        res = nres;
-                    }
-                }
-            });
-            return res;
-        }
-        throw new ElaborationError(-1, 'Irredeemable.');
-    }
-
-    finitize(other: Domain): Domain {
-        if (this.entries instanceof Array) {
-            return new Domain(this.entries);
-        }
-        if (this.entries === undefined) {
-            return new Domain(other.entries);
-        }
-        let res = new Map<string, Domain>();
-        this.entries.forEach((val: Domain, key: string) => {
-            res = res.set(key, val.finitize(<Domain> (<Map<string, Domain>> other.entries).get(key)));
-        });
-        return new Domain(res);
-    }
-
-    match(position: number, other: Domain[]): Warning[] {
-        let res: Warning[] = [];
-        let nonex = false;
-        let redun = false;
-        // let nondis = false;
-
-        if (this.entries === undefined) {
-            nonex = true;
-            for (let i of other) {
-                if (i.entries === undefined) {
-                    if (!nonex) {
-                        redun = true;
-                    }
-                    nonex = false;
-                }
-            }
-        } else if (this.entries instanceof Map) {
-            type col = { [name: string]: string };
-            let fnd = new Set<string>();
-            for (let i = 0; i < other.length; ++i) {
-                if (other[i].entries === undefined) {
-                    nonex = false;
-                    redun = (i < other.length - 1);
-                    break;
-                }
-                if (other[i].entries instanceof Array) {
-                    throw new ElaborationError(position, 'Pizza…');
-                }
-                if (other[i].entries instanceof Map) {
-                    let cur: col[] = [];
-                    let add = true;
-                    this.entries.forEach((val: Domain, key: string) => {
-                        // Check that all infin-dom have val undef in other;
-                        // Otherwise that match rule does not change the exhaust
-                        if (val.isInfinite()) {
-                            if (!(<Domain> (<Map<string, Domain>> other[i].entries).get(key)).isInfinite()) {
-                                add = false;
-                            }
-                        } else {
-                            let ncur: col[] = [];
-
-                            for (let j of (<Domain> (<Map<string, Domain>>
-                                other[i].entries).get(key)).finitize(val).getValues()) {
-                                if (cur.length === 0) {
-                                    let nk: col = {};
-                                    nk[key] = j;
-                                    ncur.push(nk);
-                                } else {
-                                    for (let k of cur) {
-                                        let nk: col = {};
-                                        for (let w in k) {
-                                            if (k.hasOwnProperty(w)) {
-                                                nk[w] = k[w];
-                                            }
-                                        }
-                                        nk[key] = j;
-                                        ncur.push(nk);
-                                    }
-                                }
-                            }
-                            cur = ncur;
-                        }
-                    });
-                    let good = false;
-                    for (let j of cur) {
-                        if (!fnd.has(JSON.stringify(j))) {
-                            good = true;
-                        }
-                        // else {
-                        //    nondis = true;
-                        // }
-                        if (add) {
-                            fnd = fnd.add(JSON.stringify(j));
-                        }
-                    }
-                    if (cur.length > 0) {
-                        redun = redun || !good;
-                    }
-                }
-            }
-            nonex = fnd.size !== this.getSize();
-        } else {
-            let fnd = new Map<string, boolean>();
-            for (let i of this.entries) {
-                fnd = fnd.set(i, false);
-            }
-            nonex = true;
-            for (let i = 0; i < other.length; ++i) {
-                if (other[i].entries === undefined) {
-                    nonex = false;
-                    redun = (i < other.length - 1);
-                    break;
-                }
-                if (other[i].entries instanceof Array) {
-                    for (let j of <string[]> other[i].entries) {
-                        fnd = fnd.set(j, true);
-                    }
-                }
-                throw new ElaborationError(position,
-                    'I\'m not interested in ordinary people\'s bugs. But, if any of you are aliens, '
-                    + 'time-travelers, or espers, please come see me. That is all!');
-            }
-            if (!nonex) {
-                let missing: string[] = [];
-                fnd.forEach((val: boolean, key: string) => {
-                    if (!val) {
-                        missing.push(key);
-                    }
-                });
-
-                if (missing.length > 0) {
-                    let rs = '';
-                    for (let i = 0; i < missing.length; ++i) {
-                        if (i > 0) {
-                            rs += ', ';
-                        }
-                        rs += '"' + missing[i] + '"';
-                    }
-                    if (missing.length > 1) {
-                        rs = ' (Rules for constructors ' + res + ' are non-exhaustive.)\n';
-                    } else if (missing.length > 0) {
-                        rs = ' (Rules for constructor ' + res + ' are non-exhaustive.)\n';
-                    } else {
-                        rs = '\n';
-                    }
-                    nonex = false;
-                    res.push(new Warning(position, 'Pattern matching is non-exhaustive.' + rs));
-                }
-            }
-        }
-
-        if (nonex) {
-            res.push(new Warning(position, 'Pattern matching is non-exhaustive.\n'));
-        }
-        // if (nondis) {
-            // res.push(new Warning(position, 'Some rules are not disjoint.\n'));
-        // }
-        if (redun) {
-            res.push(new Warning(position, 'Some cases are unused in this match.\n'));
-        }
-
-        return res;
-    }
-}
 
 export abstract class Type {
     abstract toString(): string;
@@ -264,15 +43,6 @@ export abstract class Type {
         return this;
     }
 
-    checkExhaustiveness(state: State, tyVarBnd: Map<string, [Type, boolean]>, position: number, match:
-        [Pattern & Expression, Expression][]): Warning[] {
-        if (match.length > 1) {
-            return [new Warning(match[1][0].position,
-                'Some cases are unused in this match.')];
-        }
-        return [];
-    }
-
     // Mark all type variables as free
     makeFree(): Type {
         return this;
@@ -290,12 +60,13 @@ export abstract class Type {
         return 'undefined';
     }
 
-    admitsEquality(state: State): boolean {
+    // Checks whether all records in this type are complete
+    isResolved(): boolean {
         return false;
     }
 
-    getDomain(state: State): Domain {
-        return new Domain(undefined);
+    admitsEquality(state: State): boolean {
+        return false;
     }
 
     flatten(repl: Map<string, Type> = new Map<string, Type>()): Type {
@@ -368,6 +139,11 @@ export class AnyType extends Type {
         super();
     }
 
+    isResolved(): boolean {
+        return true;
+    }
+
+
     toString(): string {
         return 'any';
     }
@@ -406,6 +182,10 @@ export class TypeVariableBind extends Type {
     constructor(public name: string, public type: Type, public domain: Type[] = []) {
         super();
         this.isFree = false;
+    }
+
+    isResolved(): boolean {
+        return this.type.isResolved();
     }
 
     simplify(): TypeVariableBind {
@@ -590,6 +370,10 @@ export class TypeVariable extends Type {
         this.isFree = false;
     }
 
+    isResolved(): boolean {
+        return true;
+    }
+
     makeFree(): Type {
         let res = new TypeVariable(this.name, this.position, this.domain);
         res.isFree = true;
@@ -703,8 +487,6 @@ export class TypeVariable extends Type {
             } else {
                 let otv = oth.getTypeVariables();
                 if (otv.has((<TypeVariable> ths).name)) {
-                    // console.log(otv);
-                    // console.log(ths);
                     throw new ElaborationError(-1,
                         'Type clash. An expression of type "' + (<TypeVariable> ths).normalize()[0]
                         + '" cannot have type "' + oth.normalize()[0] + '" because of circularity.');
@@ -795,61 +577,18 @@ export class RecordType extends Type {
         super();
     }
 
-    getDomain(state: State): Domain {
-        let res = new Map<string, Domain>();
-
-        this.elements.forEach((val: Type, key: string) => {
-            res = res.set(key, val.getDomain(state));
-        });
-
-        return new Domain(res);
-    }
-
-    checkExhaustiveness(state: State, tyVarBnd: Map<string, [Type, boolean]>, position: number, match:
-        [Pattern & Expression, Expression][]): Warning[] {
-
-        let needsCatchAll = new Map<string, boolean>();
-        let domains = new Map<string, Domain>();
-        this.elements.forEach((val: Type, key: string) => {
-            domains = domains.set(key, val.getDomain(state));
-        });
-
-        this.elements.forEach((val: Type, key: string) => {
-            needsCatchAll = needsCatchAll.set(key, (<Domain> domains.get(key)).isInfinite());
-        });
-
-        let found: Domain[] = [];
-        for (let i = 0; i < match.length; ++i) {
-            let fnsh = false;
-            let cur = new Map<string, Domain>();
-            if (match[i][0] instanceof Record) {
-                fnsh = true;
-                this.elements.forEach((val: Type, key: string) => {
-                    let tmp = (<Pattern&Expression> (<Record> match[i][0]).getEntry(
-                        key)).getMatchedValues(state, tyVarBnd);
-                    fnsh = fnsh && (tmp.entries === undefined);
-                    cur = cur.set(key, (tmp.entries === undefined && needsCatchAll.get(key) !== true) ?
-                        (<Domain> domains.get(key)) : tmp);
-                });
-                if (fnsh && i === match.length - 1) {
-                    return [];
-                } else if (fnsh) {
-                    return [new Warning(position, 'Some cases are unused in this match.\n')];
-                }
-                found.push(new Domain(cur));
-            }
-
-            if (((match[i][0] instanceof ValueIdentifier || match[i][0] instanceof Wildcard
-                || match[i][0] instanceof LayeredPattern || match[i][0] instanceof TypedExpression)
-                && match[i][0].getMatchedValues(state, tyVarBnd).entries === undefined)) {
-                if (i !== match.length - 1) {
-                    return [new Warning(position, 'Some cases are unused in this match.\n')];
-                }
-                return [];
-            }
+    isResolved(): boolean {
+        if (!this.complete) {
+            return false;
         }
 
-        return this.getDomain(state).match(position, found);
+        let res = true;
+
+        this.elements.forEach((val: Type, key: string) => {
+            res = res && val.isResolved();
+        });
+
+        return res;
     }
 
     makeFree(): Type {
@@ -1101,6 +840,10 @@ export class FunctionType extends Type {
         super();
     }
 
+    isResolved(): boolean {
+        return this.parameterType.isResolved() && this.returnType.isResolved();
+    }
+
     makeFree(): Type {
         return new FunctionType(this.parameterType.makeFree(), this.returnType.makeFree(), this.position);
     }
@@ -1226,177 +969,13 @@ export class CustomType extends Type {
         super();
     }
 
-    getDomain(state: State): Domain {
-        let tp = state.getStaticType(this.name);
-        if (this.qualifiedName !== undefined) {
-            let reslv = state.getAndResolveStaticStructure(this.qualifiedName);
-            if (reslv !== undefined) {
-                tp = reslv.getType(this.name);
-            } else {
-                tp = undefined;
+    isResolved(): boolean {
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            if (!this.typeArguments[i].isResolved()) {
+                return false;
             }
         }
-        if (tp === undefined) {
-            throw new ElaborationError(this.position, 'Mi…sa…Mi…sa…ka…MisakaMisakaMisakaMisaka');
-        }
-
-        if (tp.constructors.length === 0) {
-            return new Domain(undefined);
-        } else {
-            return new Domain(tp.constructors);
-        }
-    }
-
-    checkExhaustiveness(state: State, tyVarBnd: Map<string, [Type, boolean]>, position: number, match:
-        [Pattern & Expression, Expression][]): Warning[] {
-
-        let tp = state.getStaticType(this.name);
-        if (this.qualifiedName !== undefined) {
-            let reslv = state.getAndResolveStaticStructure(this.qualifiedName);
-            if (reslv !== undefined) {
-                tp = reslv.getType(this.name);
-            } else {
-                tp = undefined;
-            }
-        }
-        if (tp === undefined) {
-            throw new ElaborationError(position, 'Mi…sa…Mi…sa…ka…MisakaMisakaMisakaMisaka');
-        }
-        let found = new Map<string, boolean>();
-        for (let i = 0; i < tp.constructors.length; ++i) {
-            found = found.set(tp.constructors[i], false);
-        }
-
-        let needCatchAll = tp.constructors.length === 0;
-        let hasCatchAll = false;
-
-        let needExtraWork = new Map<string, [Pattern & Expression, Expression][]>();
-        let redun = false;
-
-        for (let i = 0; i < match.length; ++i) {
-            if (hasCatchAll) {
-                return [new Warning(match[i][0].position,
-                    'Some cases are unused in this match.')];
-            }
-            if (match[i][0] instanceof FunctionApplication) {
-                let cn = (<ValueIdentifier> (<FunctionApplication> match[i][0]).func).name.getText();
-                if (((<ValueIdentifier> (<FunctionApplication> match[i][0]).func).name)
-                    instanceof LongIdentifierToken) {
-                    cn = (<LongIdentifierToken> (<ValueIdentifier> (<FunctionApplication>
-                        match[i][0]).func).name).id.getText();
-                }
-
-                let old: [Pattern & Expression, Expression][] = [];
-                if (needExtraWork.has(cn)) {
-                    old = <[Pattern & Expression, Expression][]> needExtraWork.get(cn);
-                }
-                old.push([<Pattern & Expression> (<FunctionApplication> match[i][0]).argument, match[i][1]]);
-                needExtraWork = needExtraWork.set(cn, old);
-                continue;
-            }
-
-            let tmp = match[i][0].getMatchedValues(state, tyVarBnd).entries;
-            if (tmp === undefined) {
-                hasCatchAll = true;
-                continue;
-            }
-            if (tmp instanceof Map) {
-                throw new ElaborationError(position, 'Anpan.');
-            }
-            for (let j of tmp) {
-                if (found.has(j)) {
-                    if (found.get(j) === true) {
-                        redun = true;
-                    }
-                    found = found.set(j, true);
-                }
-            }
-        }
-
-        let result: Warning[] = [];
-        needExtraWork.forEach((val: [Pattern & Expression, Expression][], key: string) => {
-            let cinf = state.getStaticValue(key);
-            let reslv: StaticBasis | undefined = undefined;
-            if (this.qualifiedName !== undefined) {
-                reslv = state.getAndResolveStaticStructure(this.qualifiedName);
-                if (reslv !== undefined) {
-                    cinf = reslv.getValue(key);
-                } else {
-                    cinf = undefined;
-                }
-            }
-            if (cinf === undefined || cinf[1] === 0) {
-                throw new ElaborationError(position, 'Unacceptable.');
-            }
-            let ctp = cinf[0];
-            while (ctp instanceof TypeVariableBind) {
-                ctp = (<TypeVariableBind> ctp).type;
-            }
-            if (this.qualifiedName !== undefined) {
-                ctp = ctp.qualify(new State(0, undefined, <StaticBasis> reslv,
-                    new DynamicBasis({}, {}, {}, {}, {}), [0, {}]), this.qualifiedName);
-            }
-            if (!(ctp instanceof FunctionType)) {
-                throw new ElaborationError(position, 'Unacceptable.');
-            }
-
-            let rt = ctp.returnType.merge(state, new Map<string, [Type, boolean]>(), this);
-            ctp = ctp.parameterType.instantiate(state, rt[1]);
-            let tmp = ctp.checkExhaustiveness(state, tyVarBnd, position, val);
-
-            let bad = false;
-            for (let e of tmp) {
-                if (e.message.includes('non-exhaustive')) {
-                    bad = true;
-                } else {
-                    result.push(new Warning(e.position, 'Constructor "' + key + '": ' + e.message));
-                }
-            }
-            if (!bad) {
-                if (found.has(key)) {
-                    if (found.get(key) === true) {
-                        redun = true;
-                    }
-                    found = found.set(key, true);
-                }
-            }
-        });
-
-        let ok = !needCatchAll || hasCatchAll;
-        let missing: string[] = [];
-        found.forEach((val: boolean, key: string) => {
-            if (!val) {
-                missing.push(key);
-                ok = false;
-            }
-        });
-
-        if (!ok) {
-            let res = '';
-            for (let i = 0; i < missing.length; ++i) {
-                if (i > 0) {
-                    res += ', ';
-                }
-                res += '"' + missing[i] + '"';
-            }
-            if (missing.length > 1) {
-                res = ' (Rules for constructors ' + res + ' are non-exhaustive.)\n';
-            } else if (missing.length > 0) {
-                res = ' (Rules for constructor ' + res + ' are non-exhaustive.)\n';
-            } else {
-                res = '\n';
-            }
-
-            if (!hasCatchAll) {
-                result = result.concat([new Warning(position, 'Pattern matching is non-exhaustive.' + res)]);
-            }
-        }
-
-        if (redun) {
-            result.push(new Warning(position, 'Some cases are unused in this match.'));
-        }
-
-        return result;
+        return true;
     }
 
     isOpaque(): boolean {
@@ -1491,7 +1070,7 @@ export class CustomType extends Type {
                 let ntype = <FunctionType> tp.type.replaceTypeVariables(repl);
                 let mt = this.merge(state, tyVarBnd, ntype.parameterType, true);
                 let newstate = state.getNestedState(state.id);
-                newstate.setStaticType(this.name, ntype.returnType, [], -1);
+                newstate.setStaticType(this.name, ntype.returnType, [], -1, tp.allowsEquality);
                 return ntype.returnType.instantiate(newstate, mt[1]);
             } catch (e) {
                 if (!(e instanceof Array)) {
@@ -1638,14 +1217,46 @@ export class CustomType extends Type {
             }
         }
 
-        for (let i = 0; i < this.typeArguments.length; ++i) {
-            if (!this.typeArguments[i].admitsEquality(state)) {
-                return false;
-            }
-        }
         if (tp === undefined) {
             return true;
         }
+
+        let nstate = state.getNestedState(state.id);
+        nstate.setStaticType(this.name, this, [], this.typeArguments.length, true);
+
+        for (let i = 0; i < this.typeArguments.length; ++i) {
+            if (!this.typeArguments[i].admitsEquality(nstate)) {
+                return false;
+            }
+        }
+
+        for (let i = 0; i < tp.constructors.length; ++i) {
+            let curtp = state.getStaticValue(tp.constructors[i]);
+            if (curtp === undefined) {
+                continue;
+            }
+            let ctp = curtp[0];
+            while (ctp instanceof TypeVariableBind) {
+                ctp = (<TypeVariableBind> ctp).type;
+            }
+            if (ctp instanceof CustomType) { // Constructor without argument, nothing to check
+                continue;
+            }
+            // Current constructor takes arguments; check that they admit equality
+            let partp: Type = (<FunctionType> ctp).parameterType;
+            let re = partp.getTypeVariables();
+            let rep = new Map<string, string>();
+            re.forEach((dom: Type[], id: string) => {
+                if (!id.startsWith('\'\'')) {
+                    rep = rep.set(id, '\'' + id);
+                }
+            });
+            partp = partp.replaceTypeVariables(rep);
+            if (!partp.admitsEquality(nstate)) {
+                 return false;
+            }
+        }
+
         return tp.allowsEquality;
     }
 

@@ -6,7 +6,7 @@ import { Expression, Tuple, Constant, ValueIdentifier, Wildcard,
          ConjunctivePattern, DisjunctivePattern, PatternGuard, NestedMatch } from './expressions';
 import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } from './types';
 import { InternalInterpreterError, IncompleteError, ParserError } from './errors';
-import { Token, KeywordToken, IdentifierToken, ConstantToken,
+import { Token, KeywordToken, IdentifierToken, ConstantToken, RealConstantToken,
          TypeVariableToken, LongIdentifierToken, IntegerConstantToken,
          AlphanumericIdentifierToken, NumericToken } from './tokens';
 import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
@@ -27,6 +27,7 @@ import { State } from './state';
 
 export class Parser {
     private position: number = 0; // position of the next not yet parsed token
+    private newcons: Set<string> = new Set<string>(); // new constructor names that appear
 
     constructor(private tokens: Token[], private state: State, private currentId: number,
                 private options: { [name: string]: any }) {
@@ -238,6 +239,10 @@ export class Parser {
 
             let nstate = this.state;
             this.state = this.state.getNestedState(this.state.id);
+            let oldcon = new Set<string>();
+            this.newcons.forEach((v: string) => {
+                oldcon = oldcon.add(v);
+            });
 
             let dec = this.parseDeclaration();
             this.assertKeywordToken(this.currentToken(), 'in');
@@ -259,6 +264,7 @@ export class Parser {
             ++this.position;
 
             this.state = nstate;
+            this.newcons = oldcon;
 
             if (res.length >= 2) {
                 return new LocalDeclarationExpression(curTok.position, dec,
@@ -921,6 +927,8 @@ export class Parser {
         let res: [PatternExpression, Expression][] = [];
         while (true) {
             let pat = this.parsePattern();
+            pat.simplify().assertUniqueBinding(this.state, this.newcons);
+
             this.assertKeywordToken(this.currentToken(), '=>');
             ++this.position;
             let exp = this.parseExpression();
@@ -1031,7 +1039,7 @@ export class Parser {
         if (this.checkKeywordToken(curTok, 'op')) {
             ++this.position;
             let nextCurTok = this.currentToken();
-            this.assertIdentifierOrLongToken(nextCurTok);
+            this.assertVidOrLongToken(nextCurTok);
             (<IdentifierToken|LongIdentifierToken> nextCurTok).opPrefixed = true;
             ++this.position;
 
@@ -1114,9 +1122,14 @@ export class Parser {
                 results.push(this.parsePattern());
             }
         } else if (curTok instanceof ConstantToken) {
+            if (curTok instanceof RealConstantToken) {
+                throw new ParserError('I am not interested in real constants such as "'
+                    + curTok.getText() + '" appearing in patterns.', curTok.position);
+            }
+
             ++this.position;
             return new Constant(curTok.position, curTok);
-        } else if (curTok instanceof IdentifierToken
+        } else if ((curTok.isVid() && curTok.getText() !== '=')
             || curTok instanceof LongIdentifierToken) {
             ++this.position;
 
@@ -1132,6 +1145,11 @@ export class Parser {
                     }
                     this.assertKeywordToken(newTok, 'as');
                     ++this.position;
+
+                    if (curTok instanceof KeywordToken) { // StarToken
+                        curTok = new IdentifierToken(curTok.getText(), curTok.position);
+                    }
+
                     return new LayeredPattern(curTok.position, <IdentifierToken> curTok, tp, this.parsePattern());
                 }
             } catch (f) {
@@ -1443,6 +1461,7 @@ export class Parser {
             return res;
         }
         let pat = this.parsePattern();
+        pat.simplify().assertUniqueBinding(this.state, this.newcons);
         this.assertKeywordToken(this.currentToken(), '=');
         ++this.position;
         return new ValueBinding(curTok.position, false, pat, this.parseExpression());
@@ -1531,7 +1550,7 @@ export class Parser {
                         this.position = oldPos;
                         let left = this.parseAtomicPattern();
 
-                        this.assertIdentifierOrLongToken(this.currentToken());
+                        this.assertVidOrLongToken(this.currentToken());
                         nm = new ValueIdentifier(this.currentToken().position, this.currentToken());
 
                         if (this.state.getInfixStatus(this.currentToken()) === undefined
@@ -1549,6 +1568,7 @@ export class Parser {
                         let right = this.parseAtomicPattern();
                         args.push(new Tuple(-1, [left, right]));
                     } catch (f) {
+                        console.log(f);
                         // It wasn't infix at all, but simply wrong.
                         throw e;
                     }
@@ -1580,6 +1600,8 @@ export class Parser {
                     'Different function names in different cases ("' + nm.name.getText()
                     + '" vs. "' + name.name.getText() + '")', curTok.position);
             }
+
+            new Tuple(-1, args).simplify().assertUniqueBinding(this.state, this.newcons);
 
             result.push([args, ty, this.parseExpression()]);
             if (this.checkKeywordToken(this.currentToken(), '|')) {
@@ -1656,6 +1678,7 @@ export class Parser {
 
         while (true) {
             let name = this.parseOpIdentifierToken();
+            this.newcons = this.newcons.add(name.getText());
             if (this.checkKeywordToken(this.currentToken(), 'of')) {
                 ++this.position;
                 let ty = this.parseType();
@@ -2036,6 +2059,10 @@ export class Parser {
 
             let nstate = this.state;
             this.state = this.state.getNestedState(this.state.id);
+            let oldcon = new Set<string>();
+            this.newcons.forEach((v: string) => {
+                oldcon = oldcon.add(v);
+            });
 
             let datbind = this.parseDatatypeBindingSeq();
             let tybind: TypeBinding[]|undefined = undefined;
@@ -2050,6 +2077,7 @@ export class Parser {
             ++this.position;
 
             this.state = nstate;
+            this.newcons = oldcon;
 
             return new AbstypeDeclaration(curTok.position, datbind, tybind, dec, curId);
         } else if (this.checkKeywordToken(curTok, 'exception')) {
@@ -2069,6 +2097,10 @@ export class Parser {
 
             let nstate = this.state;
             this.state = this.state.getNestedState(this.state.id);
+            let oldcon = new Set<string>();
+            this.newcons.forEach((v: string) => {
+                oldcon = oldcon.add(v);
+            });
 
             let dec: Declaration = this.parseDeclaration(false, strDec);
             this.assertKeywordToken(this.currentToken(), 'in');
@@ -2078,6 +2110,7 @@ export class Parser {
             ++this.position;
 
             this.state = nstate;
+            this.newcons = oldcon;
 
             return new LocalDeclaration(curTok.position, dec, dec2, curId);
         } else if (this.checkKeywordToken(curTok, 'open')) {
