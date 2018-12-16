@@ -55,7 +55,7 @@ let initialState: State = new State(
             'bool':     new TypeInformation(new CustomType('bool'),  ['true', 'false'], 0, true),
             'int':      new TypeInformation(new CustomType('int'),   [], 0, true),
             'word':     new TypeInformation(new CustomType('word'),  [], 0, true),
-            'real':     new TypeInformation(realType,  [], 0, true),
+            'real':     new TypeInformation(realType,  [], 0, false),
             'string':   new TypeInformation(new CustomType('string'), [], 0, true),
             'char':     new TypeInformation(new CustomType('char'),  [], 0, true),
             'list':     new TypeInformation(new CustomType('list', [typeVar]), ['nil', '::'], 1, true),
