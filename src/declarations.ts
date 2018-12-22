@@ -226,22 +226,24 @@ export class ValueDeclaration extends Declaration {
             return;
         }
 
-        for (let j = 0; j < result.length; ++j) {
-            state.setDynamicValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
-        }
+        let nstate = state.getNestedState(state.id);
 
         for (let j = 0; j < recursives.length; ++j) {
             if (recursives[j][1] instanceof FunctionValue) {
-                state.setDynamicValue(recursives[j][0], new FunctionValue(
+                nstate.setDynamicValue(recursives[j][0], new FunctionValue(
                     (<FunctionValue> recursives[j][1]).state, recursives,
                     (<FunctionValue> recursives[j][1]).body), IdentifierStatus.VALUE_VARIABLE);
             } else {
-                state.setDynamicValue(recursives[j][0], recursives[j][1], IdentifierStatus.VALUE_VARIABLE);
+                nstate.setDynamicValue(recursives[j][0], recursives[j][1], IdentifierStatus.VALUE_VARIABLE);
             }
         }
 
+        for (let j = 0; j < result.length; ++j) {
+            nstate.setDynamicValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
+        }
+
         return {
-            'newState': state,
+            'newState': nstate,
             'value': undefined,
             'hasThrown': false,
         };
