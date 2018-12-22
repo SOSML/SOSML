@@ -1701,6 +1701,86 @@ export class LayeredPattern extends Expression implements Pattern {
 }
 
 // Successor ML
+export class Vector extends Expression implements Pattern {
+    // #[exp1, ..., expn]
+    constructor(public position: number, public expressions: Expression[]) { super(); }
+
+    getType(state: State,
+            tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
+            nextName: string            = '\'*t0',
+            tyVars: Set<string>         = new Set<string>(),
+            forceRebind: boolean       = false)
+        : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
+
+        if (this.expressions.length === 0) {
+            // TODO
+            return [new CustomType('vector', [new AnyType()], this.position), [], nextName, tyVars, tyVarBnd, state.valueIdentifierId];
+        }
+
+
+        // TODO
+
+        return [new CustomType('vector', [new AnyType()], this.position), [], nextName, tyVars, tyVarBnd, state.valueIdentifierId];
+    }
+
+    // Computes the value of an expression, returns [computed value, is thrown exception]
+    compute(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
+        throw new InternalInterpreterError(this.position, 'NG');
+    }
+
+    getExplicitTypeVariables(): Set<TypeVariable> {
+        // TODO
+        return new Set<TypeVariable>();
+    }
+
+
+    matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
+        [[string, Type][], Type, Map<string, [Type, boolean]>] {
+        if (!(t instanceof CustomType) || (<CustomType> t).name !== 'vector') {
+            throw new ElaborationError(this.position,
+                'Vectors like only vectors, not "' + t + '". Stay cool.');
+        }
+
+        let partp = (<CustomType> t).typeArguments[0];
+        let res: [string, Type][] = [];
+
+        for (let i = 0; i < this.expressions.length; ++i) {
+            let tmp = (<PatternExpression> this.expressions[i]).matchType(state, tyVarBnd, partp);
+            partp = tmp[1];
+            res = res.concat(tmp[0]);
+            tyVarBnd = tmp[2];
+        }
+
+        return [res, new CustomType('vector', [partp], this.position), tyVarBnd];
+    }
+
+    matches(state: State, v: Value): [string, Value][] | undefined {
+        // TODO
+        throw new InternalInterpreterError(this.position, 'NG');
+    }
+
+    simplify(): PatternExpression {
+        let res: Expression[] = [];
+        for (let i = 0; i < this.expressions.length - 1; ++i) {
+            res.push(this.expressions[i].simplify());
+        }
+        return new Vector(this.position, res);
+    }
+
+    toString(): string {
+        let res = '#[ ';
+        for (let i = 0; i < this.expressions.length; ++i) {
+            if (i > 0) {
+                res += ', ';
+            }
+            res += this.expressions[i];
+        }
+        return res + ' ]';
+    }
+}
+
+
+
 
 export class ConjunctivePattern extends Expression implements Pattern {
 // pat1 as pat2

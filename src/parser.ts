@@ -1,5 +1,5 @@
 import { Expression, Tuple, Constant, ValueIdentifier, Wildcard,
-         LayeredPattern, FunctionApplication, TypedExpression, Record, List,
+         LayeredPattern, FunctionApplication, TypedExpression, Record, List, Vector,
          Sequence, RecordSelector, Lambda, Conjunction, LocalDeclarationExpression,
          Disjunction, Conditional, CaseAnalysis, RaiseException,
          HandleException, Match, InfixExpression, PatternExpression, While,
@@ -130,6 +130,8 @@ export class Parser {
          *           [op] longvid                   ValueIdentifier(position, name:Token)
          *              [KeywordToken] IdentifierToken
          *           { [exprow] }
+         *           #[exp1, …, expn]               Vector(pos, exps: (Pattern|Exp)[])
+         *              KeywordToken exp [KeywordToken exp]* KeywordToken
          *           #lab                           RecordSelector(pos, label:Token)
          *              KeywordToken IdentifierToken
          *           ()                             Tuple(pos, [])
@@ -230,6 +232,29 @@ export class Parser {
         if (this.checkKeywordToken(curTok, '#')) {
             ++this.position;
             let nextTok = this.currentToken();
+
+            if (this.options.allowSuccessorML && this.checkKeywordToken(nextTok, '[')) { // It's a _vector_
+                ++this.position;
+                if (this.checkKeywordToken(this.currentToken(), ']')) {
+                    ++this.position;
+                    return new Vector(curTok.position, []);
+                }
+                let results: Expression[] = [this.parseExpression()];
+                while (true) {
+                    let nextCurTok = this.currentToken();
+                    if (this.checkKeywordToken(nextCurTok, ',')) {
+                        ++this.position;
+                    } else if (this.checkKeywordToken(nextCurTok, ']')) {
+                        ++this.position;
+                        return new Vector(curTok.position, results);
+                    } else {
+                        throw new ParserError('Expected "," or "]" but found "' +
+                            nextCurTok.getText() + '".', nextCurTok.position);
+                    }
+                    results.push(this.parseExpression());
+                }
+            }
+
             this.assertRecordLabelToken(nextTok);
             ++this.position;
             return new RecordSelector(curTok.position, <NumericToken | IdentifierToken> nextTok);
@@ -1028,6 +1053,7 @@ export class Parser {
          *           { [patrow] }
          *           ()                     Tuple(pos, [])
          *           ( pat1, …, patn )      Tuple(pos, (Pattern|Exp)[])
+         *           #[ pat1, …, patn ]     Vector(pos, (Pattern|Exp)[])
          *           [ pat1, …, patn ]      List(pos, (Pattern|Exp)[])
          *           ( pat )
          */
@@ -1096,6 +1122,31 @@ export class Parser {
                 } else {
                     throw new ParserError('Expected "," or ")", but got "'
                         + nextCurTok.getText() + '".', nextCurTok.position);
+                }
+                results.push(this.parsePattern());
+            }
+        }
+
+        if (this.options.allowSuccessorML && this.checkKeywordToken(curTok, '#')
+            && this.checkKeywordToken(this.nextToken(), '[')) {
+            ++this.position;
+            ++this.position;
+
+            if (this.checkKeywordToken(this.currentToken(), ']')) {
+                ++this.position;
+                return new Vector(curTok.position, []);
+            }
+            let results: PatternExpression[] = [this.parsePattern()];
+            while (true) {
+                let nextCurTok = this.currentToken();
+                if (this.checkKeywordToken(nextCurTok, ',')) {
+                    ++this.position;
+                } else if (this.checkKeywordToken(nextCurTok, ']')) {
+                    ++this.position;
+                    return new Vector(curTok.position, results);
+                } else {
+                    throw new ParserError('Expected "," or "]" but found "' +
+                        nextCurTok.getText() + '".', nextCurTok.position);
                 }
                 results.push(this.parsePattern());
             }
@@ -2246,6 +2297,13 @@ export class Parser {
             throw new IncompleteError(-1, 'More input, I\'m starving. ~nyan.');
         }
         return this.tokens[ this.position ];
+    }
+
+    private nextToken(): Token {
+        if (this.position + 1 >= this.tokens.length) {
+            throw new IncompleteError(-1, 'More input, I\'m starving. ~nyan.');
+        }
+        return this.tokens[ this.position + 1 ];
     }
 }
 

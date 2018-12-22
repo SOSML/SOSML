@@ -169,6 +169,7 @@ let opts = {
     'allowUnicodeInStrings': false,
     'allowSuccessorML': false,
     'disableElaboration': false,
+    'disableEvaluation': false,
     'allowLongFunctionNames': false,
     'strictMode': false
 };
