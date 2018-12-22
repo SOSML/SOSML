@@ -67,6 +67,7 @@ export class ValueDeclaration extends Declaration {
               isTopLevel: boolean, options: { [name: string]: any }):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         let result: [string, Type][] = [];
+        let result2: [string, Type][] = [];
 
         let warns: Warning[] = [];
         let bnds = tyVarBnd;
@@ -95,10 +96,12 @@ export class ValueDeclaration extends Declaration {
             state.valueIdentifierId = val[4];
 
             for (let j = 0; j < (<[string, Type][]> val[0]).length; ++j) {
-                result.push((<[string, Type][]> val[0])[j]);
+                result2.push((<[string, Type][]> val[0])[j]);
             }
         }
 
+
+        let nstate = state.getNestedState(state.id);
         for (let j = 0; j < result.length; ++j) {
             if (!options || options.allowSuccessorML !== true) {
                 if (!result[j][1].isResolved()) {
@@ -106,7 +109,7 @@ export class ValueDeclaration extends Declaration {
                         'Unresolved record type. (Is that a goblin?)');
                 }
             }
-            state.setStaticValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
+            nstate.setStaticValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
         }
 
         let wcp = warns;
@@ -115,7 +118,7 @@ export class ValueDeclaration extends Declaration {
             bcp = bcp.set(key, val);
         });
         let ncp = nextName;
-        let ids = state.valueIdentifierId;
+        let ids = nstate.valueIdentifierId;
         let numit = this.valueBinding.length - i + 1;
         for (let l = 0; l < numit * numit + 1; ++l) {
             warns = wcp;
@@ -124,19 +127,19 @@ export class ValueDeclaration extends Declaration {
                 bnds = bnds.set(key, val);
             });
             nextName = ncp;
-            state.valueIdentifierId = ids;
+            nstate.valueIdentifierId = ids;
 
             let haschange = false;
 
             for (let j = i; j < this.valueBinding.length; ++j) {
-                let val = this.valueBinding[j].getType(this.typeVariableSequence, state, bnds, nextName, isTopLevel);
+                let val = this.valueBinding[j].getType(this.typeVariableSequence, nstate, bnds, nextName, isTopLevel);
                 warns = warns.concat(val[1]);
                 bnds = val[2];
                 nextName = val[3];
-                state.valueIdentifierId = val[4];
+                nstate.valueIdentifierId = val[4];
 
                 for (let k = 0; k < val[0].length; ++k) {
-                    let oldtp = state.getStaticValue(val[0][k][0]);
+                    let oldtp = nstate.getStaticValue(val[0][k][0]);
                     if (oldtp === undefined || !oldtp[0].normalize()[0].equals(val[0][k][1].normalize()[0])) {
                         haschange = true;
                     }
@@ -148,7 +151,7 @@ export class ValueDeclaration extends Declaration {
                         }
                     }
 
-                    state.setStaticValue(val[0][k][0], val[0][k][1], IdentifierStatus.VALUE_VARIABLE);
+                    nstate.setStaticValue(val[0][k][0], val[0][k][1], IdentifierStatus.VALUE_VARIABLE);
                 }
             }
 
@@ -160,7 +163,18 @@ export class ValueDeclaration extends Declaration {
             }
         }
 
-        return [state, warns, bnds, nextName];
+        for (let j = 0; j < result2.length; ++j) {
+            if (!options || options.allowSuccessorML !== true) {
+                if (!result2[j][1].isResolved()) {
+                    throw new ElaborationError(this.position,
+                        'Unresolved record type. (Is that a goblin?)');
+                }
+            }
+            nstate.setStaticValue(result2[j][0], result2[j][1], IdentifierStatus.VALUE_VARIABLE);
+        }
+
+
+        return [nstate, warns, bnds, nextName];
     }
 
     evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
