@@ -7,7 +7,7 @@ import { State, IdentifierStatus } from './state';
 import { InternalInterpreterError, ElaborationError, EvaluationError, ParserError, Warning } from './errors';
 import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
-         ExceptionValue, ConstructedValue, ReferenceValue } from './values';
+         ExceptionValue, ConstructedValue, ReferenceValue, VectorValue } from './values';
 import { EvaluationResult, EvaluationParameters, EvaluationStack, IdCnt } from './evaluator';
 
 export abstract class Expression {
@@ -1717,15 +1717,49 @@ export class Vector extends Expression implements Pattern {
             return [new CustomType('vector', [new AnyType()], this.position), [], nextName, tyVars, tyVarBnd, state.valueIdentifierId];
         }
 
+        // TODO Do this properly
 
-        // TODO
+        let tmp = this.expressions[0].getType(state, tyVarBnd, nextName, tyVars, forceRebind);
+        let restp = tmp[0];
 
-        return [new CustomType('vector', [new AnyType()], this.position), [], nextName, tyVars, tyVarBnd, state.valueIdentifierId];
+        for (let i = 0; i < this.expressions.length; ++i) {
+            tmp = this.expressions[i].getType(state, tmp[4], tmp[2], tmp[3], forceRebind);
+            try {
+                let mt = restp.merge(state, tmp[4], tmp[0]);
+                tmp[4] = mt[1];
+                restp = mt[0];
+            } catch (e) {
+                if (!(e instanceof Array)) {
+                    throw e;
+                }
+                throw new ElaborationError(this.position,
+                    'Type clash in vector entries: ' + e[0]);
+            }
+        }
+
+        return [new CustomType('vector', [restp], this.position), tmp[1], tmp[2], tmp[3],
+            tmp[4], tmp[5]];
     }
 
     // Computes the value of an expression, returns [computed value, is thrown exception]
     compute(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
-        throw new InternalInterpreterError(this.position, 'NG');
+        let res: Value[] = [];
+
+        for (let i = 0; i < this.expressions.length; ++i) {
+            let tmp: EvaluationResult = this.expressions[i].compute(params, callStack);
+            if (tmp === undefined || tmp.value === undefined) {
+                throw new InternalInterpreterError(this.position, 'NG');
+            }
+            res.push(tmp.value);
+        }
+
+        // TODO: do this properly
+
+        return {
+            'newState': undefined,
+            'value': new VectorValue(res),
+            'hasThrown': false,
+        };
     }
 
     getExplicitTypeVariables(): Set<TypeVariable> {
@@ -1755,13 +1789,28 @@ export class Vector extends Expression implements Pattern {
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        // TODO
-        throw new InternalInterpreterError(this.position, 'NG');
+        if (!(v instanceof VectorValue)) {
+            throw new ElaborationError(this.position,
+                'Vectors like only vectors, not "' + v + '". Stay cool.');
+        }
+
+        let res: [string, Value][] = [];
+
+        // TODO do this properly
+
+        for (let i = 0; i < this.expressions.length; ++i) {
+            let tmp = (<PatternExpression> this.expressions[i]).matches(state, (<VectorValue> v).entries[i]);
+            if (tmp !== undefined) {
+                res = res.concat(tmp);
+            }
+        }
+
+        return res;
     }
 
     simplify(): PatternExpression {
         let res: Expression[] = [];
-        for (let i = 0; i < this.expressions.length - 1; ++i) {
+        for (let i = 0; i < this.expressions.length; ++i) {
             res.push(this.expressions[i].simplify());
         }
         return new Vector(this.position, res);

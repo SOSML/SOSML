@@ -19,7 +19,7 @@ export class InterpreterError extends Error implements InterpreterMessage {
 // of how absurd the input is.
 export class InternalInterpreterError extends InterpreterError {
     constructor(position: number, message: string = 'internal compiler error') {
-        super(position, message, 'You triggered Third Impact');
+        super(position, message, 'Have you ever seen an interpreter error? Basically that');
         Object.setPrototypeOf(this, InternalInterpreterError.prototype);
     }
 }
