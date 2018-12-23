@@ -16,6 +16,12 @@ let realType = new CustomType('real');
 let stringType = new CustomType('string');
 let charType = new CustomType('char');
 
+let overflowException = new ExceptionConstructor('Overflow', 0, 0, 3);
+let domainException = new ExceptionConstructor('Domain', 0, 0, 4);
+let sizeException = new ExceptionConstructor('Size', 0, 0, 5);
+let chrException = new ExceptionConstructor('Chr', 0, 0, 6);
+let subscriptException = new ExceptionConstructor('Subscript', 0, 0, 7);
+
 function addArrayLib(state: State): State {
     let dres = new DynamicBasis({}, {}, {}, {}, {});
     let sres = new StaticBasis({}, {}, {}, {}, {});
@@ -35,7 +41,7 @@ function addArrayLib(state: State): State {
             if (cnt instanceof Integer) {
                 let c = cnt.value;
                 if (c < 0) {
-                    return [new ExceptionConstructor('Size').construct(), true, []];
+                    return [sizeException.construct(), true, []];
                 }
 
                 let arr = new ArrayValue(params.modifiable.memory[0] + 1, c);
@@ -99,7 +105,7 @@ function addArrayLib(state: State): State {
             if (arr instanceof ArrayValue && index instanceof Integer) {
                 let ind = index.value;
                 if (ind < 0 || ind >= arr.length) {
-                    return [new ExceptionConstructor('Subscript').construct(), true, []];
+                    return [subscriptException.construct(), true, []];
                 }
 
                 return [(<Value> params.modifiable.getCell(arr.address + ind)), false, []];
@@ -123,7 +129,7 @@ function addArrayLib(state: State): State {
             if (arr instanceof ArrayValue && index instanceof Integer) {
                 let ind = index.value;
                 if (ind < 0 || ind >= arr.length) {
-                    return [new ExceptionConstructor('Subscript').construct(), true, []];
+                    return [subscriptException.construct(), true, []];
                 }
 
                 params.modifiable.setCell(arr.address + ind, value);
@@ -162,7 +168,7 @@ function addMathLib(state: State): State {
         if (val instanceof Real) {
             let value = (<Real> val).value;
             if (value < 0) {
-                return [new ExceptionConstructor('Domain').construct(), true, []];
+                return [domainException.construct(), true, []];
             }
             return [new Real(Math.sqrt(value)), false, []];
         } else {
@@ -354,7 +360,7 @@ function addCharLib(state: State): State {
         if (val instanceof Integer) {
             let value = (<Integer> val).value;
             if (value < 0 || value > 255) {
-                return [new ExceptionConstructor('Chr').construct(), true, []];
+                return [chrException.construct(), true, []];
             }
             return [new CharValue(String.fromCharCode(value)), false, []];
         } else {
@@ -385,7 +391,7 @@ function addRealLib(state: State): State {
             let value = (<Real> val).value;
             let integer = new Integer(Math.round(value));
             if (integer.hasOverflow()) {
-                return [new ExceptionConstructor('Overflow').construct(), true, []];
+                return [overflowException.construct(), true, []];
             }
             return [integer, false, []];
         } else {
@@ -399,7 +405,7 @@ function addRealLib(state: State): State {
             let value = (<Real> val).value;
             let integer = new Integer(Math.floor(value));
             if (integer.hasOverflow()) {
-                return [new ExceptionConstructor('Overflow').construct(), true, []];
+                return [overflowException.construct(), true, []];
             }
             return [integer, false, []];
         } else {
@@ -413,7 +419,7 @@ function addRealLib(state: State): State {
             let value = (<Real> val).value;
             let integer = new Integer(Math.ceil(value));
             if (integer.hasOverflow()) {
-                return [new ExceptionConstructor('Overflow').construct(), true, []];
+                return [overflowException.construct(), true, []];
             }
             return [integer, false, []];
         } else {
@@ -543,7 +549,7 @@ function addVectorLib(state: State): State {
             if (vec instanceof VectorValue && index instanceof Integer) {
                 let ind = index.value;
                 if (ind < 0 || ind >= vec.entries.length) {
-                    return [new ExceptionConstructor('Subscript').construct(), true, []];
+                    return [subscriptException.construct(), true, []];
                 }
 
                 return [vec.entries[ind], false, []];
@@ -567,7 +573,7 @@ function addVectorLib(state: State): State {
             if (vec instanceof VectorValue && index instanceof Integer) {
                 let ind = index.value;
                 if (ind < 0 || ind >= vec.entries.length) {
-                    return [new ExceptionConstructor('Subscript').construct(), true, []];
+                    return [subscriptException.construct(), true, []];
                 }
 
                 let res = new VectorValue(vec.entries.slice());

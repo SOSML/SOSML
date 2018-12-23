@@ -347,6 +347,7 @@ export class State {
                 public staticBasis: StaticBasis,
                 public dynamicBasis: DynamicBasis,
                 public memory: Memory,
+                public exceptionEvalId: number,
                 public freeTypeVariables: FreeTypeVariableInformation
                 = [0, new Map<string, [Type, boolean]>()],
                 private infixEnvironment: InfixEnvironment = {},
@@ -365,6 +366,7 @@ export class State {
             new StaticBasis({}, {}, {}, {}, {}),
             new DynamicBasis({}, {}, {}, {}, {}),
             [this.memory[0], {}],
+            this.exceptionEvalId,
             [this.freeTypeVariables[0], new Map<string, [Type, boolean]>()]);
         res.insideLocalDeclBody = this.insideLocalDeclBody;
         for (let i of this.loadedModules) {
@@ -681,6 +683,10 @@ export class State {
     setNewCell(value: Value): ReferenceValue {
         this.memory[1][this.memory[0]] = value;
         return new ReferenceValue(this.memory[0]++);
+    }
+
+    getNextExceptionEvalId(): number {
+        return this.exceptionEvalId++;
     }
 
     deleteStaticValue(name: string) {

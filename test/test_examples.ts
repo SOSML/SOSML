@@ -660,7 +660,7 @@ it("1.8", () => {
         }],
         ['1 div 0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Div'));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Div', undefined, 0, 2));
         }]
     ]);
 });
@@ -823,7 +823,7 @@ it("1.13.1", () => {
     run_test([
         ['4*1073741823;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Overflow'));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Overflow', undefined, 0, 3));
         }]
     ]);
 });
@@ -1215,7 +1215,7 @@ fun q (x:int, y:int) = x*x + 2*x*y + y*y;
         }],
         ['val z = x*x - 2*x*y + y*y;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Overflow'));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Overflow', undefined, 0, 3));
         }],
         ['fun p (x:int, y:int) = (x+y)*(x+y);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -3529,11 +3529,11 @@ nth ([3,4,5]);
         }],
         ['hd nil;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Empty', undefined));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Empty', undefined, 0, 9));
         }],
         ['tl nil;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Empty', undefined));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Empty', undefined, 0, 9));
         }],
         ['fun hd nil = raise Empty | hd (x::xr) = x;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -3640,7 +3640,7 @@ nth ([3,4,5]);
         }],
         ['nth ([3,4,5], 3);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Subscript', undefined));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Subscript', undefined, 0, 7));
         }]
     ]);
 });
@@ -3827,7 +3827,7 @@ test [1,2];
         }],
         ['exception SomethingWrong;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('SomethingWrong')[0]).toEqualWithType(new Val.ExceptionConstructor('SomethingWrong', undefined));
+            expect(state.getDynamicValue('SomethingWrong')[0]).toEqualWithType(new Val.ExceptionConstructor('SomethingWrong', undefined, 0, 10));
             expect(state.getStaticValue('SomethingWrong')).toEqualWithType([
                 new Type.CustomType('exn'),
                 State.IdentifierStatus.EXCEPTION_CONSTRUCTOR
@@ -3849,7 +3849,7 @@ test [1,2];
         }],
         ['test [1,2];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('SomethingWrong', undefined));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('SomethingWrong', undefined, 0, 10));
         }]
     ]);
 });
@@ -4120,7 +4120,7 @@ explode "\"\\\t\na";
         }],
         ['chr 256;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Chr'));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Chr', undefined, 0, 6));
         }],
         ['"\\"\\\\\\t\\na";', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -5164,11 +5164,11 @@ test (Newer 13);
     run_test([
         ['raise Empty;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Empty', undefined));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Empty', undefined, 0, 9));
         }],
         ['Empty;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.ExceptionValue('Empty', undefined));
+            expect(state.getDynamicValue('it')[0]).toEqualWithType(new Val.ExceptionValue('Empty', undefined, 0, 9));
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.CustomType('exn'),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -5176,7 +5176,7 @@ test (Newer 13);
         }],
         ['exception New;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('New')[0]).toEqualWithType(new Val.ExceptionConstructor('New', 0));
+            expect(state.getDynamicValue('New')[0]).toEqualWithType(new Val.ExceptionConstructor('New', 0, 0, 10));
             expect(state.getStaticValue('New')).toEqualWithType([
                 new Type.CustomType('exn'),
                 State.IdentifierStatus.EXCEPTION_CONSTRUCTOR
@@ -5184,7 +5184,7 @@ test (Newer 13);
         }],
         ['exception Newer of int;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('Newer')[0]).toEqualWithType(new Val.ExceptionConstructor('Newer', 1));
+            expect(state.getDynamicValue('Newer')[0]).toEqualWithType(new Val.ExceptionConstructor('Newer', 1, 0, 11));
             expect(state.getStaticValue('Newer')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.CustomType('int'),
@@ -5196,9 +5196,9 @@ test (Newer 13);
         ['(Overflow, New, Newer);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')[0]).toEqualWithType(createTuple([
-                new Val.ExceptionValue('Overflow', undefined),
-                new Val.ExceptionValue('New', undefined),
-                new Val.ExceptionConstructor('Newer', 1)
+                new Val.ExceptionValue('Overflow', undefined, 0, 3),
+                new Val.ExceptionValue('New', undefined, 0, 10),
+                new Val.ExceptionConstructor('Newer', 1, 0, 11)
             ]));
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.RecordType(new Map([
@@ -5247,7 +5247,7 @@ fun f x y = if x then y else raise New;
     run_test([
         ['exception New;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('New')[0]).toEqualWithType(new Val.ExceptionConstructor('New', 0));
+            expect(state.getDynamicValue('New')[0]).toEqualWithType(new Val.ExceptionConstructor('New', 0, 0, 10));
             expect(state.getStaticValue('New')).toEqualWithType([
                 new Type.CustomType('exn'),
                 State.IdentifierStatus.EXCEPTION_CONSTRUCTOR
@@ -5255,7 +5255,7 @@ fun f x y = if x then y else raise New;
         }],
         ['raise New;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('New', undefined));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('New', undefined, 0, 10));
         }],
         ['fun f x y = if x then y else raise New;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -5305,7 +5305,7 @@ fun adjoin env env' x = env' x handle Unbound => env x;
         }],
         ['exception Unbound;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('Unbound')[0]).toEqualWithType(new Val.ExceptionConstructor('Unbound', 0));
+            expect(state.getDynamicValue('Unbound')[0]).toEqualWithType(new Val.ExceptionConstructor('Unbound', 0, 0, 12));
             expect(state.getStaticValue('Unbound')).toEqualWithType([
                 new Type.CustomType('exn'),
                 State.IdentifierStatus.EXCEPTION_CONSTRUCTOR
@@ -5356,7 +5356,7 @@ fun adjoin env env' x = env' x handle Unbound => env x;
         }],
         ['fac 15;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Overflow', undefined));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Overflow', undefined, 0, 3));
         }],
         ['test (fn () => fac 15);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -5414,7 +5414,7 @@ testOverflow 100000 100000;
         }],
         ['(raise Overflow, raise Subscript);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Overflow', undefined));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Overflow', undefined, 0, 3));
         }],
         ['(5 ; 7);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -5462,7 +5462,7 @@ fun testDouble compare xs =
     run_test([
         ['exception Double;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('Double')[0]).toEqualWithType(new Val.ExceptionConstructor('Double', 0));
+            expect(state.getDynamicValue('Double')[0]).toEqualWithType(new Val.ExceptionConstructor('Double', 0, 0, 10));
             expect(state.getStaticValue('Double')).toEqualWithType([
                 new Type.CustomType('exn'),
                 State.IdentifierStatus.EXCEPTION_CONSTRUCTOR
@@ -6007,7 +6007,7 @@ ast t3 [1,2];
         }],
         ['ast t3 [1,2];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Subscript', undefined));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Subscript', undefined, 0, 7));
         }]
     ]);
 });
@@ -6192,7 +6192,7 @@ fun balanced t = (depthb t ; true) handle Unbalanced => false;
         }],
         ['exception Unbalanced;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('Unbalanced')[0]).toEqualWithType(new Val.ExceptionConstructor('Unbalanced', 0));
+            expect(state.getDynamicValue('Unbalanced')[0]).toEqualWithType(new Val.ExceptionConstructor('Unbalanced', 0, 0, 10));
             expect(state.getStaticValue('Unbalanced')).toEqualWithType([
                 new Type.CustomType('exn'),
                 State.IdentifierStatus.EXCEPTION_CONSTRUCTOR
@@ -6774,7 +6774,7 @@ elab' empty (Id "x");
             '; ' +
             '', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('Unbound')[0]).toEqualWithType(new Val.ExceptionConstructor('Unbound', 1));
+            expect(state.getDynamicValue('Unbound')[0]).toEqualWithType(new Val.ExceptionConstructor('Unbound', 1, 0, 10));
             expect(state.getStaticValue('Unbound')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.CustomType('string'),
@@ -6818,7 +6818,7 @@ elab' empty (Id "x");
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
             ]);
-            expect(state.getDynamicValue('Error')[0]).toEqualWithType(new Val.ExceptionConstructor('Error', 1));
+            expect(state.getDynamicValue('Error')[0]).toEqualWithType(new Val.ExceptionConstructor('Error', 1, 0, 11));
             expect(state.getStaticValue('Error')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.CustomType('string'),
@@ -6884,7 +6884,7 @@ elab' empty (Id "x");
         }],
         ['f "z";', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Unbound', new Val.StringValue('z')));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Unbound', new Val.StringValue('z'), 0, 10));
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.CustomType('ty'),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -7222,7 +7222,7 @@ lex (explode " intbool->int ");
             '  | lex _ = raise Error "lex" ' +
             ';', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('Error')[0]).toEqualWithType(new Val.ExceptionConstructor('Error', 1));
+            expect(state.getDynamicValue('Error')[0]).toEqualWithType(new Val.ExceptionConstructor('Error', 1, 0, 10));
             expect(state.getStaticValue('Error')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.CustomType('string'),
@@ -7330,7 +7330,7 @@ parse (rep (C(B A, C(A, A))));
     run_test([
         ['exception Error of string;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('Error')[0]).toEqualWithType(new Val.ExceptionConstructor('Error', 1));
+            expect(state.getDynamicValue('Error')[0]).toEqualWithType(new Val.ExceptionConstructor('Error', 1, 0, 10));
             expect(state.getStaticValue('Error')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.CustomType('string'),
@@ -7370,7 +7370,7 @@ parse (rep (C(B A, C(A, A))));
         }],
         ['test [2,0,1];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Error', new Val.StringValue('test')));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Error', new Val.StringValue('test'), 0, 10));
         }],
         ['datatype tree = A | B of tree | C of tree * tree;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -7625,11 +7625,11 @@ and pty (BOOL::tr) = (Bool,tr)
         }],
         ['ty [INT, ARROW, BOOL, ARROW];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Error', new Val.StringValue('pty')));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Error', new Val.StringValue('pty'), 0, 10));
         }],
         ['ty [LPAR, BOOL];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Error', new Val.StringValue('RPAR')));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Error', new Val.StringValue('RPAR'), 0, 10));
         }],
         ['fun ty ts = (case pty ts of ' +
             '            (t, ARROW::tr) => let val (t\',tr\') = ty tr ' +
@@ -7702,7 +7702,7 @@ and pty (BOOL::tr) = (Bool,tr)
         }],
         ['parse ty [INT, ARROW, BOOL, RPAR];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Error', new Val.StringValue('parse')));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Error', new Val.StringValue('parse'), 0, 10));
         }],
         ['parse ty [INT, ARROW, BOOL, ARROW, INT];', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
@@ -7826,7 +7826,7 @@ lexInt ~1 34 (explode "72 Katzen");
             '                    else lexId (hd cs\' ::cs) (tl cs\') ' +
             ';', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
-            expect(state.getDynamicValue('Error')[0]).toEqualWithType(new Val.ExceptionConstructor('Error', 1));
+            expect(state.getDynamicValue('Error')[0]).toEqualWithType(new Val.ExceptionConstructor('Error', 1, 0, 10));
             expect(state.getStaticValue('Error')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.CustomType('string'),

@@ -728,7 +728,8 @@ export class ConstructedValue extends Value {
 export class ExceptionValue extends Value {
     constructor(public constructorName: string,
                 public argument: Value|undefined = undefined,
-                public id: number = 0) {
+                public id: number = 0,
+                public evalId: number = 0) {
         super();
     }
 
@@ -759,7 +760,8 @@ export class ExceptionValue extends Value {
             return false;
         }
         if (this.constructorName !== (<ExceptionValue> other).constructorName
-            || this.id !== (<ExceptionValue> other).id) {
+            || this.id !== (<ExceptionValue> other).id
+            || this.evalId !== (<ExceptionValue> other).evalId) {
             return false;
         }
         if (this.argument !== undefined) {
@@ -826,7 +828,7 @@ export class ValueConstructor extends Value {
 
 export class ExceptionConstructor extends Value {
     constructor(public exceptionName: string, public numArgs: number = 0,
-                public id: number = 0) {
+                public id: number = 0, public evalId: number = 0) {
         super();
     }
 
@@ -835,11 +837,12 @@ export class ExceptionConstructor extends Value {
             return false;
         }
         return this.exceptionName === (<ExceptionConstructor> other).exceptionName
-            && this.id === (<ExceptionConstructor> other).id;
+            && this.id === (<ExceptionConstructor> other).id
+            && this.evalId === (<ExceptionConstructor> other).evalId;
     }
 
     construct(parameter: Value|undefined = undefined): ExceptionValue {
-        return new ExceptionValue(this.exceptionName, parameter, this.id);
+        return new ExceptionValue(this.exceptionName, parameter, this.id, this.evalId);
     }
 
     pcToString(state: State|undefined, pc: PrintCounter) {
