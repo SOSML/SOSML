@@ -1,6 +1,3 @@
-/* TODO: tests
-*/
-
 const Lexer = require("../src/lexer");
 const Parser = require("../src/parser");
 const Value = require("../src/values");
@@ -9,9 +6,6 @@ const State = require("../src/state");
 const InitialState = require("../src/initialState");
 const API = require("../src/main");
 
-const diff = require('jest-diff');
-const chalk = require('chalk');
-
 function printBasis( state: any, dynamicBasis: any, staticBasis: any, indent: number = 0 ): string {
     let istr = '';
     for( let i = 0; i < indent; ++i ) {
@@ -19,30 +13,41 @@ function printBasis( state: any, dynamicBasis: any, staticBasis: any, indent: nu
     }
     let out = '';
     let stsym = '>';
-    for( let i in dynamicBasis.valueEnvironment ) {
-        if( dynamicBasis.valueEnvironment.hasOwnProperty( i ) ) {
-            if( staticBasis ) {
+
+    if( dynamicBasis === undefined ) {
+        for( let i in staticBasis.valueEnvironment ) {
+            if( staticBasis.valueEnvironment.hasOwnProperty( i ) ) {
                 out += stsym + ' ' + istr + printBinding( state,
-                    [ i, dynamicBasis.valueEnvironment[ i ],
+                    [ i, undefined,
                         staticBasis.getValue( i ) ] ) + '\n';
-            } else {
-                out += stsym + ' ' + istr + printBinding( state,
-                    [ i, dynamicBasis.valueEnvironment[ i ], undefined ] ) + '\n';
             }
         }
-    }
-
-    for( let i in dynamicBasis.structureEnvironment ) {
-        if( dynamicBasis.structureEnvironment.hasOwnProperty( i ) ) {
-            out += stsym + ' ' + istr + 'structure ' + i + ' = {\n';
-            if( staticBasis ) {
-                out += printBasis( state, dynamicBasis.getStructure( i ),
-                    staticBasis.getStructure( i ), indent + 1 );
-            } else {
-                out += printBasis( state, dynamicBasis.getStructure( i ),
-                    undefined, indent + 1 );
+    } else {
+        for( let i in dynamicBasis.valueEnvironment ) {
+            if( dynamicBasis.valueEnvironment.hasOwnProperty( i ) ) {
+                if( staticBasis ) {
+                    out += stsym + ' ' + istr + printBinding( state,
+                        [ i, dynamicBasis.valueEnvironment[ i ],
+                            staticBasis.getValue( i ) ] ) + '\n';
+                } else {
+                    out += stsym + ' ' + istr + printBinding( state,
+                        [ i, dynamicBasis.valueEnvironment[ i ], undefined ] ) + '\n';
+                }
             }
-            out += stsym + ' ' + istr + '}\n';
+        }
+
+        for( let i in dynamicBasis.structureEnvironment ) {
+            if( dynamicBasis.structureEnvironment.hasOwnProperty( i ) ) {
+                out += stsym + ' ' + istr + 'structure ' + i + ' = {\n';
+                if( staticBasis ) {
+                    out += printBasis( state, dynamicBasis.getStructure( i ),
+                        staticBasis.getStructure( i ), indent + 1 );
+                } else {
+                    out += printBasis( state, dynamicBasis.getStructure( i ),
+                        undefined, indent + 1 );
+                }
+                out += stsym + ' ' + istr + '}\n';
+            }
         }
     }
     return out;
@@ -51,12 +56,22 @@ function printBasis( state: any, dynamicBasis: any, staticBasis: any, indent: nu
 function printBinding( state: any, bnd: [ string, [any, any], [any, any] ] ): string {
     let res = '';
 
-    if( bnd[ 1 ][ 0 ] instanceof Value.ValueConstructor ) {
-        res += 'con';
-    } else if( bnd[ 1 ][ 0 ] instanceof Value.ExceptionConstructor ) {
-        res += 'exn';
+    if( bnd[ 1 ] ) {
+        if( bnd[ 1 ][ 0 ] instanceof Value.ValueConstructor ) {
+            res += 'con';
+        } else if( bnd[ 1 ][ 0 ] instanceof Value.ExceptionConstructor ) {
+            res += 'exn';
+        } else {
+            res += 'val';
+        }
     } else {
-        res += 'val';
+        if( bnd[ 2 ][ 0 ] instanceof Value.ValueConstructor ) {
+            res += 'con';
+        } else if( bnd[ 2 ][ 0 ] instanceof Value.ExceptionConstructor ) {
+            res += 'exn';
+        } else {
+            res += 'val';
+        }
     }
 
     if( bnd[ 1 ] ) {
@@ -66,7 +81,7 @@ function printBinding( state: any, bnd: [ string, [any, any], [any, any] ] ): st
             res += ' ' + bnd[ 0 ] + ' = ' + bnd[ 1 ][ 0 ].toString( state );
         }
     } else {
-        return res + ' ' + bnd[ 0 ] + ' = undefined;';
+        res += ' ' + bnd[ 0 ];
     }
 
     if( bnd[ 2 ] ) {
@@ -91,8 +106,10 @@ function run( stuff: string, moreStuff: string[ ] = [ ], evaluate: boolean = tru
 
             let opts = {
                 'allowUnicodeInStrings': false,
-                'allowSuccessorML': false,
+                'allowSuccessorML': true,
                 'disableElaboration': false,
+                'disableEvaluation': true,
+                'disableTypeInference': true,
                 'allowLongFunctionNames': false,
                 'strictMode': false
             };
@@ -108,9 +125,16 @@ function run( stuff: string, moreStuff: string[ ] = [ ], evaluate: boolean = tru
                             + res.error + '\x1b[39;49;0m';
                         break;
                     } else {
-                        out += printBasis( res.state,
-                            res.state.getDynamicChanges( st - 1 ),
-                            res.state.getStaticChanges( st - 1 ) );
+                        if (opts.disableEvaluation) {
+                            out += printBasis( res.state,
+                                undefined,
+                                res.state.getStaticChanges( st - 1 ) );
+
+                        } else {
+                            out += printBasis( res.state,
+                                res.state.getDynamicChanges( st - 1 ),
+                                res.state.getStaticChanges( st - 1 ) );
+                        }
                     }
                     if( res.warnings !== undefined ) {
                         for( let i = 0; i < res.warnings.length; ++i ) {
@@ -145,4 +169,3 @@ function run( stuff: string, moreStuff: string[ ] = [ ], evaluate: boolean = tru
 }
 
 run(';');
-
