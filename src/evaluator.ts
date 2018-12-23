@@ -57,6 +57,7 @@ export function evaluate(state: State, ast: Declaration): EvaluationResult {
                     newState.setValueIdentifierId(i, idChanges[i]);
                 }
             }
+            newState.exceptionEvalId = modifiable.exceptionEvalId;
         }
     }
 

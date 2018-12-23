@@ -200,7 +200,7 @@ export class ValueDeclaration extends Declaration {
             if (matched === undefined) {
                 return {
                     'newState': state,
-                    'value': new ExceptionValue('Bind'),
+                    'value': new ExceptionValue('Bind', undefined, 0, 1),
                     'hasThrown': true,
                 };
             }
@@ -536,7 +536,7 @@ export class ExceptionDeclaration extends Declaration {
     evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
         let state = params.state;
         for (let i = 0; i < this.bindings.length; ++i) {
-            this.bindings[i].evaluate(state);
+            this.bindings[i].evaluate(state, params.modifiable);
         }
         return {
             'newState': state,
@@ -1369,7 +1369,7 @@ export class DatatypeBinding {
 // Exception Bindings
 
 export interface ExceptionBinding {
-    evaluate(state: State): void;
+    evaluate(state: State, modifiable: State): void;
     elaborate(state: State, isTopLevel: boolean, knownTypeVars: Set<string>, options: { [name: string]: any }): State;
 }
 
@@ -1403,13 +1403,14 @@ export class DirectExceptionBinding implements ExceptionBinding {
         return state;
     }
 
-    evaluate(state: State): void {
+    evaluate(state: State, modifiable: State): void {
         let numArg = 0;
         if (this.type !== undefined) {
             numArg = 1;
         }
         let id = state.getValueIdentifierId(this.name.getText());
         state.incrementValueIdentifierId(this.name.getText());
+        let evalId = modifiable.getNextExceptionEvalId();
 
         if (!State.allowsRebind(this.name.getText())) {
             throw new EvaluationError(this.position, 'You simply cannot rebind "'
@@ -1417,7 +1418,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
         }
 
         state.setDynamicValue(this.name.getText(),
-            new ExceptionConstructor(this.name.getText(), numArg, id), IdentifierStatus.EXCEPTION_CONSTRUCTOR);
+            new ExceptionConstructor(this.name.getText(), numArg, id, evalId), IdentifierStatus.EXCEPTION_CONSTRUCTOR);
     }
 }
 
@@ -1447,7 +1448,7 @@ export class ExceptionAlias implements ExceptionBinding {
         return state;
     }
 
-    evaluate(state: State): void {
+    evaluate(state: State, modifiable: State): void {
         let res: [Value, IdentifierStatus] | undefined = undefined;
         if (this.oldname instanceof LongIdentifierToken) {
             let st = state.getAndResolveDynamicStructure(<LongIdentifierToken> this.oldname);

@@ -159,7 +159,7 @@ export class ValueIdentifier extends Expression implements Pattern {
             if (st !== undefined) {
                 res = st.getValue((<LongIdentifierToken> this.name).id.getText());
                 if (res !== undefined) {
-                    let nst = new State(0, undefined, st, state.dynamicBasis, [0, {}]);
+                    let nst = new State(0, undefined, st, state.dynamicBasis, [0, {}], 4);
                     res = [res[0].qualify(nst, this.name), res[1]];
                 }
             }
@@ -915,11 +915,20 @@ export class FunctionApplication extends Expression implements Pattern {
             }
             return undefined;
         } else if (v instanceof ExceptionValue) {
+            let exCtorData = state.getDynamicValue((<ValueIdentifier> this.func).name.getText());
+            if (exCtorData === undefined) {
+                throw new InternalInterpreterError(this.position,
+                    'How did you match something that does not exist?');
+            }
+            let exCtor = exCtorData[0];
             if (this.func instanceof ValueIdentifier
+                && exCtor instanceof ExceptionConstructor
                 && (<ValueIdentifier> this.func).name.getText()
                 === (<ExceptionValue> v).constructorName
-                && state.getValueIdentifierId((<ExceptionValue> v).constructorName)
-                === (<ExceptionValue> v).id + 1) {
+                && (<ExceptionConstructor> exCtor).id
+                === (<ExceptionValue> v).id
+                && (<ExceptionConstructor> exCtor).evalId
+                === (<ExceptionValue> v).evalId) {
                 if ((<ExceptionValue> v).argument !== undefined) {
                     return (<PatternExpression> this.argument).matches(
                         state, <Value> (<ExceptionValue> v).argument);
@@ -1238,7 +1247,7 @@ export class HandleException extends Expression {
             || next.value === undefined) {
             throw new InternalInterpreterError(-1, 'How is this undefined?');
         }
-        if (!next.hasThrown || !(<Value> next.value).equals(new ExceptionValue('Match', undefined, 0))) {
+        if (!next.hasThrown || !(<Value> next.value).equals(new ExceptionValue('Match', undefined, 0, 0))) {
             // Exception got handled
             return {
                 'newState': undefined,
@@ -1436,7 +1445,7 @@ export class Match {
         }
         return {
             'newState': undefined,
-            'value': new ExceptionValue('Match', undefined, 0),
+            'value': new ExceptionValue('Match', undefined, 0, 0),
             'hasThrown': true,
         };
     }
