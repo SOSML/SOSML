@@ -173,9 +173,24 @@ it("Duplicate tyvar", () => {
     run_test([ge("datatype ('a, 'a) FAIL = A;", Errors.ElaborationError)]);
 });
 
+it("Non-linear pattern", () => {
+    run_test([ge('val (x,x) = (1, 2);', Errors.ParserError)]);
+    run_test([ge('val [x,x] = [1, 2];', Errors.ParserError)]);
+    run_test([ge('fun test (x,x) = true | test _ = false;', Errors.ParserError)]);
+    run_test([ge('fun test x x = true | test _ = false;', Errors.ParserError)]);
+});
+
 it("Operator redefinition", () => {
     run_test([
         gc('fun a*b=3;', undefined, ['*'], [undefined], [[BND(BNDB(FUNC(PAIR(VAR,VARB), INT))),0]]),
+        gc('4 * 5;', undefined, ['it'], [[new Val.Integer(3), 0]], [[INT, 0]])
+    ]);
+    run_test([
+        gc('fun (a*b) 3=3;', undefined, ['*'], [undefined], [[BND(BNDB(FUNC(PAIR(VAR,VARB), FUNC(INT,INT)))),0]]),
+        gc('(4 * 5) 3;', undefined, ['it'], [[new Val.Integer(3), 0]], [[INT, 0]])
+    ]);
+    run_test([
+        gc('fun(a*b)=3;',undefined, ['*'], [undefined], [[BND(BNDB(FUNC(PAIR(VAR,VARB), INT))),0]]),
         gc('4 * 5;', undefined, ['it'], [[new Val.Integer(3), 0]], [[INT, 0]])
     ]);
     run_test([
@@ -186,10 +201,22 @@ it("Operator redefinition", () => {
         gc('fun a-b=3;', undefined, ['-'], [undefined], [[BND(BNDB(FUNC(PAIR(VAR,VARB), INT))),0]]),
         gc('4 - 5;', undefined, ['it'], [[new Val.Integer(3), 0]], [[INT, 0]])
     ]);
+    run_test([
+        gc('fun a o b=3;',undefined,['o'], [undefined], [[BND(BNDB(FUNC(PAIR(VAR,VARB), INT))),0]]),
+        gc('4 o 5;', undefined, ['it'], [[new Val.Integer(3), 0]], [[INT, 0]])
+    ]);
+    run_test([
+        gc('fun (a o b)=3;',undefined,['o'],[undefined],[[BND(BNDB(FUNC(PAIR(VAR,VARB), INT))),0]]),
+        gc('4 o 5;', undefined, ['it'], [[new Val.Integer(3), 0]], [[INT, 0]])
+    ]);
     run_test([ge('fun a = b = 3;', Errors.ParserError)]);
-    run_test([ge('fun (a = b) = 3;', Errors.ParserError)]);
+    run_test([ge('fun (a = b) = 3;', Errors.FeatureDisabledError)]);
     run_test([
         gc('fun ! x = 5;', undefined, ['!'], [undefined], [[BND(FUNC(VAR, INT)), 0]]),
+        gc('! 10;', undefined, ['it'], [[new Val.Integer(5), 0]], [[INT, 0]])
+    ]);
+    run_test([
+        gc('fun (! x) = 5;', undefined, ['!'], [undefined], [[BND(FUNC(VAR, INT)), 0]]),
         gc('! 10;', undefined, ['it'], [[new Val.Integer(5), 0]], [[INT, 0]])
     ]);
 });
