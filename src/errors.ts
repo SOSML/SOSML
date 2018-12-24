@@ -35,7 +35,7 @@ export class FeatureNotImplementedError extends InterpreterError {
 // Used if the code may be valid SML, but uses a feature that is currently disabled in the interpreter settings.
 export class FeatureDisabledError extends InterpreterError {
     constructor(position: number, message: string) {
-        super(position, message, 'Have you ever tried using something you were not supposed to? '
+        super(position, message, 'Have you ever tried doing something you were not supposed to? '
         + 'Basically that');
         Object.setPrototypeOf(this, FeatureDisabledError.prototype);
     }
