@@ -23,7 +23,12 @@ export class TypeInformation {
     // Every constructor also appears in the value environment,
     // thus it suffices to record their names here.
     constructor(public type: Type, public constructors: string[],
-                public arity: number, public allowsEquality: boolean = true) { }
+        public arity: number, public allowsEquality: boolean = true) { }
+
+    toString(): string {
+        return 'TypeInformation(' + this.type + ', ['+this.constructors + '], arity = ' + this.arity
+        + ', allowsEquality = ' + this.allowsEquality + ')';
+    }
 }
 
 // maps type name to constructor names
