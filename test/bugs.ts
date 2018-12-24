@@ -50,10 +50,10 @@ function gc(code: string, expect_error: any = undefined, expect_result: string[]
             let log = code + '\n';
             if (expect_error !== undefined) {
                 expect(hasThrown).toEqual(true);
-                expect(expect_error).toEqualWithType(exceptionValue);
+                expect(exceptionValue).toEqualWithType(expect_error);
             } else {
                 expect(hasThrown).toEqual(false);
-                expect(undefined).toEqualWithType(exceptionValue);
+                expect(exceptionValue).toEqualWithType(undefined);
                 for (let i = 0; i < expect_result.length; ++i) {
                     let result_val = (expect_result[i][0] === '_')
                         ? state.getDynamicType(expect_result[i].substring(1))
@@ -66,14 +66,14 @@ function gc(code: string, expect_error: any = undefined, expect_result: string[]
                         + 'found val: ' + result_val
                         + '\nfound type: ' + result_type + '\n');
                     if (expect_value[i] !== undefined) {
-                        expect(expect_value[i]).toEqualWithType(result_val);
+                        expect(result_val).toEqualWithType(expect_value[i]);
                     } else {
-                        expect(undefined).not.toEqualWithType(result_val);
+                        expect(result_val).not.toEqualWithType(undefined);
                     }
                     if (expect_type[i] !== undefined) {
-                        expect(expect_type[i]).toEqualWithType(result_type);
+                        expect(result_type).toEqualWithType(expect_type[i]);
                     } else {
-                        expect(undefined).not.toEqualWithType(result_type);
+                        expect(result_type).not.toEqualWithType(undefined);
                     }
                 }
             }
