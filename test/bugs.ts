@@ -50,10 +50,10 @@ function gc(code: string, expect_error: any = undefined, expect_result: string[]
             let log = code + '\n';
             if (expect_error !== undefined) {
                 expect(hasThrown).toEqual(true);
-                expect(expect_error).toEqualWithType(exceptionValue);
+                expect(exceptionValue).toEqualWithType(expect_error);
             } else {
                 expect(hasThrown).toEqual(false);
-                expect(undefined).toEqualWithType(exceptionValue);
+                expect(exceptionValue).toEqualWithType(undefined);
                 for (let i = 0; i < expect_result.length; ++i) {
                     let result_val = (expect_result[i][0] === '_')
                         ? state.getDynamicType(expect_result[i].substring(1))
@@ -66,14 +66,14 @@ function gc(code: string, expect_error: any = undefined, expect_result: string[]
                         + 'found val: ' + result_val
                         + '\nfound type: ' + result_type + '\n');
                     if (expect_value[i] !== undefined) {
-                        expect(expect_value[i]).toEqualWithType(result_val);
+                        expect(result_val).toEqualWithType(expect_value[i]);
                     } else {
-                        expect(undefined).not.toEqualWithType(result_val);
+                        expect(result_val).not.toEqualWithType(undefined);
                     }
                     if (expect_type[i] !== undefined) {
-                        expect(expect_type[i]).toEqualWithType(result_type);
+                        expect(result_type).toEqualWithType(expect_type[i]);
                     } else {
-                        expect(undefined).not.toEqualWithType(result_type);
+                        expect(result_type).not.toEqualWithType(undefined);
                     }
                 }
             }
@@ -89,6 +89,7 @@ function ge(code: string, expect_error_type: any): any {
 
 
 let INT = new Type.CustomType('int');
+let REAL = new Type.CustomType('real');
 let BOOL = new Type.CustomType('bool');
 let WORD = new Type.CustomType('word');
 let STRING = new Type.CustomType('string');
@@ -115,10 +116,10 @@ function PAIR (t1: Type.Type, t2: Type.Type): Type.Type {
     return new Type.TupleType([t1, t2]).simplify();
 }
 
-let MATCH = new Val.ExceptionConstructor('Match', 0, 0, 0);
-let BIND = new Val.ExceptionConstructor('Bind', 0, 0, 1);
-let DIV = new Val.ExceptionConstructor('Div', 0, 0, 2);
-let OVERFLOW = new Val.ExceptionConstructor('Overflow', 0, 0, 3);
+let MATCH = new Val.ExceptionValue('Match', undefined, 0, 0);
+let BIND = new Val.ExceptionValue('Bind', undefined, 0, 1);
+let DIV = new Val.ExceptionValue('Div', undefined, 0, 2);
+let OVERFLOW = new Val.ExceptionValue('Overflow', undefined, 0, 3);
 
 function TI (t: string, cons: string[], arity: number, allowsEquality: boolean = true) {
     return new State.TypeInformation(new Type.CustomType(t, [], -1), cons, arity, allowsEquality);
@@ -178,6 +179,34 @@ it("Non-linear pattern", () => {
     run_test([ge('val [x,x] = [1, 2];', Errors.ParserError)]);
     run_test([ge('fun test (x,x) = true | test _ = false;', Errors.ParserError)]);
     run_test([ge('fun test x x = true | test _ = false;', Errors.ParserError)]);
+    run_test([ge('case (3, 4) of (x, x) => x;', Errors.ParserError)]);
+
+    run_test([
+        gc(`datatype nat = O | S of nat
+        fun less O O = false | less (S m) O = false
+        | less O (S n) = true | less (S m) (S n) = less(m)(n);`, undefined,
+            ['_nat', 'O', 'S', 'less'],
+            [['O', 'S'], [new Val.ValueConstructor('O'),1], [new Val.ValueConstructor('S', 1), 1],
+                undefined], [TI('nat', ['O', 'S'], 0, true),
+                [new Type.CustomType('nat'),1], [FUNC(new Type.CustomType('nat'),
+                new Type.CustomType('nat')),1], [FUNC(new Type.CustomType('nat'),
+                    FUNC(new Type.CustomType('nat'), BOOL)), 0]]),
+        gc('fun f O O = 5;', undefined, ['f'], [undefined], [[FUNC(new Type.CustomType('nat'),
+            FUNC(new Type.CustomType('nat'),INT)), 0]]);
+    ]);
+    run_test([
+        gc(`datatype nat = O | S of nat
+        fun less O O = false | less (S m) O = false
+        | less O (S n) = true | less (S m) (S n) = less(m)(n); fun f O O = 5;`, undefined,
+            ['_nat', 'O', 'S', 'less', 'f'],
+            [['O', 'S'], [new Val.ValueConstructor('O'),1], [new Val.ValueConstructor('S', 1), 1],
+                undefined, undefined], [TI('nat', ['O', 'S'], 0, true),
+                [new Type.CustomType('nat'),1], [FUNC(new Type.CustomType('nat'),
+                new Type.CustomType('nat')),1], [FUNC(new Type.CustomType('nat'),
+                    FUNC(new Type.CustomType('nat'), BOOL)), 0],
+                [FUNC(new Type.CustomType('nat'), FUNC(new Type.CustomType('nat'),INT)), 0]])
+    ]);
+
 });
 
 it("Operator redefinition", () => {
@@ -209,6 +238,15 @@ it("Operator redefinition", () => {
         gc('fun (a o b)=3;',undefined,['o'],[undefined],[[BND(BNDB(FUNC(PAIR(VAR,VARB), INT))),0]]),
         gc('4 o 5;', undefined, ['it'], [[new Val.Integer(3), 0]], [[INT, 0]])
     ]);
+    run_test([
+        gc('fun (a o b) 3=3;',undefined,['o'],[undefined],[[BND(BNDB(FUNC(PAIR(VAR,VARB), FUNC(INT, INT)))),0]]),
+        gc('(4 o 5) 3;', undefined, ['it'], [[new Val.Integer(3), 0]], [[INT, 0]])
+    ]);
+    run_test([
+        gc('fun (a o b) 3=3;',undefined,['o'],[undefined],[[BND(BNDB(FUNC(PAIR(VAR,VARB), FUNC(INT, INT)))),0]]),
+        ge('4 o 5 3;', Errors.ElaborationError)
+    ]);
+    run_test([ge('fun (a o b 4) = 3;', Errors.ElaborationError)]);
     run_test([ge('fun a = b = 3;', Errors.ParserError)]);
     run_test([ge('fun (a = b) = 3;', Errors.FeatureDisabledError)]);
     run_test([
@@ -237,6 +275,12 @@ it("let expressions", () => {
         gc('fun t x = let datatype L = B; val l = case B of _ => true in l end;', undefined,
             ['t'], [undefined], [[BND(FUNC(VAR,BOOL)), 0]])
     ]);
+    run_test([
+        gc('fun pisort compare = let fun insert (x, nil) = [x] | insert (x, y::yr) = case compare(x,y) of GREATER => y::insert(x,yr) | _ => x::y::yr in foldl insert nil end;', undefined,
+            ['pisort'], [undefined], [[BND(FUNC(FUNC(PAIR(VAR,VAR), new Type.CustomType('order')),
+                FUNC(new Type.CustomType('list', [VAR]),
+                new Type.CustomType('list', [VAR])))),0]])
+    ]);
 });
 
 it("datatypes", () => {
@@ -256,3 +300,180 @@ it("datatypes", () => {
     ]);
 });
 
+it("real equality", () => {
+    run_test([
+        ge('val 3.00 = 3.0;', Errors.ParserError)
+    ]);
+    run_test([
+        gc('datatype D = E of real;', undefined, ['_D', 'E'],
+            [['E', undefined], [new Val.ValueConstructor('E',1),1],
+            [TI('D', ['E'], 1, false), [new Val.ValueConstructor('E',1),1]]),
+        ge('E 5.0 = E 4.0;', Errors.ElaborationError)
+    ]);
+    run_test([
+        gc('SOME 2 = SOME 5;', undefined, ['it'], [[new Val.BoolValue(false), 0]], [[BOOL, 0]])
+    ]);
+    run_test([
+        gc('datatype D = D of int * real;', undefined, ['_D', 'D'],
+            [['D', undefined], [new Val.ValueConstructor('D', 1), 1]],
+            [TI('D', ['D'], 0, true), [FUNC(PAIR(INT, REAL), new
+                Type.CustomType('D')), 1]]),
+        ge('D (1, 3.5) = D (2, 3.5);', Errors.ElaborationError)
+    ]);
+    run_test([
+        gc('datatype tree = T of tree list;', undefined, ['_tree', 'T'],
+            [['T', undefined], [new Val.ValueConstructor('T', 1), 1]],
+            [TI('tree', ['T'], 0, true), [FUNC(new Type.CustomType('list',
+                [new Type.CustomType('tree')]), new Type.CustomType('tree')), 1]]),
+        gc('T [] = T [];', undefined, ['it'], [[new Val.BoolValue(true), 0]], [[BOOL, 0]])
+    ]);
+});
+
+it("unresolved records", () => {
+    run_test([
+        ge('fn x => #1 x;', Errors.ElaborationError)
+    ]);
+    run_test([
+        ge('fun unzip1 xs = map #1;', Errors.ElaborationError)
+    ]);
+    run_test([
+        gc('fn (x : (int * int)) => #1 x;', undefined, ['it'], [undefined],
+            [[FUNC(PAIR(INT,INT), INT), 0]])
+    ]);
+});
+
+it("let expression circularity", () => {
+    run_test([
+        gc('let fun foo f = cas (fn(a,b)=>a+b)   and cas f a b = f(a,b) in foo end;',
+            undefined, ['it'], [undefined], [[FBND(FUNC(FREE, FUNC(INT, FUNC(INT, INT)))), 0]])
+    ]);
+});
+
+it("let expression polymorphism", () => {
+    run_test([
+        gc('val (a, b) = let val x = fn y => y in (x 5, x 9.0) end;', undefined,
+            ['a', 'b'], [[new Val.Integer(5), 0], [new Val.Real(9.0), 0]],
+            [[INT, 0], [REAL, 0]]);
+    ]);
+});
+
+it("let expressions records", () => {
+    run_test([
+        gc('fun f a = let val x = #2 a val (c,d) = a in 42 end;', undefined,
+            ['f'], [undefined], [[BND(BNDB(FUNC(PAIR(VAR,VARB), INT))), 0]]),
+        ge('f (1, 2, 3);', Errors.ElaborationError)
+    ]);
+});
+
+it("polymorphic exceptions", () => {
+    run_test([
+        gc("val findDouble = fn (x: 'a) => ((let exception Double of 'a in Double end));",
+            undefined, ['findDouble'], [undefined],
+            [[BND(FUNC(VAR, FUNC(VAR, new Type.CustomType('exn')))), 0]])
+    ]);
+    run_test([
+        gc('fun f x = let fun f (y:\'a) = y in let exception C of \'a; in  (raise C x) handle C a => a end end;',
+            undefined, ['f'], [undefined], [[BND(FUNC(VAR, VAR)), 0]])
+    ]);
+    run_test([
+        gc("val findDouble = fn x => ((let exception Double of 'a in Double end));",
+            undefined, ['findDouble'], [undefined],
+            [[BND(BNDB(FUNC(VAR, FUNC(VARB, new Type.CustomType('exn'))))), 0]])
+    ]);
+});
+
+it("assign to record", () => {
+    run_test([
+        ge('val {3: int} = 3;', Errors.ParserError)
+    ]);
+});
+
+it("nameless function", () => {
+    run_test([
+        ge('fun f = fn fish => case (fish) of (x) => 1;', Errors.ParserError)
+    ]);
+});
+
+it("qualified exception names", () => {
+    run_test([
+        gc('structure S = struct exception SExc fun raiseExc v = raise SExc end;', undefined),
+        gc('val v = S.raiseExc () handle S.SExc => 5;', undefined, ['v'],
+            [[new Val.Integer(5), 0]], [[INT, 0]])
+    ]);
+});
+
+it("signature structure", () => {
+    run_test([
+        gc('structure Store :> sig type address = int end = struct type address = int end;',
+            undefined)
+    ]);
+});
+
+it("circularity", () => {
+    run_test([
+        ge('fun test (a, b) = a + test b;', Errors.ElaborationError)
+    ]);
+});
+
+it("free type variables", () => {
+    run_test([
+        gc(`fun pot [] = [[]] | pot (x::xs) = let
+        val p = pot xs in  p @ (List.map (fn a => x :: a) p) end;`, undefined,
+            ['pot'], [undefined], [[BND(FUNC(new Type.CustomType('list', [VAR]),
+            new Type.CustomType('list', [new Type.CustomType('list', [VAR])]))), 0]])
+    ]);
+});
+
+it("junk after declaration", () => {
+    run_test([
+        ge('fun f x = x);', Errors.ParserError)
+    ]);
+});
+
+it("structures datatype shadowing", () => {
+    run_test([
+        gc('structure S1 = struct datatype D = con; end;', undefined),
+        gc('structure S2 = struct datatype D = con; end;', undefined),
+        gc('open S1;', undefined), // TODO
+        gc('val x1 = con;', undefined), // TODO
+        gc('open S2;', undefined), // TODO
+        gc('val x2 = con;', undefined), // TODO
+        ge('x1 = x2;', Errors.ElaborationError)
+    ]);
+});
+
+it("recursion", () => {
+    run_test([
+        gc('fun g x y = g x y and f x y = g x x;', undefined, ['f', 'g'],
+            [undefined, undefined],
+            [[BND(BNDB(new Type.TypeVariableBind('\'c', FUNC(VAR, FUNC(VARB,
+                new Type.TypeVariable('\'c')))))),
+                0], [BND(BNDB(new Type.TypeVariableBind('\'c', FUNC(VAR, FUNC(VARB,
+                    new Type.TypeVariable('\'c')))))),
+                0]])
+    ]);
+});
+
+it("real", () => {
+    run_test([
+        gc('fun plus x y : real = x+y;', undefined, ['plus'],
+            [undefined], [[FUNC(REAL, FUNC(REAL, REAL)), 0]])
+    ]);
+});
+
+it("incomlete while loop", () => {
+    run_test([
+        gc('val r = ref 0;', undefined), // TODO
+        gc('while true do ((fn x => (r := x * !r)) ((r := !r + 1; !r)));', OVERFLOW)
+    ]);
+    run_test([
+        gc('val r = ref 0;', undefined), // TODO
+        ge('while true do ((fn x => (r := x * !r)) ((r := !r + 1;', Errors.IncompleteError)
+    ]);
+});
+
+it("Ungarded type variables", () => {
+    run_test([
+        ge("datatype L = n | c of 'a * L;", Errors.ElaborationError)
+    ]);
+});

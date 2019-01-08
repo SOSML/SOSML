@@ -162,8 +162,8 @@ export class TransparentConstraint extends Expression implements Structure {
                 try {
                     let sgtp = <CustomType> sg.type;
                     let sttp = st.type;
-                    if (st.type instanceof FunctionType) {
-                        sttp = (<FunctionType> st.type).parameterType;
+                    if (!(sg.type instanceof FunctionType) && st.type instanceof FunctionType) {
+                       sttp = (<FunctionType> st.type).parameterType;
                     }
                     let tp = sgtp.merge(nstate, tyVarBnd, sttp);
 
@@ -336,7 +336,7 @@ export class OpaqueConstraint extends Expression implements Structure {
                 try {
                     let sgtp = <CustomType> sg.type;
                     let sttp = st.type;
-                    if (st.type instanceof FunctionType) {
+                    if (!(sg.type instanceof FunctionType) && st.type instanceof FunctionType) {
                         sttp = (<FunctionType> st.type).parameterType;
                     }
                     let tp = sgtp.merge(nstate, tyVarBnd, sttp);
