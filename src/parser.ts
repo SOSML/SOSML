@@ -5,7 +5,7 @@ import { Expression, Tuple, Constant, ValueIdentifier, Wildcard,
          HandleException, Match, InfixExpression, PatternExpression, While,
          ConjunctivePattern, DisjunctivePattern, PatternGuard, NestedMatch } from './expressions';
 import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } from './types';
-import { InternalInterpreterError, IncompleteError, ParserError } from './errors';
+import { InternalInterpreterError, IncompleteError, ParserError, FeatureDisabledError } from './errors';
 import { Token, KeywordToken, IdentifierToken, ConstantToken, RealConstantToken,
          TypeVariableToken, LongIdentifierToken, IntegerConstantToken,
          AlphanumericIdentifierToken, NumericToken } from './tokens';
@@ -1129,7 +1129,7 @@ export class Parser {
 
             ++this.position;
             return new Constant(curTok.position, curTok);
-        } else if (curTok instanceof IdentifierToken
+        } else if ((curTok.isVid() && curTok.getText() !== '=')
             || curTok instanceof LongIdentifierToken) {
             ++this.position;
 
@@ -1145,6 +1145,11 @@ export class Parser {
                     }
                     this.assertKeywordToken(newTok, 'as');
                     ++this.position;
+
+                    if (curTok instanceof KeywordToken) { // StarToken
+                        curTok = new IdentifierToken(curTok.getText(), curTok.position);
+                    }
+
                     return new LayeredPattern(curTok.position, <IdentifierToken> curTok, tp, this.parsePattern());
                 }
             } catch (f) {
@@ -1480,28 +1485,83 @@ export class Parser {
             let nm: ValueIdentifier;
 
             if (this.checkKeywordToken(this.currentToken(), '(')) {
-                let pat = this.parsePattern();
-                let isBad = false;
-                let revArgs: PatternExpression[] = [];
+                let op = this.position;
+                try {
+                    let pat = this.parsePattern();
+                    let isBad = false;
+                    let revArgs: PatternExpression[] = [];
 
-                if (!(pat instanceof FunctionApplication)) {
-                    isBad = true;
-                }
-                while (!isBad && (pat instanceof FunctionApplication)) {
-                    revArgs.push(<PatternExpression> (<FunctionApplication> pat).argument);
-                    pat  = <PatternExpression> (<FunctionApplication> pat).func;
-                }
-                if (!(pat instanceof ValueIdentifier)) {
-                    isBad = true;
-                }
-                if (isBad) {
-                    throw new ParserError('Nyaboron is sad. Did you forget a function name?',
-                        pat.position);
-                }
+                    if (!(pat instanceof FunctionApplication)) {
+                        isBad = true;
+                    }
+                    while (!isBad && (pat instanceof FunctionApplication)) {
+                        revArgs.push(<PatternExpression> (<FunctionApplication> pat).argument);
+                        pat  = <PatternExpression> (<FunctionApplication> pat).func;
+                    }
+                    if (!(pat instanceof ValueIdentifier)) {
+                        isBad = true;
+                    }
+                    if (isBad) {
+                        throw new ParserError('Nyaboron is sad. Did you forget a function name?',
+                            pat.position);
+                    }
 
-                nm = <ValueIdentifier> pat;
-                for (let i = revArgs.length - 1; i >= 0; --i) {
-                    args.push(revArgs[i]);
+                    nm = <ValueIdentifier> pat;
+                    for (let i = revArgs.length - 1; i >= 0; --i) {
+                        args.push(revArgs[i]);
+                    }
+                } catch (e) {
+                    let hard = false;
+                    try {
+                        this.position = op;
+
+                        ++this.position;
+                        let left = this.parseAtomicPattern();
+
+                        this.assertVidOrLongToken(this.currentToken());
+                        nm = new ValueIdentifier(this.currentToken().position, this.currentToken());
+
+                        if (this.state.getInfixStatus(this.currentToken()) === undefined
+                            || !this.state.getInfixStatus(this.currentToken()).infix) {
+                            throw new ParserError('"' + this.currentToken().getText()
+                                + '" does not have infix status.',
+                                this.currentToken().position);
+                        }
+                        if (this.options.allowSuccessorML !== true
+                            && this.currentToken().getText() === '=') {
+                            hard = true;
+                            throw new FeatureDisabledError(this.currentToken().position,
+                                'Why would you try to rebind "="?');
+                        }
+                        ++this.position;
+
+                        let right = this.parseAtomicPattern();
+                        this.assertKeywordToken(this.currentToken(), ')');
+                        ++this.position;
+                        args.push(new Tuple(-1, [left, right]));
+
+                        while (true) {
+                            if (this.checkKeywordToken(this.currentToken(), '=')
+                                || this.checkKeywordToken(this.currentToken(), ':')) {
+                                break;
+                            }
+                            let pat = this.parseAtomicPattern();
+                            if (pat instanceof ValueIdentifier
+                                && this.state.getInfixStatus((<ValueIdentifier> pat).name) !== undefined
+                                && this.state.getInfixStatus((<ValueIdentifier> pat).name).infix) {
+
+                                throw new ParserError('Cute little infix identifiers such as "' +
+                                    pat + '" sure should play somewhere else.', pat.position);
+                            }
+                            args.push(pat);
+                        }
+                    } catch (f) {
+                        if (!hard) {
+                            throw e;
+                        }
+                        throw f;
+                    }
+
                 }
             } else {
                 let oldPos = this.position;
@@ -1545,7 +1605,7 @@ export class Parser {
                         this.position = oldPos;
                         let left = this.parseAtomicPattern();
 
-                        this.assertIdentifierOrLongToken(this.currentToken());
+                        this.assertVidOrLongToken(this.currentToken());
                         nm = new ValueIdentifier(this.currentToken().position, this.currentToken());
 
                         if (this.state.getInfixStatus(this.currentToken()) === undefined
@@ -1563,6 +1623,7 @@ export class Parser {
                         let right = this.parseAtomicPattern();
                         args.push(new Tuple(-1, [left, right]));
                     } catch (f) {
+                        console.log(f);
                         // It wasn't infix at all, but simply wrong.
                         throw e;
                     }

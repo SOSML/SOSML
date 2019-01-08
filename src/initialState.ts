@@ -2,7 +2,7 @@ import { State, StaticBasis, DynamicBasis, InfixStatus, TypeInformation,
          IdentifierStatus } from './state';
 import { FunctionType, CustomType, TupleType, Type, TypeVariable, TypeVariableBind } from './types';
 import { CharValue, Real, Integer, StringValue, PredefinedFunction, Word, ConstructedValue,
-         ValueConstructor, ExceptionConstructor, BoolValue, Value, RecordValue } from './values';
+         ValueConstructor, ExceptionConstructor, BoolValue, Value, RecordValue, ReferenceValue } from './values';
 import { InternalInterpreterError, Warning } from './errors';
 import { EvaluationParameters } from './evaluator';
 
@@ -29,6 +29,11 @@ let intWordType = new TypeVariable('\'iw');
 let intRealType = new TypeVariable('\'ir');
 let intWordRealType = new TypeVariable('\'iwr');
 let anyType = new TypeVariable('\'any');
+
+let matchException = new ExceptionConstructor('Match', 0, 0, 0);
+let bindException = new ExceptionConstructor('Bind', 0, 0, 1);
+let divException = new ExceptionConstructor('Div', 0, 0, 2);
+let overflowException = new ExceptionConstructor('Overflow', 0, 0, 3);
 
 function intWordBind(type: Type): Type {
     return new TypeVariableBind('\'iw', type, [new CustomType('int'), new CustomType('word')]).propagate();
@@ -144,12 +149,12 @@ let initialState: State = new State(
 
                     if (val1 instanceof Integer && val2 instanceof Integer) {
                         if ((<Integer> val2).value === 0) {
-                            return [new ExceptionConstructor('Div').construct(), true, []];
+                            return [divException.construct(), true, []];
                         }
                         return [(<Integer> val1).divide(<Integer> val2), false, []];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
                         if ((<Word> val2).value === 0) {
-                            return [new ExceptionConstructor('Div').construct(), true, []];
+                            return [divException.construct(), true, []];
                         }
                         return [(<Word> val1).divide(<Word> val2), false, []];
                     }
@@ -164,12 +169,12 @@ let initialState: State = new State(
 
                     if (val1 instanceof Integer && val2 instanceof Integer) {
                         if ((<Integer> val2).value === 0) {
-                            return [new ExceptionConstructor('Div').construct(), true, []];
+                            return [divException.construct(), true, []];
                         }
                         return [(<Integer> val1).modulo(<Integer> val2), false, []];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
                         if ((<Word> val2).value === 0) {
-                            return [new ExceptionConstructor('Div').construct(), true, []];
+                            return [divException.construct(), true, []];
                         }
                         return [(<Word> val1).modulo(<Word> val2), false, []];
                     }
@@ -185,19 +190,19 @@ let initialState: State = new State(
                     if (val1 instanceof Integer && val2 instanceof Integer) {
                         let result = (<Integer> val1).multiply(<Integer> val2);
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true, []];
+                            return [overflowException.construct(), true, []];
                         }
                         return [result, false, []];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
                         let result = (<Word> val1).multiply(<Word> val2);
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true, []];
+                            return [overflowException.construct(), true, []];
                         }
                         return [result, false, []];
                     } else if (val1 instanceof Real && val2 instanceof Real) {
                         let result = (<Real> val1).multiply(<Real> val2);
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true, []];
+                            return [overflowException.construct(), true, []];
                         }
                         return [result, false, []];
                     }
@@ -212,7 +217,7 @@ let initialState: State = new State(
 
                     if (val1 instanceof Real && val2 instanceof Real) {
                         if ((<Real> val2).value === 0) {
-                            return [new ExceptionConstructor('Div').construct(), true, []];
+                            return [divException.construct(), true, []];
                         }
                         return [(<Real> val1).divide(<Real> val2), false, []];
                     }
@@ -228,19 +233,19 @@ let initialState: State = new State(
                     if (val1 instanceof Integer && val2 instanceof Integer) {
                         let result = (<Integer> val1).add(<Integer> val2);
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true, []];
+                            return [overflowException.construct(), true, []];
                         }
                         return [result, false, []];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
                         let result = (<Word> val1).add(<Word> val2);
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true, []];
+                            return [overflowException.construct(), true, []];
                         }
                         return [result, false, []];
                     } else if (val1 instanceof Real && val2 instanceof Real) {
                         let result = (<Real> val1).add(<Real> val2);
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true, []];
+                            return [overflowException.construct(), true, []];
                         }
                         return [result, false, []];
                     }
@@ -256,19 +261,19 @@ let initialState: State = new State(
                     if (val1 instanceof Integer && val2 instanceof Integer) {
                         let result = (<Integer> val1).add((<Integer> val2).negate());
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true, []];
+                            return [overflowException.construct(), true, []];
                         }
                         return [result, false, []];
                     } else if (val1 instanceof Word && val2 instanceof Word) {
                         let result = (<Word> val1).add((<Word> val2).negate());
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true, []];
+                            return [overflowException.construct(), true, []];
                         }
                         return [result, false, []];
                     } else if (val1 instanceof Real && val2 instanceof Real) {
                         let result = (<Real> val1).add((<Real> val2).negate());
                         if (result.hasOverflow()) {
-                            return [new ExceptionConstructor('Overflow').construct(), true, []];
+                            return [overflowException.construct(), true, []];
                         }
                         return [result, false, []];
                     }
@@ -386,16 +391,14 @@ let initialState: State = new State(
                     'Called "<>" on value of the wrong type (' + val.constructor.name + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
 
-            // ':='
-            // 'ref': new ValueIdentifier(new FunctionType(typeVar, new CustomType('ref', typeVar)),
             'true':     [new BoolValue(true), IdentifierStatus.VALUE_CONSTRUCTOR],
             'false':    [new BoolValue(false), IdentifierStatus.VALUE_CONSTRUCTOR],
             'nil':      [new ValueConstructor('nil'), IdentifierStatus.VALUE_CONSTRUCTOR],
             '::':       [new ValueConstructor('::', 1), IdentifierStatus.VALUE_CONSTRUCTOR],
-            'Match':    [new ExceptionConstructor('Match'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
-            'Bind':     [new ExceptionConstructor('Bind'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
-            'Div':      [new ExceptionConstructor('Div'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
-            'Overflow': [new ExceptionConstructor('Overflow'), IdentifierStatus.EXCEPTION_CONSTRUCTOR],
+            'Match':    [matchException, IdentifierStatus.EXCEPTION_CONSTRUCTOR],
+            'Bind':     [bindException, IdentifierStatus.EXCEPTION_CONSTRUCTOR],
+            'Div':      [divException, IdentifierStatus.EXCEPTION_CONSTRUCTOR],
+            'Overflow': [overflowException, IdentifierStatus.EXCEPTION_CONSTRUCTOR],
             '^':        [new PredefinedFunction('^', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
                     let val1 = (<RecordValue> val).getValue('1');
@@ -426,13 +429,13 @@ let initialState: State = new State(
                 if (val instanceof Integer) {
                     let result = (<Integer> val).negate();
                     if (result.hasOverflow()) {
-                        return [new ExceptionConstructor('Overflow').construct(), true, []];
+                        return [overflowException.construct(), true, []];
                     }
                     return [result, false, []];
                 } else if (val instanceof Real) {
                     let result = (<Real> val).negate();
                     if (result.hasOverflow()) {
-                        return [new ExceptionConstructor('Overflow').construct(), true, []];
+                        return [overflowException.construct(), true, []];
                     }
                     return [result, false, []];
                 }
@@ -446,7 +449,7 @@ let initialState: State = new State(
                     }
                     let result = (<Integer> val).negate();
                     if (result.hasOverflow()) {
-                        return [new ExceptionConstructor('Overflow').construct(), true, []];
+                        return [overflowException.construct(), true, []];
                     }
                     return [result, false, []];
                 } else if (val instanceof Real) {
@@ -455,7 +458,7 @@ let initialState: State = new State(
                     }
                     let result = (<Real> val).negate();
                     if (result.hasOverflow()) {
-                        return [new ExceptionConstructor('Overflow').construct(), true, []];
+                        return [overflowException.construct(), true, []];
                     }
                     return [result, false, []];
                 }
@@ -479,14 +482,43 @@ let initialState: State = new State(
                     warns.push(new Warning(-2, val.toString(undefined, 1e18) + '\n'));
                 }
                 return [new RecordValue(), false, warns];
-            }), IdentifierStatus.VALUE_VARIABLE]
-            // ref, :=, ! are implemented directly within evaluate.
+            }), IdentifierStatus.VALUE_VARIABLE],
+            ':=':             [new PredefinedFunction(':=', (val: Value, params: EvaluationParameters) => {
+                if (val instanceof RecordValue) {
+                    let val1 = (<RecordValue> val).getValue('1');
+                    let val2 = (<RecordValue> val).getValue('2');
+
+                    if (val1 instanceof ReferenceValue) {
+                        params.modifiable.setCell((<ReferenceValue> val1).address, val2);
+                        return [new RecordValue(), false, []];
+                    }
+                }
+                throw new InternalInterpreterError(-1,
+                    'Called ":=" on value of the wrong type (' + val.constructor.name + ').');
+
+            }), IdentifierStatus.VALUE_VARIABLE],
+            'ref':            [new PredefinedFunction('ref', (val: Value, params: EvaluationParameters) => {
+                return [params.modifiable.setNewCell(val), false, []];
+            }), IdentifierStatus.VALUE_VARIABLE],
+            '!':              [new PredefinedFunction('!', (val: Value, params: EvaluationParameters) => {
+                if (val instanceof ReferenceValue) {
+                    let cell = params.modifiable.getCell((<ReferenceValue> val).address);
+                    if (cell === undefined) {
+                        throw new InternalInterpreterError(-1,
+                            'Neko-sempai, I think that I crashed. What shall I do now?');
+                    }
+                    return [<Value> cell, false, []];
+                }
+                throw new InternalInterpreterError(-1,
+                    'Called "!" on value of the wrong type (' + val.constructor.name + ').');
+            }), IdentifierStatus.VALUE_VARIABLE],
         },
         {},
         {},
         {}
     ),
     [ 0, {} ],
+    4, // 0-3 is reserved for Match, Bind, Div and Overflow exceptions
     [ 0, new Map<string, [Type, boolean]>() ],
     {
         'div': new InfixStatus(true, 7, false),

@@ -23,7 +23,12 @@ export class TypeInformation {
     // Every constructor also appears in the value environment,
     // thus it suffices to record their names here.
     constructor(public type: Type, public constructors: string[],
-                public arity: number, public allowsEquality: boolean = true) { }
+        public arity: number, public allowsEquality: boolean = true) { }
+
+    toString(): string {
+        return 'TypeInformation(' + this.type + ', ['+this.constructors + '], arity = ' + this.arity
+        + ', allowsEquality = ' + this.allowsEquality + ')';
+    }
 }
 
 // maps type name to constructor names
@@ -226,10 +231,10 @@ export class DynamicBasis {
 
 export class StaticBasis {
     constructor(public typeEnvironment: StaticTypeEnvironment,
-        public valueEnvironment: StaticValueEnvironment,
-        public structureEnvironment: StaticStructureEnvironment,
-        public signatureEnvironment: StaticSignatureEnvironment,
-        public functorEnvironment: StaticFunctorEnvironment) {
+                public valueEnvironment: StaticValueEnvironment,
+                public structureEnvironment: StaticStructureEnvironment,
+                public signatureEnvironment: StaticSignatureEnvironment,
+                public functorEnvironment: StaticFunctorEnvironment) {
     }
 
     getValue(name: string): [Type, IdentifierStatus] | undefined {
@@ -343,18 +348,19 @@ export class State {
 
     // The states' ids are non-decreasing; a single declaration uses the same ids
     constructor(public id: number,
-        public parent: State | undefined,
-        public staticBasis: StaticBasis,
-        public dynamicBasis: DynamicBasis,
-        public memory: Memory,
-        public freeTypeVariables: FreeTypeVariableInformation
-        = [0, new Map<string, [Type, boolean]>()],
-        private infixEnvironment: InfixEnvironment = {},
-        public valueIdentifierId: { [name: string]: number } = {},
-        public warns: Warning[] = [],
-        public insideLocalDeclBody: boolean = false,
-        public localDeclStart: boolean = false,
-        public loadedModules: string[] = []) {
+                public parent: State | undefined,
+                public staticBasis: StaticBasis,
+                public dynamicBasis: DynamicBasis,
+                public memory: Memory,
+                public exceptionEvalId: number,
+                public freeTypeVariables: FreeTypeVariableInformation
+                = [0, new Map<string, [Type, boolean]>()],
+                private infixEnvironment: InfixEnvironment = {},
+                public valueIdentifierId: { [name: string]: number } = {},
+                public warns: Warning[] = [],
+                public insideLocalDeclBody: boolean = false,
+                public localDeclStart: boolean = false,
+                public loadedModules: string[] = []) {
     }
 
     getNestedState(newId: number|undefined = undefined) {
@@ -365,6 +371,7 @@ export class State {
             new StaticBasis({}, {}, {}, {}, {}),
             new DynamicBasis({}, {}, {}, {}, {}),
             [this.memory[0], {}],
+            this.exceptionEvalId,
             [this.freeTypeVariables[0], new Map<string, [Type, boolean]>()]);
         res.insideLocalDeclBody = this.insideLocalDeclBody;
         for (let i of this.loadedModules) {
@@ -683,6 +690,10 @@ export class State {
         return new ReferenceValue(this.memory[0]++);
     }
 
+    getNextExceptionEvalId(): number {
+        return this.exceptionEvalId++;
+    }
+
     deleteStaticValue(name: string) {
         this.staticBasis.deleteValue(name);
         if (this.parent !== undefined) {
@@ -795,9 +806,9 @@ export class State {
 
 
     setInfixStatus(id: Token, precedence: number,
-        rightAssociative: boolean,
-        infix: boolean,
-        atId: number|undefined = undefined): void {
+                   rightAssociative: boolean,
+                   infix: boolean,
+                   atId: number|undefined = undefined): void {
             if (atId === undefined || atId === this.id) {
                 if (id.isVid() || id instanceof LongIdentifierToken) {
                     this.infixEnvironment[id.getText()]

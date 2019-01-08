@@ -150,7 +150,7 @@ it("exception shadowing", () => {
         }],
         ['(case 2 of 1 => true) handle Match => false;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Match'));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Match', undefined, 0, 0));
         }]
     ]);
     run_test([
@@ -159,7 +159,7 @@ it("exception shadowing", () => {
         }],
         ['(1 div 0) handle Div => 42;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Div'));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Div', undefined, 0, 2));
         }]
     ]);
     run_test([
@@ -168,7 +168,7 @@ it("exception shadowing", () => {
         }],
         ['let val 1 = 2; in true end handle Bind => false;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Bind'));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Bind', undefined, 0, 1));
         }]
     ]);
     run_test([
@@ -177,7 +177,7 @@ it("exception shadowing", () => {
         }],
         ['f 42 handle Blob => false;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(true);
-            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Blob', undefined));
+            expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Blob', undefined, 0, 10));
         }]
     ]);
 });

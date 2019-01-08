@@ -67,6 +67,7 @@ export class ValueDeclaration extends Declaration {
               isTopLevel: boolean, options: { [name: string]: any }):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         let result: [string, Type][] = [];
+        let result2: [string, Type][] = [];
 
         let warns: Warning[] = [];
         let bnds = tyVarBnd;
@@ -95,10 +96,12 @@ export class ValueDeclaration extends Declaration {
             state.valueIdentifierId = val[4];
 
             for (let j = 0; j < (<[string, Type][]> val[0]).length; ++j) {
-                result.push((<[string, Type][]> val[0])[j]);
+                result2.push((<[string, Type][]> val[0])[j]);
             }
         }
 
+
+        let nstate = state.getNestedState(state.id);
         for (let j = 0; j < result.length; ++j) {
             if (!options || options.allowSuccessorML !== true) {
                 if (!result[j][1].isResolved()) {
@@ -106,7 +109,7 @@ export class ValueDeclaration extends Declaration {
                         'Unresolved record type. (Is that a goblin?)');
                 }
             }
-            state.setStaticValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
+            nstate.setStaticValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
         }
 
         let wcp = warns;
@@ -115,7 +118,7 @@ export class ValueDeclaration extends Declaration {
             bcp = bcp.set(key, val);
         });
         let ncp = nextName;
-        let ids = state.valueIdentifierId;
+        let ids = nstate.valueIdentifierId;
         let numit = this.valueBinding.length - i + 1;
         for (let l = 0; l < numit * numit + 1; ++l) {
             warns = wcp;
@@ -124,19 +127,19 @@ export class ValueDeclaration extends Declaration {
                 bnds = bnds.set(key, val);
             });
             nextName = ncp;
-            state.valueIdentifierId = ids;
+            nstate.valueIdentifierId = ids;
 
             let haschange = false;
 
             for (let j = i; j < this.valueBinding.length; ++j) {
-                let val = this.valueBinding[j].getType(this.typeVariableSequence, state, bnds, nextName, isTopLevel);
+                let val = this.valueBinding[j].getType(this.typeVariableSequence, nstate, bnds, nextName, isTopLevel);
                 warns = warns.concat(val[1]);
                 bnds = val[2];
                 nextName = val[3];
-                state.valueIdentifierId = val[4];
+                nstate.valueIdentifierId = val[4];
 
                 for (let k = 0; k < val[0].length; ++k) {
-                    let oldtp = state.getStaticValue(val[0][k][0]);
+                    let oldtp = nstate.getStaticValue(val[0][k][0]);
                     if (oldtp === undefined || !oldtp[0].normalize()[0].equals(val[0][k][1].normalize()[0])) {
                         haschange = true;
                     }
@@ -148,7 +151,7 @@ export class ValueDeclaration extends Declaration {
                         }
                     }
 
-                    state.setStaticValue(val[0][k][0], val[0][k][1], IdentifierStatus.VALUE_VARIABLE);
+                    nstate.setStaticValue(val[0][k][0], val[0][k][1], IdentifierStatus.VALUE_VARIABLE);
                 }
             }
 
@@ -160,7 +163,18 @@ export class ValueDeclaration extends Declaration {
             }
         }
 
-        return [state, warns, bnds, nextName];
+        for (let j = 0; j < result2.length; ++j) {
+            if (!options || options.allowSuccessorML !== true) {
+                if (!result2[j][1].isResolved()) {
+                    throw new ElaborationError(this.position,
+                        'Unresolved record type. (Is that a goblin?)');
+                }
+            }
+            nstate.setStaticValue(result2[j][0], result2[j][1], IdentifierStatus.VALUE_VARIABLE);
+        }
+
+
+        return [nstate, warns, bnds, nextName];
     }
 
     evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
@@ -200,7 +214,7 @@ export class ValueDeclaration extends Declaration {
             if (matched === undefined) {
                 return {
                     'newState': state,
-                    'value': new ExceptionValue('Bind'),
+                    'value': new ExceptionValue('Bind', undefined, 0, 1),
                     'hasThrown': true,
                 };
             }
@@ -226,22 +240,24 @@ export class ValueDeclaration extends Declaration {
             return;
         }
 
-        for (let j = 0; j < result.length; ++j) {
-            state.setDynamicValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
-        }
+        let nstate = state.getNestedState(state.id);
 
         for (let j = 0; j < recursives.length; ++j) {
             if (recursives[j][1] instanceof FunctionValue) {
-                state.setDynamicValue(recursives[j][0], new FunctionValue(
+                nstate.setDynamicValue(recursives[j][0], new FunctionValue(
                     (<FunctionValue> recursives[j][1]).state, recursives,
                     (<FunctionValue> recursives[j][1]).body), IdentifierStatus.VALUE_VARIABLE);
             } else {
-                state.setDynamicValue(recursives[j][0], recursives[j][1], IdentifierStatus.VALUE_VARIABLE);
+                nstate.setDynamicValue(recursives[j][0], recursives[j][1], IdentifierStatus.VALUE_VARIABLE);
             }
         }
 
+        for (let j = 0; j < result.length; ++j) {
+            nstate.setDynamicValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
+        }
+
         return {
-            'newState': state,
+            'newState': nstate,
             'value': undefined,
             'hasThrown': false,
         };
@@ -358,6 +374,8 @@ export class DatatypeDeclaration extends Declaration {
               isTopLevel: boolean, options: { [name: string]: any }):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         // I'm assuming the withtype is empty
+
+        let tocheck: Type[] = [];
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
             let res = this.datatypeBinding[i].getType(state, isTopLevel);
 
@@ -367,10 +385,15 @@ export class DatatypeDeclaration extends Declaration {
                         + res[0][j][0] + '".');
                 }
                 state.setStaticValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
+                tocheck.push(res[0][j][1]);
             }
             state.setStaticType(res[2][0], res[1], res[2][1],
                 this.datatypeBinding[i].typeVariableSequence.length, true);
             state.incrementValueIdentifierId(res[2][0]);
+        }
+
+        for (let i = 0; i < tocheck.length; ++i) {
+            tocheck[i].instantiate(state, new Map<string, [Type, boolean]>());
         }
 
         return [state, [], tyVarBnd, nextName];
@@ -527,7 +550,7 @@ export class ExceptionDeclaration extends Declaration {
     evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
         let state = params.state;
         for (let i = 0; i < this.bindings.length; ++i) {
-            this.bindings[i].evaluate(state);
+            this.bindings[i].evaluate(state, params.modifiable);
         }
         return {
             'newState': state,
@@ -1107,7 +1130,15 @@ export class ValueBinding {
         }
 
         let ntys: TypeVariable[] = [];
+        let seennames: Set<string> = new Set<string>();
         for (let i = 0; i < tyVarSeq.length; ++i) {
+            if (seennames.has(tyVarSeq[i].name)) {
+                throw new ElaborationError(tyVarSeq[i].position,
+                    'I will not let a duplicate type variable name "' + tyVarSeq[i].name
+                    + '" disturb my Happy Sugar Life.');
+            }
+            seennames = seennames.add(tyVarSeq[i].name);
+
             let nt = tyVarSeq[i].instantiate(state, res[2]);
             if (!(nt instanceof TypeVariable) || (<TypeVariable> nt).domain.length > 0
                 || tyVarSeq[i].admitsEquality(state) !== nt.admitsEquality(state)) {
@@ -1293,13 +1324,17 @@ export class DatatypeBinding {
         for (let i = 0; i < this.type.length; ++i) {
             let tp: Type = restp;
             if (this.type[i][1] !== undefined) {
-                let curtp = (<Type> this.type[i][1]).instantiate(nstate,
-                    new Map<string, [Type, boolean]>()).replace(idlesstp, restp);
+                let curtp = (<Type> this.type[i][1]).replace(idlesstp, restp);
                 tp = new FunctionType(curtp, tp);
             }
 
             let tvs = new Set<string>();
             for (let j = 0; j < this.typeVariableSequence.length; ++j) {
+                if (tvs.has(this.typeVariableSequence[j].name)) {
+                    throw new ElaborationError(this.typeVariableSequence[j].position,
+                        'I\'m not interested in duplicate type variable names such as "'
+                        + this.typeVariableSequence[j] + '".');
+                }
                 tvs = tvs.add(this.typeVariableSequence[j].name);
             }
             let ungar: string[] = [];
@@ -1348,7 +1383,7 @@ export class DatatypeBinding {
 // Exception Bindings
 
 export interface ExceptionBinding {
-    evaluate(state: State): void;
+    evaluate(state: State, modifiable: State): void;
     elaborate(state: State, isTopLevel: boolean, knownTypeVars: Set<string>, options: { [name: string]: any }): State;
 }
 
@@ -1382,13 +1417,14 @@ export class DirectExceptionBinding implements ExceptionBinding {
         return state;
     }
 
-    evaluate(state: State): void {
+    evaluate(state: State, modifiable: State): void {
         let numArg = 0;
         if (this.type !== undefined) {
             numArg = 1;
         }
         let id = state.getValueIdentifierId(this.name.getText());
         state.incrementValueIdentifierId(this.name.getText());
+        let evalId = modifiable.getNextExceptionEvalId();
 
         if (!State.allowsRebind(this.name.getText())) {
             throw new EvaluationError(this.position, 'You simply cannot rebind "'
@@ -1396,7 +1432,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
         }
 
         state.setDynamicValue(this.name.getText(),
-            new ExceptionConstructor(this.name.getText(), numArg, id), IdentifierStatus.EXCEPTION_CONSTRUCTOR);
+            new ExceptionConstructor(this.name.getText(), numArg, id, evalId), IdentifierStatus.EXCEPTION_CONSTRUCTOR);
     }
 }
 
@@ -1426,7 +1462,7 @@ export class ExceptionAlias implements ExceptionBinding {
         return state;
     }
 
-    evaluate(state: State): void {
+    evaluate(state: State, modifiable: State): void {
         let res: [Value, IdentifierStatus] | undefined = undefined;
         if (this.oldname instanceof LongIdentifierToken) {
             let st = state.getAndResolveDynamicStructure(<LongIdentifierToken> this.oldname);

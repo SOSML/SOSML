@@ -159,7 +159,7 @@ export class ValueIdentifier extends Expression implements Pattern {
             if (st !== undefined) {
                 res = st.getValue((<LongIdentifierToken> this.name).id.getText());
                 if (res !== undefined) {
-                    let nst = new State(0, undefined, st, state.dynamicBasis, [0, {}]);
+                    let nst = new State(0, undefined, st, state.dynamicBasis, [0, {}], 4);
                     res = [res[0].qualify(nst, this.name), res[1]];
                 }
             }
@@ -278,8 +278,12 @@ export class ValueIdentifier extends Expression implements Pattern {
         if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
             return [[this.name.getText(), v]];
         }
-        if (v.equals(res[0])) {
-            return [];
+        try {
+            if (v.equals(res[0])) {
+                return [];
+            }
+        } catch (e) { // This is dirty. It may have been possible to rebind after all
+            return [[this.name.getText(), v]];
         }
         return undefined;
     }
@@ -846,7 +850,7 @@ export class FunctionApplication extends Expression implements Pattern {
             return false;
         }
         let f = state.getStaticValue((<ValueIdentifier> this.func).name.getText());
-        if (f === undefined) {
+        if (f === undefined || (<ValueIdentifier> this.func).name.getText() === 'ref') {
             return false;
         }
         return f[1] !== IdentifierStatus.VALUE_VARIABLE;
@@ -911,11 +915,20 @@ export class FunctionApplication extends Expression implements Pattern {
             }
             return undefined;
         } else if (v instanceof ExceptionValue) {
+            let exCtorData = state.getDynamicValue((<ValueIdentifier> this.func).name.getText());
+            if (exCtorData === undefined) {
+                throw new InternalInterpreterError(this.position,
+                    'How did you match something that does not exist?');
+            }
+            let exCtor = exCtorData[0];
             if (this.func instanceof ValueIdentifier
+                && exCtor instanceof ExceptionConstructor
                 && (<ValueIdentifier> this.func).name.getText()
                 === (<ExceptionValue> v).constructorName
-                && state.getValueIdentifierId((<ExceptionValue> v).constructorName)
-                === (<ExceptionValue> v).id + 1) {
+                && (<ExceptionConstructor> exCtor).id
+                === (<ExceptionValue> v).id
+                && (<ExceptionConstructor> exCtor).evalId
+                === (<ExceptionValue> v).evalId) {
                 if ((<ExceptionValue> v).argument !== undefined) {
                     return (<PatternExpression> this.argument).matches(
                         state, <Value> (<ExceptionValue> v).argument);
@@ -1025,70 +1038,6 @@ export class FunctionApplication extends Expression implements Pattern {
         }
 
         let step: number = params.step;
-
-
-        if (this.func instanceof ValueIdentifier) {
-            if (this.func.name.getText() === 'ref'
-                || this.func.name.getText() === ':='
-                || this.func.name.getText() === '!') {
-                if (step === -1) {
-                    params.step = step + 1;
-                    params.state = state;
-                    callStack.push({'next': this, 'params': params});
-                    callStack.push({
-                        'next': this.argument,
-                        'params': {'state': state, 'modifiable': modifiable, 'recResult': undefined}
-                    });
-                    return;
-                }
-
-                let aVal = params.recResult;
-                if (aVal === undefined
-                    || aVal.value === undefined) {
-                    throw new InternalInterpreterError(-1, 'How is this undefined?');
-                }
-                if (aVal.hasThrown) {
-                    return {
-                        'newState': undefined,
-                        'value': aVal.value,
-                        'hasThrown': true,
-                    };
-                }
-                let val = <Value> aVal.value;
-
-                if (this.func.name.getText() === 'ref') {
-                    let res: ReferenceValue = modifiable.setNewCell(val);
-
-                    return {
-                        'newState': undefined,
-                        'value': res,
-                        'hasThrown': false,
-                    };
-                } else if (this.func.name.getText() === ':=') {
-                    if ((!(val instanceof RecordValue))
-                        || (!((<RecordValue> val).getValue('1') instanceof ReferenceValue))) {
-                        throw new EvaluationError(this.position, 'That\'s not how ":=" works.');
-                    }
-                    modifiable.setCell((<ReferenceValue> (<RecordValue> val).getValue('1')).address,
-                        (<RecordValue> val).getValue('2'));
-                    return {
-                        'newState': undefined,
-                        'value': new RecordValue(),
-                        'hasThrown': false,
-                    };
-                } else if (this.func.name.getText() === '!') {
-                    if (!(val instanceof ReferenceValue)) {
-                        throw new EvaluationError(this.position,
-                            'You cannot dereference "' + this.argument + '".');
-                    }
-                    return {
-                        'newState': undefined,
-                        'value': modifiable.getCell((<ReferenceValue> val).address),
-                        'hasThrown': false,
-                    };
-                }
-            }
-        }
 
         if (step === -1) {
             params.step = step + 1;
@@ -1298,7 +1247,7 @@ export class HandleException extends Expression {
             || next.value === undefined) {
             throw new InternalInterpreterError(-1, 'How is this undefined?');
         }
-        if (!next.hasThrown || !(<Value> next.value).equals(new ExceptionValue('Match', undefined, 0))) {
+        if (!next.hasThrown || !(<Value> next.value).equals(new ExceptionValue('Match', undefined, 0, 0))) {
             // Exception got handled
             return {
                 'newState': undefined,
@@ -1496,7 +1445,7 @@ export class Match {
         }
         return {
             'newState': undefined,
-            'value': new ExceptionValue('Match', undefined, 0),
+            'value': new ExceptionValue('Match', undefined, 0, 0),
             'hasThrown': true,
         };
     }
@@ -1549,7 +1498,7 @@ export class Match {
             restp = restp.instantiate(state, bnds);
             bnds.forEach((val: [Type, boolean], key: string) => {
                 if (key[1] !== '*' || key[2] !== '*') {
-                    nmap = nmap.set(key, [val[0].instantiate(state, bnds), val[1]]);
+                    nmap = nmap.set(key, val);
                 } else {
                     keep = keep.set(key, val);
                 }
@@ -1602,6 +1551,7 @@ export class Wildcard extends Expression implements Pattern {
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
+            //       return [new AnyType(), [], nextName, tyVars, tyVarBnd, state.valueIdentifierId];
         let cur = (+nextName.substring(3)) + 1;
         let nm = '';
         for (; ; ++cur) {
