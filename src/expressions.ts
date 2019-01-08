@@ -957,10 +957,21 @@ export class FunctionApplication extends Expression implements Pattern {
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         if (forceRebind && this.func instanceof ValueIdentifier) {
-            let t = state.getStaticValue((<ValueIdentifier> this.func).name.getText());
-            if (t === undefined || t[1] === IdentifierStatus.VALUE_VARIABLE) {
-                throw new ElaborationError(this.position,
-                    '"' + (<ValueIdentifier> this.func).name.getText() + '" is not a constructor.');
+            if ((<ValueIdentifier> this.func).name instanceof LongIdentifierToken) {
+                let st = state.getAndResolveStaticStructure((<ValueIdentifier> this.func).name);
+                if (st === undefined ||
+                    st.getValue((<ValueIdentifier> this.func).name.id.getText()) === undefined) {
+                    throw new ElaborationError(this.position,
+                        '"' + (<ValueIdentifier> this.func).name.getText()
+                        + '" is not a constructor.');
+                }
+            } else {
+                let t = state.getStaticValue((<ValueIdentifier> this.func).name.getText());
+                if (t === undefined || t[1] === IdentifierStatus.VALUE_VARIABLE) {
+                    throw new ElaborationError(this.position,
+                        '"' + (<ValueIdentifier> this.func).name.getText()
+                        + '" is not a constructor.');
+                }
             }
         }
 
