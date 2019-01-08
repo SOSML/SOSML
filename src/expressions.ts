@@ -958,9 +958,11 @@ export class FunctionApplication extends Expression implements Pattern {
 
         if (forceRebind && this.func instanceof ValueIdentifier) {
             if ((<ValueIdentifier> this.func).name instanceof LongIdentifierToken) {
-                let st = state.getAndResolveStaticStructure((<ValueIdentifier> this.func).name);
+                let st = state.getAndResolveStaticStructure(<LongIdentifierToken>
+                    (<ValueIdentifier> this.func).name);
                 if (st === undefined ||
-                    st.getValue((<ValueIdentifier> this.func).name.id.getText()) === undefined) {
+                    st.getValue((<LongIdentifierToken> (<ValueIdentifier> this.func).name).
+                        id.getText()) === undefined) {
                     throw new ElaborationError(this.position,
                         '"' + (<ValueIdentifier> this.func).name.getText()
                         + '" is not a constructor.');
