@@ -11,8 +11,8 @@ function printBasis( state: any, dynamicBasis: any, staticBasis: any, indent: nu
         istr += '  ';
     }
     let out = '';
-    let fullst = 'ＳＯＳさん＞　';
-    let emptyst = '　　　　　＞　';
+    let fullst = 'ＳＯＳ＞　';
+    let emptyst = '　　　＞　';
     let stsym = indent === 0 ? fullst : emptyst;
 
     if( dynamicBasis === undefined ) {
@@ -177,7 +177,7 @@ let opts = {
 let state = getFirstState( );
 let st = getFirstState( ).id + 1;
 
-console.log('ＳＯＳさん＞　ごきげんよう御主人様、御命令をお願いいたしませんか。\n');
+console.log('ＳＯＳ＞　ごきげんよう御主人様、御命令をお願いいたしませんか。\n');
 let tmp = '';
 
 let rl = readline.createInterface({
@@ -195,8 +195,8 @@ rl.on( 'line', ( line: string ) => {
         let res = interpret( tmp, state, opts );
 
         if( res.evaluationErrored ) {
-            out += 'ＳＯＳさん＞　申し訳ございませんが、御問題がありました：\n'
-                +  '　　　　　＞　\x1b[31;40;1m' + res.error + '\x1b[39;49;0m\n';
+            out += 'ＳＯＳ＞　申し訳ございませんが、御問題がありました：\n'
+                +  '　　　＞　\x1b[31;40;1m' + res.error + '\x1b[39;49;0m\n';
             tmp = '';
         } else {
             out += printBasis( res.state,
@@ -209,7 +209,7 @@ rl.on( 'line', ( line: string ) => {
         if( res.warnings !== undefined ) {
             for( let i = 0; i < res.warnings.length; ++i ) {
                 if( res.warnings[ i ].position >= -1 ) {
-                    out += '気を付けてください：' + res.warnings[ i ].message;
+                    out += 'お気を付けてください：' + res.warnings[ i ].message;
                 } else {
                     out += '御通知があります：　' + res.warnings[ i ].message;
                 }
@@ -218,13 +218,13 @@ rl.on( 'line', ( line: string ) => {
         console.log( out );
     } catch (e) {
         if( !( e instanceof IncompleteError ) ) {
-            console.log( 'ＳＯＳさん＞　申し訳ございませんが、御問題がありました：\n'
-                + '　　　　　＞　\x1b[31;40;1m' + e + '\x1b[39;49;0m\n' );
+            console.log( 'ＳＯＳ＞　申し訳ございませんが、御問題がありました：\n'
+                + '　　　＞　\x1b[31;40;1m' + e + '\x1b[39;49;0m\n' );
             tmp = '';
         }
     }
     rl.prompt( );
 }).on('close', () => {
-    console.log( '\nＳＯＳさん＞　毎度どうもありがとうございます。お元気で御機嫌よう。' );
+    console.log( '\nＳＯＳ＞　毎度どうもありがとうございます。お元気で御機嫌よう。' );
     process.exit( 0 );
 });

@@ -369,6 +369,9 @@ export class Parser {
                 let newExp = this.parseAtomicExpression();
                 res = new FunctionApplication(curTok.position, res, newExp);
             } catch (e) {
+                if (e instanceof IncompleteError) {
+                    throw e;
+                }
                 this.position = oldPos;
                 break;
             }
