@@ -12,6 +12,9 @@
 # production
 /build
 
+# version file
+src/version.ts
+
 # misc
 .DS_Store
 .env
