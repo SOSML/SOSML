@@ -11,6 +11,9 @@
   "types": "build/main.d.ts",
   "license": "GPL-3.0",
   "scripts": {
+    "preversion": "jest",
+    "postversion": "git add -A && git push && git push --tags",
+    "version": "npm run dist",
     "citest": "jest --coverage --expand --verbose",
     "cilint": "tslint -c tslint.json 'src/**/*.ts'",
     "test": "jest --notify --watch",
