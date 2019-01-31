@@ -5,13 +5,12 @@ import { CharValue, Real, Integer, PredefinedFunction,  StringValue, Value, Reco
     ConstructedValue, ArrayValue } from './values';
 import { InternalInterpreterError, Warning } from './errors';
 import * as Interpreter from './main';
-import { COMMIT_HASH, BRANCH_NAME, BUILD_DATE, COMMIT_MESSAGE } from './version';
+import { COMMIT_HASH, BRANCH_NAME, BUILD_DATE, COMMIT_MESSAGE, VERSION } from './version';
 import { EvaluationStack, EvaluationParameters, EvaluationResult } from './evaluator';
 import * as Lexer from './lexer';
 import * as Parser from './parser';
 import { Declaration } from './declarations';
 import { ValueIdentifier, Record } from './expressions';
-
 
 let intType = new CustomType('int');
 let realType = new CustomType('real');
@@ -1219,6 +1218,7 @@ export let STDLIB: {
     'Version': {
         'native': undefined,
         'code': `structure Version = struct
+            val version     = "` + VERSION + `";
             val branch      = "` + BRANCH_NAME + `";
             val commit      = "` + COMMIT_HASH + `";
             val buildDate   = "` + BUILD_DATE + `";
