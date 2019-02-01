@@ -649,7 +649,7 @@ export class LocalDeclarationExpression extends Expression {
 
                 console.log(newName + ' > ' + newType);
                  */
-             nstate.setStaticValue(newName, newType, IdentifierStatus.VALUE_VARIABLE);
+                nstate.setStaticValue(newName, newType, IdentifierStatus.VALUE_VARIABLE);
             }
             nvbnd = nvbnd.set(key, val);
         });
@@ -676,7 +676,7 @@ export class LocalDeclarationExpression extends Expression {
         res[2].forEach((val: [Type, boolean], key: string) => {
             // if (key[1] !== '*' || key[2] !== '*') {
                 nvbnd2 = nvbnd2.set(key, val);
-            //} else {
+            // } else {
             // }
         });
             // console.log(res[0].getStaticChanges(state.id));
