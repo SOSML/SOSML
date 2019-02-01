@@ -233,7 +233,7 @@ export class Parser {
             ++this.position;
             let nextTok = this.currentToken();
 
-            if (this.options.allowSuccessorML && this.checkKeywordToken(nextTok, '[')) { // It's a _vector_
+            if (this.options.allowVector && this.checkKeywordToken(nextTok, '[')) { // It's a _vector_
                 ++this.position;
                 if (this.checkKeywordToken(this.currentToken(), ']')) {
                     ++this.position;
@@ -1130,7 +1130,7 @@ export class Parser {
             }
         }
 
-        if (this.options.allowSuccessorML && this.checkKeywordToken(curTok, '#')
+        if (this.options.allowVector && this.checkKeywordToken(curTok, '#')
             && this.checkKeywordToken(this.nextToken(), '[')) {
             ++this.position;
             ++this.position;
