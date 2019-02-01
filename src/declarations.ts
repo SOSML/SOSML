@@ -1118,10 +1118,10 @@ export class ValueBinding {
         let noBind = new Set<string>();
                 // tyVarBnd.forEach((val: [Type, boolean], key: string) => {
                 // noBind.add(key);
-                //val[0].getTypeVariables().forEach((dom: Type[], v: string) => {
+                // val[0].getTypeVariables().forEach((dom: Type[], v: string) => {
                 // noBind.add(v);
                 // });
-                //});
+                // });
 
         if (res === undefined) {
             throw new ElaborationError(this.position,
@@ -1178,7 +1178,7 @@ export class ValueBinding {
                     }
                     res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1], dm);
                     (<TypeVariableBind> res[0][i][1]).isFree =
-                        (<TypeVariableBind> res[0][i][1]).domain.length == 0 && (valuePoly || free.has(ntys[j].name));
+                        (<TypeVariableBind> res[0][i][1]).domain.length === 0 && (valuePoly || free.has(ntys[j].name));
                     hasFree = hasFree || (<TypeVariableBind> res[0][i][1]).isFree;
 
                     done.add(ntys[j].name);
@@ -1198,7 +1198,7 @@ export class ValueBinding {
             for (let j = ntys.length - 1; j >= 0; --j) {
                 res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1], ntys[j].domain);
                 (<TypeVariableBind> res[0][i][1]).isFree =
-                    (<TypeVariableBind> res[0][i][1]).domain.length == 0 && (valuePoly || free.has(ntys[j].name));
+                    (<TypeVariableBind> res[0][i][1]).domain.length === 0 && (valuePoly || free.has(ntys[j].name));
 
                 hasFree = hasFree || (<TypeVariableBind> res[0][i][1]).isFree;
             }

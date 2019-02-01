@@ -1378,7 +1378,7 @@ export class StructureSpecification extends Specification {
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
 
         let stbas = new StaticBasis({}, {}, {}, {}, {});
-        let warns: Warning[] = []
+        let warns: Warning[] = [];
         let tv = tyVarBnd;
         let nN = nextName;
 

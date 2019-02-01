@@ -23,10 +23,10 @@ export class TypeInformation {
     // Every constructor also appears in the value environment,
     // thus it suffices to record their names here.
     constructor(public type: Type, public constructors: string[],
-        public arity: number, public allowsEquality: boolean = true) { }
+                public arity: number, public allowsEquality: boolean = true) { }
 
     toString(): string {
-        return 'TypeInformation(' + this.type + ', ['+this.constructors + '], arity = ' + this.arity
+        return 'TypeInformation(' + this.type + ', [' + this.constructors + '], arity = ' + this.arity
         + ', allowsEquality = ' + this.allowsEquality + ')';
     }
 }
@@ -712,7 +712,7 @@ export class State {
     }
 
     setStaticType(name: string, type: Type, constructors: string[], arity: number,
-        allowsEquality: boolean, atId: number|undefined = undefined) {
+                  allowsEquality: boolean, atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
             this.staticBasis.setType(name, type, constructors, arity, allowsEquality);
         } else if (atId > this.id || this.parent === undefined) {
