@@ -28,6 +28,7 @@ export function interpret(nextInstruction: string,
                               'allowUnicodeInStrings': false,
                               'allowSuccessorML': false,
                               'disableElaboration': false,
+                              'allowVector': true,
                               'strictMode': true
                           }): { [name: string]: any } {
     let state = oldState.getNestedState();
