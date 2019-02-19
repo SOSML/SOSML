@@ -167,7 +167,8 @@ function printBinding( state: any, bnd: [any, any[] | undefined, any[] | undefin
 
 let opts = {
     'allowUnicodeInStrings': false,
-    'allowSuccessorML': false,
+    'allowSuccessorML': true,
+    'allowVector': true,
     'disableElaboration': false,
     'disableEvaluation': false,
     'allowLongFunctionNames': false,

@@ -1170,7 +1170,7 @@ export let STDLIB: {
             val length : 'a vector -> int
             val sub : 'a vector * int -> 'a
             val update : 'a vector * int * 'a -> 'a vector
-            (* val concat : 'a vector list -> 'a vector *)
+            val concat : 'a vector list -> 'a vector
             val appi : (int * 'a -> unit) -> 'a vector -> unit
             val app  : ('a -> unit) -> 'a vector -> unit
             val mapi : (int * 'a -> 'b) -> 'a vector -> 'b vector
@@ -1206,6 +1206,8 @@ export let STDLIB: {
                 end;
             fun foldl f init vec = foldli (fn (_, a, x) => f(a, x)) init vec;
             fun foldr f init vec = foldri (fn (_, a, x) => f(a, x)) init vec;
+
+            fun concat l = fromList (List.concat (List.map (foldr (fn (a, b) => (a::b)) []) l));
 
             fun appi f vec = List.app f (foldri (fn (i,a,l) => (i,a)::l) [] vec);
             fun app  f vec = List.app f (foldr (fn (a,l) => a::l) [] vec);
