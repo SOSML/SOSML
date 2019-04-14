@@ -615,8 +615,8 @@ function addEvalLib(state: State): State {
 
 
     // Evaluates a given program and returns the result
-    dres.setValue('evalExp', new PredefinedFunction('symbolic_eval', (val:Value,
-        params: EvaluationParameters) => {
+    dres.setValue('evalExp', new PredefinedFunction('symbolic_eval', (val: Value,
+                                                                      params: EvaluationParameters) => {
         if (val instanceof StringValue) {
             let str = (<StringValue> val).value;
 
@@ -1179,11 +1179,11 @@ export let STDLIB: {
             val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
             val foldl  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
             val foldr  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
-            (* val findi : (int * 'a -> bool) -> 'a vector -> (int * 'a) option *)
-            (* val find  : ('a -> bool) -> 'a vector -> 'a option *)
-            (* val exists : ('a -> bool) -> 'a vector -> bool *)
-            (* val all : ('a -> bool) -> 'a vector -> bool *)
-            (* val collate : ('a * 'a -> order) -> 'a vector * 'a vector -> order *)
+            val findi : (int * 'a -> bool) -> 'a vector -> (int * 'a) option 
+            val find  : ('a -> bool) -> 'a vector -> 'a option 
+            val exists : ('a -> bool) -> 'a vector -> bool
+            val all : ('a -> bool) -> 'a vector -> bool
+            val collate : ('a * 'a -> order) -> 'a vector * 'a vector -> order
         end = struct
             open Vector;
             fun tabulate (n, f) = fromList (List.tabulate (n, f));
@@ -1213,6 +1213,37 @@ export let STDLIB: {
             fun app  f vec = List.app f (foldr (fn (a,l) => a::l) [] vec);
             fun mapi f vec = fromList (List.map f (foldri (fn (i,a,l) => (i,a)::l) [] vec));
             fun map  f vec = fromList (List.map f (foldr (fn (a,l) => a::l) [] vec));
+
+            fun findi f vec = let
+                val len = length vec
+                fun loop index = 
+                    if index = ~1 then NONE
+                    else let
+                        val el = sub(vec, index) 
+                    in if f (index, el) then SOME (index, el) else loop (index-1) 
+                    end
+                in 
+                    loop (len -1)
+                end;
+            fun find f vec = case findi (fn (_, v) => f v) vec of NONE => NONE 
+                                                                 | SOME (_, v) => SOME v
+            fun exists p vec = case find p vec of NONE => false 
+                                                | SOME _ => true
+            
+            fun all p vec = foldl (fn (v, acc) => p v andalso acc) true vec
+            fun collate p (v1, v2) = let
+                val length1 = length v1
+                val length2 = length v2
+                fun loop index = 
+                    if index = length v1 andalso index = length v2 then EQUAL
+                    else if index = length v1 then LESS
+                    else if index = length v2 then GREATER
+                    else case p (sub (v1, index), sub (v2, index)) of
+                        EQUAL => loop (index + 1)
+                      | l => l
+                in loop 0
+                end
+            
 
         end; `,
         'requires': ['Option', 'List']
