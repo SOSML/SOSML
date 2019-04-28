@@ -1226,11 +1226,11 @@ export let STDLIB: {
                     loop (len -1)
                 end;
             fun find f vec = case findi (fn (_, v) => f v) vec of NONE => NONE 
-                                                                 | SOME (_, v) => SOME v
+                                                                 | SOME (_, v) => SOME v;
             fun exists p vec = case find p vec of NONE => false 
-                                                | SOME _ => true
+                                                | SOME _ => true;
             
-            fun all p vec = foldl (fn (v, acc) => p v andalso acc) true vec
+            fun all p vec = foldl (fn (v, acc) => p v andalso acc) true vec;
             fun collate p (v1, v2) = let
                 val length1 = length v1
                 val length2 = length v2
@@ -1242,9 +1242,7 @@ export let STDLIB: {
                         EQUAL => loop (index + 1)
                       | l => l
                 in loop 0
-                end
-            
-
+                end;
         end; `,
         'requires': ['Option', 'List']
     },
