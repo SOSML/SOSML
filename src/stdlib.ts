@@ -721,7 +721,11 @@ export let STDLIB: {
 
             (* fun ! (a : \'A ref): \'A = ! a;
             fun op := ((a, b) : (\'A ref * \'A)): unit = a := b;
-            fun ref (a : \'A): \'A ref = ref a; *)`,
+            fun ref (a : \'A): \'A ref = ref a; *)
+            
+            fun ignore a = ();
+            infix 0 before;
+            fun a before (b: unit) = a;`,
         'requires': undefined },
     'Array': {
         'native': addArrayLib,
@@ -1335,7 +1339,8 @@ export let STDLIB: {
                       | l => l
                 in loop 0
                 end;
-        end; `,
+        end;
+        val vector = Vector.fromList;`,
         'requires': ['Option', 'List']
     },
     'Version': {
