@@ -885,8 +885,24 @@ export let STDLIB: {
 
                 val ord = ord;
                 val chr = chr;
+                val maxOrd = 255;
+                val maxChar = chr maxOrd;
+                val minChar = chr 0;
+                
+                fun contains s = let
+                    val table = Array.array(maxOrd + 1, false)
+                    val l = explode s
+                    in 
+                        (List.app (fn x => Array.update(table, ord x, true)) l; fn c => Array.sub(table, ord c))
+                    end;
+                fun notContains s = let
+                    val table = Array.array(maxOrd + 1, false)
+                    val l = explode s
+                    in 
+                        (List.app (fn x => Array.update(table, ord x, true)) l; fn c => not (Array.sub(table, ord c)))
+                    end;
             end;`,
-        'requires': ['Int'] },
+        'requires': ['Int', 'Array', 'List'] },
     'Eval': {
         'native': addEvalLib,
         'code': undefined,
