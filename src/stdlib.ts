@@ -615,8 +615,8 @@ function addEvalLib(state: State): State {
 
 
     // Evaluates a given program and returns the result
-    dres.setValue('evalExp', new PredefinedFunction('symbolic_eval', (val:Value,
-        params: EvaluationParameters) => {
+    dres.setValue('evalExp', new PredefinedFunction('symbolic_eval', (val: Value,
+                                                                      params: EvaluationParameters) => {
         if (val instanceof StringValue) {
             let str = (<StringValue> val).value;
 
@@ -721,7 +721,11 @@ export let STDLIB: {
 
             (* fun ! (a : \'A ref): \'A = ! a;
             fun op := ((a, b) : (\'A ref * \'A)): unit = a := b;
-            fun ref (a : \'A): \'A ref = ref a; *)`,
+            fun ref (a : \'A): \'A ref = ref a; *)
+            
+            fun ignore a = ();
+            infix 0 before;
+            fun a before (b: unit) = a;`,
         'requires': undefined },
     'Array': {
         'native': addArrayLib,
@@ -736,26 +740,69 @@ export let STDLIB: {
             val sub : 'a array * int -> 'a
             val update : 'a array * int * 'a -> unit
             val vector : 'a array -> 'a vector
-            (* val copy    : {src : 'a array, dst : 'a array, di : int} -> unit *)
-            (* val copyVec : {src : 'a vector, dst : 'a array, di : int} -> unit *)
-            (* val appi : (int * 'a -> unit) -> 'a array -> unit *)
-            (* val app  : ('a -> unit) -> 'a array -> unit *)
-            (* val modifyi : (int * 'a -> 'a) -> 'a array -> unit *)
-            (* val modify  : ('a -> 'a) -> 'a array -> unit *)
+            val copy    : {src : 'a array, dst : 'a array, di : int} -> unit
+            val copyVec : {src : 'a vector, dst : 'a array, di : int} -> unit
+            val appi : (int * 'a -> unit) -> 'a array -> unit
+            val app  : ('a -> unit) -> 'a array -> unit
+            val modifyi : (int * 'a -> 'a) -> 'a array -> unit
+            val modify  : ('a -> 'a) -> 'a array -> unit
             val foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
             val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a array -> 'b
             val foldl  : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
             val foldr  : ('a * 'b -> 'b) -> 'b -> 'a array -> 'b
-            (* val findi : (int * 'a -> bool) -> 'a array -> (int * 'a) option *)
-            (* val find  : ('a -> bool) -> 'a array -> 'a option *)
-            (* val exists : ('a -> bool) -> 'a array -> bool *)
-            (* val all : ('a -> bool) -> 'a array -> bool *)
-            (* val collate : ('a * 'a -> order) -> 'a array * 'a array -> order *)
+            val findi : (int * 'a -> bool) -> 'a array -> (int * 'a) option
+            val find  : ('a -> bool) -> 'a array -> 'a option
+            val exists : ('a -> bool) -> 'a array -> bool
+            val all : ('a -> bool) -> 'a array -> bool
+            val collate : ('a * 'a -> order) -> 'a array * 'a array -> order
         end = struct
             open Array;
             fun tabulate (n, f) = fromList (List.tabulate (n, f));
 
             fun vector arr = Vector.tabulate (length arr, fn i => sub (arr, i));
+            
+            fun copy {src, dst, di} = if di < 0 orelse length dst < di + length src then raise Subscript 
+                else let
+                    val len = length src
+                    fun loop index = if index = len then ()
+                        else ( update(dst, index + di, sub(src, index)); loop (index + 1))
+                    in 
+                        loop 0
+                    end;
+            fun copyVec {src, dst, di} = if di < 0 orelse length dst < di + Vector.length src then raise Subscript 
+                else let
+                    val len = Vector.length src
+                    fun loop index = if index = len then ()
+                        else ( update(dst, index + di, Vector.sub(src, index)); loop (index + 1))
+                    in 
+                        loop 0
+                    end;
+            
+            fun appi p arr = let
+                val len = length arr
+                fun loop index = if index = len then ()
+                    else (p(index, sub(arr, index)); loop (index +1))
+                in 
+                    loop 0
+                end;
+            fun app p = appi (fn (_, v) => p v);
+            
+                        fun modifyi p arr = let
+                val len = length arr
+                fun loop index = if index = len then ()
+                    else ( update(arr, index, p(index, sub(arr, index))); loop (index +1))
+                in 
+                    loop 0
+                end;
+                
+            fun modifyi p arr = let
+                val len = length arr
+                fun loop index = if index = len then ()
+                    else ( update(arr, index, p(index, sub(arr, index))); loop (index +1))
+                in 
+                    loop 0
+                end; 
+            fun modify p = modifyi (fn (_, v) => p v);
 
             fun foldli f init arr = let
                 val len = length arr
@@ -775,6 +822,36 @@ export let STDLIB: {
                 end;
             fun foldl f init arr = foldli (fn (_, a, x) => f(a, x)) init arr;
             fun foldr f init arr = foldri (fn (_, a, x) => f(a, x)) init arr;
+            
+            fun findi f arr = let
+                val len = length arr
+                fun loop index = 
+                    if index = Array.length arr then NONE
+                    else let
+                        val el = sub(arr, index) 
+                    in if f (index, el) then SOME (index, el) else loop (index+1) 
+                    end
+                in 
+                    loop 0
+                end;
+            fun find f arr = case findi (fn (_, v) => f v) arr of NONE => NONE 
+                                                                | SOME (_, v) => SOME v;
+            fun exists p arr = case find p arr of NONE => false 
+                                                | SOME _ => true;
+            
+            fun all p = foldl (fn (v, acc) => p v andalso acc) true;
+            fun collate p (a1, a2) = let
+                val length1 = length a1
+                val length2 = length a2
+                fun loop index = 
+                    if index = length1 andalso index = length2 then EQUAL
+                    else if index = length1 then LESS
+                    else if index = length2 then GREATER
+                    else case p (sub (a1, index), sub (a2, index)) of
+                        EQUAL => loop (index + 1)
+                      | l => l
+                in loop 0
+                end;
 
         end;`,
         'requires': ['Option', 'List', 'Vector']
@@ -812,8 +889,27 @@ export let STDLIB: {
 
                 val ord = ord;
                 val chr = chr;
+                val maxOrd = 255;
+                val maxChar = chr maxOrd;
+                val minChar = chr 0;
+                
+                fun succ c = if c = maxChar then raise Chr else chr(ord c + 1)
+                fun pred c = if c = minChar then raise Chr else chr(ord c - 1)
+                
+                fun contains s = let
+                    val table = Array.array(maxOrd + 1, false)
+                    val l = explode s
+                    in 
+                        (List.app (fn x => Array.update(table, ord x, true)) l; fn c => Array.sub(table, ord c))
+                    end;
+                fun notContains s = let
+                    val table = Array.array(maxOrd + 1, false)
+                    val l = explode s
+                    in 
+                        (List.app (fn x => Array.update(table, ord x, true)) l; fn c => not (Array.sub(table, ord c)))
+                    end;
             end;`,
-        'requires': ['Int'] },
+        'requires': ['Int', 'Array', 'List'] },
     'Eval': {
         'native': addEvalLib,
         'code': undefined,
@@ -924,8 +1020,8 @@ export let STDLIB: {
 
                 fun revAppend (l1, l2) = (rev l1) @ l2;
 
-                fun app f [] = ()
-                  | app f (x::xs) = (f x; app f xs);
+                fun app (f: 'a -> unit) [] = ()
+                  | app (f: 'a -> unit) (x::xs) = (f x; app f xs);
 
                 fun mapPartial f l
                     = ((map valOf) o (filter isSome) o (map f)) l;
@@ -1054,7 +1150,7 @@ export let STDLIB: {
                       NONE => NONE
                     | SOME v => SOME (f v);
 
-                fun compose (f, g) a = case g a of
+                fun composePartial (f, g) a = case g a of
                       NONE => NONE
                     | SOME v => (f v);
             end;
@@ -1179,11 +1275,11 @@ export let STDLIB: {
             val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
             val foldl  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
             val foldr  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
-            (* val findi : (int * 'a -> bool) -> 'a vector -> (int * 'a) option *)
-            (* val find  : ('a -> bool) -> 'a vector -> 'a option *)
-            (* val exists : ('a -> bool) -> 'a vector -> bool *)
-            (* val all : ('a -> bool) -> 'a vector -> bool *)
-            (* val collate : ('a * 'a -> order) -> 'a vector * 'a vector -> order *)
+            val findi : (int * 'a -> bool) -> 'a vector -> (int * 'a) option 
+            val find  : ('a -> bool) -> 'a vector -> 'a option 
+            val exists : ('a -> bool) -> 'a vector -> bool
+            val all : ('a -> bool) -> 'a vector -> bool
+            val collate : ('a * 'a -> order) -> 'a vector * 'a vector -> order
         end = struct
             open Vector;
             fun tabulate (n, f) = fromList (List.tabulate (n, f));
@@ -1214,7 +1310,37 @@ export let STDLIB: {
             fun mapi f vec = fromList (List.map f (foldri (fn (i,a,l) => (i,a)::l) [] vec));
             fun map  f vec = fromList (List.map f (foldr (fn (a,l) => a::l) [] vec));
 
-        end; `,
+            fun findi f vec = let
+                val len = length vec
+                fun loop index = 
+                    if index = Vector.length vec then NONE
+                    else let
+                        val el = sub(vec, index) 
+                    in if f (index, el) then SOME (index, el) else loop (index+1) 
+                    end
+                in 
+                    loop 0
+                end;
+            fun find f vec = case findi (fn (_, v) => f v) vec of NONE => NONE 
+                                                                 | SOME (_, v) => SOME v;
+            fun exists p vec = case find p vec of NONE => false 
+                                                | SOME _ => true;
+            
+            fun all p vec = foldl (fn (v, acc) => p v andalso acc) true vec;
+            fun collate p (v1, v2) = let
+                val length1 = length v1
+                val length2 = length v2
+                fun loop index = 
+                    if index = length1 andalso index = length2 then EQUAL
+                    else if index = length1 then LESS
+                    else if index = length2 then GREATER
+                    else case p (sub (v1, index), sub (v2, index)) of
+                        EQUAL => loop (index + 1)
+                      | l => l
+                in loop 0
+                end;
+        end;
+        val vector = Vector.fromList;`,
         'requires': ['Option', 'List']
     },
     'Version': {
