@@ -889,6 +889,9 @@ export let STDLIB: {
                 val maxChar = chr maxOrd;
                 val minChar = chr 0;
                 
+                fun succ c = if c = maxChar then raise Chr else chr(ord c + 1)
+                fun pred c = if c = minChar then raise Chr else chr(ord c - 1)
+                
                 fun contains s = let
                     val table = Array.array(maxOrd + 1, false)
                     val l = explode s
@@ -1013,8 +1016,8 @@ export let STDLIB: {
 
                 fun revAppend (l1, l2) = (rev l1) @ l2;
 
-                fun app f [] = ()
-                  | app f (x::xs) = (f x; app f xs);
+                fun app (f: 'a -> unit) [] = ()
+                  | app (f: 'a -> unit) (x::xs) = (f x; app f xs);
 
                 fun mapPartial f l
                     = ((map valOf) o (filter isSome) o (map f)) l;
