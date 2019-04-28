@@ -1127,7 +1127,7 @@ export let STDLIB: {
                       NONE => NONE
                     | SOME v => SOME (f v);
 
-                fun compose (f, g) a = case g a of
+                fun composePartial (f, g) a = case g a of
                       NONE => NONE
                     | SOME v => (f v);
             end;
