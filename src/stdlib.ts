@@ -1217,13 +1217,13 @@ export let STDLIB: {
             fun findi f vec = let
                 val len = length vec
                 fun loop index = 
-                    if index = ~1 then NONE
+                    if index = Vector.length vec then NONE
                     else let
                         val el = sub(vec, index) 
-                    in if f (index, el) then SOME (index, el) else loop (index-1) 
+                    in if f (index, el) then SOME (index, el) else loop (index+1) 
                     end
                 in 
-                    loop (len -1)
+                    loop 0
                 end;
             fun find f vec = case findi (fn (_, v) => f v) vec of NONE => NONE 
                                                                  | SOME (_, v) => SOME v;
