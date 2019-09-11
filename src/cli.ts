@@ -1,21 +1,26 @@
+// A proof-of-concept CLI for SOSML
+// Build with `npm run cli`
+// Run with `node sosml_cli.js`
+
 import { getFirstState, interpret } from './main';
 import { IncompleteError } from './errors';
-import { CustomType, FunctionType } from './types';
-import { ValueConstructor, ExceptionConstructor } from './values';
+import { Type, CustomType, FunctionType } from './types';
+import { Value, ValueConstructor, ExceptionConstructor } from './values';
+import { State, DynamicBasis, StaticBasis, IdentifierStatus } from './state';
 
 import * as readline from 'readline';
 
-function printBasis( state: any, dynamicBasis: any, staticBasis: any, indent: number = 0 ): string {
+function printBasis( state: State, dynamicBasis: DynamicBasis | undefined, staticBasis: StaticBasis | undefined, indent: number = 0 ): string {
     let istr = '';
     for( let i = 0; i < indent; ++i ) {
         istr += '  ';
     }
     let out = '';
-    let fullst = 'ＳＯＳ＞　';
-    let emptyst = '　　　＞　';
+    let fullst = 'ＳＯＳ＞　　';
+    let emptyst = '　　　＞　　';
     let stsym = indent === 0 ? fullst : emptyst;
 
-    if( dynamicBasis === undefined ) {
+    if( dynamicBasis === undefined && staticBasis !== undefined ) {
         for( let i in staticBasis.valueEnvironment ) {
             if( staticBasis.valueEnvironment.hasOwnProperty( i ) ) {
                 out += stsym + ' ' + istr + printBinding( state,
@@ -26,11 +31,12 @@ function printBasis( state: any, dynamicBasis: any, staticBasis: any, indent: nu
 
         for( let i in staticBasis.typeEnvironment ) {
             if( staticBasis.typeEnvironment.hasOwnProperty( i ) ) {
-                if( staticBasis.typeEnvironment.hasOwnProperty( i ) ) {
-                    if( staticBasis.getType( i ).type instanceof CustomType ) {
-                        out += stsym + ' ' + istr + 'datatype \x1b[1m' + staticBasis.getType(i).type
+                let sbtp = staticBasis.getType( i );
+                if( sbtp !== undefined ) {
+                    if( sbtp.type instanceof CustomType ) {
+                        out += stsym + ' ' + istr + 'datatype \x1b[1m' + sbtp.type
                             + '\x1b[0m : {\n'
-                        for( let j of staticBasis.getType(i).constructors ) {
+                        for( let j of sbtp.constructors ) {
                             out += emptyst + '   ' + istr + printBinding( state,
                                 [ j, undefined, staticBasis.getValue( j ) ] ) + '\n';
                         }
@@ -42,11 +48,12 @@ function printBasis( state: any, dynamicBasis: any, staticBasis: any, indent: nu
 
         for( let i in staticBasis.typeEnvironment ) {
             if( staticBasis.typeEnvironment.hasOwnProperty( i ) ) {
-                if( staticBasis.typeEnvironment.hasOwnProperty( i ) ) {
-                    if( staticBasis.getType(i).type instanceof FunctionType ) {
+                let sbtp = staticBasis.getType( i );
+                if( sbtp !== undefined ) {
+                    if( sbtp.type instanceof FunctionType ) {
                         out += stsym + ' ' + istr + 'type \x1b[1m'
-                            + staticBasis.getType(i).type.parameterType + ' = '
-                            + staticBasis.getType(i).type.returnType + '\x1b[0m;\n';
+                            + sbtp.type.parameterType + ' = '
+                            + sbtp.type.returnType + '\x1b[0m;\n';
                     }
                 }
             }
@@ -66,7 +73,7 @@ function printBasis( state: any, dynamicBasis: any, staticBasis: any, indent: nu
             }
         }
 
-    } else {
+    } else if ( staticBasis !== undefined && dynamicBasis !== undefined ) {
         for( let i in dynamicBasis.valueEnvironment ) {
             if( dynamicBasis.valueEnvironment.hasOwnProperty( i ) ) {
                 if( staticBasis ) {
@@ -83,10 +90,11 @@ function printBasis( state: any, dynamicBasis: any, staticBasis: any, indent: nu
         for( let i in dynamicBasis.typeEnvironment ) {
             if( dynamicBasis.typeEnvironment.hasOwnProperty( i ) ) {
                 if( staticBasis.typeEnvironment.hasOwnProperty( i ) ) {
-                    if( staticBasis.getType( i ).type instanceof CustomType ) {
-                        out += stsym + ' ' + istr + 'datatype \x1b[1m' + staticBasis.getType(i).type
+                    let sbtp = staticBasis.getType( i );
+                    if( sbtp !== undefined && sbtp.type instanceof CustomType ) {
+                        out += stsym + ' ' + istr + 'datatype \x1b[1m' + sbtp.type
                             + '\x1b[0m = {\n'
-                        for( let j of staticBasis.getType(i).constructors ) {
+                        for( let j of sbtp.constructors ) {
                             out += emptyst + '   ' + istr + printBinding( state,
                                 [ j, dynamicBasis.valueEnvironment[ j ],
                                     staticBasis.getValue( j ) ] ) + '\n';
@@ -100,10 +108,11 @@ function printBasis( state: any, dynamicBasis: any, staticBasis: any, indent: nu
         for( let i in dynamicBasis.typeEnvironment ) {
             if( dynamicBasis.typeEnvironment.hasOwnProperty( i ) ) {
                 if( staticBasis.typeEnvironment.hasOwnProperty( i ) ) {
-                    if( staticBasis.getType(i).type instanceof FunctionType ) {
+                    let sbtp = staticBasis.getType( i );
+                    if( sbtp !== undefined && sbtp.type instanceof FunctionType ) {
                         out += stsym + ' ' + istr + 'type \x1b[1m'
-                            + staticBasis.getType(i).type.parameterType + ' = '
-                            + staticBasis.getType(i).type.returnType + '\x1b[0m;\n';
+                            + sbtp.type.parameterType + ' = '
+                            + sbtp.type.returnType + '\x1b[0m;\n';
                     }
                 }
             }
@@ -126,16 +135,18 @@ function printBasis( state: any, dynamicBasis: any, staticBasis: any, indent: nu
     return out;
 }
 
-function printBinding( state: any, bnd: [any, any[] | undefined, any[] | undefined], acon: boolean =  true): string {
+function printBinding( state: State, bnd: [string, [Value, IdentifierStatus] | undefined, [Type, IdentifierStatus] | undefined], acon: boolean =  true): string {
     let res = '';
 
-    let value: any = bnd[1];
-    if (value) {
-        value = value[0];
+    let value: Value | undefined;
+    let bnd1 = bnd[1];
+    if ( bnd1 !== undefined ) {
+        value = bnd1[0];
     }
-    let type: any = bnd[2];
-    if (type) {
-        type = type[0];
+    let type: Type | undefined;
+    let bnd2 = bnd[2];
+    if ( bnd2 !== undefined ) {
+        type = bnd2[0];
     }
 
     if ( ( value instanceof ValueConstructor || type instanceof ValueConstructor ) && acon ) {
@@ -157,7 +168,7 @@ function printBinding( state: any, bnd: [any, any[] | undefined, any[] | undefin
     }
 
     if (type) {
-        return res + ': \x1b[3m' + type.toString(state) + '\x1b[0m;';
+        return res + ': \x1b[3m' + type.toString() + '\x1b[0m;';
     } else {
         return res + ': \x1b[3mundefined\x1b[0m;';
     }
@@ -177,13 +188,13 @@ let opts = {
 let state = getFirstState( );
 let st = getFirstState( ).id + 1;
 
-console.log('ＳＯＳ＞　ごきげんよう御主人様、御命令をお願いいたしませんか。\n');
+console.log('ＳＯＳ＞　　ごきげんよう御主人様、御命令をお願いいたしませんか。\n');
 let tmp = '';
 
 let rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
-    prompt: '御主人様＞　　'
+    prompt: '御主人様＞　'
 });
 rl.prompt( );
 
@@ -195,8 +206,8 @@ rl.on( 'line', ( line: string ) => {
         let res = interpret( tmp, state, opts );
 
         if( res.evaluationErrored ) {
-            out += 'ＳＯＳ＞　申し訳ございませんが、御問題がありました：\n'
-                +  '　　　＞　\x1b[31;40;1m' + res.error + '\x1b[39;49;0m\n';
+            out += 'ＳＯＳ＞　　申し訳ございませんが、御問題がありました：\n'
+                +  '　　　＞　　\x1b[31;40;1m' + res.error + '\x1b[39;49;0m\n';
             tmp = '';
         } else {
             out += printBasis( res.state,
@@ -218,13 +229,13 @@ rl.on( 'line', ( line: string ) => {
         console.log( out );
     } catch (e) {
         if( !( e instanceof IncompleteError ) ) {
-            console.log( 'ＳＯＳ＞　申し訳ございませんが、御問題がありました：\n'
-                + '　　　＞　\x1b[31;40;1m' + e + '\x1b[39;49;0m\n' );
+            console.log( 'ＳＯＳ＞　　申し訳ございませんが、御問題がありました：\n'
+                + '　　　＞　　\x1b[31;40;1m' + e + '\x1b[39;49;0m\n' );
             tmp = '';
         }
     }
     rl.prompt( );
 }).on('close', () => {
-    console.log( '\nＳＯＳ＞　毎度どうもありがとうございます。お元気で御機嫌よう。' );
+    console.log( '\nＳＯＳ＞　　毎度どうもありがとうございます。お元気で御機嫌よう。' );
     process.exit( 0 );
 });
