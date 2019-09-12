@@ -2,7 +2,7 @@ name: Run tests
 on: [push]
 jobs:
     build:
-        name: Build
+        name: Test
         runs-on: ubuntu-18.04
         steps:
             - uses: actions/checkout@master
@@ -12,4 +12,5 @@ jobs:
               with:
                   node-version: 10.x
             - run: npm install
+            - run: npm run dist
             - run: npm run citest
