@@ -1,7 +1,7 @@
 # SOSML - Online SML
 
 SOSML is an online interpreter for the functional programming language Standard ML, written in TypeScript.
-It is to be used as a learning tool in a freshman class at Saarland University; you can try it out at https://sosml.github.io.
+It is to be used as a learning tool in a freshman class at Saarland University; you can try it out at https://sosml.org.
 
 ## Features
 Correctly lexing, parsing, elaborating and interpreting any SML core language program, i.e. a program that may contain the following constructs:
@@ -35,7 +35,7 @@ Correctly lexing, parsing, elaborating and interpreting any SML core language pr
   * [x] `print`
   * [x] `ref`, `!`, and `:=`
   * [x] structures
-  * [x] signatures 
+  * [x] signatures
   * [x] functors
 * Supported standard library constructs (Note that all available libraries are loaded per default, currently SOSML has not implemented any user-space loading of modules.)
   * Math library
@@ -76,9 +76,9 @@ This runs all tests located in the `test` directory.
 
 ## Contributing
 
-We welcome you to open an Issue for any error you may find, and we will try to fix it ASAP. 
-Further, if you want additional parts of the Standard Library or other features in general implemented, 
-feel free to open a new Issue. 
+We welcome you to open an Issue for any error you may find, and we will try to fix it ASAP.
+Further, if you want additional parts of the Standard Library or other features in general implemented,
+feel free to open a new Issue.
 
-If you want to contribute via writing code, you may check the Issues page for any unresolved problems 
+If you want to contribute via writing code, you may check the Issues page for any unresolved problems
 or unimplemented features and then submit a pull request after solving that problem or implementing that feature.
