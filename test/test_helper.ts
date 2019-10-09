@@ -96,5 +96,4 @@ export function init(): void {
     });
 }
 
-
-it();
+test.skip('skip', () => {})
