@@ -207,7 +207,7 @@ rl.on( 'line', ( line: string ) => {
         let res = interpret( tmp, state, opts );
 
         if( res.evaluationErrored ) {
-            out += 'ＳＯＳ＞　　申し訳ございませんが、御問題がありました：\n'
+            out += 'ＳＯＳ＞　　申し訳ございませんが、御問題がございました：\n'
                 +  '　　　＞　　\x1b[31;40;1m' + res.error + '\x1b[39;49;0m\n';
             tmp = '';
         } else {
@@ -221,16 +221,16 @@ rl.on( 'line', ( line: string ) => {
         if( res.warnings !== undefined ) {
             for( let i = 0; i < res.warnings.length; ++i ) {
                 if( res.warnings[ i ].position >= -1 ) {
-                    out += 'お気を付けてください：' + res.warnings[ i ].message;
+                    out += 'お気を付けてくださいませ：' + res.warnings[ i ].message;
                 } else {
-                    out += '御通知があります：　' + res.warnings[ i ].message;
+                    out += '御通知がございます：　' + res.warnings[ i ].message;
                 }
             }
         }
         console.log( out );
     } catch (e) {
         if( !( e instanceof IncompleteError ) ) {
-            console.log( 'ＳＯＳ＞　　申し訳ございませんが、御問題がありました：\n'
+            console.log( 'ＳＯＳ＞　　申し訳ございませんが、御問題がごさいました：\n'
                 + '　　　＞　　\x1b[31;40;1m' + e + '\x1b[39;49;0m\n' );
             tmp = '';
         }

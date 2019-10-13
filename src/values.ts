@@ -17,6 +17,8 @@ export class PrintCounter {
 }
 
 export abstract class Value {
+    abstract typeName(): string;
+
     abstract pcToString(state: State|undefined|undefined, pc: PrintCounter): string;
     toString(state: State|undefined|undefined, length: number = 120): string {
         return this.pcToString(state, new PrintCounter(length));
@@ -34,6 +36,10 @@ export class ReferenceValue extends Value {
 
     equals(other: ReferenceValue) {
         return this.address === other.address;
+    }
+
+    typeName(): string {
+        return 'ReferenceValue';
     }
 
     pcToString(state: State|undefined, pc: PrintCounter) {
@@ -70,6 +76,10 @@ export class VectorValue extends Value {
         return true;
     }
 
+    typeName(): string {
+        return 'VectorValue';
+    }
+
     pcToString(state: State|undefined, pc: PrintCounter) {
         let res = '#[';
         pc.charactersLeft -= 3;
@@ -103,6 +113,10 @@ export class ArrayValue extends Value {
 
     equals(other: ArrayValue) {
         return this.address === other.address;
+    }
+
+    typeName(): string {
+        return 'ArrayValue';
     }
 
     pcToString(state: State|undefined, pc: PrintCounter) {
@@ -151,6 +165,10 @@ export class BoolValue extends Value {
         return this.value === other.value;
     }
 
+    typeName(): string {
+        return 'BoolValue';
+    }
+
     pcToString(state: State|undefined, pc: PrintCounter) {
         if (this.value) {
             pc.charactersLeft -= 4;
@@ -165,6 +183,10 @@ export class BoolValue extends Value {
 export class CharValue extends Value {
     constructor(public value: char) {
         super();
+    }
+
+    typeName(): string {
+        return 'CharValue';
     }
 
     pcToString(state: State|undefined, pc: PrintCounter): string {
@@ -219,6 +241,10 @@ export class StringValue extends Value {
 
     constructor(public value: string) {
         super();
+    }
+
+    typeName(): string {
+        return 'StringValue';
     }
 
     pcToString(state: State|undefined, pc: PrintCounter): string {
@@ -291,6 +317,10 @@ export class Word extends Value {
         super();
     }
 
+    typeName(): string {
+        return 'Word';
+    }
+
     pcToString(state: State|undefined, pc: PrintCounter): string {
         let ret = '' + this.value;
         pc.charactersLeft -= ret.length;
@@ -325,6 +355,10 @@ export class Word extends Value {
 export class Integer extends Value {
     constructor(public value: int) {
         super();
+    }
+
+    typeName(): string {
+        return 'Integer';
     }
 
     pcToString(state: State|undefined, pc: PrintCounter): string {
@@ -365,6 +399,10 @@ export class Integer extends Value {
 export class Real extends Value {
     constructor(public value: number) {
         super();
+    }
+
+    typeName(): string {
+        return 'Real';
     }
 
     pcToString(state: State|undefined, pc: PrintCounter): string {
@@ -422,6 +460,10 @@ export class Real extends Value {
 export class RecordValue extends Value {
     constructor(public entries: Map<string, Value> = new Map<string, Value>()) {
         super();
+    }
+
+    typeName(): string {
+        return 'RecordValue';
     }
 
     pcToString(state: State|undefined, pc: PrintCounter): string {
@@ -543,6 +585,10 @@ export class FunctionValue extends Value {
         super();
     }
 
+    typeName(): string {
+        return 'FunctionValue';
+    }
+
     pcToString(state: State|undefined, pc: PrintCounter): string {
         pc.charactersLeft -= 2;
         return 'fn';
@@ -583,6 +629,10 @@ export class ConstructedValue extends Value {
                 public argument: Value|undefined = undefined,
                 public id: number = 0) {
         super();
+    }
+
+    typeName(): string {
+        return 'ConstructedValue';
     }
 
     pcToString(state: State|undefined, pc: PrintCounter): string {
@@ -733,6 +783,10 @@ export class ExceptionValue extends Value {
         super();
     }
 
+    typeName(): string {
+        return 'ExceptionValue';
+    }
+
     pcToString(state: State|undefined, pc: PrintCounter): string {
         let result: string = this.constructorName;
         pc.charactersLeft -= this.constructorName.length + 1;
@@ -783,6 +837,10 @@ export class PredefinedFunction extends Value {
         super();
     }
 
+    typeName(): string {
+        return 'PredefinedFunction';
+    }
+
     pcToString(state: State|undefined, pc: PrintCounter): string {
         pc.charactersLeft -= 2;
         return 'fn';
@@ -800,6 +858,10 @@ export class ValueConstructor extends Value {
     constructor(public constructorName: string, public numArgs: number = 0,
                 public id: number = 0) {
         super();
+    }
+
+    typeName(): string {
+        return 'ValueConstructor';
     }
 
     equals(other: Value): boolean {
@@ -830,6 +892,10 @@ export class ExceptionConstructor extends Value {
     constructor(public exceptionName: string, public numArgs: number = 0,
                 public id: number = 0, public evalId: number = 0) {
         super();
+    }
+
+    typeName(): string {
+        return 'ExceptionConstructor';
     }
 
     equals(other: Value): boolean {

@@ -6,6 +6,8 @@ export abstract class Type {
     abstract toString(): string;
     abstract equals(other: any): boolean;
 
+    abstract typeName(): string;
+
     // Constructs types with type variables instantiated as much as possible
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
         throw new ElaborationError(-1,
@@ -143,6 +145,9 @@ export class AnyType extends Type {
         return true;
     }
 
+    typeName(): string {
+        return 'AnyType';
+    }
 
     toString(): string {
         return 'any';
@@ -238,6 +243,10 @@ export class TypeVariableBind extends Type {
             this.type.instantiate(state, tyVarBnd), this.domain);
         res.isFree = this.isFree;
         return res;
+    }
+
+    typeName(): string {
+        return 'TypeVariableBind';
     }
 
     toString(): string {
@@ -399,6 +408,10 @@ export class TypeVariable extends Type {
         let res = new TypeVariable(this.name, this.position, dom);
         res.isFree = this.isFree;
         return res;
+    }
+
+    typeName(): string {
+        return 'TypeVariable';
     }
 
     toString(): string {
@@ -757,6 +770,10 @@ export class RecordType extends Type {
         return res;
     }
 
+    typeName(): string {
+        return 'RecordType';
+    }
+
     toString(): string {
         let isTuple = this.elements.size !== 1;
         for (let i = 1; i <= this.elements.size; ++i) {
@@ -931,6 +948,10 @@ export class FunctionType extends Type {
 
     admitsEquality(state: State): boolean {
         return false;
+    }
+
+    typeName(): string {
+        return 'FunctionType';
     }
 
     toString(): string {
@@ -1260,6 +1281,10 @@ export class CustomType extends Type {
         return tp.allowsEquality;
     }
 
+    typeName(): string {
+        return 'CustomType';
+    }
+
     toString(): string {
         let result: string = '';
         if (this.typeArguments.length > 1
@@ -1323,6 +1348,10 @@ export class CustomType extends Type {
 export class TupleType extends Type {
     constructor(public elements: Type[], public position: number = 0) {
         super();
+    }
+
+    typeName(): string {
+        return 'TupleType';
     }
 
     toString(): string {
