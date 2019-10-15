@@ -1677,7 +1677,7 @@ export class Parser {
                         let right = this.parseAtomicPattern();
                         args.push(new Tuple(-1, [left, right]));
                     } catch (f) {
-                        console.log(f);
+                        // console.log(f);
                         // It wasn't infix at all, but simply wrong.
                         throw e;
                     }
