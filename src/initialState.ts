@@ -160,7 +160,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "div" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called "div" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
             'mod':      [new PredefinedFunction('mod', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
@@ -180,7 +180,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "mod" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called "mod" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
             '*':        [new PredefinedFunction('*', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
@@ -208,7 +208,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "*" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called "*" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
             '/':        [new PredefinedFunction('/', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
@@ -223,7 +223,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "/" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called "/" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
             '+':        [new PredefinedFunction('+', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
@@ -251,7 +251,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "+" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called "+" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
             '-':        [new PredefinedFunction('-', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
@@ -279,7 +279,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "-" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called "-" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
 
             '<':        [new PredefinedFunction('<', (val: Value, params: EvaluationParameters) => {
@@ -302,7 +302,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "<" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called "<" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
             '>':        [new PredefinedFunction('<', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
@@ -324,7 +324,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called ">" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called ">" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
             '<=':       [new PredefinedFunction('<', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
@@ -347,7 +347,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "<=" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called "<=" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
             '>=':       [new PredefinedFunction('<', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
@@ -368,7 +368,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called ">=" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called ">=" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
             '=':        [new PredefinedFunction('=', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
@@ -378,7 +378,7 @@ let initialState: State = new State(
                     return [new BoolValue(val1.equals(val2)), false, []];
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "=" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called "=" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
             '<>':       [new PredefinedFunction('=', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof RecordValue) {
@@ -388,7 +388,7 @@ let initialState: State = new State(
                     return [new BoolValue(!val1.equals(val2)), false, []];
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "<>" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called "<>" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
 
             'true':     [new BoolValue(true), IdentifierStatus.VALUE_CONSTRUCTOR],
@@ -409,21 +409,21 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "^" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called "^" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
             'explode':  [new PredefinedFunction('explode', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof StringValue) {
                     return [(<StringValue> val).explode(), false, []];
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "explode" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called "explode" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
             'implode':  [new PredefinedFunction('implode', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof ConstructedValue) {
                     return [StringValue.implode(val), false, []];
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "implode" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called "implode" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
             '~':        [new PredefinedFunction('~', (val: Value, params: EvaluationParameters) => {
                 if (val instanceof Integer) {
@@ -494,7 +494,7 @@ let initialState: State = new State(
                     }
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called ":=" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called ":=" on value of the wrong type (' + val.typeName() + ').');
 
             }), IdentifierStatus.VALUE_VARIABLE],
             'ref':            [new PredefinedFunction('ref', (val: Value, params: EvaluationParameters) => {
@@ -510,7 +510,7 @@ let initialState: State = new State(
                     return [<Value> cell, false, []];
                 }
                 throw new InternalInterpreterError(-1,
-                    'Called "!" on value of the wrong type (' + val.constructor.name + ').');
+                    'Called "!" on value of the wrong type (' + val.typeName() + ').');
             }), IdentifierStatus.VALUE_VARIABLE],
         },
         {},

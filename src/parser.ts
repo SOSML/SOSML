@@ -47,7 +47,7 @@ export class Parser {
     assertKeywordToken(tok: Token, text: string | undefined = undefined) {
         if (!(tok instanceof KeywordToken)) {
             throw new ParserError('Expected a reserved word, got "' + tok.getText()
-                + '" (' + tok.constructor.name + ').' , tok.position);
+                + '" (' + tok.typeName() + ').' , tok.position);
         }
         if (text !== undefined && tok.text !== text) {
             throw new ParserError('Expected "' + text + '" but got "' + tok.text + '".', tok.position);
@@ -57,21 +57,21 @@ export class Parser {
         if (!tok.isVid()) {
             throw new ParserError('Expected an identifier, got \"'
                 + tok.getText() + '\" ('
-                + tok.constructor.name + ').', tok.position);
+                + tok.typeName() + ').', tok.position);
         }
     }
     assertIdentifierToken(tok: Token) {
         if (!(tok instanceof IdentifierToken)) {
             throw new ParserError('Expected an identifier, got \"'
                 + tok.getText() + '\" ('
-                + tok.constructor.name + ').', tok.position);
+                + tok.typeName() + ').', tok.position);
         }
     }
     assertVidOrLongToken(tok: Token) {
         if (!tok.isVid() && !(tok instanceof LongIdentifierToken)) {
             throw new ParserError('Expected an identifier, got \"'
                 + tok.getText() + '\" ('
-                + tok.constructor.name + ').', tok.position);
+                + tok.typeName() + ').', tok.position);
         }
     }
     assertIdentifierOrLongToken(tok: Token) {
@@ -79,14 +79,14 @@ export class Parser {
             && !(tok instanceof LongIdentifierToken)) {
             throw new ParserError('Expected an identifier, got \"'
                 + tok.getText() + '\" ('
-                + tok.constructor.name + ').', tok.position);
+                + tok.typeName() + ').', tok.position);
         }
     }
     assertRecordLabelToken(tok: Token) {
         if (!tok.isValidRecordLabel()) {
             throw new ParserError('Expected a record label \"'
                 + tok.getText() + '\" ('
-                + tok.constructor.name + ').', tok.position);
+                + tok.typeName() + ').', tok.position);
         }
     }
     checkVidOrLongToken(tok: Token) {

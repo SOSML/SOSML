@@ -649,7 +649,7 @@ export class State {
             }
         } else {
             throw new InternalInterpreterError(id.position,
-                'You gave me some "' + id.getText() + '" (' + id.constructor.name
+                'You gave me some "' + id.getText() + '" (' + id.typeName()
                 + ') but I only want (Long)IdentifierToken.');
         }
     }

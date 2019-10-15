@@ -705,8 +705,8 @@ export class RecordType extends Type {
 
         // Merging didn't work
         throw ['Cannot merge "' + this.instantiate(state, tyVarBnd).normalize()[0] + '" and "'
-            + other.instantiate(state, tyVarBnd).normalize()[0] + '".', this.constructor.name,
-            other.constructor.name];
+            + other.instantiate(state, tyVarBnd).normalize()[0] + '".', this.typeName(),
+            other.typeName()];
     }
 
     makeEqType(state: State, tyVarBnd: Map<string, [Type, boolean]>): [Type, Map<string, [Type, boolean]>] {
@@ -906,8 +906,8 @@ export class FunctionType extends Type {
 
         // Merging didn't work
         throw ['Cannot merge "' + this.instantiate(state, tyVarBnd).normalize()[0] + '" and "'
-            + other.instantiate(state, tyVarBnd).normalize()[0] + '".', this.constructor.name,
-            other.constructor.name];
+            + other.instantiate(state, tyVarBnd).normalize()[0] + '".', this.typeName(),
+            other.typeName()];
     }
 
     makeEqType(state: State, tyVarBnd: Map<string, [Type, boolean]>): [Type, Map<string, [Type, boolean]>] {
@@ -1164,8 +1164,8 @@ export class CustomType extends Type {
 
         // Merging didn't work
         throw ['Cannot merge "' + this.instantiate(state, tyVarBnd).normalize()[0] + '" and "'
-            + other.instantiate(state, tyVarBnd).normalize()[0] + '".', this.constructor.name,
-            other.constructor.name];
+            + other.instantiate(state, tyVarBnd).normalize()[0] + '".', this.typeName(),
+            other.typeName()];
     }
 
     makeEqType(state: State, tyVarBnd: Map<string, [Type, boolean]>): [Type, Map<string, [Type, boolean]>] {

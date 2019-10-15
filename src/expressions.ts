@@ -417,7 +417,7 @@ export class Record extends Expression implements Pattern {
 
         if (!(t instanceof RecordType)) {
             throw new ElaborationError(this.position,
-                'Expected pattern of a record type, got "' + t.constructor.name + '".');
+                'Expected pattern of a record type, got "' + t.typeName() + '".');
         }
         if (this.complete && this.entries.length !== (<RecordType> t).elements.size) {
             throw new ElaborationError(this.position,
@@ -948,7 +948,7 @@ export class FunctionApplication extends Expression implements Pattern {
             return undefined;
         }
         throw new EvaluationError(this.position, 'Help me, I\'m broken. ('
-            + v.constructor.name + ').' );
+            + v.typeName() + ').' );
     }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
@@ -1131,7 +1131,7 @@ export class FunctionApplication extends Expression implements Pattern {
                 };
             }
             throw new EvaluationError(this.position, 'Cannot evaluate the function "'
-                + this.func + '" (' + funcVal[0].constructor.name + ').');
+                + this.func + '" (' + funcVal[0].typeName() + ').');
         }
         // brace so linter does not complain about shadowed names
         {
@@ -1339,7 +1339,7 @@ export class RaiseException extends Expression {
         }
         if (!(res.value instanceof ExceptionValue)) {
             throw new EvaluationError(this.position,
-                'Cannot "raise" value of type "' + (<Value> res.value).constructor.name
+                'Cannot "raise" value of type "' + (<Value> res.value).typeName()
                 + '" (type must be "exn").');
         }
         return {
