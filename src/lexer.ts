@@ -346,12 +346,9 @@ class Lexer {
             this.position += 3;
             return new KeywordToken('...', this.tokenStart);
         } else {
-            if (firstChar.charCodeAt(0) < 32) {
-                throw new LexerError(this.position,
-                    'Invalid character <' + firstChar.charCodeAt(0) + '>.');
-            } else {
-                throw new LexerError(this.position, 'Invalid token "' + firstChar + '".');
-            }
+            throw new LexerError(this.position,
+                                 'Invalid token "' + firstChar + '" (\\u'
+                                 + firstChar.charCodeAt(0).toString(16).toUpperCase() + ').');
         }
 
         do {
