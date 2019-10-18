@@ -55,6 +55,7 @@ export interface Pattern {
     position: number;
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>];
+    cover(rules: PatternExpression[]): Warning[];
     matches(state: State, v: Value): [string, Value][] | undefined;
     simplify(): PatternExpression;
     toString(indentation: number, oneLine: boolean): string;
@@ -1465,7 +1466,7 @@ export class Match {
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
-            forceRebind: boolean = false, checkEx: boolean = false):
+            forceRebind: boolean = false, checkEx: boolean = true):
     [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         let restp: Type = new FunctionType(new AnyType(), new AnyType());
@@ -1528,12 +1529,27 @@ export class Match {
         });
 
         if (checkEx) {
-            warns.push(new Warning(this.position,
-                'How should I know whether this pattern matching is exhaustive?' +
-                ' Do I look like friggin\' WIKIP***A to you?!\n'));
+            try {
+                warns = warns.concat(this.checkExhaustiveness((<FunctionType> restp).parameterType));
+            } catch (e) {
+                warns.push(new Warning(this.position,
+                                       'How should I know whether this pattern matching is exhaustive?'
+                                       + ' Do I look like friggin\' WIKIP***A to you?!\n' + e.message + '\n'));
+            }
         }
 
         return [restp, warns, nextName, tyVars, bnds, state.valueIdentifierId];
+    }
+
+    checkExhaustiveness(type: Type): Warning[] {
+        return this.checkCover(new Wildcard(-1), type, this.matches.map((a: [PatternExpression, Expression]) => {
+            return a[0];
+        }));
+    }
+
+    checkCover(value: PatternExpression, type: Type, patterns: PatternExpression[]): Warning[] {
+        console.log('Checking for ' + type + ' with binds', patterns.map((a: any) => {return a.constructor.name + ':' + a.toString();}));
+        return [];
     }
 
     simplify(): Match {
