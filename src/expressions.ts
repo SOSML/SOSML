@@ -75,7 +75,7 @@ export class Constant extends Expression implements Pattern {
     }
 
     cover(state: State, rules: PatternExpression[]): Warning[] {
-        return [new Warning(-1, '一昨日来やがれ。')];
+        throw new InternalInterpreterError('一昨日来やがれ。');
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -469,8 +469,11 @@ export class Record extends Expression implements Pattern {
 
         let sname = this.entries[0][0];
         let nrules: PatternExpression[] = [];
-        let sprules = new Map<PatternExpression, PatternExpression[]>();
+        let sprules = new Map<string, PatternExpression[]>();
         let wc = new Wildcard();
+
+        let wcrules: PatternExpression[] = [];
+        let hadConstants = false;
 
         for (let rule of rules) {
             if (!(rule instanceof Record)) {
@@ -489,27 +492,77 @@ export class Record extends Expression implements Pattern {
             if (key === undefined) {
                 key = wc;
             }
+            if (key instanceof ValueIdentifier) {
+                // Check if variable, if it is, replace by Wildcard
+                let cnm = (<ValueIdentifier> key).name.getText();
+                let res = state.getStaticValue(cnm);
+                if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
+                    key = wc;
+                }
+            }
+
             nrules.push(key);
-            if (!sprules.has(key)) {
-                sprules = sprules.set(key, [new Record((<Record> rule).complete, cnrule)]);
+
+            let kid = key.toString();
+            if (key instanceof FunctionApplication) {
+                kid = (<FunctionApplication> key).func.toString();
+            }
+            if (key instanceof Record) {
+                kid = '';
+                // TODO
+            }
+            kid = kid + key.constructor.name;
+
+            if (key instanceof Constant) {
+                // Ignore these rules, as they will never contribute to completeness.
+                hadConstants = true;
+                continue;
+            }
+
+            if (key instanceof Wildcard) {
+                // Cache rule for new non wc-rules
+                wcrules.push(new Record((<Record> rule).complete, cnrule));
+
+                // add rule to existing wc-rules
+                let nsprules = new Map<string, PatternExpression[]>();
+                sprules.forEach((sprule: PatternExpression[], key: string) => {
+                    sprule.push(new Record((<Record> rule).complete, cnrule));
+                    nsprules = nsprules.set(key, sprule);
+                });
+                sprules = nsprules;
+                continue;
+            }
+
+            if (!sprules.has(kid)) {
+                sprules = sprules.set(kid, wcrules.concat([new Record(
+                    (<Record> rule).complete, cnrule)]));
             } else {
-                let old = <PatternExpression[]> sprules.get(key);
+                let old = <PatternExpression[]> sprules.get(kid);
                 old.push(new Record((<Record> rule).complete, cnrule));
-                sprules = sprules.set(key, old);
+                sprules = sprules.set(kid, old);
             }
         }
-
-
-        console.log(nrules, sprules);
 
         let warns: Warning[] = [];
 
         // The following is a dirty hack because I am lazy.
         warns = warns.concat(wc.cover(state, nrules)).filter((w: Warning) => w.type === -1);
 
-        sprules.forEach((sprule: PatternExpression[], key: PatternExpression) => {
-            console.log(sprule);
+        // Generate a new Record without the key already processed
+        let nentries: [string, Expression|PatternExpression][] = [];
+        for (let i = 1; i < this.entries.length; ++i) {
+            nentries.push(this.entries[i]);
+        }
+        let newrec = new Record(true, nentries);
+
+        sprules.forEach((sprule: PatternExpression[], key: string) => {
+            warns = warns.concat(newrec.cover(state, sprule));
         });
+
+        if (hadConstants) {
+            // Wildcards actually need to be checked after all
+            warns = warns.concat(newrec.cover(state, wcrules));
+        }
 
         return warns;
     }
@@ -853,7 +906,7 @@ export class TypedExpression extends Expression implements Pattern {
     }
 
     cover(state: State, rules: PatternExpression[]): Warning[] {
-        return [new Warning(-1, '一昨日来やがれ。')];
+        throw new InternalInterpreterError('一昨日来やがれ。');
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -1614,7 +1667,21 @@ export class Match {
 
         if (checkEx) {
             try {
-                warns = warns.concat(this.checkExhaustiveness(state));
+
+                let tmp = this.checkExhaustiveness(state);
+
+                // Make warns unique
+                let res: Warning[] = [];
+                let seenmsg = new Set<string>();
+
+                for (let w of tmp) {
+                    if (!seenmsg.has(w.message)) {
+                        seenmsg.add(w.message);
+                        res.push(w);
+                    }
+                }
+
+                warns = warns.concat(res);
             } catch (e) {
                 warns.push(new Warning(0, 'How should I know whether "' + this + '" is exhaustive?'
                                        + ' Do I look like friggin\' WIKIP***A to you?!\n' + e.message + '\n'));
@@ -1685,6 +1752,7 @@ export class Wildcard extends Expression implements Pattern {
 
     cover(state: State, rules: PatternExpression[]): Warning[] {
         let isExh = false;
+        let hasWildcard = false;
         let warns: Warning[] = [];
         let seenConsts = new Set<string>();
 
@@ -1725,6 +1793,7 @@ export class Wildcard extends Expression implements Pattern {
 
             if (currentRule instanceof Wildcard) {
                 isExh = true;
+                hasWildcard = true;
                 if (i + 1 < rules.length) {
                     warns.push(new Warning(0, 'Rules after "' + currentRule
                                            + '" unused in pattern matching.\n'));
@@ -1737,6 +1806,7 @@ export class Wildcard extends Expression implements Pattern {
                 let res = state.getStaticValue(cnm);
                 if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
                     isExh = true;
+                    hasWildcard = true;
                     if (i + 1 < rules.length) {
                         warns.push(new Warning(0, 'Rules after "' + currentRule
                                                + '" unused in pattern matching.\n'));
@@ -1836,7 +1906,7 @@ export class Wildcard extends Expression implements Pattern {
             }
 
             if (currentRule instanceof Vector) {
-                // TODO
+                throw new PatternMatchError('Vector pattern are not checked for exhaustiveness.');
             }
         }
 
@@ -1845,7 +1915,7 @@ export class Wildcard extends Expression implements Pattern {
             isExh = true;
             for (let i = 0; i < cons.length; ++i) {
                 if (!idealPts.has(cons[i])) {
-                    isExh = false;
+                    isExh = hasWildcard;
                     continue;
                 }
                 warns = warns.concat((<PatternExpression> idealPts.get(cons[i])).cover(
@@ -1958,7 +2028,7 @@ export class LayeredPattern extends Expression implements Pattern {
     }
 
     cover(state: State, rules: PatternExpression[]): Warning[] {
-        return [new Warning(-1, '一昨日来やがれ。')];
+        throw new PatternMatchError('Layered patterns are not checked for exhaustiveness.');
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
