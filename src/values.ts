@@ -24,8 +24,7 @@ export abstract class Value {
         return this.pcToString(state, new PrintCounter(length));
     }
     equals(other: Value): boolean {
-        throw new InternalInterpreterError(-1,
-            'Tried comparing incomparable things.');
+        throw new InternalInterpreterError('Tried comparing incomparable things.');
     }
 }
 
@@ -52,7 +51,7 @@ export class ReferenceValue extends Value {
                 pc.charactersLeft -= 4;
                 return 'ref ' + (<Value> state.getCell(this.address)).pcToString(state, pc);
             } else {
-                throw new EvaluationError(-1, 'Ouch, you may not de-reference "$'
+                throw new EvaluationError('Ouch, you may not de-reference "$'
                     + this.address + '".');
             }
         }
@@ -143,7 +142,7 @@ export class ArrayValue extends Value {
                         res += (<Value> state.getCell(this.address + i)).pcToString(state, pc);
                         pc.charactersLeft += reserve;
                     } else {
-                        throw new EvaluationError(-1, 'Ouch, you may not de-reference "$'
+                        throw new EvaluationError('Ouch, you may not de-reference "$'
                             + (this.address + i) + '".');
                     }
                 } else {
@@ -216,7 +215,7 @@ export class StringValue extends Value {
         let str = '';
         while (list.constructorName !== 'nil') {
             if (list.constructorName !== '::') {
-                throw new InternalInterpreterError(-1,
+                throw new InternalInterpreterError(
                     'Is this a char list? I can\'t implode "' + list.constructorName + '".');
             }
             let arg = list.argument;
@@ -227,11 +226,11 @@ export class StringValue extends Value {
                     str += a1.value;
                     list = a2;
                 } else {
-                    throw new InternalInterpreterError(-1,
+                    throw new InternalInterpreterError(
                         'Is this a char list? I can\'t implode "' + list.constructorName + '".');
                 }
             } else {
-                throw new InternalInterpreterError(-1,
+                throw new InternalInterpreterError(
                     'Is this a char list? I can\'t implode "' + list.constructorName + '".');
             }
         }
@@ -497,7 +496,7 @@ export class RecordValue extends Value {
                         break;
                     }
                 } else {
-                    throw new InternalInterpreterError(-1,
+                    throw new InternalInterpreterError(
                         'How did we loose this value? It was there before. I promise…');
                 }
             }
@@ -538,7 +537,7 @@ export class RecordValue extends Value {
 
     getValue(name: string): Value {
         if (!this.entries.has(name)) {
-            throw new EvaluationError(0, 'Tried accessing non-existing record part.');
+            throw new EvaluationError('Tried accessing non-existing record part.');
         }
         return <Value> this.entries.get(name);
     }
@@ -617,7 +616,7 @@ export class FunctionValue extends Value {
     }
 
     equals(other: Value): boolean {
-        throw new InternalInterpreterError(-1, 'You simply cannot compare "'
+        throw new InternalInterpreterError('You simply cannot compare "'
             + this.pcToString(undefined, new PrintCounter(20))
             + '" and "' + other.pcToString(undefined, new PrintCounter(20)) + '".');
     }
@@ -643,7 +642,7 @@ export class ConstructedValue extends Value {
             let list: ConstructedValue = this;
             while (list.constructorName !== 'nil') {
                 if (list.constructorName !== '::') {
-                    throw new InternalInterpreterError(-1,
+                    throw new InternalInterpreterError(
                         'Is this even a list? 1 "' + list.constructorName + '".');
                 }
                 let arg = list.argument;
@@ -669,11 +668,11 @@ export class ConstructedValue extends Value {
                         }
                         list = a2;
                     } else {
-                        throw new InternalInterpreterError(-1,
+                        throw new InternalInterpreterError(
                             'Is this even a list? 2 "' + list.constructorName + '".');
                     }
                 } else {
-                    throw new InternalInterpreterError(-1,
+                    throw new InternalInterpreterError(
                         'Is this even a list? 3 "' + list.constructorName + '".');
                 }
             }
@@ -685,7 +684,7 @@ export class ConstructedValue extends Value {
         }
 
         if (state !== undefined) {
-            let infix = state.getInfixStatus(new IdentifierToken(this.constructorName, -1));
+            let infix = state.getInfixStatus(new IdentifierToken(this.constructorName));
             if (infix !== undefined
                 && infix.infix
                 && this.argument instanceof RecordValue && this.argument.entries.size === 2) {

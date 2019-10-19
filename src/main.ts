@@ -44,7 +44,7 @@ export function interpret(nextInstruction: string,
     if (options.disableElaboration === true) {
         let tmp = Evaluator.evaluate(oldState.getNestedState(), ast /* , options */);
         if (tmp === undefined) {
-            throw new InternalInterpreterError(-1, 'How is this undefined?');
+            throw new InternalInterpreterError('How is this undefined?');
         }
         return {
             'state':                tmp.newState,
@@ -62,13 +62,13 @@ export function interpret(nextInstruction: string,
             'state':                state,
             'evaluationErrored':    false,
             'error':                undefined,
-            'warnings':             state.getWarnings()
+            'warnings':             elab[1]
         };
     }
     // Use a fresh state to be able to piece types and values together
     let res = Evaluator.evaluate(oldState.getNestedState(), ast /* , options */);
     if (res === undefined) {
-        throw new InternalInterpreterError(-1, 'How is this undefined?');
+        throw new InternalInterpreterError('How is this undefined?');
     }
 
     for (let i = 0; i < elab[1].length; ++i) {

@@ -220,7 +220,7 @@ rl.on( 'line', ( line: string ) => {
         }
         if( res.warnings !== undefined ) {
             for( let i = 0; i < res.warnings.length; ++i ) {
-                if( res.warnings[ i ].position >= -1 ) {
+                if( res.warnings[ i ].type >= -1 ) {
                     out += 'お気を付けてくださいませ：' + res.warnings[ i ].message;
                 } else {
                     out += '御通知がございます：　' + res.warnings[ i ].message;

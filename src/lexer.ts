@@ -46,13 +46,9 @@ class Lexer {
         this.skipWhitespaceAndComments();
     }
 
-    consumeChar(errorMessageOnEOF: string = '', errornumberOnEOF: number = this.input.length - 1): char {
+    consumeChar(errorMessageOnEOF: string = ''): char {
         if (this.position >= this.input.length) {
-            if (errorMessageOnEOF === '') {
-                throw new IncompleteError(errornumberOnEOF);
-            } else {
-                throw new IncompleteError(errornumberOnEOF, errorMessageOnEOF);
-            }
+            throw new IncompleteError(errorMessageOnEOF);
         }
         ++this.position;
         return this.input.charAt(this.position - 1);
@@ -81,13 +77,12 @@ class Lexer {
             this.skipWhitespace();
 
             while (this.position + 1 < this.input.length && this.input.substr(this.position, 2) === '(*') {
-                let commentStart = this.position;
                 this.position += 2;
                 let openComments: number = 1;
 
                 while (openComments > 0) {
                     if (this.position > this.input.length - 2) {
-                        throw new IncompleteError(commentStart, 'unclosed comment');
+                        throw new IncompleteError('unclosed comment');
                     }
 
                     let s: string = this.input.substr(this.position, 2);
@@ -118,28 +113,27 @@ class Lexer {
 
     makeNumberToken(value: string, real: boolean = false, word: boolean = false, hexadecimal: boolean = false): Token {
         if (real && word) {
-            throw new InternalInterpreterError(this.position);
+            throw new InternalInterpreterError('(...)');
         }
         let token: string = this.input.substring(this.tokenStart, this.position);
         if (real) {
-            return new RealConstantToken(token, this.tokenStart, parseFloat(value));
+            return new RealConstantToken(token, parseFloat(value));
         }
         let v: int = parseInt(value, hexadecimal ? 16 : 10);
         if (v > MAXINT) {
-            throw new LexerError(this.position, '"' + v + '", whoa, it\'s over "' + MAXINT + '".');
+            throw new LexerError('"' + v + '", whoa, it\'s over "' + MAXINT + '".');
         } else if (v < MININT) {
-            throw new LexerError(this.position, '"' + v
-                + '", whoa, it\'s ounder "' + MININT + '".');
+            throw new LexerError('"' + v + '", whoa, it\'s ounder "' + MININT + '".');
         }
         if (word) {
-            return new WordConstantToken(token, this.tokenStart, v);
+            return new WordConstantToken(token, v);
         } else {
             let firstChar = token.charAt(0);
             if (Lexer.isNumber(firstChar, false) && firstChar !== '0') {
                 // firstChar !== 0 also implies that the number is not hexadecimal
-                return new NumericToken(token, this.tokenStart, v);
+                return new NumericToken(token, v);
             } else {
-                return new IntegerConstantToken(token, this.tokenStart, v);
+                return new IntegerConstantToken(token, v);
             }
         }
     }
@@ -210,7 +204,7 @@ class Lexer {
     lexString(): StringConstantToken {
         let startnumber: number = this.position;
         if (this.consumeChar() !== '"') {
-            throw new InternalInterpreterError(this.position);
+            throw new InternalInterpreterError('(...)');
         }
         let value: string = '';
 
@@ -220,7 +214,7 @@ class Lexer {
                 if (Lexer.isWhitespace(this.getChar())) {
                    this.skipWhitespace();
                    if (this.consumeChar('unterminated whitespace escape sequence') !== '\\') {
-                       throw new LexerError(this.position - 1,
+                       throw new LexerError(
                            'Found non-whitespace character in whitespace escape sequence.');
                    }
                 } else {
@@ -238,8 +232,7 @@ class Lexer {
                         case '^': {
                             let cc: number = this.consumeChar().charCodeAt(0);
                             if (cc < 64 || cc > 95) {
-                                throw new LexerError(this.position - 1,
-                                    '"' + String.fromCharCode(cc) +
+                                throw new LexerError('"' + String.fromCharCode(cc) +
                                     '" does not represent a valid control character.');
                             }
                             value += String.fromCharCode(cc - 64);
@@ -248,12 +241,12 @@ class Lexer {
                         case 'u': {
                             let s: string = this.readNumeric(true, 4);
                             if (s.length !== 4) {
-                                throw new LexerError(this.position - s.length - 1,
+                                throw new LexerError(
                                     'A Unicode escape sequence must consist of four digits.');
                             }
                             let v: number = parseInt(s, 16);
                             if (v >= 256 && !this.options.allowUnicodeInStrings) {
-                                throw new LexerError(this.position - s.length - 1,
+                                throw new LexerError(
                                     'The character code "' + s + '" is too large,'
                                     + ' only values between 00 and ff are allowed.');
                             }
@@ -262,17 +255,17 @@ class Lexer {
                         }
                         default: {
                             if (!Lexer.isNumber(c, false)) {
-                                throw new LexerError(this.position - 1, 'Invalid escape sequence.');
+                                throw new LexerError('Invalid escape sequence.');
                             }
                             --this.position; // 'un-consume' the first character of the number
                             let s: string = this.readNumeric(false, 3);
                             if (s.length !== 3) {
-                                throw new LexerError(this.position - s.length - 1,
+                                throw new LexerError(
                                     'A numeric escape sequence must consist of three digits.');
                             }
                             let v: number = parseInt(s, 10);
                             if (v >= 256 && !this.options.allowUnicodeInStrings) {
-                                throw new LexerError(this.position - s.length - 1,
+                                throw new LexerError(
                                     'The character code "' + s + '" is too large,'
                                     + ' only values between 000 and 255 are allowed.');
                             }
@@ -283,7 +276,7 @@ class Lexer {
                 }
 
             } else {
-                let c: number = this.consumeChar('unterminated string', this.tokenStart).charCodeAt(0);
+                let c: number = this.consumeChar('unterminated string').charCodeAt(0);
                 // Only printable characters (33 to 126) and spaces are allowed (SML definition, chapter 2.2)
                 // We however also allow all non-ASCII characters (>128), since MosML and SML/NJ seem to do so as well.
                 if ((c < 33 || c > 126) && c !== 32 /*space*/ && c < 128) {
@@ -299,7 +292,7 @@ class Lexer {
                     if (c === 13) {
                         info = ' (carriage return)';
                     }
-                    throw new LexerError(this.position - 1,
+                    throw new LexerError(
                         'A string may not contain the character <' + c + '>' + info + '.');
                 }
                 value += String.fromCharCode(c);
@@ -307,21 +300,21 @@ class Lexer {
         }
 
         if (this.consumeChar() !== '"') {
-            throw new InternalInterpreterError(this.position);
+            throw new InternalInterpreterError('(...)');
         }
-        return new StringConstantToken(this.input.substring(startnumber, this.position), this.tokenStart, value);
+        return new StringConstantToken(this.input.substring(startnumber, this.position), value);
     }
 
     lexCharacter(): CharacterConstantToken {
         if (this.consumeChar() !== '#') {
-            throw new InternalInterpreterError(this.position);
+            throw new InternalInterpreterError('(...)');
         }
         let t: StringConstantToken = this.lexString();
         if (t.value.length !== 1) {
-            throw new LexerError(this.tokenStart,
+            throw new LexerError(
                 'A character constant must have length 1, not ' + t.value.length + '.');
         }
-        return new CharacterConstantToken('#' + t.text,  this.tokenStart, t.value);
+        return new CharacterConstantToken('#' + t.text, t.value);
     }
 
     lexIdentifierOrKeyword(): Token {
@@ -341,13 +334,12 @@ class Lexer {
             // alphanumeric identifiers may not start with a number
             charChecker = Lexer.isAlphanumeric;
         } else if (reservedWords.has(firstChar)) {
-            return new KeywordToken(this.consumeChar(), this.tokenStart);
+            return new KeywordToken(this.consumeChar());
         } else if (firstChar === '.' && this.getChar(1) === '.' && this.getChar(2) === '.') {
             this.position += 3;
-            return new KeywordToken('...', this.tokenStart);
+            return new KeywordToken('...');
         } else {
-            throw new LexerError(this.position,
-                                 'Invalid token "' + firstChar + '" (\\u'
+            throw new LexerError('Invalid token "' + firstChar + '" (\\u'
                                  + firstChar.charCodeAt(0).toString(16).toUpperCase() + ').');
         }
 
@@ -356,21 +348,21 @@ class Lexer {
         } while (charChecker(this.getChar()));
 
         if (token === '*') {
-            return new StarToken(this.tokenStart);
+            return new StarToken();
         } else if (token === '=') {
-            return new EqualsToken(this.tokenStart);
+            return new EqualsToken();
         } else if (reservedWords.has(token)) {
-            return new KeywordToken(token,  this.tokenStart);
+            return new KeywordToken(token);
         } else if (firstChar === '\'') {
             if (token.charAt(1) === '\'') {
-                return new EqualityTypeVariableToken(token, this.tokenStart);
+                return new EqualityTypeVariableToken(token);
             } else {
-                return new TypeVariableToken(token, this.tokenStart);
+                return new TypeVariableToken(token);
             }
         } else if (Lexer.isAlphanumeric(firstChar)) {
-            return new AlphanumericIdentifierToken(token, this.tokenStart);
+            return new AlphanumericIdentifierToken(token);
         } else {
-            return new IdentifierToken(token, this.tokenStart);
+            return new IdentifierToken(token);
         }
     }
 
@@ -385,7 +377,7 @@ class Lexer {
         do {
             this.consumeChar();
             if (!(t instanceof AlphanumericIdentifierToken)) {
-                throw new LexerError(t.position, 'Expected structure name before ".".');
+                throw new LexerError('Expected structure name before ".".');
             }
             qualifiers.push(t);
             this.tokenStart = this.position;
@@ -395,10 +387,9 @@ class Lexer {
         // Only value identifiers, type constructors and structure identifiers are allowed here.
         // EqualsToken is not allowed because it cannot be re-bound.
         if ((!(t instanceof IdentifierToken || t instanceof StarToken)) || t instanceof TypeVariableToken) {
-            throw new LexerError(t.position,
-                '"' + t.text + '" is not allowed in a long identifier.');
+            throw new LexerError('"' + t.text + '" is not allowed in a long identifier.');
         }
-        return new LongIdentifierToken(this.input.substring(tokenStart, this.position), tokenStart, qualifiers, t);
+        return new LongIdentifierToken(this.input.substring(tokenStart, this.position),  qualifiers, t);
     }
 
     nextToken(): Token {

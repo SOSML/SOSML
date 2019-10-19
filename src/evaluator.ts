@@ -32,7 +32,7 @@ export function evaluate(state: State, ast: Declaration): EvaluationResult {
     while (callStack.length > 0) {
         let next = callStack.pop();
         if (next === undefined) {
-            throw new InternalInterpreterError(-1, 'How is this undefined?');
+            throw new InternalInterpreterError('How is this undefined?');
         }
         let target = next.next;
         let params = next.params;

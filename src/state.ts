@@ -534,7 +534,7 @@ export class State {
     getAndResolveStaticStructure(name: LongIdentifierToken, idLimit: number = 0): StaticBasis | undefined {
         let res: StaticBasis | undefined = undefined;
         if (name.qualifiers.length === 0) {
-            throw new EvaluationError(name.position,
+            throw new EvaluationError(
                 'Unqualified LongIdentifierToken are too unqualified to be useful here.');
         } else {
             res = this.getStaticStructure(name.qualifiers[0].getText(), idLimit);
@@ -604,7 +604,7 @@ export class State {
     getAndResolveDynamicStructure(name: LongIdentifierToken, idLimit: number = 0): DynamicBasis | undefined {
         let res: DynamicBasis | undefined = undefined;
         if (name.qualifiers.length === 0) {
-            throw new EvaluationError(name.position,
+            throw new EvaluationError(
                 'Unqualified LongIdentifierToken are too unqualified to be useful here.');
         } else {
             res = this.getDynamicStructure(name.qualifiers[0].getText(), idLimit);
@@ -648,7 +648,7 @@ export class State {
                 return this.parent.getInfixStatus(id, idLimit);
             }
         } else {
-            throw new InternalInterpreterError(id.position,
+            throw new InternalInterpreterError(
                 'You gave me some "' + id.getText() + '" (' + id.typeName()
                 + ') but I only want (Long)IdentifierToken.');
         }
@@ -672,7 +672,7 @@ export class State {
         if (atId === undefined || this.id === atId) {
             this.valueIdentifierId[name] = this.getValueIdentifierId(name, atId) + 1;
         } else if (atId > this.id || this.parent === undefined) {
-            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+            throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
         } else {
             this.parent.incrementValueIdentifierId(name, atId);
         }
@@ -705,7 +705,7 @@ export class State {
         if (atId === undefined || atId === this.id) {
             this.staticBasis.setValue(name, type, is);
         } else if (atId > this.id || this.parent === undefined) {
-            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+            throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
         } else {
             (<State> this.parent).setStaticValue(name, type, is, atId);
         }
@@ -716,7 +716,7 @@ export class State {
         if (atId === undefined || atId === this.id) {
             this.staticBasis.setType(name, type, constructors, arity, allowsEquality);
         } else if (atId > this.id || this.parent === undefined) {
-            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+            throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
         } else {
             (<State> this.parent).setStaticType(name, type, constructors, arity,
                 allowsEquality, atId);
@@ -727,7 +727,7 @@ export class State {
         if (atId === undefined || atId === this.id) {
             this.staticBasis.setStructure(name, structure);
         } else if (atId > this.id || this.parent === undefined) {
-            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+            throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
         } else {
             this.parent.setStaticStructure(name, structure, atId);
         }
@@ -737,7 +737,7 @@ export class State {
         if (atId === undefined || atId === this.id) {
             this.staticBasis.setSignature(name, signature);
         } else if (atId > this.id || this.parent === undefined) {
-            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+            throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
         } else {
             this.parent.setStaticSignature(name, signature, atId);
         }
@@ -747,7 +747,7 @@ export class State {
         if (atId === undefined || atId === this.id) {
             this.staticBasis.setFunctor(name, functor);
         } else if (atId > this.id || this.parent === undefined) {
-            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+            throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
         } else {
             this.parent.setStaticFunctor(name, functor, atId);
         }
@@ -757,7 +757,7 @@ export class State {
         if (atId === undefined || atId === this.id) {
             this.dynamicBasis.setValue(name, value, is);
         } else if (atId > this.id || this.parent === undefined) {
-            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+            throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
         } else {
             this.parent.setDynamicValue(name, value, is, atId);
         }
@@ -767,7 +767,7 @@ export class State {
         if (atId === undefined || atId === this.id) {
             this.dynamicBasis.setType(name, constructors);
         } else if (atId > this.id || this.parent === undefined) {
-            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+            throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
         } else {
             this.parent.setDynamicType(name, constructors, atId);
         }
@@ -777,7 +777,7 @@ export class State {
         if (atId === undefined || atId === this.id) {
             this.dynamicBasis.setStructure(name, structure);
         } else if (atId > this.id || this.parent === undefined) {
-            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+            throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
         } else {
             this.parent.setDynamicStructure(name, structure, atId);
         }
@@ -787,7 +787,7 @@ export class State {
         if (atId === undefined || atId === this.id) {
             this.dynamicBasis.setSignature(name, signature);
         } else if (atId > this.id || this.parent === undefined) {
-            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+            throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
         } else {
             this.parent.setDynamicSignature(name, signature, atId);
         }
@@ -797,7 +797,7 @@ export class State {
         if (atId === undefined || atId === this.id) {
             this.dynamicBasis.setFunctor(name, functor);
         } else if (atId > this.id || this.parent === undefined) {
-            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+            throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
         } else {
             this.parent.setDynamicFunctor(name, functor, atId);
         }
@@ -815,7 +815,7 @@ export class State {
                         = new InfixStatus(infix, precedence, rightAssociative);
                 }
             } else if (atId > this.id || this.parent === undefined) {
-                throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+                throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
             } else {
                 this.parent.setInfixStatus(id, precedence, rightAssociative, infix, atId);
             }
@@ -825,7 +825,7 @@ export class State {
         if (atId === undefined || atId === this.id) {
             this.valueIdentifierId[name] = setTo;
         } else if (atId > this.id || this.parent === undefined) {
-            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+            throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
         } else {
             this.parent.setValueIdentifierId(name, setTo, atId);
         }
@@ -835,7 +835,7 @@ export class State {
         if (atId === undefined || atId === this.id) {
             this.warns.push(warn);
         } else if (atId > this.id || this.parent === undefined) {
-            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+            throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
         } else {
             this.parent.addWarning(warn, atId);
         }
@@ -845,7 +845,7 @@ export class State {
         if (atId === undefined || atId === this.id) {
             this.warns = warns;
         } else if (atId > this.id || this.parent === undefined) {
-            throw new InternalInterpreterError(-1, 'State with id "' + atId + '" does not exist.');
+            throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
         } else {
             this.parent.setWarnings(warns, atId);
         }

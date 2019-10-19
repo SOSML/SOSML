@@ -4,14 +4,15 @@ import { Token, IdentifierToken, ConstantToken, IntegerConstantToken, RealConsta
          NumericToken, WordConstantToken, CharacterConstantToken, StringConstantToken,
          LongIdentifierToken } from './tokens';
 import { State, IdentifierStatus } from './state';
-import { InternalInterpreterError, ElaborationError, EvaluationError, ParserError, Warning } from './errors';
+import { InternalInterpreterError, ElaborationError, EvaluationError, ParserError,
+         PatternMatchError, Warning } from './errors';
 import { Value, CharValue, StringValue, Integer, Real, Word, ValueConstructor,
          ExceptionConstructor, PredefinedFunction, RecordValue, FunctionValue,
          ExceptionValue, ConstructedValue, ReferenceValue, VectorValue } from './values';
 import { EvaluationResult, EvaluationParameters, EvaluationStack, IdCnt } from './evaluator';
 
 export abstract class Expression {
-    position: number;
+
 
     getType(state: State,
             tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
@@ -19,12 +20,12 @@ export abstract class Expression {
             tyVars: Set<string>         = new Set<string>(),
             forceRebind: boolean       = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
-        throw new InternalInterpreterError(this.position, 'Called "getType" on a derived form.');
+        throw new InternalInterpreterError('Called "getType" on a derived form.');
     }
 
     // Computes the value of an expression, returns [computed value, is thrown exception]
     compute(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
-        throw new InternalInterpreterError(this.position, 'Called "getValue" on a derived form.');
+        throw new InternalInterpreterError('Called "getValue" on a derived form.');
     }
 
     // Returns whether the expression could do nasty stuff (value polymorphism ...)
@@ -37,7 +38,7 @@ export abstract class Expression {
     }
 
     toString(): string {
-        throw new InternalInterpreterError(this.position,
+        throw new InternalInterpreterError(
             'You humans can\'t seem to write bug-free code. What an inferior species.');
     }
 
@@ -52,10 +53,10 @@ export abstract class Expression {
 export interface Pattern {
     // Returns which bindings would be created by matching v to this Pattern,
     // or undefined, if v does not match this Pattern.
-    position: number;
+
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>];
-    cover(rules: PatternExpression[]): Warning[];
+    cover(state: State, rules: PatternExpression[]): Warning[];
     matches(state: State, v: Value): [string, Value][] | undefined;
     simplify(): PatternExpression;
     toString(indentation: number, oneLine: boolean): string;
@@ -66,19 +67,22 @@ export interface Pattern {
 export type PatternExpression = Pattern & Expression;
 
 export class Constant extends Expression implements Pattern {
-    constructor(public position: number, public token: ConstantToken) { super(); }
+    constructor(public token: ConstantToken) { super(); }
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>] {
         return [[], this.getType(state, tyVarBnd)[0], tyVarBnd];
     }
 
+    cover(state: State, rules: PatternExpression[]): Warning[] {
+        return [new Warning(-1, '一昨日来やがれ。')];
+    }
+
     matches(state: State, v: Value): [string, Value][] | undefined {
         // the call to compute just gets two states but will not use them
         let val = this.compute({'state': state, 'modifiable': state, 'recResult': undefined}, []);
         if (val === undefined || val.value === undefined) {
-            throw new InternalInterpreterError(this.token.position,
-                'How is this undefined?');
+            throw new InternalInterpreterError('How is this undefined?');
         }
         if ((<Value> val.value).equals(v)) {
             return [];
@@ -108,7 +112,7 @@ export class Constant extends Expression implements Pattern {
             return [new CustomType('string'), [], nextName, tyVars, tyVarBnd,
                 state.valueIdentifierId];
         } else {
-            throw new InternalInterpreterError(this.token.position,
+            throw new InternalInterpreterError(
                 '"' + this + '" does not seem to be a valid constant.');
         }
     }
@@ -134,7 +138,7 @@ export class Constant extends Expression implements Pattern {
         }
 
         if (val === undefined) {
-            throw new EvaluationError(this.token.position, 'You sure that this is a constant?');
+            throw new EvaluationError('You sure that this is a constant?');
         }
 
         return {
@@ -147,7 +151,7 @@ export class Constant extends Expression implements Pattern {
 
 export class ValueIdentifier extends Expression implements Pattern {
 // op longvid or longvid
-    constructor(public position: number, public name: Token) { super(); }
+    constructor(public name: Token) { super(); }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
@@ -180,7 +184,7 @@ export class ValueIdentifier extends Expression implements Pattern {
                     state, mps);
                 return [tmp, [], nextName, tyVars, mps, state.valueIdentifierId];
             } else if (res === undefined) {
-                throw new ElaborationError(this.position, 'Unbound value identifier "'
+                throw new ElaborationError('Unbound value identifier "'
                     + this.name.getText() + '".');
             }
         }
@@ -236,7 +240,7 @@ export class ValueIdentifier extends Expression implements Pattern {
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>] {
         if (this.name instanceof LongIdentifierToken) {
-            throw new ElaborationError(this.position, 'Variable names in patterns cannot be qualified.');
+            throw new ElaborationError('Variable names in patterns cannot be qualified.');
         }
 
         let res = state.getStaticValue(this.name.getText());
@@ -264,15 +268,20 @@ export class ValueIdentifier extends Expression implements Pattern {
             if (!(e instanceof Array)) {
                 throw e;
             }
-            throw new ElaborationError(this.position,
+            throw new ElaborationError(
                 'Type clash: "' + t.normalize()[0] + '" vs. "'
                 + res[0].normalize()[0] + '": ' + e[0]);
         }
     }
 
+    cover(state: State, rules: PatternExpression[]): Warning[] {
+        // Got checked elsewhere already.
+        return [];
+    }
+
     matches(state: State, v: Value): [string, Value][] | undefined {
         if (this.name instanceof LongIdentifierToken) {
-            throw new EvaluationError(this.position, 'Variable names in patterns cannot be qualified.');
+            throw new EvaluationError('Variable names in patterns cannot be qualified.');
         }
 
         let res = state.getDynamicValue(this.name.getText());
@@ -308,7 +317,7 @@ export class ValueIdentifier extends Expression implements Pattern {
         }
 
         if (res === undefined) {
-            throw new EvaluationError(this.position, 'Unbound value identifier "'
+            throw new EvaluationError('Unbound value identifier "'
                 + this.name.getText() + '".');
         }
 
@@ -357,13 +366,13 @@ export class ValueIdentifier extends Expression implements Pattern {
 export class Record extends Expression implements Pattern {
 // { lab = exp, ... } or { }
 // a record(pattern) is incomplete if it ends with '...'
-    constructor(public position: number, public complete: boolean,
+    constructor(public complete: boolean,
                 public entries: [string, Expression|PatternExpression][]) {
         super();
         this.entries.sort();
         for (let i = 1; i < this.entries.length; ++i) {
             if (this.entries[i][0] === this.entries[i - 1][0]) {
-                throw new ElaborationError(this.position,
+                throw new ElaborationError(
                     'Label "' + this.entries[i][0] + '" occurs more than once in the same record.');
             }
         }
@@ -385,7 +394,7 @@ export class Record extends Expression implements Pattern {
                 return this.entries[i][1];
             }
         }
-        throw new InternalInterpreterError(this.position,
+        throw new InternalInterpreterError(
             'Yeah, "' + name + '" would be nice to have.');
     }
 
@@ -417,11 +426,11 @@ export class Record extends Expression implements Pattern {
 
 
         if (!(t instanceof RecordType)) {
-            throw new ElaborationError(this.position,
+            throw new ElaborationError(
                 'Expected pattern of a record type, got "' + t.typeName() + '".');
         }
         if (this.complete && this.entries.length !== (<RecordType> t).elements.size) {
-            throw new ElaborationError(this.position,
+            throw new ElaborationError(
                 'Expected a record type with ' + this.entries.length + ' entries,'
                 + ' but the given one has ' + (<RecordType> t).elements.size + '.');
         }
@@ -432,7 +441,7 @@ export class Record extends Expression implements Pattern {
 
         for (let i = 0; i < this.entries.length; ++i) {
             if (!(<RecordType> t).hasType(this.entries[i][0])) {
-                throw new ElaborationError(this.position, 'I am mad scientist. Sunovabitch!');
+                throw new ElaborationError('I am mad scientist. Sunovabitch!');
             }
             let cur = (<PatternExpression> this.entries[i][1]).matchType(
                 state, bnd, (<RecordType> t).getType(this.entries[i][0]));
@@ -442,6 +451,67 @@ export class Record extends Expression implements Pattern {
             bnd = cur[2];
         }
         return [res, new RecordType(rtp), bnd];
+    }
+
+    cover(state: State, rules: PatternExpression[]): Warning[] {
+        // Check that first entry alone is exhaustive,
+        // then split all rules according to first entry and check that they are
+        // exhaustive as well
+
+        if (this.entries.length === 0) {
+            if (rules.length === 0) {
+                return [
+                    new Warning(-1, 'Pattern matching is not exhaustive.\n')
+                ];
+            }
+            return [];
+        }
+
+        let sname = this.entries[0][0];
+        let nrules: PatternExpression[] = [];
+        let sprules = new Map<PatternExpression, PatternExpression[]>();
+        let wc = new Wildcard();
+
+        for (let rule of rules) {
+            if (!(rule instanceof Record)) {
+                throw new InternalInterpreterError('Pipiru piru piru pipiru pii!');
+            }
+
+            let cnrule: [string, Expression|PatternExpression][] = [];
+            let key: PatternExpression | undefined = undefined;
+            for (let nr of (<Record> rule).entries) {
+                if (nr[0] === sname) {
+                    key = <PatternExpression> nr[1];
+                } else {
+                    cnrule.push(nr);
+                }
+            }
+            if (key === undefined) {
+                key = wc;
+            }
+            nrules.push(key);
+            if (!sprules.has(key)) {
+                sprules = sprules.set(key, [new Record((<Record> rule).complete, cnrule)]);
+            } else {
+                let old = <PatternExpression[]> sprules.get(key);
+                old.push(new Record((<Record> rule).complete, cnrule));
+                sprules = sprules.set(key, old);
+            }
+        }
+
+
+        console.log(nrules, sprules);
+
+        let warns: Warning[] = [];
+
+        // The following is a dirty hack because I am lazy.
+        warns = warns.concat(wc.cover(state, nrules)).filter((w: Warning) => w.type === -1);
+
+        sprules.forEach((sprule: PatternExpression[], key: PatternExpression) => {
+            console.log(sprule);
+        });
+
+        return warns;
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -482,7 +552,7 @@ export class Record extends Expression implements Pattern {
             let name: string = this.entries[i][0];
             let exp: Expression = this.entries[i][1];
             if (e.has(name)) {
-                throw new ElaborationError(this.position,
+                throw new ElaborationError(
                     'Label "' + name + '" occurs more than once in the same record.');
             }
 
@@ -490,7 +560,7 @@ export class Record extends Expression implements Pattern {
                 let tm = state.getStaticValue((<ValueIdentifier> exp).name.getText());
                 if (tm !== undefined && tm[1] !== IdentifierStatus.VALUE_VARIABLE
                     && tm[0] instanceof FunctionType) {
-                    throw new ElaborationError(exp.position,
+                    throw new ElaborationError(
                         'Unary constructor in the pattern needs an argument.');
                 }
             }
@@ -516,7 +586,7 @@ export class Record extends Expression implements Pattern {
             let e: [string, Expression] = this.entries[i];
             newEntries.push([e[0], e[1].simplify()]);
         }
-        return new Record(this.position, this.complete, newEntries);
+        return new Record(this.complete, newEntries);
     }
 
     toString(): string {
@@ -552,7 +622,7 @@ export class Record extends Expression implements Pattern {
         if (step >= 0) {
             let val = params.recResult;
             if (val === undefined) {
-                throw new InternalInterpreterError(-1, 'How is this undefined?');
+                throw new InternalInterpreterError('How is this undefined?');
             }
 
             if (val.hasThrown) {
@@ -593,7 +663,7 @@ export class Record extends Expression implements Pattern {
             cur.forEach((v: string) => {
                 if (seen.has(v)) {
                     throw new ParserError('Don\'t try to rebind "' + v + '" "' + v + '" in the'
-                        + ' same pattern... Sorry, I stuttered.', this.position);
+                        + ' same pattern... Sorry, I stuttered.');
                 }
                 seen = seen.add(v);
             });
@@ -607,10 +677,10 @@ export class LocalDeclarationExpression extends Expression {
 // let dec in exp1; ...; expn end
 // A sequential expression exp1; ... ; expn is represented as such,
 // despite the potentially missing parentheses
-    constructor(public position: number, public declaration: Declaration, public expression: Expression) { super(); }
+    constructor(public declaration: Declaration, public expression: Expression) { super(); }
 
     simplify(): LocalDeclarationExpression {
-        return new LocalDeclarationExpression(this.position, this.declaration.simplify(), this.expression.simplify());
+        return new LocalDeclarationExpression(this.declaration.simplify(), this.expression.simplify());
     }
 
     toString(): string {
@@ -709,7 +779,7 @@ export class LocalDeclarationExpression extends Expression {
             let res = params.recResult;
             if (res === undefined
                 || res.newState === undefined) {
-                throw new InternalInterpreterError(-1, 'How is this undefined?');
+                throw new InternalInterpreterError('How is this undefined?');
             }
             let nstate = <State> res.newState;
             if (res.hasThrown) {
@@ -728,7 +798,7 @@ export class LocalDeclarationExpression extends Expression {
         }
         let nres = params.recResult;
         if (nres === undefined) {
-            throw new InternalInterpreterError(-1, 'How is this undefined?');
+            throw new InternalInterpreterError('How is this undefined?');
         }
         return {
             'newState': undefined,
@@ -746,13 +816,13 @@ export class LocalDeclarationExpression extends Expression {
 
 export class TypedExpression extends Expression implements Pattern {
 // expression: type (L)
-    constructor(public position: number, public expression: Expression,
+    constructor(public expression: Expression,
                 public typeAnnotation: Type) { super(); }
 
     getExplicitTypeVariables(): Set<TypeVariable> {
         let res = new Set<TypeVariable>();
         this.typeAnnotation.getTypeVariables().forEach((val: Type[], key: string) => {
-            res = res.add(new TypeVariable(key, 0, val));
+            res = res.add(new TypeVariable(key, val));
         });
         return res;
     }
@@ -775,11 +845,15 @@ export class TypedExpression extends Expression implements Pattern {
             if (!(e instanceof Array)) {
                 throw e;
             }
-            throw new ElaborationError(this.position,
+            throw new ElaborationError(
                 'The annotated type "' + this.typeAnnotation
                 + '" does not match the expression\'s type "'
                 + tp[1].normalize()[0] + '": ' + e[0]);
         }
+    }
+
+    cover(state: State, rules: PatternExpression[]): Warning[] {
+        return [new Warning(-1, '一昨日来やがれ。')];
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -801,7 +875,7 @@ export class TypedExpression extends Expression implements Pattern {
             if (!(e instanceof Array)) {
                 throw e;
             }
-            throw new ElaborationError(this.position,
+            throw new ElaborationError(
                 'The specified type "' + this.typeAnnotation
                 + '" does not match the annotated expression\'s type "'
                 + tp[0].normalize()[0] + '": ' + e[0]);
@@ -809,7 +883,7 @@ export class TypedExpression extends Expression implements Pattern {
     }
 
     simplify(): TypedExpression {
-        return new TypedExpression(this.position,
+        return new TypedExpression(
             this.expression.simplify(), this.typeAnnotation.simplify());
     }
 
@@ -831,8 +905,7 @@ export class TypedExpression extends Expression implements Pattern {
 // May represent either a function application or a constructor with an argument
 export class FunctionApplication extends Expression implements Pattern {
 // function argument
-    constructor(public position: number,
-                public func: Expression,
+    constructor(public func: Expression,
                 public argument: Expression|PatternExpression) { super(); }
 
     getExplicitTypeVariables(): Set<TypeVariable> {
@@ -860,12 +933,12 @@ export class FunctionApplication extends Expression implements Pattern {
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>] {
         if (!(this.func instanceof ValueIdentifier)) {
-            throw new ElaborationError(this.position, 'Non-identifier applied to a pattern.');
+            throw new ElaborationError('Non-identifier applied to a pattern.');
         }
 
         let ti = state.getStaticValue((<ValueIdentifier> this.func).name.getText());
         if (ti === undefined || ti[1] === IdentifierStatus.VALUE_VARIABLE) {
-            throw new ElaborationError(this.position, 'Expected a constructor, "'
+            throw new ElaborationError('Expected a constructor, "'
                 + (<ValueIdentifier> this.func).name.getText() + '" isn\'t.');
         }
 
@@ -881,7 +954,7 @@ export class FunctionApplication extends Expression implements Pattern {
         tyVarBnd = tmp[4];
 
         if (!(ti[0] instanceof FunctionType)) {
-            throw new ElaborationError(this.position, 'This is truly more...slothful.');
+            throw new ElaborationError('This is truly more...slothful.');
         }
 
         try {
@@ -895,13 +968,25 @@ export class FunctionApplication extends Expression implements Pattern {
             if (!(e instanceof Array)) {
                 throw e;
             }
-            throw new ElaborationError(this.position, 'Merge failed: ' + e[0]);
+            throw new ElaborationError('Merge failed: ' + e[0]);
         }
+    }
+
+    cover(state: State, rules: PatternExpression[]): Warning[] {
+        // Remove outermost function application and check parameters
+        return (<PatternExpression> this.argument).cover(
+            state, rules.map((rule: PatternExpression) => {
+            if (!(rule instanceof FunctionApplication)) {
+                throw new InternalInterpreterError(
+                    'I received much data that did not compute.');
+            }
+            return <PatternExpression> (<FunctionApplication> rule).argument;
+        }));
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         if (v instanceof FunctionValue) {
-            throw new EvaluationError(this.position,
+            throw new EvaluationError(
                 'You simply cannot match function values.');
         } else if (v instanceof ConstructedValue) {
             if (this.func instanceof ValueIdentifier
@@ -918,7 +1003,7 @@ export class FunctionApplication extends Expression implements Pattern {
         } else if (v instanceof ExceptionValue) {
             let exCtorData = state.getDynamicValue((<ValueIdentifier> this.func).name.getText());
             if (exCtorData === undefined) {
-                throw new InternalInterpreterError(this.position,
+                throw new InternalInterpreterError(
                     'How did you match something that does not exist?');
             }
             let exCtor = exCtorData[0];
@@ -938,7 +1023,7 @@ export class FunctionApplication extends Expression implements Pattern {
             }
             return undefined;
         } else if (v instanceof PredefinedFunction) {
-            throw new EvaluationError(this.position,
+            throw new EvaluationError(
                 'You simply cannot match predefined functions.');
         } else if (v instanceof ReferenceValue) {
             if (this.func instanceof ValueIdentifier
@@ -948,7 +1033,7 @@ export class FunctionApplication extends Expression implements Pattern {
             }
             return undefined;
         }
-        throw new EvaluationError(this.position, 'Help me, I\'m broken. ('
+        throw new EvaluationError('Help me, I\'m broken. ('
             + v.typeName() + ').' );
     }
 
@@ -964,14 +1049,14 @@ export class FunctionApplication extends Expression implements Pattern {
                 if (st === undefined ||
                     st.getValue((<LongIdentifierToken> (<ValueIdentifier> this.func).name).
                         id.getText()) === undefined) {
-                    throw new ElaborationError(this.position,
+                    throw new ElaborationError(
                         '"' + (<ValueIdentifier> this.func).name.getText()
                         + '" is not a constructor.');
                 }
             } else {
                 let t = state.getStaticValue((<ValueIdentifier> this.func).name.getText());
                 if (t === undefined || t[1] === IdentifierStatus.VALUE_VARIABLE) {
-                    throw new ElaborationError(this.position,
+                    throw new ElaborationError(
                         '"' + (<ValueIdentifier> this.func).name.getText()
                         + '" is not a constructor.');
                 }
@@ -1023,19 +1108,18 @@ export class FunctionApplication extends Expression implements Pattern {
                 if (!(e instanceof Array)) {
                     throw e;
                 }
-                throw new ElaborationError(this.position,
+                throw new ElaborationError(
                     'Type clash. Functions of type "' + f[0].normalize()[0]
                     + '" cannot take an argument of type "' + arg[0].normalize()[0] + '": ' + e[0]);
             }
         } else {
-            throw new ElaborationError(this.func.position,
-                '"' + this.func + '" of type "'
+            throw new ElaborationError('"' + this.func + '" of type "'
                 + f[0].normalize()[0] + '" is not a function.');
         }
     }
 
     simplify(): FunctionApplication {
-        return new FunctionApplication(this.position, this.func.simplify(), this.argument.simplify());
+        return new FunctionApplication(this.func.simplify(), this.argument.simplify());
     }
 
     toString(): string {
@@ -1067,7 +1151,7 @@ export class FunctionApplication extends Expression implements Pattern {
         if (step === 0) {
             let funcVal = params.recResult;
             if (funcVal === undefined) {
-                throw new InternalInterpreterError(-1, 'How is this undefined?');
+                throw new InternalInterpreterError('How is this undefined?');
             }
             if (funcVal.hasThrown) {
                 // computing the function failed
@@ -1091,11 +1175,11 @@ export class FunctionApplication extends Expression implements Pattern {
 
             if (funcVal === undefined
                 || funcVal.value === undefined) {
-                throw new InternalInterpreterError(-1, 'How is this undefined?');
+                throw new InternalInterpreterError('How is this undefined?');
             }
             if (argVal === undefined
                 || argVal.value === undefined) {
-                throw new InternalInterpreterError(-1, 'How is this undefined?');
+                throw new InternalInterpreterError('How is this undefined?');
             }
 
             if (argVal.hasThrown) {
@@ -1131,14 +1215,14 @@ export class FunctionApplication extends Expression implements Pattern {
                     'hasThrown': res[1],
                 };
             }
-            throw new EvaluationError(this.position, 'Cannot evaluate the function "'
+            throw new EvaluationError('Cannot evaluate the function "'
                 + this.func + '" (' + funcVal[0].typeName() + ').');
         }
         // brace so linter does not complain about shadowed names
         {
             let res = <EvaluationResult> params.recResult;
             if (res === undefined) {
-                throw new InternalInterpreterError(-1, 'How is this undefined?');
+                throw new InternalInterpreterError('How is this undefined?');
             }
 
             return {
@@ -1163,7 +1247,7 @@ export class FunctionApplication extends Expression implements Pattern {
 
 export class HandleException extends Expression {
     // expression handle match
-    constructor(public position: number, public expression: Expression, public match: Match) {
+    constructor(public expression: Expression, public match: Match) {
         super();
     }
 
@@ -1176,7 +1260,7 @@ export class HandleException extends Expression {
     }
 
     simplify(): HandleException {
-        return new HandleException(this.position, this.expression.simplify(), this.match.simplify());
+        return new HandleException(this.expression.simplify(), this.match.simplify());
     }
 
     toString(): string {
@@ -1192,14 +1276,14 @@ export class HandleException extends Expression {
 
         let mtp = this.match.getType(state, tyVarBnd, nextName, tyVars, forceRebind, false);
         if (!(mtp[0] instanceof FunctionType)) {
-            throw new ElaborationError(this.match.position,
+            throw new ElaborationError(
                 'You can only handle things of type "exn" and not "'
                 + (<FunctionType> mtp[0]).parameterType.normalize()[0] + '".');
         }
         try {
             (<FunctionType> mtp[0]).parameterType.merge(state, mtp[4], new CustomType('exn'));
         } catch (e) {
-            throw new ElaborationError(this.match.position,
+            throw new ElaborationError(
                 'You can only handle things of type "exn" and not "'
                 + (<FunctionType> mtp[0]).parameterType.normalize()[0] + '".');
         }
@@ -1214,7 +1298,7 @@ export class HandleException extends Expression {
             if (!(e instanceof Array)) {
                 throw e;
             }
-            throw new ElaborationError(this.expression.position,
+            throw new ElaborationError(
                 'The "handle" cannot change the type of the expression from "'
                 + etp[0].normalize()[0] + '" to "' + rt.normalize()[0] + '": ' + e[0]);
         }
@@ -1233,7 +1317,7 @@ export class HandleException extends Expression {
         let res = params.recResult;
         if (res === undefined
             || res.value === undefined) {
-            throw new InternalInterpreterError(-1, 'How is this undefined?');
+            throw new InternalInterpreterError('How is this undefined?');
         }
         if (params.exprResult === undefined) {
             if (res.hasThrown) {
@@ -1259,7 +1343,7 @@ export class HandleException extends Expression {
             || res.value === undefined
             || next === undefined
             || next.value === undefined) {
-            throw new InternalInterpreterError(-1, 'How is this undefined?');
+            throw new InternalInterpreterError('How is this undefined?');
         }
         if (!next.hasThrown || !(<Value> next.value).equals(new ExceptionValue('Match', undefined, 0, 0))) {
             // Exception got handled
@@ -1285,14 +1369,14 @@ export class HandleException extends Expression {
 
 export class RaiseException extends Expression {
     // raise expression
-    constructor(public position: number, public expression: Expression) { super(); }
+    constructor(public expression: Expression) { super(); }
 
     getExplicitTypeVariables(): Set<TypeVariable> {
         return this.expression.getExplicitTypeVariables();
     }
 
     simplify(): RaiseException {
-        return new RaiseException(this.position, this.expression.simplify());
+        return new RaiseException(this.expression.simplify());
     }
 
     isSafe(state: State): boolean {
@@ -1317,7 +1401,7 @@ export class RaiseException extends Expression {
             if (!(e instanceof Array)) {
                 throw e;
             }
-            throw new ElaborationError(this.expression.position,
+            throw new ElaborationError(
                 'Raising anything but exceptions will only raise exceptions: ' + e[0]);
         }
     }
@@ -1336,10 +1420,10 @@ export class RaiseException extends Expression {
         let res = params.recResult;
         if (res === undefined
             || res.value === undefined) {
-            throw new InternalInterpreterError(-1, 'How is this undefined?');
+            throw new InternalInterpreterError('How is this undefined?');
         }
         if (!(res.value instanceof ExceptionValue)) {
-            throw new EvaluationError(this.position,
+            throw new EvaluationError(
                 'Cannot "raise" value of type "' + (<Value> res.value).typeName()
                 + '" (type must be "exn").');
         }
@@ -1358,14 +1442,14 @@ export class RaiseException extends Expression {
 
 export class Lambda extends Expression {
     // fn match
-    constructor(public position: number, public match: Match) { super(); }
+    constructor(public match: Match) { super(); }
 
     getExplicitTypeVariables(): Set<TypeVariable> {
         return this.match.getExplicitTypeVariables();
     }
 
     simplify(): Lambda {
-        return new Lambda(this.position, this.match.simplify());
+        return new Lambda(this.match.simplify());
     }
 
     toString(): string {
@@ -1408,7 +1492,7 @@ export class Lambda extends Expression {
 
 export class Match {
     // pat => exp or pat => exp | match
-    constructor(public position: number, public matches: [PatternExpression, Expression][]) { }
+    constructor(public matches: [PatternExpression, Expression][]) { }
 
     getExplicitTypeVariables(): Set<TypeVariable> {
         let res = new Set<TypeVariable>();
@@ -1439,7 +1523,7 @@ export class Match {
         let state = params.state;
         let value: Value = params.value;
         if (value === undefined) {
-            throw new InternalInterpreterError(-1, 'How is this undefined?');
+            throw new InternalInterpreterError('How is this undefined?');
         }
 
         for (let i = 0; i < this.matches.length; ++i) {
@@ -1480,7 +1564,7 @@ export class Match {
                 let tm = state.getStaticValue((<ValueIdentifier> this.matches[i][0]).name.getText());
                 if (tm !== undefined && tm[1] !== IdentifierStatus.VALUE_VARIABLE
                     && tm[0] instanceof FunctionType) {
-                    throw new ElaborationError(this.matches[i][0].position,
+                    throw new ElaborationError(
                         'Unary constructor in the pattern needs an argument.');
                 }
             }
@@ -1507,7 +1591,7 @@ export class Match {
                 if (!(e instanceof Array)) {
                     throw e;
                 }
-                throw new ElaborationError(this.position, 'Match rules disagree on type: ' + e[0]);
+                throw new ElaborationError('Match rules disagree on type: ' + e[0]);
             }
             restp = restp.instantiate(state, bnds);
             bnds.forEach((val: [Type, boolean], key: string) => {
@@ -1530,10 +1614,9 @@ export class Match {
 
         if (checkEx) {
             try {
-                warns = warns.concat(this.checkExhaustiveness((<FunctionType> restp).parameterType));
+                warns = warns.concat(this.checkExhaustiveness(state));
             } catch (e) {
-                warns.push(new Warning(this.position,
-                                       'How should I know whether this pattern matching is exhaustive?'
+                warns.push(new Warning(0, 'How should I know whether "' + this + '" is exhaustive?'
                                        + ' Do I look like friggin\' WIKIP***A to you?!\n' + e.message + '\n'));
             }
         }
@@ -1541,15 +1624,11 @@ export class Match {
         return [restp, warns, nextName, tyVars, bnds, state.valueIdentifierId];
     }
 
-    checkExhaustiveness(type: Type): Warning[] {
-        return this.checkCover(new Wildcard(-1), type, this.matches.map((a: [PatternExpression, Expression]) => {
+    checkExhaustiveness(state: State): Warning[] {
+        return new Wildcard().cover(state,
+                                      this.matches.map((a: [PatternExpression, Expression]) => {
             return a[0];
         }));
-    }
-
-    checkCover(value: PatternExpression, type: Type, patterns: PatternExpression[]): Warning[] {
-        console.log('Checking for ' + type + ' with binds', patterns.map((a: any) => {return a.constructor.name + ':' + a.toString();}));
-        return [];
     }
 
     simplify(): Match {
@@ -1558,7 +1637,7 @@ export class Match {
             let m: [PatternExpression, Expression] = this.matches[i];
             newMatches.push([m[0].simplify(), m[1].simplify()]);
         }
-        return new Match(this.position, newMatches);
+        return new Match(newMatches);
     }
 
     assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
@@ -1573,7 +1652,7 @@ export class Match {
 // Pure Patterns
 
 export class Wildcard extends Expression implements Pattern {
-    constructor(public position: number) { super(); }
+    constructor() { super(); }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
@@ -1595,13 +1674,196 @@ export class Wildcard extends Expression implements Pattern {
     }
 
     compute(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
-        throw new InternalInterpreterError(this.position,
+        throw new InternalInterpreterError(
             'Wildcards are far too wild to have a value.');
     }
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>] {
         return [[], t, tyVarBnd];
+    }
+
+    cover(state: State, rules: PatternExpression[]): Warning[] {
+        let isExh = false;
+        let warns: Warning[] = [];
+        let seenConsts = new Set<string>();
+
+        let cons: string[] = [];
+        let splitRules = new Map<string, PatternExpression[]>();
+        let idealPts = new Map<string, PatternExpression>();
+
+        let recordVals = new Set<string>();
+        let recRules: PatternExpression[] = [];
+
+        for (let i = 0; i < rules.length; ++i) {
+            let currentRule = rules[i];
+
+            while (currentRule instanceof TypedExpression) {
+                currentRule = <PatternExpression> (<TypedExpression> currentRule).expression;
+            }
+
+            if (currentRule instanceof Record) {
+                let rec = <Record> currentRule;
+
+                for (let n of rec.entries) {
+                    recordVals.add(n[0]);
+                }
+                recRules.push(currentRule);
+                continue;
+            }
+
+            if (currentRule instanceof Constant) {
+                // We assume that listing all different possible values for primitive types
+                // is never exhaustive, so just ignore constant values.
+                if (seenConsts.has(currentRule.toString())) {
+                    warns.push(new Warning(0, 'Duplicate rule for "' + currentRule
+                                           + '" in pattern matching.\n'));
+                }
+                seenConsts.add(currentRule.toString());
+                continue;
+            }
+
+            if (currentRule instanceof Wildcard) {
+                isExh = true;
+                if (i + 1 < rules.length) {
+                    warns.push(new Warning(0, 'Rules after "' + currentRule
+                                           + '" unused in pattern matching.\n'));
+                }
+                break;
+            }
+
+            if (currentRule instanceof ValueIdentifier) {
+                let cnm = (<ValueIdentifier> currentRule).name.getText();
+                let res = state.getStaticValue(cnm);
+                if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
+                    isExh = true;
+                    if (i + 1 < rules.length) {
+                        warns.push(new Warning(0, 'Rules after "' + currentRule
+                                               + '" unused in pattern matching.\n'));
+                    }
+                    break;
+                }
+
+                if (res[1] === IdentifierStatus.VALUE_CONSTRUCTOR) {
+                    // Constructor w/o argument, needs splitting
+                    if (cons.length === 0) {
+                        // Obtain list of all constructors
+                        let curtp = res[0];
+                        while (curtp instanceof TypeVariableBind) {
+                            curtp = (<TypeVariableBind> curtp).type;
+                        }
+                        if (curtp instanceof FunctionType) {
+                            curtp = (<FunctionType> curtp).returnType;
+                        }
+
+                        if (!(curtp instanceof CustomType)) {
+                            throw new InternalInterpreterError(
+                                'There. Just another unfortunate accident.');
+                        }
+
+                        let tpname = (<CustomType> curtp).name;
+                        let stattp = state.getStaticType(tpname);
+                        if (stattp === undefined) {
+                            throw new InternalInterpreterError(
+                                'There. Just another unfortunate accident.');
+                        }
+
+                        cons = stattp.constructors;
+                    }
+                    if (splitRules.has(cnm)) {
+                        warns.push(new Warning(0, 'Duplicate rule for "' + currentRule
+                                               + '" in pattern matching.\n'));
+                    } else {
+                        splitRules = splitRules.set(cnm, [currentRule]);
+                        idealPts = idealPts.set(cnm, currentRule);
+                    }
+                    continue;
+                }
+
+                throw new InternalInterpreterError(
+                    'There. Just another unfortunate accident.');
+            }
+
+            if (currentRule instanceof FunctionApplication) {
+                // Constructor w/ argument, needs splitting
+                let fnname = (<FunctionApplication> currentRule).func;
+                if (!(fnname instanceof ValueIdentifier)) {
+                    throw new InternalInterpreterError(
+                        'There. Just another unfortunate accident.');
+                }
+                let cnm = (<ValueIdentifier> fnname).name.getText();
+                let res = state.getStaticValue(cnm);
+
+                if (res === undefined || res[1] !== IdentifierStatus.VALUE_CONSTRUCTOR) {
+                    throw new InternalInterpreterError(
+                        'There. Just another unfortunate accident.');
+                }
+
+                if (cons.length === 0) {
+                    // Obtain list of all constructors
+                    let curtp = res[0];
+                    while (curtp instanceof TypeVariableBind) {
+                        curtp = (<TypeVariableBind> curtp).type;
+                    }
+                    if (curtp instanceof FunctionType) {
+                        curtp = (<FunctionType> curtp).returnType;
+                    }
+
+                    if (!(curtp instanceof CustomType)) {
+                        throw new InternalInterpreterError(
+                            'There. Just another unfortunate accident.');
+                    }
+
+                    let tpname = (<CustomType> curtp).name;
+                    let stattp = state.getStaticType(tpname);
+                    if (stattp === undefined) {
+                        throw new InternalInterpreterError(
+                            'There. Just another unfortunate accident.');
+                    }
+                    cons = stattp.constructors;
+                }
+                if (splitRules.has(cnm)) {
+                    let prevrls = <PatternExpression[]> splitRules.get(cnm);
+                    prevrls.push(currentRule);
+                    splitRules = splitRules.set(cnm, prevrls);
+                } else {
+                    splitRules = splitRules.set(cnm, [currentRule]);
+                        idealPts = idealPts.set(cnm, new FunctionApplication(
+                            (<FunctionApplication> currentRule).func,
+                            new Wildcard()
+                        ));
+                }
+            }
+
+            if (currentRule instanceof Vector) {
+                // TODO
+            }
+        }
+
+        if (cons.length !== 0) {
+            // Actual splitting work is required
+            isExh = true;
+            for (let i = 0; i < cons.length; ++i) {
+                if (!idealPts.has(cons[i])) {
+                    isExh = false;
+                    continue;
+                }
+                warns = warns.concat((<PatternExpression> idealPts.get(cons[i])).cover(
+                    state, <PatternExpression[]> splitRules.get(cons[i])));
+            }
+        } else if (!isExh && recRules.length !== 0) {
+            // Actually do record stuff
+            let reclbl: [string, Expression|PatternExpression][] = [];
+            recordVals.forEach((val: string) => {
+                reclbl.push([val, new Wildcard()]);
+            });
+            return warns.concat(new Record(true, reclbl).cover(state, recRules));
+        }
+
+        if (!isExh) {
+            warns.push(new Warning(-1, 'Pattern matching is not exhaustive.\n'));
+        }
+        return warns;
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -1623,7 +1885,7 @@ export class Wildcard extends Expression implements Pattern {
 
 export class LayeredPattern extends Expression implements Pattern {
     // <op> identifier <:type> as pattern
-    constructor(public position: number, public identifier: IdentifierToken,
+    constructor(public identifier: IdentifierToken,
                 public typeAnnotation: Type | undefined,
                 public pattern: Expression|PatternExpression) { super(); }
 
@@ -1632,11 +1894,11 @@ export class LayeredPattern extends Expression implements Pattern {
             forceRebind: boolean = false)
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
         if (!forceRebind) {
-            throw new InternalInterpreterError(this.position,
+            throw new InternalInterpreterError(
                 'Layered patterns are far too layered to have a type.');
         }
 
-        let valid = new ValueIdentifier(-1, this.identifier);
+        let valid = new ValueIdentifier(this.identifier);
         let gtp = valid.getType(state, tyVarBnd, nextName, tyVars, true);
         let tp = gtp[0];
 
@@ -1649,7 +1911,7 @@ export class LayeredPattern extends Expression implements Pattern {
                 if (!(e instanceof Array)) {
                     throw e;
                 }
-                throw new ElaborationError(this.position, 'Wrong type annotation: ' + e[0]);
+                throw new ElaborationError('Wrong type annotation: ' + e[0]);
             }
         }
 
@@ -1663,14 +1925,14 @@ export class LayeredPattern extends Expression implements Pattern {
             if (!(e instanceof Array)) {
                 throw e;
             }
-            throw new ElaborationError(this.position, 'Wrong type annotation: ' + e[0]);
+            throw new ElaborationError('Wrong type annotation: ' + e[0]);
         }
 
         return [tp, gtp[1].concat(argtp[1]), argtp[2], argtp[3], tyVarBnd, state.valueIdentifierId];
     }
 
     compute(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
-        throw new InternalInterpreterError(this.position,
+        throw new InternalInterpreterError(
             'Layered patterns are far too layered to have a value.');
     }
 
@@ -1687,12 +1949,16 @@ export class LayeredPattern extends Expression implements Pattern {
                 if (!(e instanceof Array)) {
                     throw e;
                 }
-                throw new ElaborationError(this.position, 'Wrong type annotation: ' + e[0]);
+                throw new ElaborationError('Wrong type annotation: ' + e[0]);
             }
         }
         let res = (<PatternExpression> this.pattern).matchType(state, tyVarBnd, tp);
         let result: [string, Type][] = [[this.identifier.getText(), tp]];
         return [result.concat(res[0]), t, res[2]];
+    }
+
+    cover(state: State, rules: PatternExpression[]): Warning[] {
+        return [new Warning(-1, '一昨日来やがれ。')];
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -1706,10 +1972,10 @@ export class LayeredPattern extends Expression implements Pattern {
 
     simplify(): LayeredPattern {
         if (this.typeAnnotation) {
-            return new LayeredPattern(this.position, this.identifier, this.typeAnnotation.simplify(),
+            return new LayeredPattern(this.identifier, this.typeAnnotation.simplify(),
                 this.pattern.simplify());
         } else {
-            return new LayeredPattern(this.position, this.identifier, undefined, this.pattern.simplify());
+            return new LayeredPattern(this.identifier, undefined, this.pattern.simplify());
         }
     }
 
@@ -1731,8 +1997,7 @@ export class LayeredPattern extends Expression implements Pattern {
 
         if (res.has(this.identifier.getText())) {
             throw new ParserError('No matter from which end you start eating this pattern,'
-                + 'rebinding "' + this.identifier.getText() + '" is still a bad idea.',
-                this.position);
+                + 'rebinding "' + this.identifier.getText() + '" is still a bad idea.');
         }
         return res.add(this.identifier.getText());
     }
@@ -1741,7 +2006,7 @@ export class LayeredPattern extends Expression implements Pattern {
 // Successor ML
 export class Vector extends Expression implements Pattern {
     // #[exp1, ..., expn]
-    constructor(public position: number, public expressions: Expression[]) { super(); }
+    constructor(public expressions: Expression[]) { super(); }
 
     getType(state: State,
             tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
@@ -1752,7 +2017,7 @@ export class Vector extends Expression implements Pattern {
 
         if (this.expressions.length === 0) {
             // TODO
-            return [new CustomType('vector', [new AnyType()], this.position), [], nextName, tyVars, tyVarBnd, state.valueIdentifierId];
+            return [new CustomType('vector', [new AnyType()]), [], nextName, tyVars, tyVarBnd, state.valueIdentifierId];
         }
 
         // TODO Do this properly
@@ -1770,12 +2035,12 @@ export class Vector extends Expression implements Pattern {
                 if (!(e instanceof Array)) {
                     throw e;
                 }
-                throw new ElaborationError(this.position,
+                throw new ElaborationError(
                     'Type clash in vector entries: ' + e[0]);
             }
         }
 
-        return [new CustomType('vector', [restp], this.position), tmp[1], tmp[2], tmp[3],
+        return [new CustomType('vector', [restp]), tmp[1], tmp[2], tmp[3],
             tmp[4], tmp[5]];
     }
 
@@ -1786,7 +2051,7 @@ export class Vector extends Expression implements Pattern {
         for (let i = 0; i < this.expressions.length; ++i) {
             let tmp: EvaluationResult = this.expressions[i].compute(params, callStack);
             if (tmp === undefined || tmp.value === undefined) {
-                throw new InternalInterpreterError(this.position, 'NG');
+                throw new InternalInterpreterError('NG');
             }
             res.push(tmp.value);
         }
@@ -1809,7 +2074,7 @@ export class Vector extends Expression implements Pattern {
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>] {
         if (!(t instanceof CustomType) || (<CustomType> t).name !== 'vector') {
-            throw new ElaborationError(this.position,
+            throw new ElaborationError(
                 'Vectors like only vectors, not "' + t + '". Stay cool.');
         }
 
@@ -1823,12 +2088,16 @@ export class Vector extends Expression implements Pattern {
             tyVarBnd = tmp[2];
         }
 
-        return [res, new CustomType('vector', [partp], this.position), tyVarBnd];
+        return [res, new CustomType('vector', [partp]), tyVarBnd];
+    }
+
+    cover(state: State, rules: PatternExpression[]): Warning[] {
+        return [new Warning(-1, '一昨日来やがれ。')];
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
         if (!(v instanceof VectorValue)) {
-            throw new ElaborationError(this.position,
+            throw new ElaborationError(
                 'Vectors like only vectors, not "' + v + '". Stay cool.');
         }
 
@@ -1851,7 +2120,7 @@ export class Vector extends Expression implements Pattern {
         for (let i = 0; i < this.expressions.length; ++i) {
             res.push(this.expressions[i].simplify());
         }
-        return new Vector(this.position, res);
+        return new Vector(res);
     }
 
     toString(): string {
@@ -1871,7 +2140,7 @@ export class Vector extends Expression implements Pattern {
 
 export class ConjunctivePattern extends Expression implements Pattern {
 // pat1 as pat2
-    constructor(public position: number, public left: PatternExpression,
+    constructor(public left: PatternExpression,
                 public right: PatternExpression) {
         super();
     }
@@ -1890,19 +2159,24 @@ export class ConjunctivePattern extends Expression implements Pattern {
             if (!(e instanceof Array)) {
                 throw e;
             }
-            throw new ElaborationError(this.position,
+            throw new ElaborationError(
                 'Both patterns of a conjunctive pattern must have the same type.');
         }
     }
 
     simplify(): ConjunctivePattern {
-        return new ConjunctivePattern(this.position, this.left.simplify(), this.right.simplify());
+        return new ConjunctivePattern(this.left.simplify(), this.right.simplify());
     }
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>]  {
         // TODO
-        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+        throw new InternalInterpreterError('「ニャ－、ニャ－」');
+    }
+
+    cover(state: State, rules: PatternExpression[]): Warning[] {
+        throw new PatternMatchError(
+            'Conjuctive patterns are not checked for exhaustiveness.');
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -1934,7 +2208,7 @@ export class ConjunctivePattern extends Expression implements Pattern {
 
 export class DisjunctivePattern extends Expression implements Pattern {
 // pat1 | pat2
-    constructor(public position: number, public left: PatternExpression,
+    constructor(public left: PatternExpression,
                 public right: PatternExpression) {
         super();
     }
@@ -1953,19 +2227,24 @@ export class DisjunctivePattern extends Expression implements Pattern {
             if (!(e instanceof Array)) {
                 throw e;
             }
-            throw new ElaborationError(this.position,
+            throw new ElaborationError(
                 'Both patterns of a disjunctive pattern must have the same type.');
         }
     }
 
     simplify(): DisjunctivePattern {
-        return new DisjunctivePattern(this.position, this.left.simplify(), this.right.simplify());
+        return new DisjunctivePattern(this.left.simplify(), this.right.simplify());
     }
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>]  {
         // TODO
-        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+        throw new InternalInterpreterError('「ニャ－、ニャ－」');
+    }
+
+    cover(state: State, rules: PatternExpression[]): Warning[] {
+        throw new PatternMatchError(
+            'Disjunctive patterns are not checked for exhaustiveness.');
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -1984,7 +2263,7 @@ export class DisjunctivePattern extends Expression implements Pattern {
 
 export class NestedMatch extends Expression implements Pattern {
 // pat1 with pat2 = exp
-    constructor(public position: number, public pattern: PatternExpression,
+    constructor(public pattern: PatternExpression,
                 public nested: PatternExpression, public expression: Expression) {
         super();
     }
@@ -1995,18 +2274,23 @@ export class NestedMatch extends Expression implements Pattern {
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         // TODO
-        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+        throw new InternalInterpreterError('「ニャ－、ニャ－」');
     }
 
     simplify(): NestedMatch {
-        return new NestedMatch(this.position, this.pattern.simplify(),
+        return new NestedMatch(this.pattern.simplify(),
             this.nested.simplify(), this.expression.simplify());
     }
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>]  {
         // TODO
-        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+        throw new InternalInterpreterError('「ニャ－、ニャ－」');
+    }
+
+    cover(state: State, rules: PatternExpression[]): Warning[] {
+        throw new PatternMatchError(
+            'Nested matches are not checked for exhaustiveness.');
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -2016,12 +2300,16 @@ export class NestedMatch extends Expression implements Pattern {
         }
 
         // TODO
-        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+        throw new InternalInterpreterError('「ニャ－、ニャ－」');
     }
 
     assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
         // TODO
         return new Set<string>();
+    }
+
+    toString(): string {
+        return '( ' + this.pattern + ' with ' + this.nested + ' = ' + this.expression + ' )';
     }
 }
 
@@ -2039,12 +2327,16 @@ export class InfixExpression extends Expression implements Pattern {
         return this.reParse(state).matchType(state, tyVarBnd, t);
     }
 
+    cover(state: State, rules: PatternExpression[]): Warning[] {
+        throw new InternalInterpreterError('一昨日来やがれ。');
+    }
+
     matches(state: State, v: Value): [string, Value][] | undefined {
         return this.reParse(state).matches(state, v);
     }
 
     simplify(): FunctionApplication {
-        throw new InternalInterpreterError(this.position, 'Ouch, I\'m not fully parsed.');
+        throw new InternalInterpreterError('Ouch, I\'m not fully parsed.');
     }
 
     reParse(state: State): FunctionApplication {
@@ -2092,15 +2384,14 @@ export class InfixExpression extends Expression implements Pattern {
                     && (poses[ops[i - 1][1] + 1] === poses[ops[i][1]]
                         || poses[ops[i - 1][1]] === poses[ops[i][1] + 1])) {
                     throw new ParserError('Could you ever imagine left associatives '
-                        + 'and right associatives living together in peace?', ops[i][0].position);
+                        + 'and right associatives living together in peace?');
                 }
             }
 
             let left = exps[ops[i][1]];
             let right = exps[ops[i][1] + 1];
-            let com = new FunctionApplication(ops[i][0].position,
-                new ValueIdentifier(ops[i][0].position, ops[i][0]),
-                new Tuple(ops[i][0].position, [left, right]));
+            let com = new FunctionApplication(new ValueIdentifier(ops[i][0]),
+                                              new Tuple([left, right]));
             let npos = poses[ops[i][1]];
             for (let j of poses[ops[i][1] + 1]) {
                 npos.push(j);
@@ -2114,17 +2405,17 @@ export class InfixExpression extends Expression implements Pattern {
     }
 }
 
-let falseConstant = new ValueIdentifier(0, new IdentifierToken('false', 0));
-let trueConstant = new ValueIdentifier(0, new IdentifierToken('true', 0));
-let nilConstant = new ValueIdentifier(0, new IdentifierToken('nil', 0));
-let consConstant = new ValueIdentifier(0, new IdentifierToken('::', 0));
+let falseConstant = new ValueIdentifier(new IdentifierToken('false'));
+let trueConstant = new ValueIdentifier(new IdentifierToken('true'));
+let nilConstant = new ValueIdentifier(new IdentifierToken('nil'));
+let consConstant = new ValueIdentifier(new IdentifierToken('::'));
 
 export class Conjunction extends Expression {
     // leftOperand andalso rightOperand
-    constructor(public position: number, public leftOperand: Expression, public rightOperand: Expression) { super(); }
+    constructor(public leftOperand: Expression, public rightOperand: Expression) { super(); }
 
     simplify(): FunctionApplication {
-        return new Conditional(this.position, this.leftOperand, this.rightOperand,
+        return new Conditional(this.leftOperand, this.rightOperand,
             falseConstant).simplify();
     }
 
@@ -2136,10 +2427,10 @@ export class Conjunction extends Expression {
 
 export class Disjunction extends Expression {
     // leftOperand orelse rightOperand
-    constructor(public position: number, public leftOperand: Expression, public rightOperand: Expression) { super(); }
+    constructor(public leftOperand: Expression, public rightOperand: Expression) { super(); }
 
     simplify(): FunctionApplication {
-        return new Conditional(this.position, this.leftOperand, trueConstant, this.rightOperand).simplify();
+        return new Conditional(this.leftOperand, trueConstant, this.rightOperand).simplify();
     }
 
     toString(): string {
@@ -2150,11 +2441,15 @@ export class Disjunction extends Expression {
 
 export class Tuple extends Expression implements Pattern {
     // (exp1, ..., expn), n > 1
-    constructor(public position: number, public expressions: Expression[]) { super(); }
+    constructor(public expressions: Expression[]) { super(); }
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>] {
         return this.simplify().matchType(state, tyVarBnd, t);
+    }
+
+    cover(state: State, rules: PatternExpression[]): Warning[] {
+        return this.simplify().cover(state, rules);
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -2166,7 +2461,7 @@ export class Tuple extends Expression implements Pattern {
         for (let i = 0; i < this.expressions.length; ++i) {
             entries.push(['' + (i + 1), this.expressions[i].simplify()]);
         }
-        return new Record(this.position, true, entries);
+        return new Record(true, entries);
     }
 
     toString(): string {
@@ -2183,11 +2478,15 @@ export class Tuple extends Expression implements Pattern {
 
 export class List extends Expression implements Pattern {
     // [exp1, ..., expn]
-    constructor(public position: number, public expressions: Expression[]) { super(); }
+    constructor(public expressions: Expression[]) { super(); }
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>] {
         return this.simplify().matchType(state, tyVarBnd, t);
+    }
+
+    cover(state: State, rules: PatternExpression[]): Warning[] {
+        return this.simplify().cover(state, rules);
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -2197,8 +2496,8 @@ export class List extends Expression implements Pattern {
     simplify(): PatternExpression {
         let res: PatternExpression = nilConstant;
         for (let i = this.expressions.length - 1; i >= 0; --i) {
-            let pair = new Tuple(-1, [this.expressions[i], res]).simplify();
-            res = new FunctionApplication(-1, consConstant, pair);
+            let pair = new Tuple([this.expressions[i], res]).simplify();
+            res = new FunctionApplication(consConstant, pair);
         }
         return res;
     }
@@ -2217,15 +2516,15 @@ export class List extends Expression implements Pattern {
 
 export class Sequence extends Expression {
     // (exp1; ...; expn), n >= 2
-    constructor(public position: number, public expressions: Expression[]) { super(); }
+    constructor(public expressions: Expression[]) { super(); }
 
     simplify(): FunctionApplication {
         let pos = this.expressions.length - 1;
-        let match = new Match(-1, [[new Wildcard(0), this.expressions[pos]]]);
-        let res = new CaseAnalysis(-1, this.expressions[pos - 1], match);
+        let match = new Match([[new Wildcard(), this.expressions[pos]]]);
+        let res = new CaseAnalysis(this.expressions[pos - 1], match);
         for (let i = pos - 2; i >= 0; --i) {
-            match = new Match(-1, [[new Wildcard(0), res]]);
-            res = new CaseAnalysis(-1, this.expressions[i], match);
+            match = new Match([[new Wildcard(), res]]);
+            res = new CaseAnalysis(this.expressions[i], match);
         }
         return res.simplify();
     }
@@ -2244,12 +2543,12 @@ export class Sequence extends Expression {
 
 export class RecordSelector extends Expression {
     // #label record
-    constructor(public position: number, public label: IdentifierToken | NumericToken) { super(); }
+    constructor(public label: IdentifierToken | NumericToken) { super(); }
 
     simplify(): Lambda {
-        return new Lambda(this.position, new Match(-1, [[
-            new Record(-1, false, [[this.label.text, new ValueIdentifier(-1, new IdentifierToken('__rs', -1))]]),
-            new ValueIdentifier(-1, new IdentifierToken('__rs', -1))]]));
+        return new Lambda(new Match([[
+            new Record(false, [[this.label.text, new ValueIdentifier(new IdentifierToken('__rs'))]]),
+            new ValueIdentifier(new IdentifierToken('__rs'))]]));
     }
 
     toString(): string {
@@ -2259,10 +2558,10 @@ export class RecordSelector extends Expression {
 
 export class CaseAnalysis extends Expression {
     // case expression of match
-    constructor(public position: number, public expression: Expression, public match: Match) { super(); }
+    constructor(public expression: Expression, public match: Match) { super(); }
 
     simplify(): FunctionApplication {
-        return new FunctionApplication(this.position, new Lambda(this.position,
+        return new FunctionApplication(new Lambda(
             this.match.simplify()),
             this.expression.simplify());
     }
@@ -2274,13 +2573,13 @@ export class CaseAnalysis extends Expression {
 
 export class Conditional extends Expression {
     // if condition then consequence else alternative
-    constructor(public position: number, public condition: Expression, public consequence: Expression,
+    constructor(public condition: Expression, public consequence: Expression,
                 public alternative: Expression) { super(); }
 
     simplify(): FunctionApplication {
-        let match: Match = new Match(this.position, [[trueConstant, this.consequence],
+        let match: Match = new Match([[trueConstant, this.consequence],
             [falseConstant, this.alternative]]);
-        return new CaseAnalysis(this.position, this.condition, match).simplify();
+        return new CaseAnalysis(this.condition, match).simplify();
     }
 
     toString(): string {
@@ -2290,22 +2589,22 @@ export class Conditional extends Expression {
 
 export class While extends Expression {
     // while exp do exp
-    constructor(public position: number, public condition: Expression,
+    constructor(public condition: Expression,
                 public body: Expression) {
         super();
     }
 
     simplify(): Expression {
-        let nm = new ValueIdentifier(this.position, new IdentifierToken('__whl', this.position));
-        let fapp = new FunctionApplication(this.position, nm, new Tuple(this.position, []));
-        let cond = new Conditional(this.position, this.condition,
-            new Sequence(this.position, [this.body, fapp]), new Tuple(this.position, []));
-        let valbnd = new ValueBinding(this.position, true, nm,
-            new Lambda(this.position, new Match(this.position,
-                [[new Tuple(this.position, []), cond]])));
-        let dec = new ValueDeclaration(this.position, [], [valbnd]);
+        let nm = new ValueIdentifier(new IdentifierToken('__whl'));
+        let fapp = new FunctionApplication(nm, new Tuple([]));
+        let cond = new Conditional(this.condition,
+            new Sequence([this.body, fapp]), new Tuple([]));
+        let valbnd = new ValueBinding(true, nm,
+            new Lambda(new Match(
+                [[new Tuple([]), cond]])));
+        let dec = new ValueDeclaration([], [valbnd]);
 
-        return new LocalDeclarationExpression(this.position, dec, fapp).simplify();
+        return new LocalDeclarationExpression(dec, fapp).simplify();
     }
 
     toString(): string {
@@ -2316,22 +2615,32 @@ export class While extends Expression {
 // Successor ML
 export class PatternGuard extends Expression implements Pattern {
 // pat if exp
-    constructor(public position: number, public pattern: PatternExpression,
+    constructor(public pattern: PatternExpression,
                 public condition: Expression) {
         super();
     }
 
     simplify(): NestedMatch {
-        return new NestedMatch(this.position, this.pattern.simplify(),
+        return new NestedMatch(this.pattern.simplify(),
             trueConstant, this.condition.simplify());
     }
 
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>]  {
-        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+        throw new InternalInterpreterError('「ニャ－、ニャ－」');
+    }
+
+    cover(state: State, rules: PatternExpression[]): Warning[] {
+        // Cannot check whether pattern is covered here
+        throw new PatternMatchError(
+            'Patterns with a pattern guard are not checked for exhaustiveness.');
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
-        throw new InternalInterpreterError(this.position, '「ニャ－、ニャ－」');
+        throw new InternalInterpreterError('「ニャ－、ニャ－」');
+    }
+
+    toString(): string {
+        return '( ' + this.pattern + ' if ' + this.condition + ' )';
     }
 }

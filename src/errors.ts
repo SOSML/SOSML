@@ -1,11 +1,10 @@
 export interface InterpreterMessage {
     message: string;
-    position: number;
 }
 
 // A general compiler error. Different translation phases may derive their own, more specialized error classes.
 export class InterpreterError extends Error implements InterpreterMessage {
-    constructor(public position: number, public message: string, public name: string) {
+    constructor(public message: string, public name: string) {
         super(message);
         Object.setPrototypeOf(this, InterpreterError.prototype);
     }
@@ -18,24 +17,24 @@ export class InterpreterError extends Error implements InterpreterMessage {
 // Used for errors that Never Happen™. Any InternalInterpreterError occurring is a bug in the interpreter, regardless
 // of how absurd the input is.
 export class InternalInterpreterError extends InterpreterError {
-    constructor(position: number, message: string = 'internal compiler error') {
-        super(position, message, 'You triggered Third Impact');
+    constructor(message: string = 'internal compiler error') {
+        super(message, 'You triggered Third Impact');
         Object.setPrototypeOf(this, InternalInterpreterError.prototype);
     }
 }
 
 // Used if the code may be valid SML, but uses a feature that this interpreter does not implement, e.g. references.
 export class FeatureNotImplementedError extends InterpreterError {
-    constructor(position: number, message: string) {
-        super(position, message, 'Feature Not Implemented');
+    constructor(message: string) {
+        super(message, 'Feature Not Implemented');
         Object.setPrototypeOf(this, FeatureNotImplementedError.prototype);
     }
 }
 
 // Used if the code may be valid SML, but uses a feature that is currently disabled in the interpreter settings.
 export class FeatureDisabledError extends InterpreterError {
-    constructor(position: number, message: string) {
-        super(position, message, 'Have you ever tried doing something you were not supposed to? '
+    constructor(message: string) {
+        super(message, 'Have you ever tried doing something you were not supposed to? '
         + 'Basically that');
         Object.setPrototypeOf(this, FeatureDisabledError.prototype);
     }
@@ -43,29 +42,29 @@ export class FeatureDisabledError extends InterpreterError {
 
 // Used if the input is incomplete, but may be a prefix of valid SML code.
 export class IncompleteError extends InterpreterError {
-    constructor(position: number, message: string = 'unexpected end of input') {
-        super(position, message, 'Input Incomplete');
+    constructor(message: string = 'unexpected end of input') {
+        super(message, 'Input Incomplete');
         Object.setPrototypeOf(this, IncompleteError.prototype);
     }
 }
 
 
 export class LexerError extends InterpreterError {
-    constructor(position: number, message: string) {
-        super(position, message, 'Lexing failed');
+    constructor(message: string) {
+        super(message, 'Lexing failed');
         Object.setPrototypeOf(this, LexerError.prototype);
     }
 }
 
 export class ParserError extends InterpreterError {
-    constructor(message: string, position: number) {
-        super(position, message, 'Parsing failed');
+    constructor(message: string) {
+        super(message, 'Parsing failed');
         Object.setPrototypeOf(this, ParserError.prototype);
     }
 }
 
 export class ElaborationError extends InterpreterError {
-    static getUnguarded(position: number, tyvars: string[]) {
+    static getUnguarded(tyvars: string[]) {
         let res = '';
         if (tyvars.length > 1) {
             res += 's';
@@ -77,25 +76,35 @@ export class ElaborationError extends InterpreterError {
             }
             res += '"' + tyvars[i] + '"';
         }
-        return new ElaborationError(position,
-            'Unguarded type variable' + res + '.');
+        return new ElaborationError('Unguarded type variable' + res + '.');
     }
-    constructor(position: number, message: string) {
-        super(position, message, 'Elaboration failed');
+    constructor(message: string) {
+        super(message, 'Elaboration failed');
         Object.setPrototypeOf(this, ElaborationError.prototype);
     }
 }
 
 export class EvaluationError extends InterpreterError {
-    constructor(position: number, message: string) {
-        super(position, message, 'Evaluation failed');
+    constructor(message: string) {
+        super(message, 'Evaluation failed');
         Object.setPrototypeOf(this, EvaluationError.prototype);
     }
 }
 
+export class PatternMatchError extends InterpreterError {
+    constructor(message: string) {
+        super(message, 'Checking Pattern failed');
+        Object.setPrototypeOf(this, PatternMatchError.prototype);
+    }
+}
+
 export class Warning extends InterpreterError {
-    constructor(position: number, message: string) {
-        super(position, message, 'Warning');
+    // type:
+    // -2 - Print
+    // -1 - Warning
+    //  0 - Message / Not-so-important Warning
+    constructor(public type: number, message: string) {
+        super(message, 'Warning');
         Object.setPrototypeOf(this, Warning.prototype);
     }
 }

@@ -10,31 +10,31 @@ export abstract class Type {
 
     // Constructs types with type variables instantiated as much as possible
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
-        throw new ElaborationError(-1,
+        throw new ElaborationError(
             'I mustn\'t run away. I mustn\'t run away. I mustn\'t run away.');
     }
 
     // Merge this type with the other type. This operation is commutative
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type): [Type, Map<string, [Type, boolean]>] {
-        throw new ElaborationError(-1, 'I don\'t know anything. But you know everything.');
+        throw new ElaborationError('I don\'t know anything. But you know everything.');
     }
 
     makeEqType(state: State, tyVarBnd: Map<string, [Type, boolean]>): [Type, Map<string, [Type, boolean]>] {
-        throw new ElaborationError(-1, 'I don\'t know everything. I just know what I know.');
+        throw new ElaborationError('I don\'t know everything. I just know what I know.');
     }
 
     // Return all (free) type variables
     getTypeVariables(free: boolean = false): Map<string, Type[]> {
-        throw new ElaborationError(-1, 'This is wrong.\nI said with a posed look.');
+        throw new ElaborationError('This is wrong.\nI said with a posed look.');
     }
 
     // Get all type variables in order (they may appear more than once)
     getOrderedTypeVariables(): string[] {
-        throw new ElaborationError(-1, 'You seem well today.\nDid something nice happen?');
+        throw new ElaborationError('You seem well today.\nDid something nice happen?');
     }
 
     replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
-        throw new ElaborationError(-1, 'あんたバカ?');
+        throw new ElaborationError('あんたバカ?');
     }
 
     qualify(state: State, qualifiers: LongIdentifierToken): Type {
@@ -374,7 +374,7 @@ export class TypeVariable extends Type {
         return res;
     }
 
-    constructor(public name: string, public position: number = 0, public domain: Type[] = []) {
+    constructor(public name: string, public domain: Type[] = []) {
         super();
         this.isFree = false;
     }
@@ -384,7 +384,7 @@ export class TypeVariable extends Type {
     }
 
     makeFree(): Type {
-        let res = new TypeVariable(this.name, this.position, this.domain);
+        let res = new TypeVariable(this.name, this.domain);
         res.isFree = true;
         return res;
     }
@@ -405,7 +405,7 @@ export class TypeVariable extends Type {
         if (domains.has(this.name)) {
             dom = <Type[]> domains.get(this.name);
         }
-        let res = new TypeVariable(this.name, this.position, dom);
+        let res = new TypeVariable(this.name, dom);
         res.isFree = this.isFree;
         return res;
     }
@@ -423,7 +423,7 @@ export class TypeVariable extends Type {
             return this;
         }
         if (seen.has(this.name)) {
-            throw new ElaborationError(-1,
+            throw new ElaborationError(
                 'Type clash. An expression of type "' + this.normalize()[0]
                 + '" cannot have type "' + (<[Type, boolean]> tyVarBnd.get(this.name))[0].normalize()[0]
                 + '" because of circularity.');
@@ -454,7 +454,7 @@ export class TypeVariable extends Type {
                             + '" and "' + other.normalize(0, {'strictMode': false})[0]
                             + '" ({' + ths.domain + '} and {' + oth.domain + '})'];
                     }
-                    let res = new TypeVariable(ths.name, ths.position, ndomain);
+                    let res = new TypeVariable(ths.name, ndomain);
                     res.isFree = ths.isFree && oth.isFree;
                     return [res, tyVarBnd];
                 } else {
@@ -492,15 +492,15 @@ export class TypeVariable extends Type {
                         dm = TypeVariable.mergeDomain(dm,
                             (<[TypeVariable, boolean]> nvb.get('$' + oth.name))[0].domain);
                     }
-                    nvb.set('$' + ths.name, [new TypeVariable(ths.name, -1, dm), rs.isFree]);
-                    nvb.set('$' + oth.name, [new TypeVariable(oth.name, -1, dm), rs.isFree]);
+                    nvb.set('$' + ths.name, [new TypeVariable(ths.name, dm), rs.isFree]);
+                    nvb.set('$' + oth.name, [new TypeVariable(oth.name, dm), rs.isFree]);
 
                     return [rs, nvb];
                 }
             } else {
                 let otv = oth.getTypeVariables();
                 if (otv.has((<TypeVariable> ths).name)) {
-                    throw new ElaborationError(-1,
+                    throw new ElaborationError(
                         'Type clash. An expression of type "' + (<TypeVariable> ths).normalize()[0]
                         + '" cannot have type "' + oth.normalize()[0] + '" because of circularity.');
                 }
@@ -536,11 +536,11 @@ export class TypeVariable extends Type {
         if (tyVarBnd.has(this.name)) {
             let tmp = (<[Type, boolean]> tyVarBnd.get(this.name))[0].makeEqType(state, tyVarBnd);
             tyVarBnd = tmp[1];
-            let n = new TypeVariable('\'' + this.name, this.position, this.domain);
+            let n = new TypeVariable('\'' + this.name, this.domain);
             n.isFree = this.isFree;
             tyVarBnd = tyVarBnd.set(n.name, [tmp[0], n.isFree]);
         }
-        let nt = new TypeVariable('\'' + this.name, this.position, this.domain);
+        let nt = new TypeVariable('\'' + this.name, this.domain);
         return [nt, tyVarBnd.set(this.name, [nt, this.isFree])];
     }
 
@@ -558,7 +558,7 @@ export class TypeVariable extends Type {
 
     replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
         if (replacements.has(this.name)) {
-            let res = new TypeVariable(<string> replacements.get(this.name), 0, this.domain);
+            let res = new TypeVariable(<string> replacements.get(this.name), this.domain);
             if (free.has(this.name)) {
                 res.isFree = true;
             } else {
@@ -585,8 +585,7 @@ export class TypeVariable extends Type {
 }
 
 export class RecordType extends Type {
-    constructor(public elements: Map<string, Type>, public complete: boolean = true,
-                public position: number = 0) {
+    constructor(public elements: Map<string, Type>, public complete: boolean = true) {
         super();
     }
 
@@ -609,7 +608,7 @@ export class RecordType extends Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.makeFree());
         });
-        return new RecordType(newElements, this.complete, this.position);
+        return new RecordType(newElements, this.complete);
     }
 
     replace(sc: Type, tg: Type): Type {
@@ -620,7 +619,7 @@ export class RecordType extends Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.replace(sc, tg));
         });
-        return new RecordType(newElements, this.complete, this.position);
+        return new RecordType(newElements, this.complete);
     }
 
 
@@ -629,7 +628,7 @@ export class RecordType extends Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.flatten(repl));
         });
-        return new RecordType(newElements, this.complete, this.position);
+        return new RecordType(newElements, this.complete);
     }
 
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
@@ -637,7 +636,7 @@ export class RecordType extends Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.instantiate(state, tyVarBnd, seen));
         });
-        return new RecordType(newElements, this.complete, this.position);
+        return new RecordType(newElements, this.complete);
     }
 
     qualify(state: State, qualifiers: LongIdentifierToken): Type {
@@ -645,7 +644,7 @@ export class RecordType extends Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.qualify(state, qualifiers));
         });
-        return new RecordType(newElements, this.complete, this.position);
+        return new RecordType(newElements, this.complete);
     }
 
     propagate(domains: Map<string, Type[]> = new Map<string, Type[]>()): Type {
@@ -653,7 +652,7 @@ export class RecordType extends Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.propagate(domains));
         });
-        return new RecordType(newElements, this.complete, this.position);
+        return new RecordType(newElements, this.complete);
     }
 
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type): [Type, Map<string, [Type, boolean]>] {
@@ -700,7 +699,7 @@ export class RecordType extends Type {
                 });
             }
 
-            return [new RecordType(rt, this.complete || other.complete, this.position), tybnd];
+            return [new RecordType(rt, this.complete || other.complete), tybnd];
         }
 
         // Merging didn't work
@@ -716,7 +715,7 @@ export class RecordType extends Type {
             newElements.set(key, tmp[0]);
             tyVarBnd = tmp[1];
         });
-        return [new RecordType(newElements, this.complete, this.position), tyVarBnd];
+        return [new RecordType(newElements, this.complete), tyVarBnd];
     }
 
     getTypeVariables(free: boolean = false): Map<string, Type[]> {
@@ -746,12 +745,12 @@ export class RecordType extends Type {
         this.elements.forEach((val: Type, key: string) => {
             rt = rt.set(key, val.replaceTypeVariables(replacements, free));
         });
-        return new RecordType(rt, this.complete, 0);
+        return new RecordType(rt, this.complete);
     }
 
     getType(name: string): Type {
         if (!this.elements.has(name)) {
-            throw new ElaborationError(0, 'Tried accessing non-existing record part.');
+            throw new ElaborationError('Tried accessing non-existing record part.');
         }
         return <Type> this.elements.get(name);
     }
@@ -826,7 +825,7 @@ export class RecordType extends Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.simplify());
         });
-        return new RecordType(newElements, this.complete, this.position);
+        return new RecordType(newElements, this.complete);
     }
 
     equals(other: any): boolean {
@@ -853,7 +852,7 @@ export class RecordType extends Type {
 }
 
 export class FunctionType extends Type {
-    constructor(public parameterType: Type, public returnType: Type, public position: number = 0) {
+    constructor(public parameterType: Type, public returnType: Type) {
         super();
     }
 
@@ -862,11 +861,11 @@ export class FunctionType extends Type {
     }
 
     makeFree(): Type {
-        return new FunctionType(this.parameterType.makeFree(), this.returnType.makeFree(), this.position);
+        return new FunctionType(this.parameterType.makeFree(), this.returnType.makeFree());
     }
 
     flatten(repl: Map<string, Type>): Type {
-        return new FunctionType(this.parameterType.flatten(repl), this.returnType.flatten(repl), this.position);
+        return new FunctionType(this.parameterType.flatten(repl), this.returnType.flatten(repl));
     }
 
     replace(sc: Type, tg: Type): Type {
@@ -874,22 +873,22 @@ export class FunctionType extends Type {
             return tg;
         }
         return new FunctionType(this.parameterType.replace(sc, tg),
-            this.returnType.replace(sc, tg), this.position);
+            this.returnType.replace(sc, tg));
     }
 
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
         return new FunctionType(this.parameterType.instantiate(state, tyVarBnd, seen),
-            this.returnType.instantiate(state, tyVarBnd, seen), this.position);
+            this.returnType.instantiate(state, tyVarBnd, seen));
     }
 
     qualify(state: State, qualifiers: LongIdentifierToken): Type {
         return new FunctionType(this.parameterType.qualify(state, qualifiers),
-            this.returnType.qualify(state, qualifiers), this.position);
+            this.returnType.qualify(state, qualifiers));
     }
 
     propagate(domains: Map<string, Type[]> = new Map<string, Type[]>()): Type {
         return new FunctionType(this.parameterType.propagate(domains),
-            this.returnType.propagate(domains), this.position);
+            this.returnType.propagate(domains));
     }
 
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type): [Type, Map<string, [Type, boolean]>] {
@@ -901,7 +900,7 @@ export class FunctionType extends Type {
             let p = this.parameterType.merge(state, tyVarBnd, o.parameterType);
             let r = this.returnType.merge(state, p[1], o.returnType);
 
-            return [new FunctionType(p[0], r[0], this.position), r[1]];
+            return [new FunctionType(p[0], r[0]), r[1]];
         }
 
         // Merging didn't work
@@ -943,7 +942,7 @@ export class FunctionType extends Type {
     replaceTypeVariables(replacements: Map<string, string>, free: Set<string> = new Set<string>()): Type {
         let res = this.parameterType.replaceTypeVariables(replacements, free);
         let res2 = this.returnType.replaceTypeVariables(replacements, free);
-        return new FunctionType(res, res2, 0);
+        return new FunctionType(res, res2);
     }
 
     admitsEquality(state: State): boolean {
@@ -966,7 +965,7 @@ export class FunctionType extends Type {
 
     simplify(): FunctionType {
         return new FunctionType(this.parameterType.simplify(),
-            this.returnType.simplify(), this.position);
+            this.returnType.simplify());
     }
 
     equals(other: any): boolean {
@@ -983,7 +982,6 @@ export class FunctionType extends Type {
 export class CustomType extends Type {
     constructor(public name: string,
                 public typeArguments: Type[] = [],
-                public position: number = 0,
                 public qualifiedName: LongIdentifierToken | undefined = undefined,
                 public opaque: boolean = false,
                 public id: number = 0) {
@@ -1016,7 +1014,7 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].makeFree());
         }
-        return new CustomType(this.name, res, this.position,
+        return new CustomType(this.name, res,
             this.qualifiedName, this.opaque, this.id);
     }
 
@@ -1028,7 +1026,7 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].replace(sc, tg));
         }
-        return new CustomType(this.name, res, this.position,
+        return new CustomType(this.name, res,
             this.qualifiedName, this.opaque, this.id);
     }
 
@@ -1037,7 +1035,7 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].flatten(repl));
         }
-        return new CustomType(this.name, res, this.position,
+        return new CustomType(this.name, res,
             this.qualifiedName, this.opaque, this.id);
     }
 
@@ -1046,7 +1044,7 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].qualify(state, qualifiers));
         }
-        let rs = new CustomType(this.name, res, this.position,
+        let rs = new CustomType(this.name, res,
             this.qualifiedName, this.opaque, this.id);
 
         let tp = state.getStaticType(this.name);
@@ -1061,7 +1059,7 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].propagate(domains));
         }
-        return new CustomType(this.name, res, this.position,
+        return new CustomType(this.name, res,
             this.qualifiedName, this.opaque, this.id);
     }
 
@@ -1097,33 +1095,33 @@ export class CustomType extends Type {
                 if (!(e instanceof Array)) {
                     throw e;
                 }
-                throw new ElaborationError(-1, 'Instantiating "' + this.normalize()[0]
+                throw new ElaborationError('Instantiating "' + this.normalize()[0]
                     + '" failed: ' + e[0]);
             }
         } else if (tp === undefined) {
             if (this.id > 0) {
-                throw new ElaborationError(-1, 'Unbound type "' + this.name + '/' + this.id + '".');
+                throw new ElaborationError('Unbound type "' + this.name + '/' + this.id + '".');
             }
-            throw new ElaborationError(-1, 'Unbound type "' + this.name + '".');
+            throw new ElaborationError('Unbound type "' + this.name + '".');
         } else if (tp !== undefined && tp.type.isOpaque()) {
             this.opaque = true;
         } else if (tp !== undefined && ((!(tp.type instanceof CustomType))
             || this.typeArguments.length !== (<CustomType> tp.type).typeArguments.length)) {
-            throw new ElaborationError(this.position, 'Arity mismatch: '
+            throw new ElaborationError('Arity mismatch: '
                 + this.normalize()[0] + ' vs ' + tp.type.normalize()[0] + '.');
         } else if (tp !== undefined && ((!(tp.type instanceof CustomType))
             || this.id > (<CustomType> tp.type).id)) {
             if (this.id > 0) {
-                throw new ElaborationError(-1, 'Unbound type "' + this.name + '/' + this.id + '".');
+                throw new ElaborationError('Unbound type "' + this.name + '/' + this.id + '".');
             }
-            throw new ElaborationError(-1, 'Unbound type "' + this.name + '".');
+            throw new ElaborationError('Unbound type "' + this.name + '".');
         }
 
         let res: Type[] = [];
         for (let i = 0; i < this.typeArguments.length; ++i) {
             res.push(this.typeArguments[i].instantiate(state, tyVarBnd, seen));
         }
-        return new CustomType(this.name, res, this.position,
+        return new CustomType(this.name, res,
             this.qualifiedName, this.opaque, this.id);
     }
 
@@ -1158,7 +1156,7 @@ export class CustomType extends Type {
                 tybnd = tmp[1];
             }
 
-            return [new CustomType(ths2.name, res, ths2.position, ths2.qualifiedName,
+            return [new CustomType(ths2.name, res, ths2.qualifiedName,
                 ths2.opaque, ths2.id), tybnd];
         }
 
@@ -1189,7 +1187,7 @@ export class CustomType extends Type {
             res.push(tmp[0]);
             tyVarBnd = tmp[1];
         }
-        return [new CustomType(this.name, res, this.position,
+        return [new CustomType(this.name, res,
             this.qualifiedName, this.opaque, this.id), tyVarBnd];
     }
 
@@ -1223,7 +1221,7 @@ export class CustomType extends Type {
         for (let i = 0; i < this.typeArguments.length; ++i) {
             rt.push(this.typeArguments[i].replaceTypeVariables(replacements, free));
         }
-        return new CustomType(this.name, rt, 0,
+        return new CustomType(this.name, rt,
             this.qualifiedName, this.opaque, this.id);
     }
 
@@ -1323,7 +1321,7 @@ export class CustomType extends Type {
         for (let i: number = 0; i < this.typeArguments.length; ++i) {
             args.push(this.typeArguments[i].simplify());
         }
-        return new CustomType(this.name, args, this.position,
+        return new CustomType(this.name, args,
             this.qualifiedName, this.opaque, this.id);
     }
 
@@ -1346,7 +1344,7 @@ export class CustomType extends Type {
 // Derived Types
 
 export class TupleType extends Type {
-    constructor(public elements: Type[], public position: number = 0) {
+    constructor(public elements: Type[]) {
         super();
     }
 
@@ -1370,7 +1368,7 @@ export class TupleType extends Type {
         for (let i: number = 0; i < this.elements.length; ++i) {
             entries.set('' + (i + 1), this.elements[i].simplify());
         }
-        return new RecordType(entries, true, this.position);
+        return new RecordType(entries, true);
     }
 
     equals(other: any): boolean {

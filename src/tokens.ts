@@ -4,7 +4,6 @@ export type int = number;
 
 export interface Token {
     text: string;
-    position: number;
     typeName(): string;
 
     getText(): string;
@@ -13,7 +12,7 @@ export interface Token {
 }
 
 export class KeywordToken implements Token {
-    constructor(public text: string, public position: number) {}
+    constructor(public text: string) {}
     typeName() { return 'KeywordToken'; }
 
     getText(): string {
@@ -26,7 +25,6 @@ export class KeywordToken implements Token {
 export abstract class ConstantToken implements Token {
     typeName() { return 'ConstantToken'; }
     text: string;
-    position: number;
 
     abstract getText(): string;
     abstract isValidRecordLabel(): boolean;
@@ -34,7 +32,7 @@ export abstract class ConstantToken implements Token {
 }
 export class IntegerConstantToken extends ConstantToken {
     typeName() { return 'IntegerConstantToken'; }
-    constructor(public text: string, public position: number, public value: int) {
+    constructor(public text: string, public value: int) {
         super();
     }
 
@@ -45,7 +43,7 @@ export class IntegerConstantToken extends ConstantToken {
 }
 export class RealConstantToken extends ConstantToken {
     typeName() { return 'RealConstantToken'; }
-    constructor(public text: string, public position: number, public value: number) {
+    constructor(public text: string, public value: number) {
         super();
     }
 
@@ -56,7 +54,7 @@ export class RealConstantToken extends ConstantToken {
 }
 export class WordConstantToken extends ConstantToken {
     typeName() { return 'WordConstantToken'; }
-    constructor(public text: string, public position: number, public value: int) {
+    constructor(public text: string, public value: int) {
         super();
     }
     getText(): string {
@@ -66,7 +64,7 @@ export class WordConstantToken extends ConstantToken {
 }
 export class CharacterConstantToken extends ConstantToken {
     typeName() { return 'CharacterConstantToken'; }
-    constructor(public text: string, public position: number, public value: char) {
+    constructor(public text: string, public value: char) {
         super();
     }
     getText(): string {
@@ -76,7 +74,7 @@ export class CharacterConstantToken extends ConstantToken {
 }
 export class StringConstantToken extends ConstantToken {
     typeName() { return 'StringConstantToken'; }
-    constructor(public text: string, public position: number, public value: string) {
+    constructor(public text: string, public value: string) {
         super();
     }
     getText(): string {
@@ -90,7 +88,7 @@ export class StringConstantToken extends ConstantToken {
 export class IdentifierToken implements Token {
     typeName() { return 'IdentifierToken'; }
     opPrefixed: boolean = false;
-    constructor(public text: string, public position: number) {}
+    constructor(public text: string) {}
     getText(): string {
         return this.text;
     }
@@ -102,7 +100,7 @@ export class IdentifierToken implements Token {
 // and functor identifiers
 export class AlphanumericIdentifierToken extends IdentifierToken {
     typeName() { return 'AlphanumericIdentifierToken'; }
-    constructor(text: string, position: number) { super(text, position); }
+    constructor(text: string) { super(text); }
     getText(): string {
         return this.text;
     }
@@ -112,7 +110,7 @@ export class AlphanumericIdentifierToken extends IdentifierToken {
 // An alphanumeric identifier that starts with a prime
 export class TypeVariableToken implements Token {
     typeName() { return 'TypeVariableToken'; }
-    constructor(public text: string, public position: number) {}
+    constructor(public text: string) {}
     getText(): string {
         return this.text;
     }
@@ -123,7 +121,7 @@ export class TypeVariableToken implements Token {
 // An alphanumeric identifier that starts with two primes
 export class EqualityTypeVariableToken extends TypeVariableToken {
     typeName() { return 'EqualityTypeVariableToken'; }
-    constructor(text: string, position: number) { super(text, position); }
+    constructor(text: string) { super(text); }
     getText(): string {
         return this.text;
     }
@@ -136,8 +134,8 @@ export class EqualityTypeVariableToken extends TypeVariableToken {
 export class StarToken extends KeywordToken {
     typeName() { return 'StarToken'; }
     opPrefixed: boolean = false;
-    constructor(public position: number) {
-        super('*', position);
+    constructor() {
+        super('*');
     }
     getText(): string {
         return this.text;
@@ -151,8 +149,8 @@ export class StarToken extends KeywordToken {
 // The identifier = may not be re-bound; this precludes any syntactic ambiguity." (Definition of SML, page 5)
 export class EqualsToken extends KeywordToken {
     typeName() { return 'EqualsToken'; }
-    constructor(public position: number) {
-        super('=', position);
+    constructor() {
+        super('=');
     }
     getText(): string {
         return this.text;
@@ -165,7 +163,7 @@ export class EqualsToken extends KeywordToken {
 // a record label.
 export class NumericToken extends IntegerConstantToken {
     typeName() { return 'NumericToken'; }
-    constructor(text: string, position: number, value: int) { super(text, position, value); }
+    constructor(text: string, value: int) { super(text, value); }
     getText(): string {
         return this.text;
     }
@@ -178,7 +176,7 @@ export class NumericToken extends IntegerConstantToken {
 export class LongIdentifierToken implements Token {
     typeName() { return 'LongIdentifierToken'; }
     opPrefixed: boolean = false;
-    constructor(public text: string, public position: number, public qualifiers: AlphanumericIdentifierToken[],
+    constructor(public text: string, public qualifiers: AlphanumericIdentifierToken[],
                 public id: IdentifierToken) {}
     getText(): string {
         let res: string = '';

@@ -16,19 +16,19 @@ export abstract class Declaration {
               nextName: string = '\'*t0', isTopLevel: boolean = false,
               options: { [name: string]: any } = {}):
                 [State, Warning[], Map<string, [Type, boolean]>, string] {
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        throw new InternalInterpreterError( 'Not yet implemented.');
     }
 
     evaluate(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        throw new InternalInterpreterError( 'Not yet implemented.');
     }
 
     toString(): string {
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        throw new InternalInterpreterError( 'Not yet implemented.');
     }
 
     simplify(): Declaration {
-        throw new InternalInterpreterError( -1, 'Not yet implemented.');
+        throw new InternalInterpreterError( 'Not yet implemented.');
     }
 
     assertUniqueBinding(state: State, conn: Set<string>): Set<string> {
@@ -39,7 +39,7 @@ export abstract class Declaration {
 // Declaration subclasses
 export class ValueDeclaration extends Declaration {
 // val typeVariableSequence valueBinding
-    constructor(public position: number, public typeVariableSequence: TypeVariable[],
+    constructor(public typeVariableSequence: TypeVariable[],
                 public valueBinding: ValueBinding[], public id: number = 0) {
         super();
     }
@@ -55,12 +55,11 @@ export class ValueDeclaration extends Declaration {
     simplify(): ValueDeclaration {
         let valBnd: ValueBinding[] = [];
         for (let i = 0; i < this.valueBinding.length; ++i) {
-            valBnd.push(new ValueBinding(this.valueBinding[i].position,
-                                         this.valueBinding[i].isRecursive,
+            valBnd.push(new ValueBinding(this.valueBinding[i].isRecursive,
                                          this.valueBinding[i].pattern.simplify(),
                                          this.valueBinding[i].expression.simplify()));
         }
-        return new ValueDeclaration(this.position, this.typeVariableSequence, valBnd, this.id);
+        return new ValueDeclaration(this.typeVariableSequence, valBnd, this.id);
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
@@ -105,7 +104,7 @@ export class ValueDeclaration extends Declaration {
         for (let j = 0; j < result.length; ++j) {
             if (!options || options.allowSuccessorML !== true) {
                 if (!result[j][1].isResolved()) {
-                    throw new ElaborationError(this.position,
+                    throw new ElaborationError(
                         'Unresolved record type. (Is that a goblin?)');
                 }
             }
@@ -146,7 +145,7 @@ export class ValueDeclaration extends Declaration {
 
                     if (!options || options.allowSuccessorML !== true) {
                         if (!val[0][k][1].isResolved()) {
-                            throw new ElaborationError(this.position,
+                            throw new ElaborationError(
                                 'Unresolved record type. (Is that a goblin?)');
                         }
                     }
@@ -158,7 +157,7 @@ export class ValueDeclaration extends Declaration {
             if (!haschange) {
                 break;
             } else if (l === numit * numit) {
-                throw new ElaborationError(this.position,
+                throw new ElaborationError(
                     'My brain trembles; too much circularity.');
             }
         }
@@ -166,7 +165,7 @@ export class ValueDeclaration extends Declaration {
         for (let j = 0; j < result2.length; ++j) {
             if (!options || options.allowSuccessorML !== true) {
                 if (!result2[j][1].isResolved()) {
-                    throw new ElaborationError(this.position,
+                    throw new ElaborationError(
                         'Unresolved record type. (Is that a goblin?)');
                 }
             }
@@ -196,7 +195,7 @@ export class ValueDeclaration extends Declaration {
         if (step >= 0) {
             let val = params.recResult;
             if (val === undefined) {
-                throw new InternalInterpreterError(-1, 'How is this undefined? ' + JSON.stringify(val));
+                throw new InternalInterpreterError('How is this undefined? ' + JSON.stringify(val));
             }
 
             if (this.valueBinding[step].isRecursive) {
@@ -277,19 +276,18 @@ export class ValueDeclaration extends Declaration {
 
 export class TypeDeclaration extends Declaration {
 // type typeBinding
-    constructor(public position: number, public typeBinding: TypeBinding[], public id: number = 0) {
+    constructor(public typeBinding: TypeBinding[], public id: number = 0) {
         super();
     }
 
     simplify(): TypeDeclaration {
         let bnds: TypeBinding[] = [];
         for (let i = 0; i < this.typeBinding.length; ++i) {
-            bnds.push(new TypeBinding(this.typeBinding[i].position,
-                                      this.typeBinding[i].typeVariableSequence,
+            bnds.push(new TypeBinding(this.typeBinding[i].typeVariableSequence,
                                       this.typeBinding[i].name,
                                       this.typeBinding[i].type.simplify()));
         }
-        return new TypeDeclaration(this.position, bnds, this.id);
+        return new TypeDeclaration(bnds, this.id);
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
@@ -298,7 +296,7 @@ export class TypeDeclaration extends Declaration {
         for (let i = 0; i < this.typeBinding.length; ++i) {
             let ex = state.getStaticType(this.typeBinding[i].name.getText());
             if (ex !== undefined && ex.type instanceof CustomType) {
-                throw new ElaborationError(this.position,
+                throw new ElaborationError(
                     'Nnaaa~ Redefining types as aliases is not yet implemented.');
             }
             state.setStaticType(this.typeBinding[i].name.getText(),
@@ -339,13 +337,13 @@ export class TypeDeclaration extends Declaration {
 
 export class DatatypeDeclaration extends Declaration {
 // datatype datatypeBinding <withtype typeBinding>
-    constructor(public position: number, public datatypeBinding: DatatypeBinding[],
+    constructor(public datatypeBinding: DatatypeBinding[],
                 public typeBinding: (TypeBinding[]) | undefined, public id: number = 0,
                 public givenIds: {[name: string]: number} = {}) {
         super();
 
         if (this.typeBinding !== undefined) {
-            throw new FeatureDisabledError(this.position, 'Who is "withtype"?');
+            throw new FeatureDisabledError('Who is "withtype"?');
         }
     }
 
@@ -362,12 +360,11 @@ export class DatatypeDeclaration extends Declaration {
                     ntype.push(this.datatypeBinding[i].type[j]);
                 }
             }
-            datbnd.push(new DatatypeBinding(this.datatypeBinding[i].position,
-                this.datatypeBinding[i].typeVariableSequence,
+            datbnd.push(new DatatypeBinding(this.datatypeBinding[i].typeVariableSequence,
                 this.datatypeBinding[i].name,
                 ntype));
         }
-        return new DatatypeDeclaration(this.position, datbnd, undefined, this.id);
+        return new DatatypeDeclaration(datbnd, undefined, this.id);
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
@@ -381,7 +378,7 @@ export class DatatypeDeclaration extends Declaration {
 
             for (let j = 0; j < res[0].length; ++j) {
                 if (!State.allowsRebind(res[0][j][0])) {
-                    throw new ElaborationError(this.position, 'You simply cannot rebind "'
+                    throw new ElaborationError('You simply cannot rebind "'
                         + res[0][j][0] + '".');
                 }
                 state.setStaticValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
@@ -408,7 +405,7 @@ export class DatatypeDeclaration extends Declaration {
 
             for (let j = 0; j < res[0].length; ++j) {
                 if (!State.allowsRebind(res[0][j][0])) {
-                    throw new EvaluationError(this.position, 'You simply cannot rebind "'
+                    throw new EvaluationError('You simply cannot rebind "'
                         + res[0][j][0] + '".');
                 }
                 state.setDynamicValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
@@ -449,7 +446,7 @@ export class DatatypeDeclaration extends Declaration {
 
 export class DatatypeReplication extends Declaration {
 // datatype name = datatype oldname
-    constructor(public position: number, public name: IdentifierToken,
+    constructor(public name: IdentifierToken,
                 public oldname: Token, public id: number = 0) {
         super();
     }
@@ -473,14 +470,14 @@ export class DatatypeReplication extends Declaration {
             res = state.getStaticType(this.oldname.getText());
         }
         if (res === undefined) {
-            throw new ElaborationError(this.position,
+            throw new ElaborationError(
                 'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
         }
 
         let tp = res.type.instantiate(state, tyVarBnd);
 
         state.setStaticType(this.name.getText(), new FunctionType(new CustomType(this.name.getText(),
-            (<CustomType> tp).typeArguments, 0, (this.oldname instanceof LongIdentifierToken)
+            (<CustomType> tp).typeArguments, (this.oldname instanceof LongIdentifierToken)
             ? this.oldname : undefined), tp), [], res.arity, res.allowsEquality);
         return [state, [], tyVarBnd, nextName];
    }
@@ -499,7 +496,7 @@ export class DatatypeReplication extends Declaration {
         }
 
         if (tp === undefined) {
-            throw new EvaluationError(this.position, 'The datatype "'
+            throw new EvaluationError('The datatype "'
                 + this.oldname.getText() + '" does not exist.');
         }
 
@@ -517,7 +514,7 @@ export class DatatypeReplication extends Declaration {
 }
 
 export class ExceptionDeclaration extends Declaration {
-    constructor(public position: number, public bindings: ExceptionBinding[],
+    constructor(public bindings: ExceptionBinding[],
                 public id: number = 0) {
         super();
     }
@@ -562,7 +559,7 @@ export class ExceptionDeclaration extends Declaration {
 
 export class LocalDeclaration extends Declaration {
 // local declaration in body end
-    constructor(public position: number, public declaration: Declaration,
+    constructor(public declaration: Declaration,
                 public body: Declaration, public id: number = 0) {
         super();
     }
@@ -574,7 +571,7 @@ export class LocalDeclaration extends Declaration {
     }
 
     simplify(): LocalDeclaration {
-        return new LocalDeclaration(this.position, this.declaration.simplify(), this.body.simplify(), this.id);
+        return new LocalDeclaration(this.declaration.simplify(), this.body.simplify(), this.id);
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
@@ -619,7 +616,7 @@ export class LocalDeclaration extends Declaration {
             let res = params.recResult;
             if (res === undefined
                 || res.newState === undefined) {
-                throw new InternalInterpreterError(-1, 'How is this undefined?');
+                throw new InternalInterpreterError('How is this undefined?');
             }
             let nnstate = <State> res.newState;
 
@@ -651,7 +648,7 @@ export class LocalDeclaration extends Declaration {
             let res = <EvaluationResult> params.res;
             if (nres === undefined
                 || res === undefined) {
-                throw new InternalInterpreterError(-1, 'How is this undefined?');
+                throw new InternalInterpreterError('How is this undefined?');
             }
 
             // Forget all local definitions
@@ -673,7 +670,7 @@ export class LocalDeclaration extends Declaration {
 
 export class OpenDeclaration extends Declaration {
 // open name_1 ... name_n
-    constructor(public position: number, public names: Token[], public id: number = 0) {
+    constructor(public names: Token[], public id: number = 0) {
         super();
     }
 
@@ -695,7 +692,7 @@ export class OpenDeclaration extends Declaration {
                 tmp = state.getStaticStructure(this.names[i].getText());
             }
             if (tmp === undefined) {
-                throw new EvaluationError(this.position,
+                throw new EvaluationError(
                     'Undefined module "' + this.names[i].getText() + '".');
             }
 
@@ -717,7 +714,7 @@ export class OpenDeclaration extends Declaration {
                 tmp = state.getDynamicStructure(this.names[i].getText());
             }
             if (tmp === undefined) {
-                throw new EvaluationError(this.position,
+                throw new EvaluationError(
                     'Undefined module "' + this.names[i].getText() + '".');
             }
             state.dynamicBasis.extend(<DynamicBasis> tmp);
@@ -769,7 +766,7 @@ export class EmptyDeclaration extends Declaration {
 
 export class SequentialDeclaration extends Declaration {
 // declaration1 <;> declaration2
-    constructor(public position: number, public declarations: Declaration[], public id: number = 0) {
+    constructor(public declarations: Declaration[], public id: number = 0) {
         super();
     }
 
@@ -785,7 +782,7 @@ export class SequentialDeclaration extends Declaration {
         for (let i = 0; i < this.declarations.length; ++i) {
             decls.push(this.declarations[i].simplify());
         }
-        return new SequentialDeclaration(this.position, decls, this.id);
+        return new SequentialDeclaration(decls, this.id);
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
@@ -818,7 +815,7 @@ export class SequentialDeclaration extends Declaration {
                     let ntp = val[0].instantiate(state, res[2]).normalize(
                         state.freeTypeVariables[0], options);
                     if (!(<State> state.parent).getTypeVariableBinds()[1].has(key)) {
-                        warns.push(new Warning(this.position, 'The free type variable "'
+                        warns.push(new Warning(0, 'The free type variable "'
                             + key + '" has been instantiated to "' + ntp[0] + '".\n'));
                     }
                     nbnds = nbnds.set(key, [ntp[0], true]);
@@ -855,7 +852,7 @@ export class SequentialDeclaration extends Declaration {
             let val = params.recResult;
             if (val === undefined
                 || val.newState === undefined) {
-                throw new InternalInterpreterError(-1, 'How is this undefined?');
+                throw new InternalInterpreterError('How is this undefined?');
             }
 
             if (val.hasThrown) {
@@ -904,7 +901,7 @@ export class SequentialDeclaration extends Declaration {
 
 export class FunctionDeclaration extends Declaration {
 // fun typeVariableSequence functionValueBinding
-    constructor(public position: number, public typeVariableSequence: TypeVariable[],
+    constructor(public typeVariableSequence: TypeVariable[],
                 public functionValueBinding: FunctionValueBinding[], public id: number = 0) {
         super();
     }
@@ -914,47 +911,46 @@ export class FunctionDeclaration extends Declaration {
         for (let i = 0; i < this.functionValueBinding.length; ++i) {
             valbnd.push(this.functionValueBinding[i].simplify());
         }
-        return new ValueDeclaration(this.position, this.typeVariableSequence, valbnd, this.id);
+        return new ValueDeclaration(this.typeVariableSequence, valbnd, this.id);
     }
 }
 
 export class Evaluation extends Declaration {
 // do exp
-    constructor(public position: number, public expression: Expression) {
+    constructor(public expression: Expression) {
         super();
     }
 
     simplify(): ValueDeclaration {
-        return new ValueDeclaration(this.position, [],
-            [new ValueBinding(this.position, false, new Tuple(-1, []), this.expression)]).simplify();
+        return new ValueDeclaration([],
+            [new ValueBinding(false, new Tuple([]), this.expression)]).simplify();
     }
 }
 
 export class AbstypeDeclaration extends Declaration {
 // abstype datatypeBinding <withtype typeBinding> with declaration end
-    constructor(public position: number, public datatypeBinding: DatatypeBinding[],
+    constructor(public datatypeBinding: DatatypeBinding[],
                 public typeBinding: (TypeBinding[]) | undefined, public declaration: Declaration,
                 public id: number = 0) {
         super();
 
         if (this.typeBinding !== undefined) {
-            throw new FeatureDisabledError(this.position, 'Who is "withtype"?');
+            throw new FeatureDisabledError('Who is "withtype"?');
         }
     }
 
     simplify(): LocalDeclaration {
-        let dat = new DatatypeDeclaration(this.position, this.datatypeBinding, undefined, this.id);
+        let dat = new DatatypeDeclaration(this.datatypeBinding, undefined, this.id);
         let tpbnd: TypeBinding[] = [];
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
-            tpbnd.push(new TypeBinding(this.datatypeBinding[i].position,
-                this.datatypeBinding[i].typeVariableSequence,
+            tpbnd.push(new TypeBinding(this.datatypeBinding[i].typeVariableSequence,
                 this.datatypeBinding[i].name,
                 new CustomType(this.datatypeBinding[i].name.getText(),
                     this.datatypeBinding[i].typeVariableSequence)));
         }
-        let tp = new TypeDeclaration(this.position, tpbnd, this.id);
-        return new LocalDeclaration(this.position,
-            dat, new SequentialDeclaration(this.position, [tp, this.declaration],
+        let tp = new TypeDeclaration(tpbnd, this.id);
+        return new LocalDeclaration(
+            dat, new SequentialDeclaration([tp, this.declaration],
                 this.id), this.id).simplify();
     }
 }
@@ -962,7 +958,7 @@ export class AbstypeDeclaration extends Declaration {
 
 export class InfixDeclaration extends Declaration {
 // infix <d> vid1 .. vidn
-    constructor(public position: number, public operators: IdentifierToken[],
+    constructor(public operators: IdentifierToken[],
                 public precedence: number = 0, public id: number = 0) {
         super();
     }
@@ -1004,7 +1000,7 @@ export class InfixDeclaration extends Declaration {
 
 export class InfixRDeclaration extends Declaration {
 // infixr <d> vid1 .. vidn
-    constructor(public position: number, public operators: IdentifierToken[],
+    constructor(public operators: IdentifierToken[],
                 public precedence: number = 0, public id: number = 0) {
         super();
     }
@@ -1046,7 +1042,7 @@ export class InfixRDeclaration extends Declaration {
 
 export class NonfixDeclaration extends Declaration {
 // nonfix <d> vid1 .. vidn
-    constructor(public position: number, public operators: IdentifierToken[],
+    constructor(public operators: IdentifierToken[],
                 public id: number = 0) {
         super();
     }
@@ -1089,7 +1085,7 @@ export class NonfixDeclaration extends Declaration {
 
 export class ValueBinding {
 // <rec> pattern = expression
-    constructor(public position: number, public isRecursive: boolean,
+    constructor(public isRecursive: boolean,
                 public pattern: Pattern, public expression: Expression) {
     }
 
@@ -1124,7 +1120,7 @@ export class ValueBinding {
                 // });
 
         if (res === undefined) {
-            throw new ElaborationError(this.position,
+            throw new ElaborationError(
                 'Type clash. An expression of type "' + tp[0]
                 + '" cannot be assigned to "' + res[1] + '".');
         }
@@ -1133,7 +1129,7 @@ export class ValueBinding {
         let seennames: Set<string> = new Set<string>();
         for (let i = 0; i < tyVarSeq.length; ++i) {
             if (seennames.has(tyVarSeq[i].name)) {
-                throw new ElaborationError(tyVarSeq[i].position,
+                throw new ElaborationError(
                     'I will not let a duplicate type variable name "' + tyVarSeq[i].name
                     + '" disturb my Happy Sugar Life.');
             }
@@ -1142,7 +1138,7 @@ export class ValueBinding {
             let nt = tyVarSeq[i].instantiate(state, res[2]);
             if (!(nt instanceof TypeVariable) || (<TypeVariable> nt).domain.length > 0
                 || tyVarSeq[i].admitsEquality(state) !== nt.admitsEquality(state)) {
-                throw new ElaborationError(this.position,
+                throw new ElaborationError(
                     'Type clash. An expression of explicit type "' + tyVarSeq[i]
                     + '" cannot have type "' + nt.normalize()[0] + '".');
             }
@@ -1152,7 +1148,7 @@ export class ValueBinding {
             let nt = val.instantiate(state, res[2]);
             if (!(nt instanceof TypeVariable) || (<TypeVariable> nt).domain.length > 0
                 || val.admitsEquality(state) !== nt.admitsEquality(state)) {
-                throw new ElaborationError(this.position,
+                throw new ElaborationError(
                     'Type clash. An expression of explicit type "' + val
                     + '" cannot have type "' + nt.normalize()[0] + '".');
             }
@@ -1192,7 +1188,7 @@ export class ValueBinding {
                         dm = TypeVariable.mergeDomain(dm,
                             (<[TypeVariable, boolean]> res[2].get('$' + val))[0].domain);
                     }
-                    ntys.push(new TypeVariable(val, 0, dm));
+                    ntys.push(new TypeVariable(val, dm));
                 }
             });
             for (let j = ntys.length - 1; j >= 0; --j) {
@@ -1205,7 +1201,7 @@ export class ValueBinding {
         }
 
         if (hasFree && isTopLevel) {
-            tp[1].push(new Warning(this.position, 'Free type variables at top level.\n'));
+            tp[1].push(new Warning(0, 'Free type variables at top level.\n'));
         }
 
         return [res[0], tp[1], res[2], tp[2], tp[5]];
@@ -1213,14 +1209,13 @@ export class ValueBinding {
 }
 
 export class FunctionValueBinding {
-    constructor(public position: number,
-                public parameters: [PatternExpression[], Type|undefined, Expression][],
+    constructor(public parameters: [PatternExpression[], Type|undefined, Expression][],
                 public name: ValueIdentifier) {
     }
 
     simplify(): ValueBinding {
         if (this.name === undefined) {
-            throw new InternalInterpreterError(this.position,
+            throw new InternalInterpreterError(
                 'This function isn\'t ready to be simplified yet.');
         }
 
@@ -1228,45 +1223,45 @@ export class FunctionValueBinding {
         let arr: ValueIdentifier[] = [];
         let matches: [PatternExpression, Expression][] = [];
         for (let i = 0; i < this.parameters[0][0].length; ++i) {
-            arr.push(new ValueIdentifier(-1, new IdentifierToken('__arg' + i, -1)));
+            arr.push(new ValueIdentifier(new IdentifierToken('__arg' + i)));
         }
         for (let i = 0; i < this.parameters.length; ++i) {
             let pat2: PatternExpression;
             if (this.parameters[i][0].length === 1) {
                 pat2 = this.parameters[i][0][0];
             } else {
-                pat2 = new Tuple(-1, this.parameters[i][0]);
+                pat2 = new Tuple(this.parameters[i][0]);
             }
 
             if (this.parameters[i][1] === undefined) {
                 matches.push([pat2, this.parameters[i][2]]);
             } else {
                 matches.push([pat2,
-                    new TypedExpression(-1, this.parameters[i][2], <Type> this.parameters[i][1])]);
+                    new TypedExpression(this.parameters[i][2], <Type> this.parameters[i][1])]);
             }
         }
         let pat: PatternExpression;
         if (arr.length !== 1) {
-            pat = new Tuple(-1, arr).simplify();
+            pat = new Tuple(arr).simplify();
         } else {
             pat = arr[0];
         }
-        let mat = new Match(-1, matches);
+        let mat = new Match(matches);
         let exp: Expression;
         //        if (arr.length === 1) {
-        //    exp = new Lambda(-1, mat);
+        //    exp = new Lambda(mat);
         // } else {
-        exp = new CaseAnalysis(-1, pat, mat);
+        exp = new CaseAnalysis(pat, mat);
 
         // Now build the lambdas around
         for (let i = this.parameters[0][0].length - 1; i >= 0; --i) {
-            exp = new Lambda(-1, new Match(-1, [[
-                new ValueIdentifier(-1, new IdentifierToken('__arg' + i, -1)),
+            exp = new Lambda(new Match([[
+                new ValueIdentifier(new IdentifierToken('__arg' + i)),
                 exp]]));
         }
         // }
 
-        return new ValueBinding(this.position, true, this.name, exp.simplify());
+        return new ValueBinding(true, this.name, exp.simplify());
     }
 
     toString(): string {
@@ -1292,7 +1287,7 @@ export class FunctionValueBinding {
 
 export class TypeBinding {
 // typeVariableSequence name = type
-    constructor(public position: number, public typeVariableSequence: TypeVariable[],
+    constructor(public typeVariableSequence: TypeVariable[],
                 public name: IdentifierToken, public type: Type) {
     }
 }
@@ -1302,7 +1297,7 @@ export class TypeBinding {
 export class DatatypeBinding {
 // typeVariableSequence name = <op> constructor <of type>
     // type: [constructorName, <type>]
-    constructor(public position: number, public typeVariableSequence: TypeVariable[],
+    constructor(public typeVariableSequence: TypeVariable[],
                 public name: IdentifierToken, public type: [IdentifierToken, Type | undefined][],
                 public givenIds: {[name: string]: number} = {}) {
     }
@@ -1316,9 +1311,9 @@ export class DatatypeBinding {
         nstate.incrementValueIdentifierId(this.name.getText());
 
         let idlesstp = new CustomType(this.name.getText(), this.typeVariableSequence,
-            -1, undefined, false, 0);
+            undefined, false, 0);
         let restp = new CustomType(this.name.getText(), this.typeVariableSequence,
-            -1, undefined, false, id);
+            undefined, false, id);
         nstate.setStaticType(this.name.getText(), restp, [], this.typeVariableSequence.length,
             true);
         for (let i = 0; i < this.type.length; ++i) {
@@ -1331,7 +1326,7 @@ export class DatatypeBinding {
             let tvs = new Set<string>();
             for (let j = 0; j < this.typeVariableSequence.length; ++j) {
                 if (tvs.has(this.typeVariableSequence[j].name)) {
-                    throw new ElaborationError(this.typeVariableSequence[j].position,
+                    throw new ElaborationError(
                         'I\'m not interested in duplicate type variable names such as "'
                         + this.typeVariableSequence[j] + '".');
                 }
@@ -1348,7 +1343,7 @@ export class DatatypeBinding {
             });
 
             if (ungar.length > 0) {
-                throw ElaborationError.getUnguarded(this.position, ungar);
+                throw ElaborationError.getUnguarded(ungar);
             }
 
             ve.push([this.type[i][0].getText(), tp]);
@@ -1389,8 +1384,7 @@ export interface ExceptionBinding {
 
 export class DirectExceptionBinding implements ExceptionBinding {
 // <op> name <of type>
-    constructor(public position: number,
-                public name: IdentifierToken,
+    constructor(public name: IdentifierToken,
                 public type: Type | undefined) {
     }
 
@@ -1404,7 +1398,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
                 // }
             });
             if (isTopLevel && tyvars.length > 0) {
-                throw ElaborationError.getUnguarded(this.position, tyvars);
+                throw ElaborationError.getUnguarded(tyvars);
             }
 
             state.setStaticValue(this.name.getText(),
@@ -1427,7 +1421,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
         let evalId = modifiable.getNextExceptionEvalId();
 
         if (!State.allowsRebind(this.name.getText())) {
-            throw new EvaluationError(this.position, 'You simply cannot rebind "'
+            throw new EvaluationError('You simply cannot rebind "'
                 + this.name.getText() + '".');
         }
 
@@ -1438,7 +1432,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
 
 export class ExceptionAlias implements ExceptionBinding {
 // <op> name = <op> oldname
-    constructor(public position: number, public name: IdentifierToken, public oldname: Token) {
+    constructor(public name: IdentifierToken, public oldname: Token) {
     }
 
     elaborate(state: State, isTopLevel: boolean, options: { [name: string]: any }): State {
@@ -1452,10 +1446,10 @@ export class ExceptionAlias implements ExceptionBinding {
             res = state.getStaticValue(this.oldname.getText());
         }
         if (res === undefined) {
-            throw new ElaborationError(this.position, 'Unbound value identifier "'
+            throw new ElaborationError('Unbound value identifier "'
                 + this.oldname.getText() + '".');
         } else if (res[1] !== IdentifierStatus.EXCEPTION_CONSTRUCTOR) {
-            throw new ElaborationError(this.position, 'You cannot transform "'
+            throw new ElaborationError('You cannot transform "'
                 + res[0] + '" into an exception.');
         }
         state.setStaticValue(this.name.getText(), res[0].normalize()[0], IdentifierStatus.EXCEPTION_CONSTRUCTOR);
@@ -1473,10 +1467,10 @@ export class ExceptionAlias implements ExceptionBinding {
             res = state.getDynamicValue(this.oldname.getText());
         }
         if (res === undefined) {
-            throw new EvaluationError(this.position, 'Unbound value identifier "'
+            throw new EvaluationError('Unbound value identifier "'
                 + this.oldname.getText() + '".');
         } else if (res[1] !== IdentifierStatus.EXCEPTION_CONSTRUCTOR) {
-            throw new EvaluationError(this.position, 'You cannot transform "'
+            throw new EvaluationError('You cannot transform "'
                 + res[0].toString(state, 40) + '" into an exception.');
         }
         state.setDynamicValue(this.name.getText(), res[0], IdentifierStatus.EXCEPTION_CONSTRUCTOR);

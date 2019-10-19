@@ -23,12 +23,12 @@ export interface Structure {
 
 export class StructureExpression extends Expression implements Structure {
 // struct <strdec> end
-    constructor(public position: number, public structureDeclaration: Declaration) {
+    constructor(public structureDeclaration: Declaration) {
         super();
     }
 
     simplify(): StructureExpression {
-        return new StructureExpression(this.position, this.structureDeclaration.simplify());
+        return new StructureExpression(this.structureDeclaration.simplify());
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
@@ -57,7 +57,7 @@ export class StructureExpression extends Expression implements Structure {
             let tmp = params.recResult;
             if (tmp === undefined
                 || tmp.newState === undefined) {
-                throw new InternalInterpreterError(-1, 'RAINBOW!');
+                throw new InternalInterpreterError('RAINBOW!');
             }
             let nstate = <State> tmp.newState;
 
@@ -76,7 +76,7 @@ export class StructureExpression extends Expression implements Structure {
 
 export class StructureIdentifier extends Expression implements Structure {
 // longstrid
-    constructor(public position: number, public identifier: Token) {
+    constructor(public identifier: Token) {
         super();
     }
 
@@ -99,7 +99,7 @@ export class StructureIdentifier extends Expression implements Structure {
         }
 
         if (res === undefined) {
-            throw new ElaborationError(this.position, 'Undefined module "'
+            throw new ElaborationError('Undefined module "'
                 + this.identifier.getText() + '".');
         }
         return [res, [], tyVarBnd, nextName];
@@ -121,7 +121,7 @@ export class StructureIdentifier extends Expression implements Structure {
         }
 
         if (res === undefined) {
-            throw new EvaluationError(this.position, 'Undefined module "'
+            throw new EvaluationError('Undefined module "'
                 + this.identifier.getText() + '".');
         }
         return <DynamicBasis> res;
@@ -135,7 +135,7 @@ export class StructureIdentifier extends Expression implements Structure {
 export class TransparentConstraint extends Expression implements Structure {
 // strexp : sigexp
     static restrict(sig: StaticBasis, str: StaticBasis, state: State,
-                    tyVarBnd: Map<string, [Type, boolean]>, nextName: string, position: number):
+                    tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let res = new StaticBasis({}, {}, {}, {}, {});
 
@@ -147,14 +147,14 @@ export class TransparentConstraint extends Expression implements Structure {
         for (let i in sig.typeEnvironment) {
             if (sig.typeEnvironment.hasOwnProperty(i)) {
                 if (!str.typeEnvironment.hasOwnProperty(i)) {
-                    throw new ElaborationError(position,
+                    throw new ElaborationError(
                         'Signature mismatch: Unimplemented type "' + i + '".');
                 }
                 let sg = <TypeInformation> sig.typeEnvironment[i];
                 let st = <TypeInformation> str.typeEnvironment[i];
 
                 if (sg.arity !== st.arity) {
-                    throw new ElaborationError(position,
+                    throw new ElaborationError(
                         'Signature mismatch: Implementation of type "' + i
                         + '" has the wrong arity.');
                 }
@@ -173,7 +173,7 @@ export class TransparentConstraint extends Expression implements Structure {
                     if (!(e instanceof Array)) {
                         throw e;
                     }
-                    throw new ElaborationError(position,
+                    throw new ElaborationError(
                         'Signature mismatch: Wrong implementation of type "' + i + '": ' + e[0]);
                 }
             }
@@ -182,7 +182,7 @@ export class TransparentConstraint extends Expression implements Structure {
         for (let i in sig.valueEnvironment) {
             if (sig.valueEnvironment.hasOwnProperty(i)) {
                 if (!str.valueEnvironment.hasOwnProperty(i)) {
-                    throw new ElaborationError(position,
+                    throw new ElaborationError(
                         'Signature mismatch: Unimplemented value "' + i + '".');
                 }
                 let sg = <[Type, IdentifierStatus]> sig.valueEnvironment[i];
@@ -237,7 +237,7 @@ export class TransparentConstraint extends Expression implements Structure {
                     if (!(e instanceof Array)) {
                         throw e;
                     }
-                    throw new ElaborationError(position,
+                    throw new ElaborationError(
                         'Signature mismatch: Wrong implementation of type "' + i + '": ' + e[0]);
                 }
             }
@@ -246,18 +246,18 @@ export class TransparentConstraint extends Expression implements Structure {
         for (let i in sig.structureEnvironment) {
             if (sig.structureEnvironment.hasOwnProperty(i)) {
                 if (!str.structureEnvironment.hasOwnProperty(i)) {
-                    throw new ElaborationError(position,
+                    throw new ElaborationError(
                         'Unimplemented structure "' + i + '".');
                 }
 
                 try {
                     let tmp = TransparentConstraint.restrict(<StaticBasis> sig.getStructure(i),
-                        <StaticBasis> str.getStructure(i), nstate, tyVarBnd, nextName, position);
+                        <StaticBasis> str.getStructure(i), nstate, tyVarBnd, nextName);
                     res.setStructure(i, tmp[0]);
                     tyVarBnd = tmp[2];
                     nextName = tmp[3];
                 } catch (e) {
-                    throw new ElaborationError(position,
+                    throw new ElaborationError(
                         'Signature Mismatch: Wrong implementation of structure "' + i + '": '
                         + e.message);
                 }
@@ -267,13 +267,13 @@ export class TransparentConstraint extends Expression implements Structure {
         return [res, [], tyVarBnd, nextName];
     }
 
-    constructor(public position: number, public structureExpression: Expression & Structure,
+    constructor(public structureExpression: Expression & Structure,
                 public signatureExpression: Expression & Signature) {
         super();
     }
 
     simplify(): TransparentConstraint {
-        return new TransparentConstraint(this.position,
+        return new TransparentConstraint(
             <Expression & Structure> this.structureExpression.simplify(),
             <Expression & Signature> this.signatureExpression.simplify());
     }
@@ -283,7 +283,7 @@ export class TransparentConstraint extends Expression implements Structure {
         let str = this.structureExpression.elaborate(state, tyVarBnd, nextName);
         let sig = this.signatureExpression.elaborate(state, str[2], str[3]);
 
-        return TransparentConstraint.restrict(sig[0], str[0], state, sig[2], sig[3], this.position);
+        return TransparentConstraint.restrict(sig[0], str[0], state, sig[2], sig[3]);
     }
 
     computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
@@ -307,7 +307,7 @@ export class TransparentConstraint extends Expression implements Structure {
 export class OpaqueConstraint extends Expression implements Structure {
 // strexp :> sigexp
     static restrict(sig: StaticBasis, str: StaticBasis, state: State,
-                    tyVarBnd: Map<string, [Type, boolean]>, nextName: string, position: number):
+                    tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
 
         let res = new StaticBasis({}, {}, {}, {}, {});
@@ -321,14 +321,14 @@ export class OpaqueConstraint extends Expression implements Structure {
         for (let i in sig.typeEnvironment) {
             if (sig.typeEnvironment.hasOwnProperty(i)) {
                 if (!str.typeEnvironment.hasOwnProperty(i)) {
-                    throw new ElaborationError(position,
+                    throw new ElaborationError(
                         'Signature mismatch: Unimplemented type "' + i + '".');
                 }
                 let sg = <TypeInformation> sig.typeEnvironment[i];
                 let st = <TypeInformation> str.typeEnvironment[i];
 
                 if (sg.arity !== st.arity) {
-                    throw new ElaborationError(position,
+                    throw new ElaborationError(
                         'Signature mismatch: Implementation of type "' + i
                         + '" has the wrong arity.');
                 }
@@ -341,7 +341,7 @@ export class OpaqueConstraint extends Expression implements Structure {
                     }
                     let tp = sgtp.merge(nstate, tyVarBnd, sttp);
                     // We need to create a new type here because of reference stuff
-                    sgtp = new CustomType(sgtp.name, sgtp.typeArguments, sgtp.position,
+                    sgtp = new CustomType(sgtp.name, sgtp.typeArguments,
                         sgtp.qualifiedName, true);
 
                     res.setType(i, sgtp, [], sg.arity, sg.allowsEquality);
@@ -352,7 +352,7 @@ export class OpaqueConstraint extends Expression implements Structure {
                     if (!(e instanceof Array)) {
                         throw e;
                     }
-                    throw new ElaborationError(position,
+                    throw new ElaborationError(
                         'Signature mismatch: Wrong implementation of type "' + i + '": ' + e[0]);
                 }
             }
@@ -361,7 +361,7 @@ export class OpaqueConstraint extends Expression implements Structure {
         for (let i in sig.valueEnvironment) {
             if (sig.valueEnvironment.hasOwnProperty(i)) {
                 if (!str.valueEnvironment.hasOwnProperty(i)) {
-                    throw new ElaborationError(position,
+                    throw new ElaborationError(
                         'Signature mismatch: Unimplemented value "' + i + '".');
                 }
                 let sg = <[Type, IdentifierStatus]> sig.valueEnvironment[i];
@@ -417,7 +417,7 @@ export class OpaqueConstraint extends Expression implements Structure {
                     if (!(e instanceof Array)) {
                         throw e;
                     }
-                    throw new ElaborationError(position,
+                    throw new ElaborationError(
                         'Signature mismatch: Wrong implementation of type "' + i + '": ' + e[0]);
                 }
             }
@@ -426,18 +426,17 @@ export class OpaqueConstraint extends Expression implements Structure {
         for (let i in sig.structureEnvironment) {
             if (sig.structureEnvironment.hasOwnProperty(i)) {
                 if (!str.structureEnvironment.hasOwnProperty(i)) {
-                    throw new ElaborationError(position,
-                        'Unimplemented structure "' + i + '".');
+                    throw new ElaborationError('Unimplemented structure "' + i + '".');
                 }
 
                 try {
                     let tmp = OpaqueConstraint.restrict(<StaticBasis> sig.getStructure(i),
-                        <StaticBasis> str.getStructure(i), nstate, tyVarBnd, nextName, position);
+                        <StaticBasis> str.getStructure(i), nstate, tyVarBnd, nextName);
                     res.setStructure(i, tmp[0]);
                     tyVarBnd = tmp[2];
                     nextName = tmp[3];
                 } catch (e) {
-                    throw new ElaborationError(position,
+                    throw new ElaborationError(
                         'Signature Mismatch: Wrong implementation of structure "' + i + '": '
                         + e.message);
                 }
@@ -447,14 +446,13 @@ export class OpaqueConstraint extends Expression implements Structure {
         return [res, [], tyVarBnd, nextName];
     }
 
-    constructor(public position: number, public structureExpression: Expression & Structure,
+    constructor(public structureExpression: Expression & Structure,
                 public signatureExpression: Expression & Signature) {
         super();
     }
 
     simplify(): OpaqueConstraint {
-        return new OpaqueConstraint(this.position,
-            <Expression & Structure> this.structureExpression.simplify(),
+        return new OpaqueConstraint(<Expression & Structure> this.structureExpression.simplify(),
             <Expression & Signature> this.signatureExpression.simplify());
     }
 
@@ -464,7 +462,7 @@ export class OpaqueConstraint extends Expression implements Structure {
         let str = this.structureExpression.elaborate(state, tyVarBnd, nextName);
         let sig = this.signatureExpression.elaborate(state, str[2], str[3]);
 
-        return OpaqueConstraint.restrict(sig[0], str[0], state, sig[2], sig[3], this.position);
+        return OpaqueConstraint.restrict(sig[0], str[0], state, sig[2], sig[3]);
    }
 
     computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
@@ -487,13 +485,13 @@ export class OpaqueConstraint extends Expression implements Structure {
 
 export class FunctorApplication extends Expression implements Structure {
 // funid ( strexp )
-    constructor(public position: number, public functorId: IdentifierToken,
+    constructor(public functorId: IdentifierToken,
                 public structureExpression: Expression & Structure) {
         super();
     }
 
     simplify(): FunctorApplication {
-        return new FunctorApplication(this.position, this.functorId,
+        return new FunctorApplication(this.functorId,
             <Expression & Structure> this.structureExpression.simplify());
     }
 
@@ -504,15 +502,14 @@ export class FunctorApplication extends Expression implements Structure {
         let fun = state.getStaticFunctor(this.functorId.getText());
 
         if (fun === undefined) {
-            throw new EvaluationError(this.position,
-                'Undefined functor "' + this.functorId.getText() + '".');
+            throw new EvaluationError('Undefined functor "' + this.functorId.getText() + '".');
         }
 
         let fn = new StaticBasis({}, {}, {}, {}, {});
         fn.extend(fun[1]);
 
         let res = fn.extend(TransparentConstraint.restrict(fun[0],
-            str[0], state, tyVarBnd, nextName, this.position)[0]);
+            str[0], state, tyVarBnd, nextName)[0]);
 
         for (let i in res.valueEnvironment) {
             if (res.valueEnvironment.hasOwnProperty(i)) {
@@ -536,8 +533,7 @@ export class FunctorApplication extends Expression implements Structure {
         let fun = state.getDynamicFunctor(this.functorId.getText());
 
         if (fun === undefined) {
-            throw new EvaluationError(this.position,
-                'Undefined functor "' + this.functorId.getText() + '".');
+            throw new EvaluationError('Undefined functor "' + this.functorId.getText() + '".');
         }
 
         if (params.funappres === undefined) {
@@ -580,11 +576,11 @@ export class LocalDeclarationStructureExpression extends Expression implements S
 // let strdec in exp1; ...; expn end
 // A sequential expression exp1; ... ; expn is represented as such,
 // despite the potentially missing parentheses
-    constructor(public position: number, public declaration: Declaration,
+    constructor(public declaration: Declaration,
                 public expression: Expression & Structure) { super(); }
 
     simplify(): LocalDeclarationStructureExpression {
-        return new LocalDeclarationStructureExpression(this.position, this.declaration.simplify(),
+        return new LocalDeclarationStructureExpression(this.declaration.simplify(),
             <Expression & Structure> this.expression.simplify());
     }
 
@@ -633,7 +629,7 @@ export class LocalDeclarationStructureExpression extends Expression implements S
         let res = <EvaluationResult> params.ldseRes;
         if (res === undefined
             || res.newState === undefined) {
-            throw new InternalInterpreterError(-1, 'Anpan.');
+            throw new InternalInterpreterError('Anpan.');
         }
         // braced so linter does not complain about shadowing
         {
@@ -663,12 +659,12 @@ export interface Signature {
 
 export class SignatureExpression extends Expression implements Signature {
 // sig spec end
-    constructor(public position: number, public specification: Specification) {
+    constructor(public specification: Specification) {
         super();
     }
 
     simplify(): SignatureExpression {
-        return new SignatureExpression(this.position, this.specification.simplify());
+        return new SignatureExpression(this.specification.simplify());
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
@@ -687,7 +683,7 @@ export class SignatureExpression extends Expression implements Signature {
 
 export class SignatureIdentifier extends Expression implements Signature {
 // sigid
-    constructor(public position: number, public identifier: Token) {
+    constructor(public identifier: Token) {
         super();
     }
 
@@ -710,7 +706,7 @@ export class SignatureIdentifier extends Expression implements Signature {
         }
 
         if (res === undefined) {
-            throw new EvaluationError(this.position, 'Undefined signature "'
+            throw new EvaluationError('Undefined signature "'
                 + this.identifier.getText() + '".');
         }
         return [<StaticBasis> res, [], tyVarBnd, nextName];
@@ -731,7 +727,7 @@ export class SignatureIdentifier extends Expression implements Signature {
         }
 
         if (res === undefined) {
-            throw new EvaluationError(this.position, 'Undefined signature "'
+            throw new EvaluationError('Undefined signature "'
                 + this.identifier.getText() + '".');
         }
         return <DynamicInterface> res;
@@ -744,14 +740,14 @@ export class SignatureIdentifier extends Expression implements Signature {
 
 export class TypeRealisation extends Expression implements Signature {
 // sigexp where type tyvarseq longtycon = ty
-    constructor(public position: number, public signatureExpression: Expression & Signature,
+    constructor(public signatureExpression: Expression & Signature,
                 public tyvarseq: TypeVariable[], public name: Token,
                 public type: Type) {
         super();
     }
 
     simplify(): TypeRealisation {
-        return new TypeRealisation(this.position, <Expression & Signature> this.signatureExpression.simplify(),
+        return new TypeRealisation(<Expression & Signature> this.signatureExpression.simplify(),
             this.tyvarseq, this.name, this.type.simplify());
     }
 
@@ -778,7 +774,7 @@ export class TypeRealisation extends Expression implements Signature {
         }
 
         if (res === undefined || st === undefined) {
-            throw new ElaborationError(this.position, 'Undefined type "'
+            throw new ElaborationError('Undefined type "'
                 + this.name.getText() + '".');
         }
 
@@ -805,7 +801,7 @@ export class TypeRealisation extends Expression implements Signature {
 
 export class StructureDeclaration extends Declaration {
 // structure strbind
-    constructor(public position: number, public structureBinding: StructureBinding[]) {
+    constructor(public structureBinding: StructureBinding[]) {
         super();
     }
 
@@ -856,7 +852,7 @@ export class StructureDeclaration extends Declaration {
         for (let i = 0; i < this.structureBinding.length; ++i) {
             bnd.push(this.structureBinding[i].simplify());
         }
-        return new StructureDeclaration(this.position, bnd);
+        return new StructureDeclaration(bnd);
     }
 
     toString(): string {
@@ -870,7 +866,7 @@ export class StructureDeclaration extends Declaration {
 
 export class SignatureDeclaration extends Declaration {
 // signature sigbind
-    constructor(public position: number, public signatureBinding: SignatureBinding[]) {
+    constructor(public signatureBinding: SignatureBinding[]) {
         super();
     }
 
@@ -904,7 +900,7 @@ export class SignatureDeclaration extends Declaration {
         for (let i = 0; i < this.signatureBinding.length; ++i) {
             bnd.push(this.signatureBinding[i].simplify());
         }
-        return new SignatureDeclaration(this.position, bnd);
+        return new SignatureDeclaration(bnd);
     }
 
     toString(): string {
@@ -918,7 +914,7 @@ export class SignatureDeclaration extends Declaration {
 
 export class FunctorDeclaration extends Declaration {
 // functor funbind
-    constructor(public position: number, public functorBinding: FunctorBinding[]) {
+    constructor(public functorBinding: FunctorBinding[]) {
         super();
     }
 
@@ -952,7 +948,7 @@ export class FunctorDeclaration extends Declaration {
         for (let i = 0; i < this.functorBinding.length; ++i) {
             bnd.push(this.functorBinding[i].simplify());
         }
-        return new FunctorDeclaration(this.position, bnd);
+        return new FunctorDeclaration(bnd);
     }
 
     toString(): string {
@@ -967,12 +963,12 @@ export class FunctorDeclaration extends Declaration {
 
 export class StructureBinding {
 // strid = strexp
-    constructor(public position: number, public name: IdentifierToken,
+    constructor(public name: IdentifierToken,
                 public binding: Expression & Structure) {
     }
 
     simplify(): StructureBinding {
-        return new StructureBinding(this.position, this.name,
+        return new StructureBinding(this.name,
             <Expression & Structure> this.binding.simplify());
     }
 
@@ -1011,12 +1007,12 @@ export class StructureBinding {
 
 export class SignatureBinding {
 // sigid = sigexp
-    constructor(public position: number, public name: IdentifierToken,
+    constructor(public name: IdentifierToken,
                 public binding: Expression & Signature) {
     }
 
     simplify(): SignatureBinding {
-        return new SignatureBinding(this.position, this.name,
+        return new SignatureBinding(this.name,
             <Expression & Signature> this.binding.simplify());
     }
 
@@ -1039,14 +1035,14 @@ export class SignatureBinding {
 
 export class FunctorBinding {
 // funid ( strid : sigexp ) = strexp
-    constructor(public position: number, public name: IdentifierToken,
+    constructor(public name: IdentifierToken,
                 public signatureName: IdentifierToken,
                 public signatureBinding: Expression & Signature,
                 public binding: Expression & Structure) {
     }
 
     simplify(): FunctorBinding {
-        return new FunctorBinding(this.position, this.name, this.signatureName,
+        return new FunctorBinding(this.name, this.signatureName,
             <Expression & Signature> this.signatureBinding.simplify(),
             <Expression & Structure> this.binding.simplify());
     }
@@ -1095,7 +1091,7 @@ export abstract class Specification {
 
 export class ValueSpecification extends Specification {
 // val valdesc
-    constructor(public position: number, public valueDescription: [IdentifierToken, Type][]) {
+    constructor(public valueDescription: [IdentifierToken, Type][]) {
         super();
     }
 
@@ -1126,7 +1122,7 @@ export class ValueSpecification extends Specification {
 
 export class TypeSpecification extends Specification {
 // type [tyvarseq tycon][]
-    constructor(public position: number, public typeDescription: [TypeVariable[], IdentifierToken][]) {
+    constructor(public typeDescription: [TypeVariable[], IdentifierToken][]) {
         super();
     }
 
@@ -1152,7 +1148,7 @@ export class TypeSpecification extends Specification {
 
 export class EqualityTypeSpecification extends Specification {
 // eqtype [tyvarseq tycon][]
-    constructor(public position: number, public typeDescription: [TypeVariable[], IdentifierToken][]) {
+    constructor(public typeDescription: [TypeVariable[], IdentifierToken][]) {
         super();
     }
 
@@ -1178,7 +1174,7 @@ export class EqualityTypeSpecification extends Specification {
 
 export class DatatypeSpecification extends Specification {
 // datatype [tyvarseq tycon = [vid <of ty>][]][]
-    constructor(public position: number, public datatypeDescription: [TypeVariable[],
+    constructor(public datatypeDescription: [TypeVariable[],
         IdentifierToken, [IdentifierToken, Type|undefined][]][]) {
         super();
     }
@@ -1248,13 +1244,13 @@ export class DatatypeSpecification extends Specification {
             dds.push([this.datatypeDescription[i][0], this.datatypeDescription[i][1], cds]);
         }
 
-        return new DatatypeSpecification(this.position, dds);
+        return new DatatypeSpecification(dds);
     }
 }
 
 export class DatatypeReplicationSpecification extends Specification {
 // datatype tycon = datatype longtycon
-    constructor(public position: number, public name: IdentifierToken, public oldname: Token) {
+    constructor(public name: IdentifierToken, public oldname: Token) {
         super();
     }
 
@@ -1272,15 +1268,15 @@ export class DatatypeReplicationSpecification extends Specification {
             res = state.getStaticType(this.oldname.getText());
         }
         if (res === undefined) {
-            throw new ElaborationError(this.position,
-                'The datatype "' + this.oldname.getText() + '" doesn\'t exist.');
+            throw new ElaborationError('The datatype "' + this.oldname.getText()
+                + '" doesn\'t exist.');
         }
 
         let tp = res.type.instantiate(state, tyVarBnd);
 
         let stbas = new StaticBasis({}, {}, {}, {}, {});
         stbas.setType(this.name.getText(), new FunctionType(new CustomType(this.name.getText(),
-            (<CustomType> tp).typeArguments, 0, (this.oldname instanceof LongIdentifierToken)
+            (<CustomType> tp).typeArguments, (this.oldname instanceof LongIdentifierToken)
             ? this.oldname : undefined), tp), [], res.arity, res.allowsEquality);
         return [stbas, [], tyVarBnd, nextName];
     }
@@ -1297,7 +1293,7 @@ export class DatatypeReplicationSpecification extends Specification {
         }
 
         if (tp === undefined) {
-            throw new EvaluationError(this.position, 'The datatype "'
+            throw new EvaluationError('The datatype "'
                 + this.oldname.getText() + '" does not exist.');
         }
 
@@ -1313,7 +1309,7 @@ export class DatatypeReplicationSpecification extends Specification {
 
 export class ExceptionSpecification extends Specification {
 // exception [vid <of ty>][]
-    constructor(public position: number, public exceptionDescription: [IdentifierToken, Type|undefined][]) {
+    constructor(public exceptionDescription: [IdentifierToken, Type|undefined][]) {
         super();
     }
 
@@ -1330,7 +1326,7 @@ export class ExceptionSpecification extends Specification {
                     tyvars.push(val);
                 });
                 if (tyvars.length > 0) {
-                    throw ElaborationError.getUnguarded(this.position, tyvars);
+                    throw ElaborationError.getUnguarded(tyvars);
                 }
 
                 stbas.setValue(this.exceptionDescription[i][0].getText(),
@@ -1364,13 +1360,13 @@ export class ExceptionSpecification extends Specification {
             }
         }
 
-        return new ExceptionSpecification(this.position, exns);
+        return new ExceptionSpecification(exns);
     }
 }
 
 export class StructureSpecification extends Specification {
 // structure [strid: sigexp][]
-    constructor(public position: number, public structureDescription: [IdentifierToken, Expression & Signature][]) {
+    constructor(public structureDescription: [IdentifierToken, Expression & Signature][]) {
         super();
     }
 
@@ -1408,13 +1404,13 @@ export class StructureSpecification extends Specification {
             res.push([this.structureDescription[i][0],
                 <Expression & Signature> this.structureDescription[i][1].simplify()]);
         }
-        return new StructureSpecification(this.position, res);
+        return new StructureSpecification(res);
     }
 }
 
 export class IncludeSpecification extends Specification {
 // include sigexp
-    constructor(public position: number, public expression: (Expression & Signature)[]) {
+    constructor(public expression: (Expression & Signature)[]) {
         super();
     }
 
@@ -1445,13 +1441,13 @@ export class IncludeSpecification extends Specification {
         for (let i = 0; i < this.expression.length; ++i) {
             res.push(<Expression & Signature> this.expression[i].simplify());
         }
-        return new IncludeSpecification(this.position, res);
+        return new IncludeSpecification(res);
     }
 }
 
 export class EmptySpecification extends Specification {
 //
-    constructor(public position: number) {
+    constructor() {
         super();
     }
 
@@ -1467,7 +1463,7 @@ export class EmptySpecification extends Specification {
 
 export class SequentialSpecification extends Specification {
 // spec[]
-    constructor(public position: number, public specifications: Specification[]) {
+    constructor(public specifications: Specification[]) {
         super();
     }
 
@@ -1501,13 +1497,13 @@ export class SequentialSpecification extends Specification {
         for (let i = 0; i < this.specifications.length; ++i) {
             res.push(this.specifications[i].simplify());
         }
-        return new SequentialSpecification(this.position, res);
+        return new SequentialSpecification(res);
     }
 }
 
 export class SharingSpecification extends Specification {
 // spec sharing type longtycon = ... = longtycon
-    constructor(public position: number, public specification: Specification,
+    constructor(public specification: Specification,
                 public typeNames: Token[]) {
         super();
     }
@@ -1540,7 +1536,7 @@ export class SharingSpecification extends Specification {
             }
 
             if (res === undefined || st === undefined) {
-                throw new ElaborationError(this.position, 'Undefined type "'
+                throw new ElaborationError('Undefined type "'
                     + this.typeNames[i].getText() + '".');
             }
 
@@ -1566,17 +1562,17 @@ export class SharingSpecification extends Specification {
 // Derived forms
 export class TypeAliasSpecification extends Specification {
 // type tyvarseq tycon = ty and ... and tyvarseq tycon = ty
-    constructor(public position: number, public alias: [TypeVariable[], IdentifierToken, Type][]) {
+    constructor(public alias: [TypeVariable[], IdentifierToken, Type][]) {
         super();
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        throw new InternalInterpreterError(this.position, 'And you don\'t seem to understand…');
+        throw new InternalInterpreterError('And you don\'t seem to understand…');
     }
 
     computeInterface(state: State): DynamicInterface {
-        throw new InternalInterpreterError(this.position, 'Being an interpreter is suffering.');
+        throw new InternalInterpreterError('Being an interpreter is suffering.');
     }
 
     simplify(): Specification {
@@ -1584,12 +1580,12 @@ export class TypeAliasSpecification extends Specification {
         for (let i = 0; i < this.alias.length; ++i) {
             tpspc.push([this.alias[i][0], this.alias[i][1]]);
         }
-        let sg: Expression & Signature = new SignatureExpression(-1, new TypeSpecification(-1, tpspc));
+        let sg: Expression & Signature = new SignatureExpression(new TypeSpecification(tpspc));
 
         for (let i = 0; i < this.alias.length; ++i) {
-            sg = new TypeRealisation(-1, sg, this.alias[i][0], this.alias[i][1], this.alias[i][2]);
+            sg = new TypeRealisation(sg, this.alias[i][0], this.alias[i][1], this.alias[i][2]);
         }
 
-        return new IncludeSpecification(-1, [sg]).simplify();
+        return new IncludeSpecification([sg]).simplify();
     }
 }

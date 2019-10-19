@@ -57,10 +57,10 @@ function addArrayLib(state: State): State {
 
                 return [arr, false, []];
             } else {
-                throw new InternalInterpreterError(-1, 'std type mismatch');
+                throw new InternalInterpreterError('std type mismatch');
             }
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('array',
@@ -75,7 +75,7 @@ function addArrayLib(state: State): State {
             let list: ConstructedValue = val;
             while (list.constructorName !== 'nil') {
                 if (list.constructorName !== '::') {
-                    throw new InternalInterpreterError(-1, 'std type mismatch');
+                    throw new InternalInterpreterError('std type mismatch');
                 }
                 let arg = list.argument;
                 if (arg instanceof RecordValue && arg.entries.size === 2) {
@@ -86,16 +86,16 @@ function addArrayLib(state: State): State {
                         arr.length++;
                         list = a2;
                     } else {
-                        throw new InternalInterpreterError(-1, 'std type mismatch');
+                        throw new InternalInterpreterError('std type mismatch');
                     }
                 } else {
-                    throw new InternalInterpreterError(-1, 'std type mismatch');
+                    throw new InternalInterpreterError('std type mismatch');
                 }
             }
 
             return [arr, false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('fromList', new FunctionType(listType, arrayType), IdentifierStatus.VALUE_VARIABLE);
@@ -113,10 +113,10 @@ function addArrayLib(state: State): State {
 
                 return [(<Value> params.modifiable.getCell(arr.address + ind)), false, []];
             } else {
-                throw new InternalInterpreterError(-1, 'std type mismatch');
+                throw new InternalInterpreterError('std type mismatch');
             }
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('sub',
@@ -138,10 +138,10 @@ function addArrayLib(state: State): State {
                 params.modifiable.setCell(arr.address + ind, value);
                 return [new RecordValue(), false, []];
             } else {
-                throw new InternalInterpreterError(-1, 'std type mismatch');
+                throw new InternalInterpreterError('std type mismatch');
             }
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('update',
@@ -153,7 +153,7 @@ function addArrayLib(state: State): State {
             let res = new Integer(val.length);
             return [res, false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('length', new FunctionType(arrayType, intType), IdentifierStatus.VALUE_VARIABLE);
@@ -175,7 +175,7 @@ function addMathLib(state: State): State {
             }
             return [new Real(Math.sqrt(value)), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('sqrt', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
@@ -185,7 +185,7 @@ function addMathLib(state: State): State {
             let value = (<Real> val).value;
             return [new Real(Math.sin(value)), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('sin', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
@@ -195,7 +195,7 @@ function addMathLib(state: State): State {
             let value = (<Real> val).value;
             return [new Real(Math.cos(value)), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('cos', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
@@ -205,7 +205,7 @@ function addMathLib(state: State): State {
             let value = (<Real> val).value;
             return [new Real(Math.tan(value)), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('tan', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
@@ -215,7 +215,7 @@ function addMathLib(state: State): State {
             let value = (<Real> val).value;
             return [new Real(Math.asin(value)), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('asin', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
@@ -225,7 +225,7 @@ function addMathLib(state: State): State {
             let value = (<Real> val).value;
             return [new Real(Math.acos(value)), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('acos', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
@@ -235,7 +235,7 @@ function addMathLib(state: State): State {
             let value = (<Real> val).value;
             return [new Real(Math.atan(value)), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('atan', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
@@ -249,10 +249,10 @@ function addMathLib(state: State): State {
                 let value2 = (<Real> val2).value;
                 return [new Real(Math.atan2(value1, value2)), false, []];
             } else {
-                throw new InternalInterpreterError(-1, 'std type mismatch');
+                throw new InternalInterpreterError('std type mismatch');
             }
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('atan2', new FunctionType(new TupleType([realType, realType]), realType).simplify(),
@@ -263,7 +263,7 @@ function addMathLib(state: State): State {
             let value = (<Real> val).value;
             return [new Real(Math.exp(value)), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('exp', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
@@ -277,10 +277,10 @@ function addMathLib(state: State): State {
                 let value2 = (<Real> val2).value;
                 return [new Real(Math.pow(value1, value2)), false, []];
             } else {
-                throw new InternalInterpreterError(-1, 'std type mismatch');
+                throw new InternalInterpreterError('std type mismatch');
             }
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('pow', new FunctionType(new TupleType([realType, realType]), realType).simplify(),
@@ -291,7 +291,7 @@ function addMathLib(state: State): State {
             let value = (<Real> val).value;
             return [new Real(Math.log(value)), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('ln', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
@@ -301,7 +301,7 @@ function addMathLib(state: State): State {
             let value = (<Real> val).value;
             return [new Real(Math.log10(value)), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('log10', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
@@ -311,7 +311,7 @@ function addMathLib(state: State): State {
             let value = (<Real> val).value;
             return [new Real(Math.sinh(value)), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('sinh', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
@@ -321,7 +321,7 @@ function addMathLib(state: State): State {
             let value = (<Real> val).value;
             return [new Real(Math.cosh(value)), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('cosh', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
@@ -331,7 +331,7 @@ function addMathLib(state: State): State {
             let value = (<Real> val).value;
             return [new Real(Math.tanh(value)), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('tanh', new FunctionType(realType, realType), IdentifierStatus.VALUE_VARIABLE);
@@ -354,7 +354,7 @@ function addCharLib(state: State): State {
             let value = (<CharValue> val).value;
             return [new Integer(value.charCodeAt(0)), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     state.setStaticValue('ord', new FunctionType(charType, intType), IdentifierStatus.VALUE_VARIABLE);
@@ -367,7 +367,7 @@ function addCharLib(state: State): State {
             }
             return [new CharValue(String.fromCharCode(value)), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     state.setStaticValue('chr', new FunctionType(intType, charType), IdentifierStatus.VALUE_VARIABLE);
@@ -384,7 +384,7 @@ function addRealLib(state: State): State {
             let value = (<Integer> val).value;
             return [new Real(value), false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('fromInt', new FunctionType(intType, realType), IdentifierStatus.VALUE_VARIABLE);
@@ -398,7 +398,7 @@ function addRealLib(state: State): State {
             }
             return [integer, false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('round', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
@@ -412,7 +412,7 @@ function addRealLib(state: State): State {
             }
             return [integer, false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('floor', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
@@ -426,7 +426,7 @@ function addRealLib(state: State): State {
             }
             return [integer, false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('ceil', new FunctionType(realType, intType), IdentifierStatus.VALUE_VARIABLE);
@@ -436,7 +436,7 @@ function addRealLib(state: State): State {
             let str = new StringValue((<Real> val).toString(undefined));
             return [str, false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('toString', new FunctionType(realType, stringType), IdentifierStatus.VALUE_VARIABLE);
@@ -456,7 +456,7 @@ function addIntLib(state: State): State {
             let str = new StringValue((<Integer> val).toString(undefined));
             return [str, false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('toString', new FunctionType(intType, stringType), IdentifierStatus.VALUE_VARIABLE);
@@ -520,7 +520,7 @@ function addVectorLib(state: State): State {
             let list: ConstructedValue = val;
             while (list.constructorName !== 'nil') {
                 if (list.constructorName !== '::') {
-                    throw new InternalInterpreterError(-1, 'std type mismatch');
+                    throw new InternalInterpreterError('std type mismatch');
                 }
                 let arg = list.argument;
                 if (arg instanceof RecordValue && arg.entries.size === 2) {
@@ -530,16 +530,16 @@ function addVectorLib(state: State): State {
                         vec.entries.push(a1);
                         list = a2;
                     } else {
-                        throw new InternalInterpreterError(-1, 'std type mismatch');
+                        throw new InternalInterpreterError('std type mismatch');
                     }
                 } else {
-                    throw new InternalInterpreterError(-1, 'std type mismatch');
+                    throw new InternalInterpreterError('std type mismatch');
                 }
             }
 
             return [vec, false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('fromList', new FunctionType(listType, vectorType), IdentifierStatus.VALUE_VARIABLE);
@@ -557,10 +557,10 @@ function addVectorLib(state: State): State {
 
                 return [vec.entries[ind], false, []];
             } else {
-                throw new InternalInterpreterError(-1, 'std type mismatch');
+                throw new InternalInterpreterError('std type mismatch');
             }
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('sub',
@@ -583,10 +583,10 @@ function addVectorLib(state: State): State {
                 res.entries[ind] = value;
                 return [res, false, []];
             } else {
-                throw new InternalInterpreterError(-1, 'std type mismatch');
+                throw new InternalInterpreterError('std type mismatch');
             }
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('update',
@@ -598,7 +598,7 @@ function addVectorLib(state: State): State {
             let res = new Integer(val.entries.length);
             return [res, false, []];
         } else {
-            throw new InternalInterpreterError(-1, 'std type mismatch');
+            throw new InternalInterpreterError('std type mismatch');
         }
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('length', new FunctionType(vectorType, intType), IdentifierStatus.VALUE_VARIABLE);
@@ -639,7 +639,7 @@ function addEvalLib(state: State): State {
                 while (callStack.length > 0) {
                     let next = callStack.pop();
                     if (next === undefined) {
-                        throw new InternalInterpreterError(-1, 'バトル、バトルしたい！');
+                        throw new InternalInterpreterError('バトル、バトルしたい！');
                     }
                     let target = next.next;
                     let params = next.params;
@@ -684,10 +684,10 @@ function addEvalLib(state: State): State {
                     new Warning(-2, debug)
                 ]];
             } catch (e) {
-                return [new RecordValue(), false, [new Warning(e.position, e.message)]];
+                return [new RecordValue(), false, [new Warning(-1, e.message)]];
             }
         } else {
-            throw new InternalInterpreterError(-1, 'This std type mismatch reigns supreme!');
+            throw new InternalInterpreterError('This std type mismatch reigns supreme!');
         }
         }), IdentifierStatus.VALUE_VARIABLE);
 
@@ -722,7 +722,7 @@ export let STDLIB: {
             (* fun ! (a : \'A ref): \'A = ! a;
             fun op := ((a, b) : (\'A ref * \'A)): unit = a := b;
             fun ref (a : \'A): \'A ref = ref a; *)
-            
+
             fun ignore a = ();
             infix 0 before;
             fun a before (b: unit) = a;`,
@@ -760,48 +760,48 @@ export let STDLIB: {
             fun tabulate (n, f) = fromList (List.tabulate (n, f));
 
             fun vector arr = Vector.tabulate (length arr, fn i => sub (arr, i));
-            
-            fun copy {src, dst, di} = if di < 0 orelse length dst < di + length src then raise Subscript 
+
+            fun copy {src, dst, di} = if di < 0 orelse length dst < di + length src then raise Subscript
                 else let
                     val len = length src
                     fun loop index = if index = len then ()
                         else ( update(dst, index + di, sub(src, index)); loop (index + 1))
-                    in 
+                    in
                         loop 0
                     end;
-            fun copyVec {src, dst, di} = if di < 0 orelse length dst < di + Vector.length src then raise Subscript 
+            fun copyVec {src, dst, di} = if di < 0 orelse length dst < di + Vector.length src then raise Subscript
                 else let
                     val len = Vector.length src
                     fun loop index = if index = len then ()
                         else ( update(dst, index + di, Vector.sub(src, index)); loop (index + 1))
-                    in 
+                    in
                         loop 0
                     end;
-            
+
             fun appi p arr = let
                 val len = length arr
                 fun loop index = if index = len then ()
                     else (p(index, sub(arr, index)); loop (index +1))
-                in 
+                in
                     loop 0
                 end;
             fun app p = appi (fn (_, v) => p v);
-            
+
                         fun modifyi p arr = let
                 val len = length arr
                 fun loop index = if index = len then ()
                     else ( update(arr, index, p(index, sub(arr, index))); loop (index +1))
-                in 
+                in
                     loop 0
                 end;
-                
+
             fun modifyi p arr = let
                 val len = length arr
                 fun loop index = if index = len then ()
                     else ( update(arr, index, p(index, sub(arr, index))); loop (index +1))
-                in 
+                in
                     loop 0
-                end; 
+                end;
             fun modify p = modifyi (fn (_, v) => p v);
 
             fun foldli f init arr = let
@@ -822,28 +822,28 @@ export let STDLIB: {
                 end;
             fun foldl f init arr = foldli (fn (_, a, x) => f(a, x)) init arr;
             fun foldr f init arr = foldri (fn (_, a, x) => f(a, x)) init arr;
-            
+
             fun findi f arr = let
                 val len = length arr
-                fun loop index = 
+                fun loop index =
                     if index = Array.length arr then NONE
                     else let
-                        val el = sub(arr, index) 
-                    in if f (index, el) then SOME (index, el) else loop (index+1) 
+                        val el = sub(arr, index)
+                    in if f (index, el) then SOME (index, el) else loop (index+1)
                     end
-                in 
+                in
                     loop 0
                 end;
-            fun find f arr = case findi (fn (_, v) => f v) arr of NONE => NONE 
+            fun find f arr = case findi (fn (_, v) => f v) arr of NONE => NONE
                                                                 | SOME (_, v) => SOME v;
-            fun exists p arr = case find p arr of NONE => false 
+            fun exists p arr = case find p arr of NONE => false
                                                 | SOME _ => true;
-            
+
             fun all p = foldl (fn (v, acc) => p v andalso acc) true;
             fun collate p (a1, a2) = let
                 val length1 = length a1
                 val length2 = length a2
-                fun loop index = 
+                fun loop index =
                     if index = length1 andalso index = length2 then EQUAL
                     else if index = length1 then LESS
                     else if index = length2 then GREATER
@@ -892,20 +892,20 @@ export let STDLIB: {
                 val maxOrd = 255;
                 val maxChar = chr maxOrd;
                 val minChar = chr 0;
-                
+
                 fun succ c = if c = maxChar then raise Chr else chr(ord c + 1)
                 fun pred c = if c = minChar then raise Chr else chr(ord c - 1)
-                
+
                 fun contains s = let
                     val table = Array.array(maxOrd + 1, false)
                     val l = explode s
-                    in 
+                    in
                         (List.app (fn x => Array.update(table, ord x, true)) l; fn c => Array.sub(table, ord c))
                     end;
                 fun notContains s = let
                     val table = Array.array(maxOrd + 1, false)
                     val l = explode s
-                    in 
+                    in
                         (List.app (fn x => Array.update(table, ord x, true)) l; fn c => not (Array.sub(table, ord c)))
                     end;
             end;`,
@@ -1275,8 +1275,8 @@ export let STDLIB: {
             val foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
             val foldl  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
             val foldr  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
-            val findi : (int * 'a -> bool) -> 'a vector -> (int * 'a) option 
-            val find  : ('a -> bool) -> 'a vector -> 'a option 
+            val findi : (int * 'a -> bool) -> 'a vector -> (int * 'a) option
+            val find  : ('a -> bool) -> 'a vector -> 'a option
             val exists : ('a -> bool) -> 'a vector -> bool
             val all : ('a -> bool) -> 'a vector -> bool
             val collate : ('a * 'a -> order) -> 'a vector * 'a vector -> order
@@ -1312,25 +1312,25 @@ export let STDLIB: {
 
             fun findi f vec = let
                 val len = length vec
-                fun loop index = 
+                fun loop index =
                     if index = Vector.length vec then NONE
                     else let
-                        val el = sub(vec, index) 
-                    in if f (index, el) then SOME (index, el) else loop (index+1) 
+                        val el = sub(vec, index)
+                    in if f (index, el) then SOME (index, el) else loop (index+1)
                     end
-                in 
+                in
                     loop 0
                 end;
-            fun find f vec = case findi (fn (_, v) => f v) vec of NONE => NONE 
+            fun find f vec = case findi (fn (_, v) => f v) vec of NONE => NONE
                                                                  | SOME (_, v) => SOME v;
-            fun exists p vec = case find p vec of NONE => false 
+            fun exists p vec = case find p vec of NONE => false
                                                 | SOME _ => true;
-            
+
             fun all p vec = foldl (fn (v, acc) => p v andalso acc) true vec;
             fun collate p (v1, v2) = let
                 val length1 = length v1
                 val length2 = length v2
-                fun loop index = 
+                fun loop index =
                     if index = length1 andalso index = length2 then EQUAL
                     else if index = length1 then LESS
                     else if index = length2 then GREATER
@@ -1358,7 +1358,7 @@ export let STDLIB: {
 
 export function loadModule(state: State, name: string, options: {[name: string]: any }): State {
     if (!STDLIB.hasOwnProperty(name)) {
-        throw new InternalInterpreterError(-1, 'The module "' + name + '" does not exist. Auuuu~');
+        throw new InternalInterpreterError('The module "' + name + '" does not exist. Auuuu~');
     }
     if (state.hasModule(name)) {
         return state;
