@@ -138,7 +138,7 @@ function run( stuff: string, moreStuff: string[ ] = [ ], evaluate: boolean = tru
                     }
                     if( res.warnings !== undefined ) {
                         for( let i = 0; i < res.warnings.length; ++i ) {
-                            if( res.warnings[ i ].position >= -1 ) {
+                            if( res.warnings[ i ].type >= -1 ) {
                                 out += 'WARN: ' + res.warnings[ i ].message;
                             } else {
                                 out += 'Printed: ' + res.warnings[ i ].message;

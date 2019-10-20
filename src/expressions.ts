@@ -60,6 +60,7 @@ export interface Pattern {
     matches(state: State, v: Value): [string, Value][] | undefined;
     simplify(): PatternExpression;
     toString(indentation: number, oneLine: boolean): string;
+    subsumes(state: State, other: PatternExpression): boolean;
 
     assertUniqueBinding(state: State, conn: Set<string>): Set<string>;
 }
@@ -72,6 +73,17 @@ export class Constant extends Expression implements Pattern {
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>] {
         return [[], this.getType(state, tyVarBnd)[0], tyVarBnd];
+    }
+
+    subsumes(state: State, other: PatternExpression): boolean {
+        while (other instanceof TypedExpression) {
+            other = <PatternExpression> (<TypedExpression> other).expression;
+        }
+
+        if (other instanceof Constant) {
+            return this.toString() === other.toString();
+        }
+        return false;
     }
 
     cover(state: State, rules: PatternExpression[]): Warning[] {
@@ -152,6 +164,52 @@ export class Constant extends Expression implements Pattern {
 export class ValueIdentifier extends Expression implements Pattern {
 // op longvid or longvid
     constructor(public name: Token) { super(); }
+
+    getConstructorName(state: State): string | undefined {
+        // Returns the name of the constructor corresponding to this
+        // ValueIdentifier or undefined if this ValueIdentifier is a variable or
+        // ExceptionConstructor
+
+        let cnm = this.name.getText();
+        let res = state.getStaticValue(cnm);
+        if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
+            return undefined;
+        } else if (res[1] === IdentifierStatus.VALUE_CONSTRUCTOR) {
+            return cnm;
+        }
+        return undefined;
+    }
+
+    getConstructorList(state: State): string[] | undefined {
+        // If this ValueIdentifier corresponds to a ValueConstructor,
+        // return all constructor names of the corresponding type.
+        // Otherwise return undefined.
+
+        let cnm = this.name.getText();
+        let res = state.getStaticValue(cnm);
+        if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
+            return undefined;
+        } else if (res[1] === IdentifierStatus.VALUE_CONSTRUCTOR) {
+            // Obtain list of all constructors
+            let curtp = res[0];
+            while (curtp instanceof TypeVariableBind) {
+                curtp = (<TypeVariableBind> curtp).type;
+            }
+            if (curtp instanceof FunctionType) {
+                curtp = (<FunctionType> curtp).returnType;
+            }
+            if (!(curtp instanceof CustomType)) {
+                return undefined;
+            }
+            let tpname = (<CustomType> curtp).name;
+            let stattp = state.getStaticType(tpname);
+            if (stattp === undefined) {
+                return undefined;
+            }
+            return stattp.constructors;
+        }
+        return undefined;
+    }
 
     getType(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
             nextName: string = '\'*t0', tyVars: Set<string> = new Set<string>(),
@@ -274,6 +332,22 @@ export class ValueIdentifier extends Expression implements Pattern {
         }
     }
 
+    subsumes(state: State, other: PatternExpression): boolean {
+        while (other instanceof TypedExpression) {
+            other = <PatternExpression> (<TypedExpression> other).expression;
+        }
+
+        let cnm = this.getConstructorName(state);
+        if (cnm === undefined) {
+            return true;
+        }
+        if (other instanceof ValueIdentifier) {
+            let onm = other.getConstructorName(state);
+            return cnm === onm;
+        }
+        return false;
+    }
+
     cover(state: State, rules: PatternExpression[]): Warning[] {
         // Got checked elsewhere already.
         return [];
@@ -378,6 +452,68 @@ export class Record extends Expression implements Pattern {
         }
     }
 
+    hasConstant(): boolean {
+        for (let exp of this.entries) {
+            if (exp instanceof Constant) {
+                return true;
+            }
+            if (exp instanceof Record && (<Record> exp).hasConstant()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    subsumes(state: State, other: PatternExpression): boolean {
+        // Checks whether the other record is a special case of this record
+        // Assumes that entries are sorted
+
+        while (other instanceof TypedExpression) {
+            other = <PatternExpression> (<TypedExpression> other).expression;
+        }
+
+        if (!(other instanceof Record)) {
+            return false;
+        }
+
+        let i = 0;
+        let j = 0;
+        while (i < this.entries.length || j < (<Record> other).entries.length) {
+            let curi = (i < this.entries.length ? this.entries[i] : undefined);
+            let curj = (j < (<Record> other).entries.length ?
+                        (<Record> other).entries[j] : undefined);
+
+            if (curj === undefined || (curi !== undefined && curi[0] < curj[0])) {
+                if (curi === undefined) {
+                    break;
+                }
+                if ((<PatternExpression> curi[1]).subsumes(state, new Wildcard())) {
+                    ++i; continue;
+                }
+                // Entry that is missing in other (and hence assumed to be a wildcard)
+                // exists in this and is not a Wildcard or variable
+                return false;
+            }
+            if (curi !== undefined && curj !== undefined && curi[0] === curj[0]) {
+                if ((<PatternExpression> curi[1]).subsumes(state, <PatternExpression> curj[1])) {
+                    ++i; ++j;
+                    continue;
+                }
+                return false;
+            }
+            if (curi === undefined || (curj !== undefined && curi[0] > curj[0])) {
+                if (curj === undefined) {
+                    break;
+                }
+                if (new Wildcard().subsumes(state, <PatternExpression> curj[1])) {
+                    ++j; continue;
+                }
+                return false;
+            }
+        }
+        return true;
+    }
+
     getExplicitTypeVariables(): Set<TypeVariable> {
         let res = new Set<TypeVariable>();
         for (let i = 0; i < this.entries.length; ++i) {
@@ -454,12 +590,17 @@ export class Record extends Expression implements Pattern {
     }
 
     cover(state: State, rules: PatternExpression[]): Warning[] {
+        // console.log(this.toString(), '.cover', rules.map(a => a.toString()));
+
         // Check that first entry alone is exhaustive,
         // then split all rules according to first entry and check that they are
         // exhaustive as well
 
+        // console.log(this.toString(), ' .cover ', rules.map(a => a.toString()));
+
         if (this.entries.length === 0) {
             if (rules.length === 0) {
+                // console.log('NE', this.toString(), rules.map(a => a.toString()));
                 return [
                     new Warning(-1, 'Pattern matching is not exhaustive.\n')
                 ];
@@ -474,6 +615,14 @@ export class Record extends Expression implements Pattern {
 
         let wcrules: PatternExpression[] = [];
         let hadConstants = false;
+
+        let cons: string[] = [];
+
+        let oldrecs: PatternExpression[] = [];
+        let ocnr: [string, Expression|PatternExpression][][] = [];
+        let subsmst: [boolean, boolean][] = []; // Rule i [is sub; subs other]
+
+        let warns: Warning[] = [];
 
         for (let rule of rules) {
             if (!(rule instanceof Record)) {
@@ -492,24 +641,99 @@ export class Record extends Expression implements Pattern {
             if (key === undefined) {
                 key = wc;
             }
+
+            // console.log(this.toString(), '.cover', rules.map(a => a.toString()),
+            //            'key ', key.toString());
+
             if (key instanceof ValueIdentifier) {
                 // Check if variable, if it is, replace by Wildcard
-                let cnm = (<ValueIdentifier> key).name.getText();
-                let res = state.getStaticValue(cnm);
-                if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
+                let cnm = (<ValueIdentifier> key).getConstructorName(state);
+                if (cnm === undefined) {
                     key = wc;
+                } else if (cons.length === 0) {
+                    // Obtain list of all constructors
+                    let stattp = (<ValueIdentifier> key).getConstructorList(state);
+                    if (stattp === undefined) {
+                        throw new InternalInterpreterError('Pipiru piru piru pipiru pii!');
+                    }
+                    cons = stattp;
                 }
             }
 
             nrules.push(key);
+            if (key instanceof Record) {
+                // Check if rule contains any constant value,
+                // if it does, the rule is irrelavant
+                if ((<Record> key).hasConstant()) {
+                    continue;
+                }
+
+                let nrecs: PatternExpression[] = [];
+                let skip = false;
+                for (let i = 0; i < oldrecs.length; ++i) {
+                    let kso = key.subsumes(state, oldrecs[i]);
+                    let osk = oldrecs[i].subsumes(state, key);
+                    if (osk && kso) {
+                        // This rule is redundant
+                        warns.push(new Warning(0, 'Rule "' + key
+                            + '" is ignored due to rule "' + oldrecs[i] + '".'));
+                        skip = true;
+                        break;
+                    }
+                }
+                if (skip) {
+                    continue;
+                }
+
+                subsmst.push([false, false]);
+                // The following could be implemented faster. I know. I don't care.
+                for (let i = 0; i < oldrecs.length; ++i) {
+                    let kso = key.subsumes(state, oldrecs[i]);
+                    let osk = oldrecs[i].subsumes(state, key);
+                    if (kso) {
+                        // This rule is more general than old rule,
+                        // hence, add this rule to the class of old rules
+                        subsmst[i][0] = true;
+                        subsmst[oldrecs.length][1] = true;
+
+                        let old = <PatternExpression[]> sprules.get(i + '');
+                        old.push(new Record((<Record> rule).complete, cnrule));
+                        sprules = sprules.set(i + '', old);
+                    }
+                    if (osk) {
+                        // There is a rule that is more general than this rule
+                        // hence, add that rule to the class of this rule
+                        subsmst[i][1] = true;
+                        subsmst[oldrecs.length][0] = true;
+
+                        nrecs.push(new Record((<Record> rule).complete, ocnr[i]))
+                    }
+                }
+
+                nrecs.push(new Record((<Record> rule).complete, cnrule));
+                sprules = sprules.set(oldrecs.length + '', nrecs);
+                oldrecs.push(key);
+                ocnr.push(cnrule);
+                continue;
+            }
 
             let kid = key.toString();
             if (key instanceof FunctionApplication) {
-                kid = (<FunctionApplication> key).func.toString();
-            }
-            if (key instanceof Record) {
-                kid = '';
-                // TODO
+                let fnname = (<FunctionApplication> key).func;
+                if (!(fnname instanceof ValueIdentifier)) {
+                    throw new InternalInterpreterError(
+                        'There. Just another unfortunate accident.');
+                }
+                kid = (<ValueIdentifier> fnname).name.getText();
+
+                if (cons.length === 0) {
+                    // Obtain list of all constructors
+                    let stattp = (<ValueIdentifier> fnname).getConstructorList(state);
+                    if (stattp === undefined) {
+                        throw new InternalInterpreterError('Pipiru piru piru pipiru pii!');
+                    }
+                    cons = stattp;
+                }
             }
             kid = kid + key.constructor.name;
 
@@ -543,8 +767,6 @@ export class Record extends Expression implements Pattern {
             }
         }
 
-        let warns: Warning[] = [];
-
         // The following is a dirty hack because I am lazy.
         warns = warns.concat(wc.cover(state, nrules)).filter((w: Warning) => w.type === -1);
 
@@ -556,10 +778,26 @@ export class Record extends Expression implements Pattern {
         let newrec = new Record(true, nentries);
 
         sprules.forEach((sprule: PatternExpression[], key: string) => {
+            //           console.log(this.toString(), '.cover 781', rules.map(a => a.toString()),
+            //                       'ule ', key, sprule.map(a => a.toString()), subsmst);
+            //           let skip = false;
+            //           if (!isNaN(+key)) {
+            //               let kn: number = +key;
+            //               if (kn < subsmst.length && subsmst[kn][1]) {
+            //                    skip = true;
+            //               }
+            //           }
+            //           if (!skip) {
             warns = warns.concat(newrec.cover(state, sprule));
+            //          } else {
+            //               console.log('Skipping', key, sprule.map(a => a.toString()));
+            //           }
         });
 
-        if (hadConstants) {
+        // If all other rules are constants, no other rule exists, or not all
+        // possible constructors have a rule, these cases are caught by a wildcard.
+        // Hence, check that rules starting with a wildcard are exhaustive as well.
+        if (hadConstants || sprules.size === 0 || sprules.size < cons.length) {
             // Wildcards actually need to be checked after all
             warns = warns.concat(newrec.cover(state, wcrules));
         }
@@ -643,6 +881,23 @@ export class Record extends Expression implements Pattern {
     }
 
     toString(): string {
+        let isTuple = this.entries.length !== 1;
+        for (let i = 0; i < this.entries.length; ++i) {
+            if (this.entries[i][0] !== ('' + (i + 1))) {
+                isTuple = false;
+            }
+        }
+        if (isTuple) {
+            let result = '(';
+            for (let i = 0; i < this.entries.length; ++i) {
+                if (i > 0) {
+                    result += ', ';
+                }
+                result += this.entries[i][1].toString();
+            }
+            return result + ')';
+        }
+
         let result: string = '{';
         let first: boolean = true;
         for (let i = 0; i < this.entries.length; ++i) {
@@ -905,6 +1160,10 @@ export class TypedExpression extends Expression implements Pattern {
         }
     }
 
+    subsumes(state: State, other: PatternExpression): boolean {
+        return (<PatternExpression> this.expression).subsumes(state, other);
+    }
+
     cover(state: State, rules: PatternExpression[]): Warning[] {
         throw new InternalInterpreterError('一昨日来やがれ。');
     }
@@ -1023,6 +1282,18 @@ export class FunctionApplication extends Expression implements Pattern {
             }
             throw new ElaborationError('Merge failed: ' + e[0]);
         }
+    }
+
+    subsumes(state: State, other: PatternExpression): boolean {
+        while (other instanceof TypedExpression) {
+            other = <PatternExpression> (<TypedExpression> other).expression;
+        }
+
+        if (other instanceof FunctionApplication) {
+            return (<PatternExpression> this.func).subsumes(
+                state, <PatternExpression> (<FunctionApplication> other).func);
+        }
+        return false;
     }
 
     cover(state: State, rules: PatternExpression[]): Warning[] {
@@ -1750,7 +2021,12 @@ export class Wildcard extends Expression implements Pattern {
         return [[], t, tyVarBnd];
     }
 
+    subsumes(state: State, other: PatternExpression): boolean {
+        return true;
+    }
+
     cover(state: State, rules: PatternExpression[]): Warning[] {
+        // console.log(this.toString(), '.cover', rules.map(a => a.toString()));
         let isExh = false;
         let hasWildcard = false;
         let warns: Warning[] = [];
@@ -1802,9 +2078,8 @@ export class Wildcard extends Expression implements Pattern {
             }
 
             if (currentRule instanceof ValueIdentifier) {
-                let cnm = (<ValueIdentifier> currentRule).name.getText();
-                let res = state.getStaticValue(cnm);
-                if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
+                let cnm = (<ValueIdentifier> currentRule).getConstructorName(state);
+                if (cnm === undefined) {
                     isExh = true;
                     hasWildcard = true;
                     if (i + 1 < rules.length) {
@@ -1814,44 +2089,23 @@ export class Wildcard extends Expression implements Pattern {
                     break;
                 }
 
-                if (res[1] === IdentifierStatus.VALUE_CONSTRUCTOR) {
-                    // Constructor w/o argument, needs splitting
-                    if (cons.length === 0) {
-                        // Obtain list of all constructors
-                        let curtp = res[0];
-                        while (curtp instanceof TypeVariableBind) {
-                            curtp = (<TypeVariableBind> curtp).type;
-                        }
-                        if (curtp instanceof FunctionType) {
-                            curtp = (<FunctionType> curtp).returnType;
-                        }
-
-                        if (!(curtp instanceof CustomType)) {
-                            throw new InternalInterpreterError(
-                                'There. Just another unfortunate accident.');
-                        }
-
-                        let tpname = (<CustomType> curtp).name;
-                        let stattp = state.getStaticType(tpname);
-                        if (stattp === undefined) {
-                            throw new InternalInterpreterError(
-                                'There. Just another unfortunate accident.');
-                        }
-
-                        cons = stattp.constructors;
+                // Constructor w/o argument, needs splitting
+                if (cons.length === 0) {
+                    let stattp = (<ValueIdentifier> currentRule).getConstructorList(state);
+                    if (stattp === undefined) {
+                        throw new InternalInterpreterError(
+                            'There. Just another unfortunate accident.');
                     }
-                    if (splitRules.has(cnm)) {
-                        warns.push(new Warning(0, 'Duplicate rule for "' + currentRule
-                                               + '" in pattern matching.\n'));
-                    } else {
-                        splitRules = splitRules.set(cnm, [currentRule]);
-                        idealPts = idealPts.set(cnm, currentRule);
-                    }
-                    continue;
+                    cons = stattp;
                 }
-
-                throw new InternalInterpreterError(
-                    'There. Just another unfortunate accident.');
+                if (splitRules.has(cnm)) {
+                    warns.push(new Warning(0, 'Duplicate rule for "' + currentRule
+                                           + '" in pattern matching.\n'));
+                } else {
+                    splitRules = splitRules.set(cnm, [currentRule]);
+                    idealPts = idealPts.set(cnm, currentRule);
+                }
+                continue;
             }
 
             if (currentRule instanceof FunctionApplication) {
@@ -1861,37 +2115,21 @@ export class Wildcard extends Expression implements Pattern {
                     throw new InternalInterpreterError(
                         'There. Just another unfortunate accident.');
                 }
-                let cnm = (<ValueIdentifier> fnname).name.getText();
-                let res = state.getStaticValue(cnm);
-
-                if (res === undefined || res[1] !== IdentifierStatus.VALUE_CONSTRUCTOR) {
+                let cnm = (<ValueIdentifier> fnname).getConstructorName(state);
+                if (cnm === undefined) {
                     throw new InternalInterpreterError(
                         'There. Just another unfortunate accident.');
                 }
 
                 if (cons.length === 0) {
-                    // Obtain list of all constructors
-                    let curtp = res[0];
-                    while (curtp instanceof TypeVariableBind) {
-                        curtp = (<TypeVariableBind> curtp).type;
-                    }
-                    if (curtp instanceof FunctionType) {
-                        curtp = (<FunctionType> curtp).returnType;
-                    }
-
-                    if (!(curtp instanceof CustomType)) {
-                        throw new InternalInterpreterError(
-                            'There. Just another unfortunate accident.');
-                    }
-
-                    let tpname = (<CustomType> curtp).name;
-                    let stattp = state.getStaticType(tpname);
+                    let stattp = (<ValueIdentifier> fnname).getConstructorList(state);
                     if (stattp === undefined) {
                         throw new InternalInterpreterError(
                             'There. Just another unfortunate accident.');
                     }
-                    cons = stattp.constructors;
+                    cons = stattp;
                 }
+
                 if (splitRules.has(cnm)) {
                     let prevrls = <PatternExpression[]> splitRules.get(cnm);
                     prevrls.push(currentRule);
@@ -1911,15 +2149,17 @@ export class Wildcard extends Expression implements Pattern {
         }
 
         if (cons.length !== 0) {
-            // Actual splitting work is required
-            isExh = true;
-            for (let i = 0; i < cons.length; ++i) {
-                if (!idealPts.has(cons[i])) {
-                    isExh = hasWildcard;
-                    continue;
+            if (!hasWildcard) { // If pattern has a wildcard already, we don't care
+                // Actual splitting work is required
+                isExh = true;
+                for (let i = 0; i < cons.length; ++i) {
+                    if (!idealPts.has(cons[i])) {
+                        isExh = hasWildcard;
+                        continue;
+                    }
+                    warns = warns.concat((<PatternExpression> idealPts.get(cons[i])).cover(
+                        state, <PatternExpression[]> splitRules.get(cons[i])));
                 }
-                warns = warns.concat((<PatternExpression> idealPts.get(cons[i])).cover(
-                    state, <PatternExpression[]> splitRules.get(cons[i])));
             }
         } else if (!isExh && recRules.length !== 0) {
             // Actually do record stuff
@@ -2025,6 +2265,10 @@ export class LayeredPattern extends Expression implements Pattern {
         let res = (<PatternExpression> this.pattern).matchType(state, tyVarBnd, tp);
         let result: [string, Type][] = [[this.identifier.getText(), tp]];
         return [result.concat(res[0]), t, res[2]];
+    }
+
+    subsumes(state: State, other: PatternExpression): boolean {
+        throw new PatternMatchError('Layered patterns are not checked for exhaustiveness.');
     }
 
     cover(state: State, rules: PatternExpression[]): Warning[] {
@@ -2161,8 +2405,12 @@ export class Vector extends Expression implements Pattern {
         return [res, new CustomType('vector', [partp]), tyVarBnd];
     }
 
+    subsumes(state: State, other: PatternExpression): boolean {
+        throw new PatternMatchError('Vector patterns are not checked for exhaustiveness.');
+    }
+
     cover(state: State, rules: PatternExpression[]): Warning[] {
-        return [new Warning(-1, '一昨日来やがれ。')];
+        throw new PatternMatchError('Vector patterns are not checked for exhaustiveness.');
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
@@ -2244,6 +2492,10 @@ export class ConjunctivePattern extends Expression implements Pattern {
         throw new InternalInterpreterError('「ニャ－、ニャ－」');
     }
 
+    subsumes(state: State, other: PatternExpression): boolean {
+        throw new PatternMatchError('Conjuctive patterns are not checked for exhaustiveness.');
+    }
+
     cover(state: State, rules: PatternExpression[]): Warning[] {
         throw new PatternMatchError(
             'Conjuctive patterns are not checked for exhaustiveness.');
@@ -2312,6 +2564,10 @@ export class DisjunctivePattern extends Expression implements Pattern {
         throw new InternalInterpreterError('「ニャ－、ニャ－」');
     }
 
+    subsumes(state: State, other: PatternExpression): boolean {
+        throw new PatternMatchError('Disjunctive patterns are not checked for exhaustiveness.');
+    }
+
     cover(state: State, rules: PatternExpression[]): Warning[] {
         throw new PatternMatchError(
             'Disjunctive patterns are not checked for exhaustiveness.');
@@ -2358,6 +2614,10 @@ export class NestedMatch extends Expression implements Pattern {
         throw new InternalInterpreterError('「ニャ－、ニャ－」');
     }
 
+    subsumes(state: State, other: PatternExpression): boolean {
+        throw new PatternMatchError('Nested matches are not checked for exhaustiveness.');
+    }
+
     cover(state: State, rules: PatternExpression[]): Warning[] {
         throw new PatternMatchError(
             'Nested matches are not checked for exhaustiveness.');
@@ -2395,6 +2655,10 @@ export class InfixExpression extends Expression implements Pattern {
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>] {
         return this.reParse(state).matchType(state, tyVarBnd, t);
+    }
+
+    subsumes(state: State, other: PatternExpression): boolean {
+        throw new InternalInterpreterError('一昨日来やがれ。');
     }
 
     cover(state: State, rules: PatternExpression[]): Warning[] {
@@ -2518,6 +2782,10 @@ export class Tuple extends Expression implements Pattern {
         return this.simplify().matchType(state, tyVarBnd, t);
     }
 
+    subsumes(state: State, other: PatternExpression): boolean {
+        return this.simplify().subsumes(state, other);
+    }
+
     cover(state: State, rules: PatternExpression[]): Warning[] {
         return this.simplify().cover(state, rules);
     }
@@ -2553,6 +2821,10 @@ export class List extends Expression implements Pattern {
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>] {
         return this.simplify().matchType(state, tyVarBnd, t);
+    }
+
+    subsumes(state: State, other: PatternExpression): boolean {
+        return this.simplify().subsumes(state, other);
     }
 
     cover(state: State, rules: PatternExpression[]): Warning[] {
@@ -2698,6 +2970,11 @@ export class PatternGuard extends Expression implements Pattern {
     matchType(state: State, tyVarBnd: Map<string, [Type, boolean]>, t: Type):
         [[string, Type][], Type, Map<string, [Type, boolean]>]  {
         throw new InternalInterpreterError('「ニャ－、ニャ－」');
+    }
+
+    subsumes(state: State, other: PatternExpression): boolean {
+        throw new PatternMatchError(
+            'Patterns with a pattern guard are not checked for exhaustiveness.');
     }
 
     cover(state: State, rules: PatternExpression[]): Warning[] {
