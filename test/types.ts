@@ -82,8 +82,8 @@ it("basic", () => {
             expect(hasThrown).toEqual(false);
             expect(state.getStaticValue('f')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('bool', [], 0),
-                    new Type.CustomType('bool', [], 0)
+                    new Type.CustomType('bool', []),
+                    new Type.CustomType('bool', [])
                 )
             , 0]);
         }],
@@ -91,8 +91,8 @@ it("basic", () => {
             expect(hasThrown).toEqual(false);
             expect(state.getStaticValue('f')).toEqualWithType([
                 new Type.FunctionType(
-                    new Type.CustomType('bool', [], 0),
-                    new Type.CustomType('bool', [], 0)
+                    new Type.CustomType('bool', []),
+                    new Type.CustomType('bool', [])
                 )
             , 0]);
             //TODO test non-exaustive warning
@@ -102,23 +102,23 @@ it("basic", () => {
             expect(state.getStaticValue('it')).toEqualWithType([
                 new Type.FunctionType(
                     new Type.RecordType(new Map([
-                        ['1', new Type.CustomType('int', [], 0)],
-                        ['2', new Type.CustomType('int', [], 0)]
+                        ['1', new Type.CustomType('int', [])],
+                        ['2', new Type.CustomType('int', [])]
                     ])),
-                    new Type.CustomType('int', [], 0)
+                    new Type.CustomType('int', [])
                 )
             , 0]);
         }],
         ['op+(1,2);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('int', [], 0)
+                new Type.CustomType('int', [])
             , 0]);
         }],
         ['op+(1.0,2.0);', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getStaticValue('it')).toEqualWithType([
-                new Type.CustomType('real', [], 0)
+                new Type.CustomType('real', [])
             , 0]);
         }],
     ]);
@@ -152,7 +152,7 @@ it("basic with annotation", () => {
             expect(hasThrown).toEqual(false);
             expect(state.getStaticValue('it')).toEqualWithType([new Type.CustomType("real"), 0]);
         }],
-        
+
     ]);
     run_test([
         ['42.0:int;', (x) => { expect(x).toThrow(Errors.ElaborationError); },

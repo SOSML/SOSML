@@ -4273,14 +4273,12 @@ val ys = rev xs;
                 new Type.CustomType(
                     'list',
                     [new Type.CustomType('int')],
-                    0,
                     new Token.LongIdentifierToken(
                         'List.tabulate',
-                        9,
                         [
-                            new Token.AlphanumericIdentifierToken("List", 9)
+                            new Token.AlphanumericIdentifierToken("List")
                         ],
-                        new Token.AlphanumericIdentifierToken("tabulate", 14)
+                        new Token.AlphanumericIdentifierToken("tabulate")
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
@@ -8409,23 +8407,19 @@ fun switch S.A = S.B
                     new Type.CustomType(
                         't',
                         [],
-                        0,
                         new Token.LongIdentifierToken(
                             "S.A",
-                            12,
-                            [new Token.AlphanumericIdentifierToken("S", 12)],
-                            new Token.AlphanumericIdentifierToken("A", 14)
+                            [new Token.AlphanumericIdentifierToken("S")],
+                            new Token.AlphanumericIdentifierToken("A")
                         )
                     ),
                     new Type.CustomType(
                         't',
                         [],
-                        0,
                         new Token.LongIdentifierToken(
                             "S.B",
-                            18,
-                            [new Token.AlphanumericIdentifierToken("S", 18)],
-                            new Token.AlphanumericIdentifierToken("B", 20)
+                            [new Token.AlphanumericIdentifierToken("S")],
+                            new Token.AlphanumericIdentifierToken("B")
                         )
                     )
                 ),
@@ -8869,14 +8863,12 @@ val ys = rev xs;
                 new Type.CustomType(
                     'list',
                     [new Type.CustomType('int')],
-                    0,
                     new Token.LongIdentifierToken(
                         'List.tabulate',
-                        9,
                         [
-                            new Token.AlphanumericIdentifierToken("List", 9)
+                            new Token.AlphanumericIdentifierToken("List")
                         ],
-                        new Token.AlphanumericIdentifierToken("tabulate", 14)
+                        new Token.AlphanumericIdentifierToken("tabulate")
                     )
                 ),
                 State.IdentifierStatus.VALUE_VARIABLE
