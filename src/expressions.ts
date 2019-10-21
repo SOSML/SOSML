@@ -627,7 +627,7 @@ export class Record extends Expression implements Pattern {
         let breakNext: string | undefined = undefined;
         for (let rule of rules) {
             if (breakNext !== undefined) {
-                warns.push(new Warning(i, 'Rules after "' + breakNext
+                warns.push(new Warning(0, 'Rules after "' + breakNext
                     + '" unused in pattern matching.\n'));
                 break;
             }
