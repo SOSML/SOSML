@@ -235,11 +235,14 @@ it('basic duplicate', () => {
     run_test([
         dp('fun f 1 = 2 | f 1 = 3 | f 2 = 10;', '1', true)
     ]);
+    run_test([
+        dp('fun f ([], []) = 10 | f ([], []) = 20 | f _ = 30;', '(nil, nil)')
+    ]);
 });
 
-it.skip('tuple duplicate', () => {
+it('tuple duplicate', () => {
     run_test([
-        uu('fun f {1 = 10, 2 = 5} = 3 | f (a, _) = 2 | f (1, _) = 20;', '(1, _)')
+        uu('fun f {1 = 10, 2 = 5} = 3 | f (a, _) = 2 | f (1, _) = 20;', '(a, _)')
     ]);
 });
 

@@ -624,9 +624,21 @@ export class Record extends Expression implements Pattern {
 
         let warns: Warning[] = [];
 
+        let breakNext: string | undefined = undefined;
         for (let rule of rules) {
+            if (breakNext !== undefined) {
+                warns.push(new Warning(i, 'Rules after "' + breakNext
+                    + '" unused in pattern matching.\n'));
+                break;
+            }
+
             if (!(rule instanceof Record)) {
                 throw new InternalInterpreterError('Pipiru piru piru pipiru pii!');
+            }
+
+            if (rule.subsumes(state, this)) {
+                // This rule rules them all
+                breakNext = rule.toString();
             }
 
             let cnrule: [string, Expression|PatternExpression][] = [];
@@ -767,8 +779,7 @@ export class Record extends Expression implements Pattern {
             }
         }
 
-        // The following is a dirty hack because I am lazy.
-        warns = warns.concat(wc.cover(state, nrules)).filter((w: Warning) => w.type === -1);
+        warns = warns.concat(wc.cover(state, nrules).filter((w: Warning) => w.type === -1));
 
         // Generate a new Record without the key already processed
         let nentries: [string, Expression|PatternExpression][] = [];
@@ -788,7 +799,9 @@ export class Record extends Expression implements Pattern {
             //               }
             //           }
             //           if (!skip) {
-            warns = warns.concat(newrec.cover(state, sprule));
+            warns = warns.concat(newrec.cover(state, sprule).filter(
+                (w: Warning) => w.type === -1)); // We needn't filter these if we wanted to warn
+                // for non-disjoint rules.
             //          } else {
             //               console.log('Skipping', key, sprule.map(a => a.toString()));
             //           }
@@ -1948,7 +1961,7 @@ export class Match {
                 for (let w of tmp) {
                     if (!seenmsg.has(w.message)) {
                         seenmsg.add(w.message);
-                        res.push(w);
+                        res.push(new Warning(w.type === -1 ? -1 : 0, w.message));
                     }
                 }
 
@@ -2030,7 +2043,7 @@ export class Wildcard extends Expression implements Pattern {
         let isExh = false;
         let hasWildcard = false;
         let warns: Warning[] = [];
-        let seenConsts = new Set<string>();
+        let seenRules = new Set<string>();
 
         let cons: string[] = [];
         let splitRules = new Map<string, PatternExpression[]>();
@@ -2046,6 +2059,12 @@ export class Wildcard extends Expression implements Pattern {
                 currentRule = <PatternExpression> (<TypedExpression> currentRule).expression;
             }
 
+            if (seenRules.has(currentRule.toString())) {
+                warns.push(new Warning(0, 'Duplicate rule for "' + currentRule
+                                       + '" in pattern matching.\n'));
+            }
+            seenRules.add(currentRule.toString());
+
             if (currentRule instanceof Record) {
                 let rec = <Record> currentRule;
 
@@ -2059,11 +2078,6 @@ export class Wildcard extends Expression implements Pattern {
             if (currentRule instanceof Constant) {
                 // We assume that listing all different possible values for primitive types
                 // is never exhaustive, so just ignore constant values.
-                if (seenConsts.has(currentRule.toString())) {
-                    warns.push(new Warning(0, 'Duplicate rule for "' + currentRule
-                                           + '" in pattern matching.\n'));
-                }
-                seenConsts.add(currentRule.toString());
                 continue;
             }
 
@@ -2071,7 +2085,7 @@ export class Wildcard extends Expression implements Pattern {
                 isExh = true;
                 hasWildcard = true;
                 if (i + 1 < rules.length) {
-                    warns.push(new Warning(0, 'Rules after "' + currentRule
+                    warns.push(new Warning(i, 'Rules after "' + currentRule
                                            + '" unused in pattern matching.\n'));
                 }
                 break;
@@ -2083,7 +2097,7 @@ export class Wildcard extends Expression implements Pattern {
                     isExh = true;
                     hasWildcard = true;
                     if (i + 1 < rules.length) {
-                        warns.push(new Warning(0, 'Rules after "' + currentRule
+                        warns.push(new Warning(i, 'Rules after "' + currentRule
                                                + '" unused in pattern matching.\n'));
                     }
                     break;
