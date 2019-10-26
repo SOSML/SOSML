@@ -502,4 +502,13 @@ it("type alias", () => {
     ]);
 });
 
-
+it("polymorphic signature type", () => {
+    run_test([
+        gc("signature ENV = sig val e : 'a end;", undefined),
+        ge("structure Env :> ENV = struct val e = 5 end;", Errors.ElaborationError)
+    ]);
+    run_test([
+        gc("signature ENV = sig val e : 'a end;", undefined),
+        ge("structure Env : ENV = struct val e = 5 end;", Errors.ElaborationError)
+    ]);
+});

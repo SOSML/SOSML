@@ -1375,7 +1375,6 @@ export class FunctionApplication extends Expression implements Pattern {
                 }
                 return [];
             }
-            console.log(this.toString(), 'Here')
             return undefined;
         } else if (v instanceof PredefinedFunction) {
             throw new EvaluationError(

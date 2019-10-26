@@ -232,13 +232,20 @@ export class TransparentConstraint extends Expression implements Structure {
 
                 try {
                     let mg = nsg.merge(nstate, tyVarBnd, st[0]);
+                    if (!mg[0].normalize()[0].equals(nsg.normalize()[0])) {
+                        throw new ElaborationError(
+                            'Signature mismatch: Implementation of value "' + i
+                            + '" has type "' + mg[0].normalize()[0]
+                            + '" which is less general than the'
+                            + ' required type "' + sg[0] + '".');
+                    }
                     res.setValue(i, sg[0].instantiate(nstate, mg[1]), sg[1]);
                 } catch (e) {
                     if (!(e instanceof Array)) {
                         throw e;
                     }
                     throw new ElaborationError(
-                        'Signature mismatch: Wrong implementation of type "' + i + '": ' + e[0]);
+                        'Signature mismatch: Wrong implementation of value "' + i + '": ' + e[0]);
                 }
             }
         }
@@ -411,7 +418,16 @@ export class OpaqueConstraint extends Expression implements Structure {
                 nsg = nsg.replaceTypeVariables(repl);
 
                 try {
-                    nsg.merge(nstate, tyVarBnd, nst);
+                    let mg = nsg.merge(nstate, tyVarBnd, nst);
+
+                    if (!mg[0].normalize()[0].equals(nsg.normalize()[0])) {
+                        throw new ElaborationError(
+                            'Signature mismatch: Implementation of value "' + i
+                            + '" has type "' + mg[0].normalize()[0]
+                            + '" which is less general than the'
+                            + ' required type "' + sg[0] + '".');
+                    }
+
                     res.setValue(i, sg[0].instantiate(nstate2, tyVarBnd), sg[1]);
                 } catch (e) {
                     if (!(e instanceof Array)) {
