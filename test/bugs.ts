@@ -395,10 +395,16 @@ it("nameless function", () => {
     ]);
 });
 
-it.skip("qualified exception names", () => {
+it("qualified exception names", () => {
     run_test([
         gc('structure S = struct exception SExc fun raiseExc v = raise SExc end;', undefined),
         gc('val v = S.raiseExc () handle S.SExc => 5;', undefined, ['v'],
+            [[new Val.Integer(5), 0]], [[INT, 0]])
+    ]);
+    run_test([
+        gc('structure S = struct exception SExc of unit fun raiseExc v = raise SExc v end;',
+           undefined),
+        gc('val v = S.raiseExc () handle S.SExc () => 5;', undefined, ['v'],
             [[new Val.Integer(5), 0]], [[INT, 0]])
     ]);
 });
@@ -476,6 +482,9 @@ it("incomlete while loop", () => {
 it("Ungarded type variables", () => {
     run_test([
         ge("datatype L = n | c of 'a * L;", Errors.ElaborationError)
+    ]);
+    run_test([
+        ge("type ''a foo = 'a -> int;", Errors.ElaborationError)
     ]);
 });
 

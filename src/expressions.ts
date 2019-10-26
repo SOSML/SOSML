@@ -354,11 +354,16 @@ export class ValueIdentifier extends Expression implements Pattern {
     }
 
     matches(state: State, v: Value): [string, Value][] | undefined {
+        let res: [Value, IdentifierStatus] | undefined = undefined;
         if (this.name instanceof LongIdentifierToken) {
-            throw new EvaluationError('Variable names in patterns cannot be qualified.');
+            let st = state.getAndResolveDynamicStructure(<LongIdentifierToken> this.name);
+            if (st !== undefined) {
+                res = st.getValue((<LongIdentifierToken> this.name).id.getText());
+            }
+        } else {
+            res = state.getDynamicValue(this.name.getText());
         }
 
-        let res = state.getDynamicValue(this.name.getText());
         if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
             return [[this.name.getText(), v]];
         }
@@ -1338,16 +1343,28 @@ export class FunctionApplication extends Expression implements Pattern {
             }
             return undefined;
         } else if (v instanceof ExceptionValue) {
-            let exCtorData = state.getDynamicValue((<ValueIdentifier> this.func).name.getText());
-            if (exCtorData === undefined) {
+            let resolved: [Value, IdentifierStatus] | undefined = undefined;
+            let name: string | undefined = undefined;
+            if ((<ValueIdentifier> this.func).name instanceof LongIdentifierToken) {
+                let st = state.getAndResolveDynamicStructure(<LongIdentifierToken>
+                    (<ValueIdentifier> this.func).name);
+                if (st !== undefined) {
+                    name = (<LongIdentifierToken> (<ValueIdentifier> this.func).name).id.getText();
+                    resolved = st.getValue(name);
+                }
+            } else {
+                name = (<ValueIdentifier> this.func).name.getText();
+                resolved = state.getDynamicValue(name);
+            }
+
+            if (resolved === undefined) {
                 throw new InternalInterpreterError(
                     'How did you match something that does not exist?');
             }
-            let exCtor = exCtorData[0];
+            let exCtor = resolved[0];
             if (this.func instanceof ValueIdentifier
                 && exCtor instanceof ExceptionConstructor
-                && (<ValueIdentifier> this.func).name.getText()
-                === (<ExceptionValue> v).constructorName
+                && name === (<ExceptionValue> v).constructorName
                 && (<ExceptionConstructor> exCtor).id
                 === (<ExceptionValue> v).id
                 && (<ExceptionConstructor> exCtor).evalId
@@ -1358,6 +1375,7 @@ export class FunctionApplication extends Expression implements Pattern {
                 }
                 return [];
             }
+            console.log(this.toString(), 'Here')
             return undefined;
         } else if (v instanceof PredefinedFunction) {
             throw new EvaluationError(
