@@ -60,7 +60,7 @@ export class DynamicFunctorInformation {
 
 export type DynamicFunctorEnvironment = { [name: string]: DynamicFunctorInformation };
 
-export type StaticFunctorEnvironment = { [name: string]: [StaticBasis, StaticBasis] };
+export type StaticFunctorEnvironment = { [name: string]: [StaticBasis, StaticBasis, string] };
 
 
 export class DynamicInterface {
@@ -265,7 +265,7 @@ export class StaticBasis {
         return undefined;
     }
 
-    getFunctor(name: string): [StaticBasis, StaticBasis] | undefined {
+    getFunctor(name: string): [StaticBasis, StaticBasis, string] | undefined {
         if (this.functorEnvironment.hasOwnProperty(name)) {
             return this.functorEnvironment[name];
         }
@@ -293,7 +293,7 @@ export class StaticBasis {
         this.signatureEnvironment[name] = signature;
     }
 
-    setFunctor(name: string, functor: [StaticBasis, StaticBasis]) {
+    setFunctor(name: string, functor: [StaticBasis, StaticBasis, string]) {
         this.functorEnvironment[name] = functor;
     }
 
@@ -559,7 +559,7 @@ export class State {
         }
     }
 
-    getStaticFunctor(name: string, idLimit: number = 0): [StaticBasis, StaticBasis] | undefined {
+    getStaticFunctor(name: string, idLimit: number = 0): [StaticBasis, StaticBasis, string] | undefined {
         let result = this.staticBasis.getFunctor(name);
         if (result !== undefined || this.parent === undefined || this.parent.id < idLimit) {
             return result;
@@ -743,7 +743,7 @@ export class State {
         }
     }
 
-    setStaticFunctor(name: string, functor: [StaticBasis, StaticBasis], atId: number|undefined = undefined) {
+    setStaticFunctor(name: string, functor: [StaticBasis, StaticBasis, string], atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
             this.staticBasis.setFunctor(name, functor);
         } else if (atId > this.id || this.parent === undefined) {

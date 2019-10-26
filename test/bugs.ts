@@ -515,3 +515,15 @@ it("polymorphic signature type", () => {
         ge("structure Env : ENV = struct val e = 5 end;", Errors.ElaborationError)
     ]);
 });
+
+it("functors", () => {
+    run_test([
+        gc("signature EXAMPLE = sig type 'a thing val example : 'a -> 'a thing end;", undefined),
+        gc("signature MOREEXAMPLE  = sig type 'a more val more : 'a -> 'b -> ('a * 'b) more end;",
+           undefined),
+        gc("functor EXTEND (BASE : EXAMPLE) : MOREEXAMPLE = struct type 'a more = "
+           + "'a BASE.thing fun more a b = BASE.example (a,b) end;", undefined),
+        gc("structure LIST_THING : EXAMPLE = struct type 'a thing = 'a list fun example a = [a] end;", undefined),
+        gc("structure LOL = EXTEND (LIST_THING);", undefined)
+    ]);
+});

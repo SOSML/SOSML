@@ -4,7 +4,7 @@ import { IdentifierToken, Token, LongIdentifierToken } from './tokens';
 import { Type, TypeVariable, CustomType, TypeVariableBind, FunctionType } from './types';
 import { State, DynamicInterface, DynamicStructureInterface, DynamicValueInterface, StaticBasis,
          DynamicTypeInterface, IdentifierStatus, DynamicBasis, DynamicFunctorInformation,
-         TypeInformation } from './state';
+         TypeInformation, StaticStructureEnvironment } from './state';
 import { Warning, EvaluationError, ElaborationError, InternalInterpreterError } from './errors';
 import { Value } from './values';
 import { getInitialState } from './initialState';
@@ -232,12 +232,12 @@ export class TransparentConstraint extends Expression implements Structure {
 
                 try {
                     let mg = nsg.merge(nstate, tyVarBnd, st[0]);
-                    if (!mg[0].normalize()[0].equals(nsg.normalize()[0])) {
+                    if (mg[0].getTypeVariables().size < nsg.getTypeVariables().size) {
                         throw new ElaborationError(
                             'Signature mismatch: Implementation of value "' + i
                             + '" has type "' + mg[0].normalize()[0]
                             + '" which is less general than the'
-                            + ' required type "' + sg[0] + '".');
+                            + ' required type "' + nsg.normalize()[0] + '".');
                     }
                     res.setValue(i, sg[0].instantiate(nstate, mg[1]), sg[1]);
                 } catch (e) {
@@ -420,7 +420,7 @@ export class OpaqueConstraint extends Expression implements Structure {
                 try {
                     let mg = nsg.merge(nstate, tyVarBnd, nst);
 
-                    if (!mg[0].normalize()[0].equals(nsg.normalize()[0])) {
+                    if (mg[0].getTypeVariables().size < nsg.getTypeVariables().size) {
                         throw new ElaborationError(
                             'Signature mismatch: Implementation of value "' + i
                             + '" has type "' + mg[0].normalize()[0]
@@ -533,7 +533,11 @@ export class FunctorApplication extends Expression implements Structure {
 
                 if (tmp !== undefined && tmp[0] !== undefined) {
                     let tst = state.getNestedState(state.id);
-                    tst.staticBasis = res;
+
+                    let nstr: StaticStructureEnvironment = {};
+                    nstr[fun[2]] = res;
+
+                    tst.staticBasis = new StaticBasis({}, {}, nstr, {}, {});
 
                     res.valueEnvironment[i] = [tmp[0].instantiate(tst, str[2]), tmp[1]];
                 }
@@ -1070,7 +1074,8 @@ export class FunctorBinding {
         let nstate = state.getNestedState(state.id);
         nstate.setStaticStructure(this.signatureName.getText(), sig[0]);
         let str = this.binding.elaborate(nstate, sig[2], sig[3]);
-        state.setStaticFunctor(this.name.getText(), [sig[0], str[0]]);
+        state.setStaticFunctor(this.name.getText(), [sig[0], str[0],
+            this.signatureName.getText()]);
         return [state, sig[1].concat(str[1]), str[2], str[3]];
     }
 
