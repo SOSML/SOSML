@@ -354,10 +354,19 @@ class Lexer {
         } else if (reservedWords.has(token)) {
             return new KeywordToken(token);
         } else if (firstChar === '\'') {
-            if (token.charAt(1) === '\'') {
-                return new EqualityTypeVariableToken(token);
+            if (token.charAt(1) === '\'' ) {
+                if (token.length === 2) {
+                    throw new LexerError('Invalid type variable "' + token + '". Delete Her.');
+                } else {
+                    return new EqualityTypeVariableToken(token);
+                }
             } else {
-                return new TypeVariableToken(token);
+                if (token.length >= 2) {
+                    return new TypeVariableToken(token);
+                } else {
+                    throw new LexerError('The noise, it won\'t STOP: Invalid type variable "'
+                                         + token + '".');
+                }
             }
         } else if (Lexer.isAlphanumeric(firstChar)) {
             return new AlphanumericIdentifierToken(token);

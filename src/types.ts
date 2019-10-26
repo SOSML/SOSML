@@ -1080,9 +1080,8 @@ export class CustomType extends Type {
                 let repl = new Map<string, string>();
 
                 tyvars.forEach((val: Type[], key: string) => {
-                    // TODO: Test that this is enough, i.e. we don't need to ensure that
-                    // the generated new names don't exist
-                    repl = repl.set(key, '\'*q' + nnm);
+                    // TODO: Make sure the new typevar names are really unique
+                    repl = repl.set(key, '\'*' + this + nnm);
                     ++nnm;
                 });
 

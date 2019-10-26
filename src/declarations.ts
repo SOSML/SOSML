@@ -294,6 +294,22 @@ export class TypeDeclaration extends Declaration {
               isTopLevel: boolean, options: { [name: string]: any }):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         for (let i = 0; i < this.typeBinding.length; ++i) {
+
+            let knownVars = new Set<string>();
+            let badTyVars: string[] = [];
+            for (let nm of this.typeBinding[i].typeVariableSequence) {
+                knownVars = knownVars.add(nm.toString());
+            }
+            this.typeBinding[i].type.instantiate(state, tyVarBnd).getTypeVariables().forEach(
+                (val: Type[], key: string) => {
+                    if (!knownVars.has(key)) {
+                        badTyVars.push(key);
+                    }
+                });
+            if (badTyVars.length > 0) {
+                throw ElaborationError.getUnguarded(badTyVars);
+            }
+
             let ex = state.getStaticType(this.typeBinding[i].name.getText());
             if (ex !== undefined && ex.type instanceof CustomType) {
                 throw new ElaborationError(

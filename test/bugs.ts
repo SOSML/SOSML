@@ -88,6 +88,7 @@ function ge(code: string, expect_error_type: any): any {
 
 
 
+let UNIT = new Type.TupleType([]).simplify();
 let INT = new Type.CustomType('int');
 let REAL = new Type.CustomType('real');
 let BOOL = new Type.CustomType('bool');
@@ -477,3 +478,19 @@ it("Ungarded type variables", () => {
         ge("datatype L = n | c of 'a * L;", Errors.ElaborationError)
     ]);
 });
+
+it("type alias", () => {
+    run_test([
+        gc("type 'a foo = 'a -> int;", undefined),
+        gc("fn x : 'a foo foo => ();", undefined, ['it'], [undefined],
+           [[BND(FUNC(FUNC(FUNC(VAR, INT), INT), UNIT)), 0]])
+        gc("fn x : 'a foo foo foo => ();", undefined, ['it'], [undefined],
+           [[BND(FUNC(FUNC(FUNC( FUNC(VAR, INT), INT), INT), UNIT)), 0]])
+        gc("val a = fn x : 'a foo foo => () val b = fn x : 'a foo foo => ();",
+           undefined, ['a', 'b'], [undefined, undefined],
+           [[BND(FUNC(FUNC(FUNC(VAR, INT), INT), UNIT)), 0],
+            [BND(FUNC(FUNC(FUNC(VAR, INT), INT), UNIT)), 0]])
+    ]);
+});
+
+
