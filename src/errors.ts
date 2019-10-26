@@ -23,14 +23,6 @@ export class InternalInterpreterError extends InterpreterError {
     }
 }
 
-// Used if the code may be valid SML, but uses a feature that this interpreter does not implement, e.g. references.
-export class FeatureNotImplementedError extends InterpreterError {
-    constructor(message: string) {
-        super(message, 'Feature Not Implemented');
-        Object.setPrototypeOf(this, FeatureNotImplementedError.prototype);
-    }
-}
-
 // Used if the code may be valid SML, but uses a feature that is currently disabled in the interpreter settings.
 export class FeatureDisabledError extends InterpreterError {
     constructor(message: string) {

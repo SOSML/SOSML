@@ -14,14 +14,23 @@ const Val = require("../src/values.ts");
 const TestHelper = require("./test_helper.ts");
 TestHelper.init();
 
-function run_test(commands, loadStdlib: boolean = true): void {
+function run_test(commands, loadStdlib: boolean = true, disableElab: boolean = false): void {
     let oldTests = [];
     let state = API.getFirstState();
     let exception;
     let value;
+    let opts = {
+        'allowUnicodeInStrings': false,
+        'allowSuccessorML': false,
+        'disableElaboration': disableElab,
+        'disableEvaluation': false,
+        'allowLongFunctionNames': false,
+        'strictMode': true
+    };
+
     for(let step of commands) {
         step[1](() => {
-            let res = API.interpret(step[0], state);
+            let res = API.interpret(step[0], state, opts);
             state = res['state'];
             exception = res['evaluationErrored'];
             value = res['error'];
@@ -41,6 +50,12 @@ it("basic", () => {
         ['42;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(42), 0]);
+        }]
+    ]);
+    run_test([
+        ['0w42;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType([new Val.Word(42), 0]);
         }]
     ]);
     run_test([
@@ -253,4 +268,81 @@ it("signature", () => {
             expect(hasThrown).toEqual(false); //TODO
         }],
     ]);
+});
+
+it("no elab - basic", () => {
+    run_test([
+        ['42;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(42), 0]);
+        }]
+    ], true, true);
+    run_test([
+        ['0w42;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType([new Val.Word(42), 0]);
+        }]
+    ], true, true);
+    run_test([
+        ['fun f x = 42;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['f 10;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+            expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(42), 0]);
+        }],
+        [`fun pot [] = [[]]
+    | pot (x::xs) = let
+      val p = pot xs
+    in
+      p @ (List.map (fn a => x :: a) p)
+    end;`, (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        [`fun pot [] = [[]]
+  | pot (x::xs) = let
+    val p = pot xs
+  in
+    (List.map (fn a => x :: a) p) @ p
+  end;`, (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }]
+    ], true, true);
+});
+
+
+it("no elab - incorrect types", () => {
+    run_test([
+        ['["1", #"1"];', (x) => { x(); },
+            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['["1", 1.0];', (x) => { x(); },
+            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }],
+        ['["1", #"1"] : char list;', (x) => { x(); },
+            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+            expect(hasThrown).toEqual(false);
+        }]
+    ], true, true);
+    run_test([
+        ['(fn x => (fn y => (fn x => y) x) y) x;',
+            (x) => { expect(x).toThrow(Errors.EvaluationError); },
+            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ]
+    ], true, true);
+    run_test([
+        ['vall x = 10;',
+            (x) => { expect(x).toThrow(Errors.EvaluationError); },
+            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ]
+    ], true, true);
+    run_test([
+        ['2 * 5.5;',
+            (x) => { expect(x).toThrow(Errors.InternalInterpreterError); },
+            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ]
+    ], true, true);
+
 });

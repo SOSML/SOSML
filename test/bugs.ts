@@ -479,12 +479,15 @@ it("incomlete while loop", () => {
     ]);
 });
 
-it("Ungarded type variables", () => {
+it("Unguarded type variables", () => {
     run_test([
         ge("datatype L = n | c of 'a * L;", Errors.ElaborationError)
     ]);
     run_test([
         ge("type ''a foo = 'a -> int;", Errors.ElaborationError)
+    ]);
+    run_test([
+        ge("type 'b foo = 'a -> 'b -> 'c -> int;", Errors.ElaborationError)
     ]);
 });
 
