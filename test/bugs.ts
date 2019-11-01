@@ -341,6 +341,13 @@ it("unresolved records", () => {
         gc('fn (x : (int * int)) => #1 x;', undefined, ['it'], [undefined],
             [[FUNC(PAIR(INT,INT), INT), 0]])
     ]);
+    run_test([
+        gc('val g: (int * int -> int) = #1;', undefined, ['g'], [undefined],
+            [[FUNC(PAIR(INT,INT), INT), 0]])
+    ]);
+    run_test([
+        ge('val g: int*int->int = #3;', Errors.ElaborationError);
+    ]);
 });
 
 it("let expression circularity", () => {

@@ -1163,10 +1163,7 @@ export class TypedExpression extends Expression implements Pattern {
 
         try {
             let res = tp[1].merge(state, tp[2], this.typeAnnotation.instantiate(state, tp[2]));
-            for (let i = 0; i < tp[0].length; ++i) {
-                tp[0][i][1] = tp[0][i][1].instantiate(state, res[1]);
-            }
-            return [tp[0], res[0], res[1]];
+            return (<PatternExpression> this.expression).matchType(state, res[1], res[0]);
         } catch (e) {
             if (!(e instanceof Array)) {
                 throw e;
