@@ -17,7 +17,8 @@ import { EvaluationResult, EvaluationParameters, EvaluationStack } from './evalu
 export interface Structure {
     computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
         DynamicBasis | Value | undefined;
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string];
 }
 
@@ -31,10 +32,12 @@ export class StructureExpression extends Expression implements Structure {
         return new StructureExpression(this.structureDeclaration.simplify());
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let nstate = state.getNestedState(0).getNestedState(state.id);
-        let tmp = this.structureDeclaration.elaborate(nstate, tyVarBnd, nextName, true);
+        let tmp = this.structureDeclaration.elaborate(nstate, tyVarBnd, nextName, paramBindings,
+                                                      true);
         state.valueIdentifierId = tmp[0].valueIdentifierId;
         return [tmp[0].getStaticChanges(0), tmp[1], tmp[2], tmp[3]];
     }
@@ -84,7 +87,8 @@ export class StructureIdentifier extends Expression implements Structure {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let res: StaticBasis | undefined = undefined;
         if (this.identifier instanceof LongIdentifierToken) {
@@ -285,10 +289,11 @@ export class TransparentConstraint extends Expression implements Structure {
             <Expression & Signature> this.signatureExpression.simplify());
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        let str = this.structureExpression.elaborate(state, tyVarBnd, nextName);
-        let sig = this.signatureExpression.elaborate(state, str[2], str[3]);
+        let str = this.structureExpression.elaborate(state, tyVarBnd, nextName, paramBindings);
+        let sig = this.signatureExpression.elaborate(state, str[2], str[3], paramBindings);
 
         return TransparentConstraint.restrict(sig[0], str[0], state, sig[2], sig[3]);
     }
@@ -472,11 +477,12 @@ export class OpaqueConstraint extends Expression implements Structure {
             <Expression & Signature> this.signatureExpression.simplify());
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
 
-        let str = this.structureExpression.elaborate(state, tyVarBnd, nextName);
-        let sig = this.signatureExpression.elaborate(state, str[2], str[3]);
+        let str = this.structureExpression.elaborate(state, tyVarBnd, nextName, paramBindings);
+        let sig = this.signatureExpression.elaborate(state, str[2], str[3], paramBindings);
 
         return OpaqueConstraint.restrict(sig[0], str[0], state, sig[2], sig[3]);
    }
@@ -511,10 +517,11 @@ export class FunctorApplication extends Expression implements Structure {
             <Expression & Structure> this.structureExpression.simplify());
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
 
-        let str = this.structureExpression.elaborate(state, tyVarBnd, nextName);
+        let str = this.structureExpression.elaborate(state, tyVarBnd, nextName, paramBindings);
         let fun = state.getStaticFunctor(this.functorId.getText());
 
         if (fun === undefined) {
@@ -604,7 +611,8 @@ export class LocalDeclarationStructureExpression extends Expression implements S
             <Expression & Structure> this.expression.simplify());
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let nstate = state.getNestedState(state.id);
         tyVarBnd.forEach((val: [Type, boolean], key: string) => {
@@ -614,7 +622,7 @@ export class LocalDeclarationStructureExpression extends Expression implements S
             }
         });
 
-        let res = this.declaration.elaborate(nstate, tyVarBnd, nextName);
+        let res = this.declaration.elaborate(nstate, tyVarBnd, nextName, paramBindings);
         nextName = res[3];
 
         let nbnds = new Map<string, [Type, boolean]>();
@@ -622,7 +630,7 @@ export class LocalDeclarationStructureExpression extends Expression implements S
             nbnds = nbnds.set(key, [val[0].instantiate(res[0], res[2]), val[1]]);
         });
 
-        let r2 = this.expression.elaborate(res[0], res[2], nextName);
+        let r2 = this.expression.elaborate(res[0], res[2], nextName, paramBindings);
         return [r2[0], res[1].concat(r2[1]), r2[2], r2[3]];
     }
 
@@ -673,7 +681,8 @@ export class LocalDeclarationStructureExpression extends Expression implements S
 
 export interface Signature {
     computeInterface(state: State): DynamicInterface;
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string];
 }
 
@@ -687,9 +696,10 @@ export class SignatureExpression extends Expression implements Signature {
         return new SignatureExpression(this.specification.simplify());
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        return this.specification.elaborate(state, tyVarBnd, nextName);
+        return this.specification.elaborate(state, tyVarBnd, nextName, paramBindings);
     }
 
     computeInterface(state: State): DynamicInterface {
@@ -711,7 +721,8 @@ export class SignatureIdentifier extends Expression implements Signature {
         return this;
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let res: StaticBasis | undefined = undefined;
         if (this.identifier instanceof LongIdentifierToken) {
@@ -771,9 +782,10 @@ export class TypeRealisation extends Expression implements Signature {
             this.tyvarseq, this.name, this.type.simplify());
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        let sig = this.signatureExpression.elaborate(state, tyVarBnd, nextName);
+        let sig = this.signatureExpression.elaborate(state, tyVarBnd, nextName, paramBindings);
 
         let tmpst = state.getNestedState(0);
         tmpst.staticBasis = sig[0];
@@ -825,11 +837,12 @@ export class StructureDeclaration extends Declaration {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string, isTopLevel: boolean):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>, isTopLevel: boolean):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         let warns: Warning[] = [];
         for (let i = 0; i < this.structureBinding.length; ++i) {
-            let tmp = this.structureBinding[i].elaborate(state, tyVarBnd, nextName);
+            let tmp = this.structureBinding[i].elaborate(state, tyVarBnd, nextName, paramBindings);
             state = tmp[0];
             warns = warns.concat(tmp[1]);
             tyVarBnd = tmp[2];
@@ -890,11 +903,13 @@ export class SignatureDeclaration extends Declaration {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-              nextName: string = '\'*t0'): [State, Warning[], Map<string, [Type, boolean]>, string] {
+    elaborate(state: State,
+              tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
+              nextName: string = '\'*t0',
+              paramBindings: Map<string, Type> = new Map<string, Type>()): [State, Warning[], Map<string, [Type, boolean]>, string] {
         let warns: Warning[] = [];
         for (let i = 0; i < this.signatureBinding.length; ++i) {
-            let tmp = this.signatureBinding[i].elaborate(state, tyVarBnd, nextName);
+            let tmp = this.signatureBinding[i].elaborate(state, tyVarBnd, nextName, paramBindings);
             state = tmp[0];
             warns = warns.concat(tmp[1]);
             tyVarBnd = tmp[2];
@@ -938,13 +953,17 @@ export class FunctorDeclaration extends Declaration {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-              nextName: string = '\'*t0'): [State, Warning[], Map<string, [Type, boolean]>, string] {
+    elaborate(state: State,
+              tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
+              nextName: string = '\'*t0',
+              paramBindings: Map<string, Type> = new Map<string, Type>()):
+              [State, Warning[], Map<string, [Type, boolean]>, string] {
 
         let warns: Warning[] = [];
         for (let i = 0; i < this.functorBinding.length; ++i) {
             let tmp: Warning[] = [];
-            [state, tmp, tyVarBnd, nextName] = this.functorBinding[i].elaborate(state, tyVarBnd, nextName);
+            [state, tmp, tyVarBnd, nextName] =
+                this.functorBinding[i].elaborate(state, tyVarBnd, nextName, paramBindings);
             warns = warns.concat(tmp);
         }
 
@@ -992,9 +1011,10 @@ export class StructureBinding {
             <Expression & Structure> this.binding.simplify());
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
-        let tmp = this.binding.elaborate(state, tyVarBnd, nextName);
+        let tmp = this.binding.elaborate(state, tyVarBnd, nextName, paramBindings);
         state.setStaticStructure(this.name.getText(), tmp[0]);
         return [state, tmp[1], tmp[2], tmp[3]];
     }
@@ -1036,9 +1056,10 @@ export class SignatureBinding {
             <Expression & Signature> this.binding.simplify());
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
-        let res = this.binding.elaborate(state, tyVarBnd, nextName);
+        let res = this.binding.elaborate(state, tyVarBnd, nextName, paramBindings);
         state.setStaticSignature(this.name.getText(), res[0]);
         return [state, res[1], res[2], res[3]];
     }
@@ -1067,13 +1088,16 @@ export class FunctorBinding {
             <Expression & Structure> this.binding.simplify());
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
-              nextName: string = '\'*t0'): [State, Warning[], Map<string, [Type, boolean]>, string] {
+    elaborate(state: State,
+              tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
+              nextName: string = '\'*t0',
+              paramBindings: Map<string, Type> = new Map<string, Type>()):
+             [State, Warning[], Map<string, [Type, boolean]>, string] {
 
-        let sig = this.signatureBinding.elaborate(state, tyVarBnd, nextName);
+        let sig = this.signatureBinding.elaborate(state, tyVarBnd, nextName, paramBindings);
         let nstate = state.getNestedState(state.id);
         nstate.setStaticStructure(this.signatureName.getText(), sig[0]);
-        let str = this.binding.elaborate(nstate, sig[2], sig[3]);
+        let str = this.binding.elaborate(nstate, sig[2], sig[3], paramBindings);
         state.setStaticFunctor(this.name.getText(), [sig[0], str[0],
             this.signatureName.getText()]);
         return [state, sig[1].concat(str[1]), str[2], str[3]];
@@ -1101,7 +1125,8 @@ export class FunctorBinding {
 // Specifications
 
 export abstract class Specification {
-    abstract elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    abstract elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+                       paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string];
     abstract computeInterface(state: State): DynamicInterface;
 
@@ -1116,7 +1141,8 @@ export class ValueSpecification extends Specification {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let res = new StaticBasis({}, {}, {}, {}, {});
         for (let i = 0; i < this.valueDescription.length; ++i) {
@@ -1147,7 +1173,8 @@ export class TypeSpecification extends Specification {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let res = new StaticBasis({}, {}, {}, {}, {});
         for (let i = 0; i < this.typeDescription.length; ++i) {
@@ -1173,7 +1200,8 @@ export class EqualityTypeSpecification extends Specification {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let res = new StaticBasis({}, {}, {}, {}, {});
         for (let i = 0; i < this.typeDescription.length; ++i) {
@@ -1200,7 +1228,8 @@ export class DatatypeSpecification extends Specification {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let res = new StaticBasis({}, {}, {}, {}, {});
 
@@ -1275,7 +1304,8 @@ export class DatatypeReplicationSpecification extends Specification {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let res: TypeInformation | undefined = undefined;
 
@@ -1334,7 +1364,8 @@ export class ExceptionSpecification extends Specification {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let stbas = new StaticBasis({}, {}, {}, {}, {});
 
@@ -1391,7 +1422,8 @@ export class StructureSpecification extends Specification {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
 
         let stbas = new StaticBasis({}, {}, {}, {}, {});
@@ -1400,7 +1432,7 @@ export class StructureSpecification extends Specification {
         let nN = nextName;
 
         for (let i = 0; i < this.structureDescription.length; ++i) {
-            let sig = this.structureDescription[i][1].elaborate(state, tv, nN);
+            let sig = this.structureDescription[i][1].elaborate(state, tv, nN, paramBindings);
             warns.concat(sig[1]);
             tv = sig[2];
             nN = sig[3];
@@ -1435,12 +1467,13 @@ export class IncludeSpecification extends Specification {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let res = new StaticBasis({}, {}, {}, {}, {});
         let warns: Warning[] = [];
         for (let i = 0; i < this.expression.length; ++i) {
-            let tmp = this.expression[i].elaborate(state, tyVarBnd, nextName);
+            let tmp = this.expression[i].elaborate(state, tyVarBnd, nextName, paramBindings);
             res = res.extend(tmp[0]);
             warns = warns.concat(tmp[1]);
             tyVarBnd = tmp[2];
@@ -1472,7 +1505,8 @@ export class EmptySpecification extends Specification {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         return [new StaticBasis({}, {}, {}, {}, {}), [], tyVarBnd, nextName];
     }
@@ -1488,13 +1522,14 @@ export class SequentialSpecification extends Specification {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         let res = new StaticBasis({}, {}, {}, {}, {});
         let warns: Warning[] = [];
         let nstate = state;
         for (let i = 0; i < this.specifications.length; ++i) {
-            let tmp = this.specifications[i].elaborate(nstate, tyVarBnd, nextName);
+            let tmp = this.specifications[i].elaborate(nstate, tyVarBnd, nextName, paramBindings);
             res = res.extend(tmp[0]);
             warns = warns.concat(tmp[1]);
             tyVarBnd = tmp[2];
@@ -1529,9 +1564,10 @@ export class SharingSpecification extends Specification {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
-        let spec = this.specification.elaborate(state, tyVarBnd, nextName);
+        let spec = this.specification.elaborate(state, tyVarBnd, nextName, paramBindings);
 
         let tmpst = state.getNestedState(0);
         tmpst.staticBasis = spec[0];
@@ -1587,7 +1623,8 @@ export class TypeAliasSpecification extends Specification {
         super();
     }
 
-    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string):
+    elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
+              paramBindings: Map<string, Type>):
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
         throw new InternalInterpreterError('And you don\'t seem to understand…');
     }

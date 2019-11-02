@@ -54,7 +54,8 @@ export function interpret(nextInstruction: string,
         };
     }
 
-    let elab = ast.elaborate(state, new Map<string, [Type, boolean]>(), '\'*t0', true, options);
+    let elab = ast.elaborate(state, new Map<string, [Type, boolean]>(), '\'*t0',
+                             new Map<string, Type>(), true, options);
     state = elab[0];
 
     if (options.disableEvaluation === true) {

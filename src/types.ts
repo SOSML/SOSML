@@ -1,4 +1,4 @@
-import { ElaborationError } from './errors';
+import { ElaborationError, InternalInterpreterError } from './errors';
 import { State } from './state';
 import { LongIdentifierToken } from './tokens';
 
@@ -372,6 +372,25 @@ export class TypeVariable extends Type {
             }
         }
         return res;
+    }
+
+    static getUnusedTypeVariableName(
+        state: State,
+        nextName: string = '\'*t0',
+        tyVars: Set<string> = new Set<string>(),
+        tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
+        extraVars: Set<string> = new Set<string>()
+    ): string {
+
+        let cur = (+nextName.substring(3)) + 1;
+        for (; ; ++cur) {
+            nextName = '\'' + nextName[1] + nextName[2] + cur;
+            if (!extraVars.has(nextName) && !tyVars.has(nextName) && !tyVarBnd.has(nextName)
+                && state.getStaticValue(nextName) === undefined) {
+                    return nextName;
+            }
+        }
+        throw new InternalInterpreterError('');
     }
 
     constructor(public name: string, public domain: Type[] = []) {
@@ -757,6 +776,13 @@ export class RecordType extends Type {
 
     hasType(name: string): boolean {
         return this.elements.has(name);
+    }
+
+    setType(name: string, type: Type) {
+        if (this.complete) {
+            throw new ElaborationError('Don\'t try to change a complete record.');
+        }
+        this.elements = this.elements.set(name, type);
     }
 
     admitsEquality(state: State): boolean {

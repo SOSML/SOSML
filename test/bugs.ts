@@ -99,6 +99,9 @@ let VAR = new Type.TypeVariable('\'a');
 let FREE = new Type.TypeVariable('\'~A');
 let VARB = new Type.TypeVariable('\'b');
 
+function LIST (t: Type.Type): Type.Type {
+    return new Type.CustomType('list', [t]);
+}
 function FUNC (t1: Type.Type, t2: Type.Type): Type.Type {
     return new Type.FunctionType(t1, t2);
 }
@@ -357,11 +360,26 @@ it("let expression circularity", () => {
     ]);
 });
 
-it.skip("let expression polymorphism", () => {
+it("let expression polymorphism", () => {
     run_test([
         gc('val (a, b) = let val x = fn y => y in (x 5, x 9.0) end;', undefined,
             ['a', 'b'], [[new Val.Integer(5), 0], [new Val.Real(9.0), 0]],
-            [[INT, 0], [REAL, 0]]);
+            [[INT, 0], [REAL, 0]])
+    ]);
+    run_test([
+        ge('fun pisort compare = let fun insert (x, y::yr) = case compare(x,y) of GREATER => x::y::yr in (insert(3,[3]); insert("x", ["x"])) end;', Errors.ElaborationError)
+    ]);
+    run_test([
+        gc('(fn (x:bool) => let val x = [] in (3::x, "x"::x) end);', undefined,
+            ['it'], [undefined],
+            [[FUNC(BOOL, PAIR(LIST(INT), LIST(STRING))), 0]])
+    ]);
+    run_test([
+        ge('(fn x => let val y = x in (3::y, "x"::y) end);', Errors.ElaborationError)
+    ]);
+    run_test([
+        gc('(fn (x:bool) => let val x = 8 in x end) true;', undefined,
+           ['it'], [[new Val.Integer(8), 0]], [[INT, 0]]);
     ]);
 });
 
@@ -532,5 +550,11 @@ it("functors", () => {
            + "'a BASE.thing fun more a b = BASE.example (a,b) end;", undefined),
         gc("structure LIST_THING : EXAMPLE = struct type 'a thing = 'a list fun example a = [a] end;", undefined),
         gc("structure LOL = EXTEND (LIST_THING);", undefined)
+    ]);
+});
+
+it("tuple typeVar propagation", () => {
+    run_test([
+        ge('{1 = fn x=>(), 2 = fn () => x };', Errors.ElaborationError)
     ]);
 });
