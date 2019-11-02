@@ -1065,13 +1065,13 @@ export let STDLIB: {
                 | mergeUniq ordr (x1::xr, ys) = takeUniq ordr x1 xr ys;
 
               fun mergepairs ordr l1  [] k              = [l1]
-                | mergepairs ordr l1 (ls as (l2::lr)) k =
-                  if k mod 2 = 1 then l1::ls
+                | mergepairs ordr l1 (l2::lr) k =
+                  if k mod 2 = 1 then l1::l2::lr
                   else mergepairs ordr (merge ordr (l1, l2)) lr (k div 2);
 
               fun nextrun ordr run []      = (run, [])
-                | nextrun ordr run (xs as (x::xr)) =
-                  if ordr(x, List.hd run) = LESS then (run, xs)
+                | nextrun ordr run (x::xr) =
+                  if ordr(x, List.hd run) = LESS then (run, x::xr)
                   else nextrun ordr (x::run) xr;
 
               fun sorting ordr []      ls r = List.hd(mergepairs ordr [] ls 0)
@@ -1087,10 +1087,10 @@ export let STDLIB: {
                             else group ordr r1 rr [r1] (cs1 :: css);
 
               fun sort ordr []               = []
-                | sort ordr (xs as [_])      = xs
-                | sort ordr (xs as [x1, x2]) = (case ordr(x1, x2) of
+                | sort ordr [x]              = [x]
+                | sort ordr [x1, x2]         = (case ordr(x1, x2) of
                     GREATER => [x2, x1]
-                  | _       => xs)
+                  | _       => [x1, x2])
                 | sort ordr xs = sorting ordr xs [] 0;
 
               fun sorted ordr []           = true
@@ -1230,7 +1230,7 @@ export let STDLIB: {
 
                 fun matchSubstring ([], _) = true
                   | matchSubstring (_, []) = false
-                  | matchSubstring (x, y as _::ys) = if matchPrefix (x, y) then true
+                  | matchSubstring (x, y::ys) = if matchPrefix (x, y::ys) then true
                     else matchSubstring (x, ys);
 
                 fun getFields (f, [], tmp, x) = (implode tmp) :: x
