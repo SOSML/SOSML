@@ -593,3 +593,12 @@ it("tuple typeVar propagation", () => {
         ge('{1 = fn x=>(), 2 = fn () => x };', Errors.ElaborationError)
     ]);
 });
+
+it("free type variables 2", () => {
+    run_test([
+        gc('val s = ref [];', undefined),
+        gc('fun push a x = a := (x::(!a));', undefined),
+        gc('push s 1;', undefined),
+        ge('push s true;', Errors.ElaborationError)
+    ]);
+});

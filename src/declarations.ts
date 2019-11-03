@@ -884,7 +884,7 @@ export class SequentialDeclaration extends Declaration {
             }
 
             res[2].forEach((val: [Type, boolean], key: string) => {
-                if (val[1] && key[1] === '~' ) {
+                if (key[1] === '~' ) {
                     // Only free type variables are to be kept
                     let ntp = val[0].instantiate(state, res[2]).normalize(
                         state.freeTypeVariables[0], options);
