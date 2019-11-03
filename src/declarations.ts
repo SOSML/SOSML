@@ -928,8 +928,8 @@ export class SequentialDeclaration extends Declaration {
                         if (!bnds2.has(nname)) {
                             nbnds = nbnds.set(nname, val);
                         } else {
+                            let mg = <[Type, boolean]> bnds2.get(nname);
                             try {
-                                let mg = bnds2.get(nname);
                                 let rmg = mg[0].merge(state, bnds2, val[0]);
                                 nbnds = nbnds.set(nname, [rmg[0], mg[1] || val[1]]);
                             } catch (e) {
@@ -943,7 +943,7 @@ export class SequentialDeclaration extends Declaration {
                         }
                     }
                 }
-            }
+            });
             bnds = nbnds;
         }
         return [state, warns, bnds, str];

@@ -837,7 +837,7 @@ export class RecordType extends Type {
         let setn = new Map<string, Type>();
         for (let i = 1; i <= this.elements.size; ++i) {
             let sub = this.elements.get('' + i);
-            setn = setn.set('' + i, sub);
+            setn = setn.set('' + i, <Type> sub);
         }
         this.elements = setn;
     }

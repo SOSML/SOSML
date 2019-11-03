@@ -549,9 +549,9 @@ export class Record extends Expression implements Pattern {
                 oldname = (<TypeVariable> t).name;
                 oldIsFree = (<TypeVariable> t).isFree;
             } else if (t instanceof RecordType && (<RecordType> t).sourceTyVar !== undefined) {
-                oldname = (<RecordType> t).sourceTyVar;
+                oldname = <string> (<RecordType> t).sourceTyVar;
                 if (tyVarBnd.has(oldname)) {
-                    oldIsFree = tyVarBnd.get(oldname)[1];
+                    oldIsFree = (<[Type, boolean]> tyVarBnd.get(oldname))[1];
                 } else {
                     throw new InternalInterpreterError('An incomplete record type just died.');
                 }
@@ -566,7 +566,7 @@ export class Record extends Expression implements Pattern {
             let tp = new RecordType(ntype, this.complete, this.complete ? undefined : oldname);
 
             if (tyVarBnd.has('@' + oldname)) {
-                let od = tyVarBnd.get('@' + oldname);
+                let od = <[Type, boolean]> tyVarBnd.get('@' + oldname);
                 try {
                     let mg = (<Type> od[0]).merge(state, tyVarBnd, tp);
                     tyVarBnd = tyVarBnd.set('@' + oldname, [mg[0], oldIsFree]);
