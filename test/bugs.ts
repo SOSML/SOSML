@@ -383,11 +383,46 @@ it("let expression polymorphism", () => {
     ]);
 });
 
-it.skip("let expressions records", () => {
+it("let expressions records", () => {
     run_test([
         gc('fun f a = let val x = #2 a val (c,d) = a in 42 end;', undefined,
             ['f'], [undefined], [[BND(BNDB(FUNC(PAIR(VAR,VARB), INT))), 0]]),
         ge('f (1, 2, 3);', Errors.ElaborationError)
+    ]);
+    run_test([
+        gc('fun f a = let val x = #2 a; val (c,d) = (fn () => a)() in a end;', undefined,
+            ['f'], [undefined], [[BND(BNDB(FUNC(PAIR(VAR,VARB), PAIR(VAR,VARB)))), 0]])
+    ]);
+    run_test([
+        gc('fun f a = let val x = #2 a; val (c,d) = a in a end;', undefined,
+            ['f'], [undefined], [[BND(BNDB(FUNC(PAIR(VAR,VARB), PAIR(VAR,VARB)))), 0]])
+    ]);
+    run_test([
+        gc('fun f a = let val {2=x, ...} = a; val (c,d) = a in a end;', undefined,
+            ['f'], [undefined], [[BND(BNDB(FUNC(PAIR(VAR,VARB), PAIR(VAR,VARB)))), 0]])
+    ]);
+    run_test([
+        gc('fun f a = let val (c,d) = a; val x = #2 a in a end;', undefined,
+            ['f'], [undefined], [[BND(BNDB(FUNC(PAIR(VAR,VARB), PAIR(VAR,VARB)))), 0]])
+    ]);
+    run_test([
+        ge('fun f a = let val b = #1 a + 1; fun c a = a / 1.0; in a end;', Errors.ElaborationError)
+    ]);
+    run_test([
+        ge('fun f a = let val {3=x, ...} = a; val (c::cs,d) = a in cs end;',
+           Errors.ElaborationError)
+    ]);
+    run_test([
+        ge('fun f a = let val (c::cs,d) = a val {3=x, ...} = a in cs end;', Errors.ElaborationError)
+    ]);
+    run_test([
+        ge('fun f a = let val {2=x, ...} = a; val {1=y,...} = a in a end;', Errors.ElaborationError)
+    ]);
+    run_test([
+        ge('fun f a = let val {1=x, ...} = a; val {2=y,...} = a in a end;', Errors.ElaborationError)
+    ]);
+    run_test([
+        ge('fun f a = let val {2=x, ...} = a in a end;', Errors.ElaborationError)
     ]);
 });
 

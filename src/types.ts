@@ -452,7 +452,15 @@ export class TypeVariable extends Type {
             nsen.add(val);
         });
         nsen.add(this.name);
-        return (<[Type, boolean]> tyVarBnd.get(this.name))[0].instantiate(state, tyVarBnd, nsen);
+
+        let res = (<[Type, boolean]> tyVarBnd.get(this.name))[0];
+        if (res instanceof RecordType && !(<RecordType> res).complete) {
+            // Store where the incomplete record came from, so that it can get completed
+            // later (e.g. in a different decl in a local decl expr)
+            (<RecordType> res).sourceTyVar = this.name;
+        }
+
+        return res.instantiate(state, tyVarBnd, nsen);
     }
 
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type): [Type, Map<string, [Type, boolean]>] {
@@ -604,8 +612,13 @@ export class TypeVariable extends Type {
 }
 
 export class RecordType extends Type {
-    constructor(public elements: Map<string, Type>, public complete: boolean = true) {
+    constructor(public elements: Map<string, Type>, public complete: boolean = true,
+                public sourceTyVar: string | undefined = undefined) {
         super();
+        this.tuplefy();
+        if (this.complete) {
+            this.sourceTyVar = undefined;
+        }
     }
 
     isResolved(): boolean {
@@ -627,7 +640,7 @@ export class RecordType extends Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.makeFree());
         });
-        return new RecordType(newElements, this.complete);
+        return new RecordType(newElements, this.complete, this.sourceTyVar);
     }
 
     replace(sc: Type, tg: Type): Type {
@@ -638,7 +651,7 @@ export class RecordType extends Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.replace(sc, tg));
         });
-        return new RecordType(newElements, this.complete);
+        return new RecordType(newElements, this.complete, this.sourceTyVar);
     }
 
 
@@ -647,7 +660,7 @@ export class RecordType extends Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.flatten(repl));
         });
-        return new RecordType(newElements, this.complete);
+        return new RecordType(newElements, this.complete, this.sourceTyVar);
     }
 
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
@@ -655,7 +668,7 @@ export class RecordType extends Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.instantiate(state, tyVarBnd, seen));
         });
-        return new RecordType(newElements, this.complete);
+        return new RecordType(newElements, this.complete, this.sourceTyVar);
     }
 
     qualify(state: State, qualifiers: LongIdentifierToken): Type {
@@ -663,7 +676,7 @@ export class RecordType extends Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.qualify(state, qualifiers));
         });
-        return new RecordType(newElements, this.complete);
+        return new RecordType(newElements, this.complete, this.sourceTyVar);
     }
 
     propagate(domains: Map<string, Type[]> = new Map<string, Type[]>()): Type {
@@ -671,7 +684,7 @@ export class RecordType extends Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.propagate(domains));
         });
-        return new RecordType(newElements, this.complete);
+        return new RecordType(newElements, this.complete, this.sourceTyVar);
     }
 
     merge(state: State, tyVarBnd: Map<string, [Type, boolean]>, other: Type): [Type, Map<string, [Type, boolean]>] {
@@ -718,7 +731,12 @@ export class RecordType extends Type {
                 });
             }
 
-            return [new RecordType(rt, this.complete || other.complete), tybnd];
+            let nsource: string | undefined = this.complete ? undefined : this.sourceTyVar;
+            if (nsource === undefined && !other.complete) {
+                nsource = other.sourceTyVar;
+            }
+
+            return [new RecordType(rt, this.complete || other.complete, nsource), tybnd];
         }
 
         // Merging didn't work
@@ -734,7 +752,7 @@ export class RecordType extends Type {
             newElements.set(key, tmp[0]);
             tyVarBnd = tmp[1];
         });
-        return [new RecordType(newElements, this.complete), tyVarBnd];
+        return [new RecordType(newElements, this.complete, this.sourceTyVar), tyVarBnd];
     }
 
     getTypeVariables(free: boolean = false): Map<string, Type[]> {
@@ -764,7 +782,7 @@ export class RecordType extends Type {
         this.elements.forEach((val: Type, key: string) => {
             rt = rt.set(key, val.replaceTypeVariables(replacements, free));
         });
-        return new RecordType(rt, this.complete);
+        return new RecordType(rt, this.complete, this.sourceTyVar);
     }
 
     getType(name: string): Type {
@@ -799,15 +817,33 @@ export class RecordType extends Type {
         return 'RecordType';
     }
 
-    toString(): string {
+    isTuple(): boolean {
         let isTuple = this.elements.size !== 1;
         for (let i = 1; i <= this.elements.size; ++i) {
             if (!this.elements.has('' + i)) {
                 isTuple = false;
             }
         }
+        return isTuple && this.complete;
+    }
 
-        if (isTuple) {
+    tuplefy() {
+        // Rearranges elements to a sorted order if this record is a tuple;
+        // nop otherwise
+        if (!this.isTuple()) {
+            return;
+        }
+
+        let setn = new Map<string, Type>();
+        for (let i = 1; i <= this.elements.size; ++i) {
+            let sub = this.elements.get('' + i);
+            setn = setn.set('' + i, sub);
+        }
+        this.elements = setn;
+    }
+
+    toString(): string {
+        if (this.isTuple() && this.complete) {
             if (this.elements.size === 0) {
                 return 'unit';
             }
@@ -851,7 +887,7 @@ export class RecordType extends Type {
         this.elements.forEach((type: Type, key: string) => {
             newElements.set(key, type.simplify());
         });
-        return new RecordType(newElements, this.complete);
+        return new RecordType(newElements, this.complete, this.sourceTyVar);
     }
 
     equals(other: any): boolean {

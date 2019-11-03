@@ -541,15 +541,50 @@ export class Record extends Expression implements Pattern {
         if (!(t instanceof RecordType)) {
             t = t.instantiate(state, tyVarBnd);
         }
-        if (t instanceof TypeVariable) {
+        if (t instanceof TypeVariable || (t instanceof RecordType && !(<RecordType> t).complete)) {
             let ntype = new Map<string, Type>();
+            let oldname = '';
+            let oldIsFree = false;
+            if (t instanceof TypeVariable) {
+                oldname = (<TypeVariable> t).name;
+                oldIsFree = (<TypeVariable> t).isFree;
+            } else if (t instanceof RecordType && (<RecordType> t).sourceTyVar !== undefined) {
+                oldname = (<RecordType> t).sourceTyVar;
+                if (tyVarBnd.has(oldname)) {
+                    oldIsFree = tyVarBnd.get(oldname)[1];
+                } else {
+                    throw new InternalInterpreterError('An incomplete record type just died.');
+                }
+            } else {
+                throw new InternalInterpreterError('An incomplete record type just died.');
+            }
             for (let i = 0; i < this.entries.length; ++i) {
-                let ntv = new TypeVariable((<TypeVariable> t).name + '*' + i);
-                ntv.isFree = (<TypeVariable> t).isFree;
+                let ntv = new TypeVariable(oldname + '*' + this.entries[i][0]);
+                ntv.isFree = oldIsFree;
                 ntype = ntype.set(this.entries[i][0], ntv);
             }
-            let tp = new RecordType(ntype, this.complete);
-            tyVarBnd = tyVarBnd.set(t.name, [tp, t.isFree]);
+            let tp = new RecordType(ntype, this.complete, this.complete ? undefined : oldname);
+
+            if (tyVarBnd.has('@' + oldname)) {
+                let od = tyVarBnd.get('@' + oldname);
+                try {
+                    let mg = (<Type> od[0]).merge(state, tyVarBnd, tp);
+                    tyVarBnd = tyVarBnd.set('@' + oldname, [mg[0], oldIsFree]);
+                    if (this.complete) {
+                        tyVarBnd = tyVarBnd.set(oldname, [mg[0], oldIsFree]);
+                    }
+                } catch (e) {
+                    if (!(e instanceof Array)) {
+                        throw e;
+                    }
+                    throw new ElaborationError('Type mismatch "'
+                                               + (<Type> od[0]).normalize()[0] + '" vs. "'
+                                               + tp.normalize()[0] + '": ' + e[0]);
+                }
+            } else {
+        //        console.log(this + '', '@' + oldname, tp +'');
+                tyVarBnd = tyVarBnd.set('@' + oldname, [tp, oldIsFree]);
+            }
             t = tp;
         }
 
@@ -562,14 +597,16 @@ export class Record extends Expression implements Pattern {
             this.entries.length !== (<RecordType> t).elements.size) {
             throw new ElaborationError(
                 'Expected a record type with ' + this.entries.length + ' entries,'
-                + ' but the given one has ' + (<RecordType> t).elements.size + '.');
+                + ' but the given record has ' + (<RecordType> t).elements.size + ' entries.');
         }
 
         let res: [string, Type][] = [];
         let rtp = new Map<string, Type>();
         let bnd = tyVarBnd;
+        let elmts = new Set<string>();
 
         for (let i = 0; i < this.entries.length; ++i) {
+            elmts = elmts.add(this.entries[i][0]);
             if (!(<RecordType> t).hasType(this.entries[i][0])) {
                 if (!(<RecordType> t).complete) {
                     // TODO: get a proper unique name
@@ -577,7 +614,8 @@ export class Record extends Expression implements Pattern {
                                              new TypeVariable('*z' + i + '*'
                                                               + t.toString().length + '*'));
                 } else {
-                    throw new ElaborationError('I am mad scientist. Sunovabitch!');
+                    throw new ElaborationError(
+                        'Record is missing entry "' + this.entries[i][0] + '".');
                 }
             }
             let cur = (<PatternExpression> this.entries[i][1]).matchType(
@@ -587,7 +625,19 @@ export class Record extends Expression implements Pattern {
             rtp = rtp.set(this.entries[i][0], cur[1]);
             bnd = cur[2];
         }
-        return [res, new RecordType(rtp), bnd];
+
+        let restp = new RecordType(rtp, this.complete || (<RecordType> t).complete);
+        try {
+            let mg = restp.merge(state, bnd, t);
+            return [res, mg[0], mg[1]];
+        } catch (e) {
+            if (!(e instanceof Array)) {
+                throw e;
+            }
+            throw new ElaborationError('Type mismatch "' + t.normalize()[0] + '" vs. "'
+                                       + restp.normalize()[0] + '": ' + e[0]);
+        }
+
     }
 
     cover(state: State, rules: PatternExpression[]): Warning[] {

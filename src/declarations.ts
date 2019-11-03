@@ -190,7 +190,6 @@ export class ValueDeclaration extends Declaration {
                     }
 
                     if (!hasOuterDeps) {
-                        // console.log('161 ' + val[0][k][0] + ' -> ' + val[0][k][1]);
                         paramBindings = paramBindings.set(val[0][k][0], val[0][k][1]);
                     }
                     nstate.setStaticValue(val[0][k][0], val[0][k][1], IdentifierStatus.VALUE_VARIABLE);
@@ -912,6 +911,41 @@ export class SequentialDeclaration extends Declaration {
             }
             str = res[3];
         }
+        if (!isTopLevel) {
+            // Put together record pieces
+            let nbnds = new Map<string, [Type, boolean]>();
+            let bnds2 = new Map<string, [Type, boolean]>();
+            let skip = new Set<string>();
+            bnds.forEach((val: [Type, boolean], nm: string) => {
+                bnds2 = nbnds.set(nm, val);
+            });
+            bnds.forEach((val: [Type, boolean], nm: string) => {
+                if (!skip.has(nm)) {
+                    nbnds = nbnds.set(nm, val);
+                    if (nm.startsWith('@')) {
+                        let nname = nm.substr(1);
+                        skip = skip.add(nname);
+                        if (!bnds2.has(nname)) {
+                            nbnds = nbnds.set(nname, val);
+                        } else {
+                            try {
+                                let mg = bnds2.get(nname);
+                                let rmg = mg[0].merge(state, bnds2, val[0]);
+                                nbnds = nbnds.set(nname, [rmg[0], mg[1] || val[1]]);
+                            } catch (e) {
+                                if (!(e instanceof Array)) {
+                                    throw e;
+                                }
+                                throw new ElaborationError('Cannot merge "' + mg[0].normalize()[0]
+                                                           + '" and "' + val[0].normalize()[0]
+                                                           + '" :' + e[0] + '.');
+                            }
+                        }
+                    }
+                }
+            }
+            bnds = nbnds;
+        }
         return [state, warns, bnds, str];
     }
 
@@ -1182,22 +1216,12 @@ export class ValueBinding {
             [[string, Type][], Warning[], Map<string, [Type, boolean]>, string, IdCnt] {
         let nstate = state.getNestedState(state.id);
         let newBnds = tyVarBnd;
-        //new Map<string, [Type, boolean]>();
-        //tyVarBnd.forEach((t: [Type, boolean], n: string) => {
-        //    newBnds = newBnds.set(n, t);
-       // });
 
         let tp = this.expression.getType(nstate, newBnds, nextName, new Set<string>(),
                                          false, paramBindings);
         let res = this.pattern.matchType(nstate, tp[4], tp[0]);
 
         let noBind = new Set<string>();
-                // tyVarBnd.forEach((val: [Type, boolean], key: string) => {
-                // noBind.add(key);
-                // val[0].getTypeVariables().forEach((dom: Type[], v: string) => {
-                // noBind.add(v);
-                // });
-                // });
 
         if (res === undefined) {
             throw new ElaborationError(
@@ -1240,12 +1264,8 @@ export class ValueBinding {
         for (let i = 0; i < res[0].length; ++i) {
             res[0][i][1] = res[0][i][1].instantiate(state, res[2]);
             if (!isTopLevel) {
-               // console.log(res[0][i][0] + '->' + res[0][i][1]);
                 paramBindings = paramBindings.set(res[0][i][0], res[0][i][1]);
             }
-            // if (!isTopLevel) {
-            //     res[2] = res[2].set('\'**' + res[0][i][0], [res[0][i][1], false]);
-            // }
             let tv = res[0][i][1].getTypeVariables();
             let free = res[0][i][1].getTypeVariables(true);
             let done = new Set<string>();

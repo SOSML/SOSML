@@ -378,6 +378,13 @@ class Lexer {
     lexLongIdentifierOrKeyword(): Token {
         let tokenStart = this.tokenStart;
         let t: Token = this.lexIdentifierOrKeyword();
+
+        if (this.getChar() === '.') {
+            // Check for "..."
+            if (this.getChar(1) === '.' && this.getChar(2) === '.') {
+                return t;
+            }
+        }
         if (this.getChar() !== '.') {
             return t;
         }
