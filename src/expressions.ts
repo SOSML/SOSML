@@ -1630,7 +1630,8 @@ export class HandleException extends Expression {
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
         let mtp = this.match.getType(state, tyVarBnd, nextName, tyVars, isPattern,
-                                     true, paramBindings);
+                                     false, paramBindings);
+        // TODO: also check exn handles for exh
         if (!(mtp[0] instanceof FunctionType)) {
             throw new ElaborationError(
                 'You can only handle things of type "exn" and not "'
