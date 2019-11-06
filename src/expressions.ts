@@ -1423,7 +1423,8 @@ export class FunctionApplication extends Expression implements Pattern {
         if (f[0] instanceof FunctionType
             && (<FunctionType> f[0]).returnType + '' === 'exn') {
                 // actively add type annotations for exceptions
-            this.argument = new TypedExpression(this.argument, f[0].parameterType);
+            this.argument = new TypedExpression(this.argument,
+                                                (<FunctionType> f[0]).parameterType);
         }
 
         let nf4 = new Map<string, [Type, boolean]>();
