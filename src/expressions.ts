@@ -1419,6 +1419,13 @@ export class FunctionApplication extends Expression implements Pattern {
         let f = this.func.getType(state, tyVarBnd, nextName, tyVars, isPattern, paramBindings);
         state.valueIdentifierId = f[5];
 
+        // This is a really dirty hack. I am not sorry.
+        if (f[0] instanceof FunctionType
+            && (<FunctionType> f[0]).returnType + '' === 'exn') {
+                // actively add type annotations for exceptions
+            this.argument = new TypedExpression(this.argument, f[0].parameterType);
+        }
+
         let nf4 = new Map<string, [Type, boolean]>();
         f[4].forEach((val: [Type, boolean], key: string) => {
             nf4 = nf4.set(key, val);

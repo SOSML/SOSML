@@ -97,6 +97,7 @@ let STRING = new Type.CustomType('string');
 let CHAR = new Type.CustomType('char');
 let VAR = new Type.TypeVariable('\'a');
 let FREE = new Type.TypeVariable('\'~A');
+FREE.isFree = true;
 let VARB = new Type.TypeVariable('\'b');
 
 function LIST (t: Type.Type): Type.Type {
@@ -426,7 +427,7 @@ it("let expressions records", () => {
     ]);
 });
 
-it.skip("polymorphic exceptions", () => {
+it("polymorphic exceptions", () => {
     run_test([
         gc("val findDouble = fn (x: 'a) => ((let exception Double of 'a in Double end));",
             undefined, ['findDouble'], [undefined],
@@ -439,7 +440,7 @@ it.skip("polymorphic exceptions", () => {
     run_test([
         gc("val findDouble = fn x => ((let exception Double of 'a in Double end));",
             undefined, ['findDouble'], [undefined],
-            [[BND(BNDB(FUNC(VAR, FUNC(VARB, new Type.CustomType('exn'))))), 0]])
+            [[BND(FBND(FUNC(VAR, FUNC(FREE, new Type.CustomType('exn'))))), 0]])
     ]);
 });
 
