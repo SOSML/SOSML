@@ -21,7 +21,7 @@ export abstract class Expression {
             isPattern: boolean = false,
             paramBindings: Map<string, Type> = new Map<string, Type>() /* i/o: contains bindings
             for parameters introduced in current decl */
-           ) : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
+           ): [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
         throw new InternalInterpreterError('Called "getType" on a derived form.');
     }
 
@@ -761,7 +761,7 @@ export class Record extends Expression implements Pattern {
                         subsmst[i][1] = true;
                         subsmst[oldrecs.length][0] = true;
 
-                        nrecs.push(new Record((<Record> rule).complete, ocnr[i]))
+                        nrecs.push(new Record((<Record> rule).complete, ocnr[i]));
                     }
                 }
 
@@ -804,9 +804,9 @@ export class Record extends Expression implements Pattern {
 
                 // add rule to existing wc-rules
                 let nsprules = new Map<string, PatternExpression[]>();
-                sprules.forEach((sprule: PatternExpression[], key: string) => {
+                sprules.forEach((sprule: PatternExpression[], key2: string) => {
                     sprule.push(new Record((<Record> rule).complete, cnrule));
-                    nsprules = nsprules.set(key, sprule);
+                    nsprules = nsprules.set(key2, sprule);
                 });
                 sprules = nsprules;
                 continue;
@@ -945,8 +945,9 @@ export class Record extends Expression implements Pattern {
                 isTuple = false;
             }
         }
+        let result: string = '{';
         if (isTuple) {
-            let result = '(';
+            result = '(';
             for (let i = 0; i < this.entries.length; ++i) {
                 if (i > 0) {
                     result += ', ';
@@ -956,7 +957,6 @@ export class Record extends Expression implements Pattern {
             return result + ')';
         }
 
-        let result: string = '{';
         let first: boolean = true;
         for (let i = 0; i < this.entries.length; ++i) {
             if (!first) {
@@ -2213,10 +2213,10 @@ export class Wildcard extends Expression implements Pattern {
                     splitRules = splitRules.set(cnm, prevrls);
                 } else {
                     splitRules = splitRules.set(cnm, [currentRule]);
-                        idealPts = idealPts.set(cnm, new FunctionApplication(
-                            (<FunctionApplication> currentRule).func,
-                            new Wildcard()
-                        ));
+                    idealPts = idealPts.set(cnm, new FunctionApplication(
+                        (<FunctionApplication> currentRule).func,
+                        new Wildcard()
+                    ));
                 }
             }
 

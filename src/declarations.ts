@@ -96,13 +96,13 @@ export class ValueDeclaration extends Declaration {
             try {
                 let nnstate = state.getNestedState(state.id);
                 let nbnds = new Map<string, [Type, boolean]>();
-                bnds.forEach((val: [Type, boolean], key: string) => {
-                    nbnds = nbnds.set(key, val);
+                bnds.forEach((val2: [Type, boolean], key: string) => {
+                    nbnds = nbnds.set(key, val2);
                 });
 
                 this.valueBinding[i].getType(this.typeVariableSequence, nnstate, nbnds,
                                              nextName, new Map<string, Type>(), isTopLevel);
-            } catch(e) {
+            } catch (e) {
                 hasOuterDeps = true;
             }
 
@@ -159,10 +159,10 @@ export class ValueDeclaration extends Declaration {
                     try {
                         let nnstate = nstate.getNestedState(state.id);
                         let nbnds = new Map<string, [Type, boolean]>();
-                        bnds.forEach((val: [Type, boolean], key: string) => {
-                            nbnds = nbnds.set(key, val);
+                        bnds.forEach((val2: [Type, boolean], key: string) => {
+                            nbnds = nbnds.set(key, val2);
                         });
-                        this.valueBinding[j].getType(this.typeVariableSequence,nnstate, nbnds,
+                        this.valueBinding[j].getType(this.typeVariableSequence, nnstate, nbnds,
                                                      nextName, new Map<string, Type>(), isTopLevel);
                     } catch (e) {
                         hasOuterDeps = true;
@@ -1274,7 +1274,7 @@ export class ValueBinding {
                     let dm = <Type[]> tv.get(ntys[j].name);
                     if (res[2].has('$' + ntys[j].name)) {
                         dm = TypeVariable.mergeDomain(dm,
-                                                      (<[TypeVariable, boolean]> res[2].get('$' + ntys[j].name))[0].domain);
+                            (<[TypeVariable, boolean]> res[2].get('$' + ntys[j].name))[0].domain);
                     }
                     res[0][i][1] = new TypeVariableBind(ntys[j].name, res[0][i][1], dm);
                     (<TypeVariableBind> res[0][i][1]).isFree =

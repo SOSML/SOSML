@@ -23,8 +23,8 @@ export class KeywordToken implements Token {
 }
 
 export abstract class ConstantToken implements Token {
-    typeName() { return 'ConstantToken'; }
     text: string;
+    typeName() { return 'ConstantToken'; }
 
     abstract getText(): string;
     abstract isValidRecordLabel(): boolean;
@@ -86,8 +86,8 @@ export class StringConstantToken extends ConstantToken {
 // Any identifier not starting with a prime (')
 // May represent value identifiers, type constructors and record labels
 export class IdentifierToken implements Token {
-    typeName() { return 'IdentifierToken'; }
     opPrefixed: boolean = false;
+    typeName() { return 'IdentifierToken'; }
     constructor(public text: string) {}
     getText(): string {
         return this.text;
@@ -132,8 +132,8 @@ export class EqualityTypeVariableToken extends TypeVariableToken {
 // A star (*) can be used as value identifier or record label, but not as a type constructor and thus must be separated.
 // See SML definition, chapter 2.4 Identifiers
 export class StarToken extends KeywordToken {
-    typeName() { return 'StarToken'; }
     opPrefixed: boolean = false;
+    typeName() { return 'StarToken'; }
     constructor() {
         super('*');
     }
@@ -174,8 +174,8 @@ export class NumericToken extends IntegerConstantToken {
 // A long identifier is a sequence str_1.str_2. … .str_n.id of n > 0 structure identifiers and one Identifier
 // separated by '.'s. The identifier may a value identifier, type constructor or structure identifier
 export class LongIdentifierToken implements Token {
-    typeName() { return 'LongIdentifierToken'; }
     opPrefixed: boolean = false;
+    typeName() { return 'LongIdentifierToken'; }
     constructor(public text: string, public qualifiers: AlphanumericIdentifierToken[],
                 public id: IdentifierToken) {}
     getText(): string {

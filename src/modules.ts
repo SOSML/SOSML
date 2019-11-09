@@ -906,7 +906,8 @@ export class SignatureDeclaration extends Declaration {
     elaborate(state: State,
               tyVarBnd: Map<string, [Type, boolean]> = new Map<string, [Type, boolean]>(),
               nextName: string = '\'*t0',
-              paramBindings: Map<string, Type> = new Map<string, Type>()): [State, Warning[], Map<string, [Type, boolean]>, string] {
+              paramBindings: Map<string, Type> = new Map<string, Type>()):
+              [State, Warning[], Map<string, [Type, boolean]>, string] {
         let warns: Warning[] = [];
         for (let i = 0; i < this.signatureBinding.length; ++i) {
             let tmp = this.signatureBinding[i].elaborate(state, tyVarBnd, nextName, paramBindings);
