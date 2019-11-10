@@ -9,8 +9,8 @@ function addRealLib(state: State): State {
     let dres = new DynamicBasis({}, {}, {}, {}, {});
     let sres = new StaticBasis({}, {}, {}, {}, {});
 
-    sres.setType('real', realType, [], 0, true);
-    dres.setType('real', []);
+    // sres.setType('real', realType, [], 0, true);
+    // dres.setType('real', []);
 
     dres.setValue('fromInt', new PredefinedFunction('fromInt', (val: Value, params: EvaluationParameters) => {
         if (val instanceof Integer) {
@@ -83,7 +83,7 @@ function addRealLib(state: State): State {
 export let REAL_LIB: Module = {
     'native': addRealLib,
     'code': `signature REAL = sig
-        type real
+        (* type real *)
 
         structure Math : MATH
 
