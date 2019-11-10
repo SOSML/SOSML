@@ -182,6 +182,9 @@ it('tuple - nested', () => {
     run_test([
         ok('fun f ((a::bs, _),_) = 2 | f (([], _),_) = 10;')
     ]);
+    run_test([
+        ok('fun h (s,c) (x::xs) = 1 | h (s,c) nil = 2;')
+    ]);
 });
 it('tuple - nested 2', () => {
     run_test([

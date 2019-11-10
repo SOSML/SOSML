@@ -724,21 +724,6 @@ export class Record extends Expression implements Pattern {
                 }
 
                 let nrecs: PatternExpression[] = [];
-                let skip = false;
-                for (let i = 0; i < oldrecs.length; ++i) {
-                    let kso = key.subsumes(state, oldrecs[i]);
-                    let osk = oldrecs[i].subsumes(state, key);
-                    if (osk && kso) {
-                        // This rule is redundant
-                        warns.push(new Warning(0, 'Rule "' + key
-                            + '" is ignored due to rule "' + oldrecs[i] + '".'));
-                        skip = true;
-                        break;
-                    }
-                }
-                if (skip) {
-                    continue;
-                }
 
                 subsmst.push([false, false]);
                 // The following could be implemented faster. I know. I don't care.

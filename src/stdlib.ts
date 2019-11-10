@@ -12,6 +12,7 @@ import { INT_LIB } from './stdlib/int';
 import { LIST_LIB } from './stdlib/list';
 import { LISTSORT_LIB } from './stdlib/listsort';
 import { MATH_LIB } from './stdlib/math';
+/* import { OS_LIB } from './stdlib/os'; */
 import { REAL_LIB } from './stdlib/real';
 import { STRING_LIB } from './stdlib/string';
 import { VECTOR_LIB } from './stdlib/vector';
@@ -30,7 +31,7 @@ export let chrException = new ExceptionConstructor('Chr', 0, 0, 6);
 export let subscriptException = new ExceptionConstructor('Subscript', 0, 0, 7);
 
 export type Module = {
-    'native': ((state: State) => State) | undefined, /* callback for native parts */
+    'native': ((state: State, options?: {[name: string]: any}) => State) | undefined, /* callback for native parts */
     'code': string | undefined,
     'requires': string[] | undefined /* names of modules required for this module (excluding __Base) */
 };
@@ -66,6 +67,7 @@ export let STDLIB: {
     'List': LIST_LIB, /* complete */
     'Listsort': LISTSORT_LIB, /* complete */
     'Math': MATH_LIB, /* Complete */
+    /* 'OS': OS_LIB, */
     'Option': { /* Complete */
         'native': undefined,
         'code': `structure Option = struct
@@ -139,7 +141,7 @@ export function loadModule(state: State, name: string, options: {[name: string]:
         }
     }
     if (mod.native !== undefined) {
-        state = mod.native(state);
+        state = mod.native(state, options);
     }
     if (mod.code !== undefined) {
         state = Interpreter.interpret(mod.code, state, options).state;
