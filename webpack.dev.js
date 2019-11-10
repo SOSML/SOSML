@@ -6,7 +6,7 @@ module.exports = {
     filename: 'interpreter.js',
     path: path.resolve(__dirname, 'build'),
     library: "Interpreter",
-    libraryTarget : "commonjs2"
+    libraryTarget : "var"
   },
   module: {
     rules: [
