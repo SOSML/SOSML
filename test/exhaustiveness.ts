@@ -249,6 +249,14 @@ it('tuple duplicate', () => {
     ]);
 });
 
+it('lists', () => {
+    run_test([
+        ne('val (1, _, c) = (1, 3, 4);')
+    ]);
+    run_test([
+        ok('val (a, b, c) = (1, 2, 3);')
+    ]);
+});
 /*
 it('lists', () => {
     run_test([

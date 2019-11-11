@@ -1219,7 +1219,27 @@ export class ValueBinding {
 
         let tp = this.expression.getType(nstate, newBnds, nextName, new Set<string>(),
                                          false, paramBindings);
+        let warns = tp[1];
         let res = this.pattern.matchType(nstate, tp[4], tp[0]);
+
+        try {
+            let exhm = new Match([[<PatternExpression> this.pattern, this.expression]]);
+            let exwn = exhm.checkExhaustiveness(state);
+
+            let rw: Warning[] = [];
+            let seenmsg = new Set<string>();
+
+            for (let w of exwn) {
+                if (!seenmsg.has(w.message)) {
+                    seenmsg.add(w.message);
+                    rw.push(new Warning(w.type === -1 ? -1 : 0, w.message));
+                }
+            }
+            warns = warns.concat(rw);
+        } catch (e) {
+            // Ignored
+        }
+
 
         let noBind = new Set<string>();
 
@@ -1305,10 +1325,10 @@ export class ValueBinding {
         }
 
         if (hasFree && isTopLevel) {
-            tp[1].push(new Warning(0, 'Free type variables at top level.\n'));
+            warns.push(new Warning(0, 'Free type variables at top level.\n'));
         }
 
-        return [res[0], tp[1], res[2], tp[2], tp[5]];
+        return [res[0], warns, res[2], tp[2], tp[5]];
     }
 }
 
