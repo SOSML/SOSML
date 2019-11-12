@@ -1161,7 +1161,7 @@ export class Parser {
                 results.push(this.parsePattern());
             }
         } else if (curTok instanceof ConstantToken) {
-            if (curTok instanceof RealConstantToken) {
+            if (curTok instanceof RealConstantToken && this.options.realEquality !== true) {
                 throw new ParserError('I am not interested in real constants such as "'
                     + curTok.getText() + '" appearing in patterns.');
             }

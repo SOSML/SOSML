@@ -558,6 +558,10 @@ let initialState: State = new State(
     }
 );
 
-export function getInitialState(): State {
-    return initialState.getNestedState();
+export function getInitialState(options: {[name: string]: any } = {}): State {
+    let res = initialState.getNestedState();
+    if (options.realEquality === true) {
+        res.setStaticType('real', realType, [], 0, true);
+    }
+    return res;
 }

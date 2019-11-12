@@ -29,7 +29,8 @@ export function interpret(nextInstruction: string,
                               'allowSuccessorML': false,
                               'disableElaboration': false,
                               'allowVector': true,
-                              'strictMode': true
+                              'strictMode': true,
+                              'realEquality': false
                           }): { [name: string]: any } {
     let state = oldState.getNestedState();
 
@@ -184,7 +185,7 @@ export function getAvailableModules(): string[] {
 
 export function getFirstState(loadModules: string[] = getAvailableModules(),
                               options: {[name: string]: any } = {}): State {
-    let res = loadModule(getInitialState(), '__Base', options);
+    let res = loadModule(getInitialState(options), '__Base', options);
     for (let i of loadModules) {
         res = loadModule(res, i, options);
     }
