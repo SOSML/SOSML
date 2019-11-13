@@ -1952,9 +1952,8 @@ export class Match {
             state.valueIdentifierId = r1[5];
             warns = warns.concat(r1[1]);
 
-            // console.log(this + ' ' + this.matches[i][1] + ' gets', nparbnds);
-
             let r2 = this.matches[i][1].getType(state, r1[4], r1[2], r1[3], isPattern, nparbnds);
+
             warns = warns.concat(r2[1]);
             state.valueIdentifierId = r2[5];
             nextName = r2[2];

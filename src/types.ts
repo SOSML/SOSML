@@ -734,6 +734,13 @@ export class RecordType extends Type {
             let nsource: string | undefined = this.complete ? undefined : this.sourceTyVar;
             if (nsource === undefined && !other.complete) {
                 nsource = other.sourceTyVar;
+                if (nsource !== undefined) {
+                    let old = tybnd.get(nsource);
+                    if (old !== undefined) {
+                        tybnd = tybnd.set(nsource,
+                            [new RecordType(rt, this.complete || other.complete, nsource), old[1]]);
+                    }
+                }
             }
 
             return [new RecordType(rt, this.complete || other.complete, nsource), tybnd];
