@@ -22,6 +22,18 @@ import * as Lexer from './lexer';
 import * as Parser from './parser';
 import * as Evaluator from './evaluator';
 
+export * from './declarations';
+export * from './errors';
+export * from './evaluator';
+export * from './expressions';
+export * from './lexer';
+export * from './parser';
+export * from './state';
+export * from './tokens';
+export * from './types';
+export * from './values';
+export * from './version';
+
 export function interpret(nextInstruction: string,
                           oldState: State = getInitialState(),
                           options: { [name: string]: any } = {
