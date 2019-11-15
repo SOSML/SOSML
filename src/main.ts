@@ -22,17 +22,28 @@ import * as Lexer from './lexer';
 import * as Parser from './parser';
 import * as Evaluator from './evaluator';
 
-export * from './declarations';
-export * from './errors';
+import * as Declarations from './declarations';
+import * as Errors from './errors';
+import * as Expressions from './expressions';
+import * as Tokens from './tokens';
+import * as Types from './types';
+import * as Values from './values';
+import * as Version from './version';
+
+export {
+    Declarations,
+    Errors,
+    Expressions,
+    Tokens,
+    Types,
+    Values,
+    Version
+};
+
 export * from './evaluator';
-export * from './expressions';
 export * from './lexer';
 export * from './parser';
 export * from './state';
-export * from './tokens';
-export * from './types';
-export * from './values';
-export * from './version';
 
 export function interpret(nextInstruction: string,
                           oldState: State = getInitialState(),
