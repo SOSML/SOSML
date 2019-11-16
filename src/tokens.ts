@@ -11,6 +11,17 @@ export interface Token {
     isVid(): boolean;
 }
 
+export class CommentToken implements Token {
+    constructor(public text: string) {}
+    typeName() { return 'CommentToken'; }
+
+    getText(): string {
+        return this.text;
+    }
+    isValidRecordLabel(): boolean { return false; }
+    isVid() { return false; }
+}
+
 export class KeywordToken implements Token {
     constructor(public text: string) {}
     typeName() { return 'KeywordToken'; }

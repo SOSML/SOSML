@@ -176,7 +176,6 @@ export let REAL_LIB: Module = {
     end;
     structure Real :> REAL = struct
         open Real;
-    end;
-    `,
+    end;`,
     'requires': ['Math']
 };

@@ -31,6 +31,10 @@ import * as Values from './values';
 import * as Version from './version';
 
 export {
+    Lexer,
+    Parser,
+    Evaluator,
+
     Declarations,
     Errors,
     Expressions,
@@ -39,10 +43,6 @@ export {
     Values,
     Version
 };
-
-export * from './evaluator';
-export * from './lexer';
-export * from './parser';
 export * from './state';
 
 export function interpret(nextInstruction: string,
