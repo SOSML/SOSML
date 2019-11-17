@@ -17,7 +17,7 @@ export class InterpreterError extends Error implements InterpreterMessage {
 // Used for errors that Never Happen™. Any InternalInterpreterError occurring is a bug in the interpreter, regardless
 // of how absurd the input is.
 export class InternalInterpreterError extends InterpreterError {
-    constructor(message: string = 'internal compiler error') {
+    constructor(message: string) {
         super(message, 'You triggered Third Impact');
         Object.setPrototypeOf(this, InternalInterpreterError.prototype);
     }
@@ -34,7 +34,7 @@ export class FeatureDisabledError extends InterpreterError {
 
 // Used if the input is incomplete, but may be a prefix of valid SML code.
 export class IncompleteError extends InterpreterError {
-    constructor(message: string = 'unexpected end of input') {
+    constructor(message: string) {
         super(message, 'Input Incomplete');
         Object.setPrototypeOf(this, IncompleteError.prototype);
     }

@@ -74,6 +74,9 @@ export function lexComment(stream: LexerStream): CommentToken {
         let openComments: number = 1;
         while (openComments > 0) {
             let s: string = '' + stream.peek() + stream.peek(1);
+            if (stream.peek() === undefined || stream.peek(1) === undefined) {
+                throw new IncompleteError('And it\'s just not enough.');
+            }
             if (s === '(*') {
                 ++openComments;
                 comment += stream.next();
