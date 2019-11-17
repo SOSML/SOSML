@@ -257,6 +257,15 @@ it('lists', () => {
         ok('val (a, b, c) = (1, 2, 3);')
     ]);
 });
+
+it('exceptions', () => {
+    run_test([
+        ne('fun f Bind = Match | f Match = Bind;')
+    ]);
+    run_test([
+        ok('fun f Bind = Match | f Match = Bind | f _ = Bind;')
+    ]);
+});
 /*
 it('lists', () => {
     run_test([

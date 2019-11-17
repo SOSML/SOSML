@@ -178,10 +178,8 @@ export class ValueIdentifier extends Expression implements Pattern {
         let res = state.getStaticValue(cnm);
         if (res === undefined || res[1] === IdentifierStatus.VALUE_VARIABLE) {
             return undefined;
-        } else if (res[1] === IdentifierStatus.VALUE_CONSTRUCTOR) {
-            return cnm;
         }
-        return undefined;
+        return cnm;
     }
 
     getConstructorList(state: State): string[] | undefined {
@@ -212,7 +210,7 @@ export class ValueIdentifier extends Expression implements Pattern {
             }
             return stattp.constructors;
         }
-        return undefined;
+        return ['__exn'];
     }
 
     getType(state: State,
