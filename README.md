@@ -1,6 +1,6 @@
-# SOSML - Online SML
+# SOSML - the Online Interpreter for Standard ML
 
-SOSML is an online interpreter for the functional programming language Standard ML, written in TypeScript.
+SOSML is the online interpreter for the functional programming language Standard ML (SML), written in TypeScript.
 It is to be used as a learning tool in a freshman class at Saarland University; you can try it out at https://sosml.org.
 
 ## Features
@@ -21,7 +21,7 @@ Correctly lexing, parsing, elaborating and interpreting any SML core language pr
   * [x] `open` declarations
   * [x] structure declarations (`structure S = struct end;`)
   * [x] signature declarations (`signature S = sig end;`)
-  * [x] functor declarations (`functor F = struct end;`)
+  * [x] functor declarations (experimental, `functor F = struct end;`)
 * Supported expressions (This list is non-exhaustive)
   * [x] tuple (`(1, 2, 3)`), records (`{a = 1, b = 2}`), and lists (`[1, 2, 3]`)
   * [x] application expressions (`f x`)
@@ -48,9 +48,61 @@ Correctly lexing, parsing, elaborating and interpreting any SML core language pr
   * Array library `fromList`, `tabulate`, `length`, `sub`, `update`, `vector`, `foldl`, `foldr`
   * String library
 
-## Building and installation
-The dependencies of this package must be installed to test or build.
+## Using SOSML as an interpreter for Standard ML (SML)
+
+If you just want to test SOSML, just head to https://sosml.org/editor and enter your code. 
+Adding a `;` will then start the evaluation.
+
+If you don't like web browsers, but still want to test SOSML, you can install the experimental CLI via `npm`
 ```bash
+npm install -g @sosml/interpreter@latest
+```
+This makes the command `sosml` available, which behaves like any other run-of-the-mill interpreter for SML.
+Note that due to its experimental state, the CLI currently does not take any options or parameters.
+
+## Using SOSML as a component in your project
+
+You may use the interpreter bundled in SOSML or parts of it to build your own fancy SML interpreter:
+First, install SOSML via
+```bash
+npm install --save @sosml/interpreter@latest
+```
+Now, to get your SML code interpreted by SOSML, import `interpret` and `getFirstState` from the package you just installed
+and you are good to go:
+```js
+import { interpret, getFirstState, State } from '@sosml/interpreter';
+
+// Obtain an initial state for the interpretation
+let initialState: State = getFirstState(); 
+
+// Let's interpret some code 
+let interpretationResult = interpret('val x = "Hello World!";', initialState);
+
+// Let's interpret some more code; note how we use the state obtained from the last step
+interpretationResult = interpret('fun f y = x | f 10 = "???";', interpretationResult.state);
+
+// Note that the last code produced a warning:
+console.log(interpretationResult.warnings); // Something like "Rules after "y" unused in pattern matching."
+
+// Similarly, interpretationResult.evaluationErrored may contain an Error if the interpretation of your code failed
+// Lastly, SML exceptions raised by your code that are not handled end up in interpretationResult.error.
+```
+Check out the `src/cli.ts` file for an example on how to parse and print the computed `State` objects.
+
+## Contributing to SOSML
+
+We welcome you to open an Issue for any error you may find, and we will try to fix it ASAP.
+Further, if you want additional parts of the Standard Library or other features in general implemented,
+feel free to open a new Issue.
+
+If you want to contribute via writing code, you may check the Issues page for any unresolved problems
+or unimplemented features and then submit a pull request after solving that problem or implementing that feature.
+
+### Cloning and building
+
+To get started on writing code for SOSML, clone the repository and install the dependencies:
+```bash
+git clone https://github.com/SOSML/SOSML
 npm install
 ```
 
@@ -66,19 +118,18 @@ npm run dist
 ```
 This will create a file in the directory `build` called `interpreter.min.js`.
 
-## Test
+To build the CLI, run
+```bash
+npm run cli
+npm link
+```
 
-To run the tests use:
+### Testing your changes
+
+SOSML comes with an extensive set of tests which can be run via:
 ```bash
 npm test
 ```
-This runs all tests located in the `test` directory.
+This runs all tests located in the `test` directory. 
+When contributing new code, please make sure that you add the appropriate tests and that no old tests begin to fail.
 
-## Contributing
-
-We welcome you to open an Issue for any error you may find, and we will try to fix it ASAP.
-Further, if you want additional parts of the Standard Library or other features in general implemented,
-feel free to open a new Issue.
-
-If you want to contribute via writing code, you may check the Issues page for any unresolved problems
-or unimplemented features and then submit a pull request after solving that problem or implementing that feature.
