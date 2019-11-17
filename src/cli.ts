@@ -16,8 +16,8 @@ function printBasis( state: State, dynamicBasis: DynamicBasis | undefined, stati
         istr += '  ';
     }
     let out = '';
-    let fullst = 'ＳＯＳ＞　　';
-    let emptyst = '　　　＞　　';
+    let fullst = 'ＳＯＳＭＬ＞　';
+    let emptyst = '　　　　　＞　';
     let stsym = indent === 0 ? fullst : emptyst;
 
     if( dynamicBasis === undefined && staticBasis !== undefined ) {
@@ -189,13 +189,13 @@ let opts = {
 let state = getFirstState( );
 let st = getFirstState( ).id + 1;
 
-console.log('ＳＯＳ＞　　ごきげんよう御主人様、御命令をお願いいたしませんか。\n');
+console.log('ＳＯＳＭＬ＞　Welcome to SOSML. Please enter your code.\n');
 let tmp = '';
 
 let rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
-    prompt: '御主人様＞　'
+    prompt: 'Ｉｎｐｕｔ＞　'
 });
 rl.prompt( );
 
@@ -207,8 +207,8 @@ rl.on( 'line', ( line: string ) => {
         let res = interpret( tmp, state, opts );
 
         if( res.evaluationErrored ) {
-            out += 'ＳＯＳ＞　　申し訳ございませんが、御問題がございました：\n'
-                +  '　　　＞　　\x1b[31;40;1m' + res.error + '\x1b[39;49;0m\n';
+            out += 'ＳＯＳＭＬ＞　There was a problem with your code:\n'
+                +  '　　　　　＞　\x1b[31;40;1m' + res.error + '\x1b[39;49;0m\n';
             tmp = '';
         } else {
             out += printBasis( res.state,
@@ -221,22 +221,22 @@ rl.on( 'line', ( line: string ) => {
         if( res.warnings !== undefined ) {
             for( let i = 0; i < res.warnings.length; ++i ) {
                 if( res.warnings[ i ].type >= -1 ) {
-                    out += 'お気を付けてくださいませ：' + res.warnings[ i ].message;
+                    out += 'Attention: ' + res.warnings[ i ].message;
                 } else {
-                    out += '御通知がございます：　' + res.warnings[ i ].message;
+                    out += 'Message: ' + res.warnings[ i ].message;
                 }
             }
         }
         console.log( out );
     } catch (e) {
         if( !( e instanceof IncompleteError ) ) {
-            console.log( 'ＳＯＳ＞　　申し訳ございませんが、御問題がごさいました：\n'
-                + '　　　＞　　\x1b[31;40;1m' + e + '\x1b[39;49;0m\n' );
+            console.log( 'ＳＯＳＭＬ＞　There was a problem with your code:\n'
+                + '　　　　　＞　\x1b[31;40;1m' + e + '\x1b[39;49;0m\n' );
             tmp = '';
         }
     }
     rl.prompt( );
 }).on('close', () => {
-    console.log( '\nＳＯＳ＞　　毎度どうもありがとうございます。お元気で御機嫌よう。' );
+    console.log( '\nＳＯＳＭＬ＞　Thank you for using SOSML. Have a nice day.' );
     process.exit( 0 );
 });
