@@ -292,6 +292,7 @@ export function lexString(stream: LexerStream): StringConstantToken {
                     }
                     default: {
                         if (!isNumber(c, false)) {
+                            c = stream.next();
                             throw new LexerError('Invalid escape sequence "\\' + c + '".');
                         }
                         let s: string = readNumeric(stream, false, 3);
