@@ -613,3 +613,12 @@ it("incomplete records", () => {
                                                              PAIR(INT, LIST(VAR)))), 0]]
     ]);
 });
+
+it("let expressions 2", () => {
+    run_test([
+        gc('fun f a = let val b = a val c = b in c end;', undefined, ['f'], [undefined],
+           [[BND(FUNC(VAR, VAR)), 0]]),
+        gc('fun f a = let val b = a val c = b val d = c in d end;', undefined, ['f'], [undefined],
+           [[BND(FUNC(VAR, VAR)), 0]]),
+    ]);
+});

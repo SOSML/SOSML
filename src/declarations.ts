@@ -100,8 +100,14 @@ export class ValueDeclaration extends Declaration {
                     nbnds = nbnds.set(key, val2);
                 });
 
+                let npars = new Map<string, Type>();
+                paramBindings.forEach((val2: Type, key: string) => {
+                    // Please forgive me for the following hack.
+                    npars = npars.set(key, <Type> (<any> null));
+                });
+
                 this.valueBinding[i].getType(this.typeVariableSequence, nnstate, nbnds,
-                                             nextName, new Map<string, Type>(), isTopLevel);
+                                             nextName, npars, isTopLevel);
             } catch (e) {
                 hasOuterDeps = true;
             }
@@ -129,7 +135,6 @@ export class ValueDeclaration extends Declaration {
                         'Unresolved record type.');
                 }
             }
-
             nstate.setStaticValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
         }
 
@@ -894,7 +899,8 @@ export class SequentialDeclaration extends Declaration {
                     }
                     nbnds = nbnds.set(key, [ntp[0], true]);
                 } else if (!isTopLevel) {
-                    nbnds = nbnds.set(key, [val[0].instantiate(state, res[2]), false]);
+                    // nbnds = nbnds.set(key, [val[0].instantiate(state, res[2]), false]);
+                    nbnds = nbnds.set(key, val); // [val[0], false]);
                 }
             });
             bnds = nbnds;

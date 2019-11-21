@@ -1055,7 +1055,9 @@ export class LocalDeclarationExpression extends Expression {
         });
 
         let nstate = state.getNestedState(state.id);
-        let res = this.declaration.elaborate(nstate, tyVarBnd, nextName, nparbnd);
+        // console.log(this.declaration, tyVarBnd, nparbnd);
+        let res = this.declaration.elaborate(nstate, tyVarBnd, nextName, nparbnd, false);
+        // console.log(res[2], nparbnd);
         let r2 = this.expression.getType(res[0], res[2], res[3], tyVars, isPattern, nparbnd);
         // console.log(this + '', paramBindings, r2[4])
         return [r2[0], res[1].concat(r2[1]), r2[2], r2[3], r2[4], r2[5]];
