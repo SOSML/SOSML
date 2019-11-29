@@ -22,21 +22,25 @@ function addRandomLib(state: State): State {
 export let RANDOM_LIB: Module = {
     'native': addRandomLib,
     'code':  `signature RANDOM = sig
-        type generator;
+        type rand;
 
-        val newGenSeed: real -> generator;
-        val newGen: unit -> generator;
-        val random: generator -> real;
-        val randomList: int * generator -> real list;
-        val range: int * int -> generator -> int;
-        val rangeList: int * int -> int * generator -> int list;
+        val randSeed: real -> rand;
+        val rand: unit -> rand;
+        (* val toString : rand -> string; *)
+        (* val fromString : string -> rand; *)
+
+        val randReal: rand -> real;
+        val randRealList: int * rand -> real list;
+        val randRange: int * int -> rand -> int;
+        val randRangeList: int * int -> int * rand -> int list;
     end;
 
     structure Random :> RANDOM = struct
         (* mosml random *)
         open Random;
 
-        type generator = {seedref : real ref};
+        type rand = {seedref : real ref};
+
         val a = 16807.0;
         val m = 2147483647.0;
 
@@ -46,32 +50,38 @@ export let RANDOM_LIB: Module = {
             t - m * Real.fromInt(Real.floor(t/m))
         end;
 
-        fun newGenSeed seed = if
+        fun randSeed seed = if
             seed > 0.0 orelse seed < 0.0
         then
             {seedref = ref (nextrand seed)}
         else
-            raise Fail "Random.newGenSeed: bad seed 0.0";
+            raise Fail "Random.randSeed: bad seed 0.0";
 
-        fun newGen () = newGenSeed (Real.fromInt (date ()));
+        (* fun toString {seedref} = Int.toString (Real.round (!seedref)); *)
+        (* fun fromString s = case Int.fromString s of
+            NONE => raise Fail "Random.fromString: given string is invalid"
+            | SOME 0 => raise Fail "Random.fromString: given string is invalid"
+            | SOME x => {seedref = ref (Real.fromInt x)}; *)
 
-        fun random {seedref} = (seedref := nextrand (!seedref); !seedref / m);
+        fun rand () = randSeed (Real.fromInt (date ()));
 
-        fun randomList (n, {seedref}) = let
+        fun randReal {seedref} = (seedref := nextrand (!seedref); !seedref / m);
+
+        fun randRealList (n, {seedref}) = let
             fun h 0 seed res = (seedref := seed; res)
               | h i seed res = h (i-1) (nextrand seed) (seed / m :: res)
         in
             h n (!seedref) []
         end;
 
-        fun range (min, max) = if min >= max then raise Fail "Random.range: empty range" else let
+        fun randRange (min, max) = if min >= max then raise Fail "Random.randRange: empty range" else let
             val scale = (Real.fromInt max - Real.fromInt min) / m
         in
             fn {seedref} =>
                 (seedref := nextrand (!seedref); Real.floor(Real.fromInt min + scale * (!seedref)))
         end;
 
-        fun rangeList (min, max) = if min >= max then raise Fail "Random.rangelist: empty range"
+        fun randRangeList (min, max) = if min >= max then raise Fail "Random.randRangeList: empty range"
         else let
             val scale = (Real.fromInt max - Real.fromInt min) / m
         in

@@ -30,7 +30,7 @@ export let domainException = new ExceptionConstructor('Domain', 0, 0, 4);
 export let sizeException = new ExceptionConstructor('Size', 0, 0, 5);
 export let chrException = new ExceptionConstructor('Chr', 0, 0, 6);
 export let subscriptException = new ExceptionConstructor('Subscript', 0, 0, 7);
-export let failException = new ExceptionConstructor('Subscript', 1, 0, 8);
+export let failException = new ExceptionConstructor('Fail', 1, 0, 8);
 
 export type Module = {
     'native': ((state: State, options?: {[name: string]: any}) => State) | undefined, /* callback for native parts */
@@ -51,7 +51,6 @@ export let STDLIB: {
             exception Size;
             exception Chr;
             exception Subscript;
-
             exception Fail of string;
 
             fun not true = false | not false = true;
