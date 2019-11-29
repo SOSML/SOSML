@@ -1028,7 +1028,12 @@ export class Parser {
                 res.push([newTok.getText(), pat]);
                 continue;
             }
-            throw new ParserError('Expected "}", "...", or identifier.');
+            if (this.checkKeywordToken(newTok, 'as') && this.options.allowSuccessorML) {
+                throw new ParserError('Layered pattern inside of record patters are disallowed '
+                                     + 'in SuccessorML mode.');
+            }
+            throw new ParserError('Expected "}", "...", "as", or an identifier, got "'
+                                  + newTok.getText() + '".');
         }
     }
 

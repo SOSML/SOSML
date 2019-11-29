@@ -2272,7 +2272,7 @@ export class LayeredPattern extends Expression implements Pattern {
         }
 
         let valid = new ValueIdentifier(this.identifier);
-        let gtp = valid.getType(state, tyVarBnd, nextName, tyVars, true);
+        let gtp = valid.getType(state, tyVarBnd, nextName, tyVars, true, paramBindings);
         let tp = gtp[0];
 
         if (this.typeAnnotation !== undefined) {
@@ -2288,7 +2288,7 @@ export class LayeredPattern extends Expression implements Pattern {
             }
         }
 
-        let argtp = this.pattern.getType(state, tyVarBnd, gtp[2], gtp[3], true);
+        let argtp = this.pattern.getType(state, tyVarBnd, gtp[2], gtp[3], true, paramBindings);
 
         try {
             let mg = tp.merge(state, argtp[4], argtp[0]);
