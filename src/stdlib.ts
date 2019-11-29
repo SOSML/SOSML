@@ -13,6 +13,7 @@ import { LIST_LIB } from './stdlib/list';
 import { LISTSORT_LIB } from './stdlib/listsort';
 import { MATH_LIB } from './stdlib/math';
 /* import { OS_LIB } from './stdlib/os'; */
+import { RANDOM_LIB } from './stdlib/random';
 import { REAL_LIB } from './stdlib/real';
 import { STRING_LIB } from './stdlib/string';
 import { VECTOR_LIB } from './stdlib/vector';
@@ -29,6 +30,7 @@ export let domainException = new ExceptionConstructor('Domain', 0, 0, 4);
 export let sizeException = new ExceptionConstructor('Size', 0, 0, 5);
 export let chrException = new ExceptionConstructor('Chr', 0, 0, 6);
 export let subscriptException = new ExceptionConstructor('Subscript', 0, 0, 7);
+export let failException = new ExceptionConstructor('Subscript', 1, 0, 8);
 
 export type Module = {
     'native': ((state: State, options?: {[name: string]: any}) => State) | undefined, /* callback for native parts */
@@ -49,6 +51,8 @@ export let STDLIB: {
             exception Size;
             exception Chr;
             exception Subscript;
+
+            exception Fail of string;
 
             fun not true = false | not false = true;
 
@@ -108,6 +112,7 @@ export let STDLIB: {
             end;
             open Option;`,
         'requires': undefined },
+    'Random': RANDOM_LIB,
     'Real': REAL_LIB,
     'String': STRING_LIB, /* Complete % useless stuff */
     'Vector': VECTOR_LIB,
