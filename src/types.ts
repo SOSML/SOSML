@@ -2,8 +2,15 @@ import { ElaborationError, InternalInterpreterError } from './errors';
 import { State } from './state';
 import { LongIdentifierToken } from './tokens';
 
+let unicodeTyVarNames: Map<string, string> = new Map<string, string>([
+    ['\'a', 'α'], ['\'b', 'β'], ['\'c', 'γ'], ['\'d', 'δ'], ['\'e', 'ε'], ['\'f', 'ζ'],
+    ['\'g', 'η'], ['\'h', 'θ'], ['\'i', 'ι'], ['\'k', 'κ'], ['\'l', 'λ'], ['\'m', 'μ'],
+    ['\'n', 'ν'], ['\'j', 'ξ'], ['\'o', 'ο'], ['\'p', 'π'], ['\'r', 'ρ'], ['\'s', 'σ'],
+    ['\'t', 'τ'], ['\'u', 'υ'], ['\'v', 'φ'], ['\'x', 'χ'], ['\'q', 'ψ'], ['\'w', 'ω']
+]);
+
 export abstract class Type {
-    abstract toString(): string;
+    abstract toString(options: { [name: string]: any }): string;
     abstract equals(other: any): boolean;
 
     abstract typeName(): string;
@@ -149,7 +156,7 @@ export class AnyType extends Type {
         return 'AnyType';
     }
 
-    toString(): string {
+    toString(options: { [name: string]: any } = {}): string {
         return 'any';
     }
 
@@ -249,7 +256,7 @@ export class TypeVariableBind extends Type {
         return 'TypeVariableBind';
     }
 
-    toString(): string {
+    toString(options: { [name: string]: any } = {}): string {
         let frees = new Set<[string, Type[]]>();
         let bound = new Set<[string, Type[]]>();
 
@@ -267,7 +274,15 @@ export class TypeVariableBind extends Type {
         if (bound.size > 0) {
             res += '∀';
             bound.forEach((val: [string, Type[]]) => {
-                res += ' ' + val[0];
+                if (options.showTypeVariablesAsUnicode === true
+                    && unicodeTyVarNames.has(val[0])) {
+                    res += ' ' + unicodeTyVarNames.get(val[0]);
+                } else if (options.showTypeVariablesAsUnicode === true
+                    && unicodeTyVarNames.has(val[0].substr(1))) {
+                    res += ' \'' + unicodeTyVarNames.get(val[0].substr(1));
+                } else {
+                    res += ' ' + val[0];
+                }
                 if (val[1].length > 0) {
                     res += ' ∈ {';
                     for (let i = 0; i < val[1].length; ++i) {
@@ -281,12 +296,20 @@ export class TypeVariableBind extends Type {
             });
             res += ' . ';
         }
-        res += ct;
+        res += ct.toString(options);
 
         if (frees.size > 0) {
             res += ',';
             frees.forEach((val: [string, Type[]]) => {
-                res += ' ' + val[0];
+                if (options.showTypeVariablesAsUnicode === true
+                    && unicodeTyVarNames.has(val[0])) {
+                    res += ' ' + unicodeTyVarNames.get(val[0]);
+                } else if (options.showTypeVariablesAsUnicode === true
+                    && unicodeTyVarNames.has(val[0].substr(1))) {
+                    res += ' \'' + unicodeTyVarNames.get(val[0].substr(1));
+                } else {
+                    res += ' ' + val[0];
+                }
                 if (val[1].length > 0) {
                     res += ' ∈ {';
                     for (let i = 0; i < val[1].length; ++i) {
@@ -433,8 +456,16 @@ export class TypeVariable extends Type {
         return 'TypeVariable';
     }
 
-    toString(): string {
-        return this.name;
+    toString(options: { [name: string]: any } = {}): string {
+        if (options.showTypeVariablesAsUnicode === true
+            && unicodeTyVarNames.has(this.name)) {
+            return <string> unicodeTyVarNames.get(this.name);
+        } else if (options.showTypeVariablesAsUnicode === true
+            && unicodeTyVarNames.has(this.name.substr(1))) {
+            return '\'' + unicodeTyVarNames.get(this.name.substr(1));
+        } else {
+            return this.name;
+        }
     }
 
     instantiate(state: State, tyVarBnd: Map<string, [Type, boolean]>, seen: Set<string> = new Set<string>()): Type {
@@ -849,7 +880,7 @@ export class RecordType extends Type {
         this.elements = setn;
     }
 
-    toString(): string {
+    toString(options: { [name: string]: any } = {}): string {
         if (this.isTuple() && this.complete) {
             if (this.elements.size === 0) {
                 return 'unit';
@@ -862,9 +893,9 @@ export class RecordType extends Type {
                 let sub = this.elements.get('' + i);
                 if (sub instanceof FunctionType ||
                     (sub instanceof RecordType && (<RecordType> sub).elements.size !== 0)) {
-                    res += '(' + sub + ')';
+                    res += '(' + sub.toString(options) + ')';
                 } else {
-                    res += sub;
+                    res += (<Type> sub).toString(options);
                 }
             }
             return res + '';
@@ -1022,13 +1053,13 @@ export class FunctionType extends Type {
         return 'FunctionType';
     }
 
-    toString(): string {
+    toString(options: { [name: string]: any } = {}): string {
         if (this.parameterType instanceof FunctionType) {
-            return '(' + this.parameterType + ')'
-                + ' → ' + this.returnType;
+            return '(' + this.parameterType.toString(options) + ')'
+                + ' → ' + this.returnType.toString(options);
         } else {
-            return this.parameterType
-                + ' → ' + this.returnType;
+            return this.parameterType.toString(options)
+                + ' → ' + this.returnType.toString(options);
         }
     }
 
@@ -1351,22 +1382,24 @@ export class CustomType extends Type {
         return 'CustomType';
     }
 
-    toString(): string {
+    toString(options: { [name: string]: any } = {}): string {
         let result: string = '';
         if (this.typeArguments.length > 1
             || (this.typeArguments.length === 1 && (this.typeArguments[0] instanceof FunctionType
-                || (this.typeArguments[0] instanceof RecordType && this.typeArguments[0].toString() !== 'unit')))) {
+                || (this.typeArguments[0] instanceof RecordType
+                    && this.typeArguments[0].toString(options) !== 'unit')))) {
             result += '(';
         }
         for (let i = 0; i < this.typeArguments.length; ++i) {
             if (i > 0) {
                 result += ', ';
             }
-            result += this.typeArguments[i];
+            result += this.typeArguments[i].toString(options);
         }
         if (this.typeArguments.length > 1
             || (this.typeArguments.length === 1 && (this.typeArguments[0] instanceof FunctionType
-            || (this.typeArguments[0] instanceof RecordType && this.typeArguments[0].toString() !== 'unit')))) {
+            || (this.typeArguments[0] instanceof RecordType
+                && this.typeArguments[0].toString(options) !== 'unit')))) {
             result += ')';
         }
         if (this.typeArguments.length > 0) {
@@ -1420,13 +1453,13 @@ export class TupleType extends Type {
         return 'TupleType';
     }
 
-    toString(): string {
+    toString(options: { [name: string]: any } = {}): string {
         let result: string = '(';
         for (let i: number = 0; i < this.elements.length; ++i) {
             if (i > 0) {
                 result += ' * ';
             }
-            result += this.elements[i];
+            result += this.elements[i].toString(options);
         }
         return result + ')';
     }

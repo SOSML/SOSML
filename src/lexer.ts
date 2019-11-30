@@ -9,16 +9,28 @@ import { int, char, Token, KeywordToken, WordConstantToken, CharacterConstantTok
          RealConstantToken, IntegerConstantToken, CommentToken } from './tokens';
 import { MAXINT, MININT } from './values';
 
-// TODO: maybe these should be static class members
 let reservedWords: Set<string> = new Set<string>([
-    'abstype', 'and', 'andalso', 'as', 'case', 'datatype', 'do', 'else', 'end', 'exception', 'fn', 'fun', 'handle',
-    'if', 'in', 'infix', 'infixr', 'let', 'local', 'nonfix', 'of', 'op', 'open', 'orelse', 'raise', 'rec', 'then',
-    'type', 'val', 'with', 'withtype', 'while',
+    'abstype', 'and', 'andalso', 'as', 'case', 'datatype', 'do', 'else', 'end', 'exception', 'fn',
+    'fun', 'handle', 'if', 'in', 'infix', 'infixr', 'let', 'local', 'nonfix', 'of', 'op', 'open',
+    'orelse', 'raise', 'rec', 'then', 'type', 'val', 'with', 'withtype', 'while',
     '(', ')', '[', ']', '{', '}', ',', ':', ';', '...', '_', '|', '=', '=>', '->', '#',
-    'eqtype', 'functor', 'signature', 'struct', 'include', 'sharing', 'structure', 'where', 'sig', ':>'
+    'eqtype', 'functor', 'signature', 'struct', 'include', 'sharing', 'structure', 'where',
+    'sig', ':>'
 ]);
 let symbolicCharacters: Set<string> = new Set<string>([
-    '!', '%', '&', '$', '#', '+', '-', '/', ':', '<', '=', '>', '?', '@', '\\', '~', '`', '^', '|', '*'
+    '!', '%', '&', '$', '#', '+', '-', '/', ':', '<',
+    '=', '>', '?', '@', '\\', '~', '`', '^', '|', '*'
+]);
+
+let unicodeKeywords: Map<string, string> = new Map<string, string>([
+    ['→', '->'], ['Λ', 'fn']
+]);
+
+let unicodeTyVarNames: Map<string, string> = new Map<string, string>([
+    ['α', '\'a'], ['β', '\'b'], ['γ', '\'c'], ['δ', '\'d'], ['ε', '\'e'], ['ζ', '\'f'],
+    ['η', '\'g'], ['θ', '\'h'], ['ι', '\'i'], ['κ', '\'k'], ['λ', '\'l'], ['μ', '\'m'],
+    ['ν', '\'n'], ['ξ', '\'j'], ['ο', '\'o'], ['π', '\'p'], ['ρ', '\'r'], ['σ', '\'s'],
+    ['τ', '\'t'], ['υ', '\'u'], ['φ', '\'v'], ['χ', '\'x'], ['ψ', '\'q'], ['ω', '\'w']
 ]);
 
 export type LexerStream = {
@@ -28,30 +40,55 @@ export type LexerStream = {
     'eos': () => boolean, // Returns true if the stream has no more characters
 };
 
+export function resolveUnicodeKeyword(c: char | undefined): string | undefined {
+    if (c !== undefined && unicodeKeywords.has(c)) {
+        return unicodeKeywords.get(c);
+    }
+    return c;
+}
+
+export function resolveUnicodeTypeVariable(c: char | undefined): string | undefined {
+    if (c !== undefined && unicodeTyVarNames.has(c)) {
+        return unicodeTyVarNames.get(c);
+    }
+    return c;
+}
 
 // TODO proper support for >= 256 chars
-export function isAlphanumeric(c: char | undefined): boolean {
+export function isAlphanumeric(c: char | undefined, options: { [name: string]: any } = {}): boolean {
     if (c === undefined) {
         return false;
     }
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c === '\'' || c === '_';
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c === '\'' || c === '_') {
+        return true;
+    }
+    if (options.allowUnicode === true) {
+        if (symbolicCharacters.has(c) || reservedWords.has(c) || c === '.') {
+            return false;
+        }
+        if (options.allowUnicodeTypeVariables !== true || resolveUnicodeTypeVariable(c) === c) {
+            // Allow only sensible characters
+            return /^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Zs}\p{Ps}\p{Pe}]*$/u.test(c);
+        }
+    }
+    return false;
 }
 
-export function isSymbolic(c: char | undefined): boolean {
+export function isSymbolic(c: char | undefined, options: { [name: string]: any } = {}): boolean {
     if (c === undefined) {
         return false;
     }
     return symbolicCharacters.has(<char> c);
 }
 
-export function isWhitespace(c: char | undefined): boolean {
+export function isWhitespace(c: char | undefined, options: { [name: string]: any } = {}): boolean {
     if (c === undefined) {
         return false;
     }
     return c === ' ' || c === '\t' || c === '\n' || c === '\f';
 }
 
-export function isNumber(c: char | undefined, hexadecimal: boolean): boolean {
+export function isNumber(c: char | undefined, hexadecimal: boolean, options: { [name: string]: any } = {}): boolean {
     if (c === undefined) {
         return false;
     }
@@ -67,7 +104,7 @@ function skipWhitespace(stream: LexerStream): string {
 }
 
 // Reads and munches a single comment and everything that is inside
-export function lexComment(stream: LexerStream): CommentToken {
+export function lexComment(stream: LexerStream, options: { [name: string]: any } = {}): CommentToken {
     let comment = '';
     if (stream.peek() === '(' && stream.peek(1) === '*') {
         comment += stream.next() + stream.next();
@@ -126,7 +163,7 @@ function makeNumberToken(token: string, value: string, real: boolean = false, wo
     }
 }
 
-export function lexNumber(stream: LexerStream): Token {
+export function lexNumber(stream: LexerStream, options: { [name: string]: any } = {}): Token {
     let token: string = '';
     let value: string = '';
     let hexadecimal: boolean = false;
@@ -200,7 +237,7 @@ export function lexNumber(stream: LexerStream): Token {
     return makeNumberToken(token, value, real);
 }
 
-export function lexString(stream: LexerStream): StringConstantToken {
+export function lexString(stream: LexerStream, options: { [name: string]: any } = {}): StringConstantToken {
     if (stream.next() !== '"') {
         throw new InternalInterpreterError('That was not a string.');
     }
@@ -339,7 +376,7 @@ export function lexString(stream: LexerStream): StringConstantToken {
     return new StringConstantToken(token + '"', value);
 }
 
-export function lexCharacter(stream: LexerStream): CharacterConstantToken {
+export function lexCharacter(stream: LexerStream, options: { [name: string]: any } = {}): CharacterConstantToken {
     if (stream.next() !== '#') {
         throw new InternalInterpreterError('That was not a character.');
     }
@@ -351,7 +388,7 @@ export function lexCharacter(stream: LexerStream): CharacterConstantToken {
     return new CharacterConstantToken('#' + t.text, t.value);
 }
 
-export function lexIdentifierOrKeyword(stream: LexerStream): Token {
+export function lexIdentifierOrKeyword(stream: LexerStream, options: { [name: string]: any } = {}): Token {
     // Both identifiers and keywords can be either symbolic (consisting only of the characters
     // ! % & $ # + - / : < = > ? @ \ ~ ‘ ^ | *
     // or alphanumeric (consisting only of letters, digits, ' or _).
@@ -360,11 +397,20 @@ export function lexIdentifierOrKeyword(stream: LexerStream): Token {
 
     let token: string = '';
 
-    let charChecker: (c: char | undefined) => boolean;
+    let charChecker: any;
     let firstChar = stream.peek();
-    if (isSymbolic(firstChar)) {
+
+    if (options.allowUnicodeTypeVariables === true
+        && resolveUnicodeTypeVariable(firstChar) !== firstChar) {
+        stream.next();
+        return new TypeVariableToken(<string> resolveUnicodeTypeVariable(firstChar));
+    } else if (options.allowUnicode === true && resolveUnicodeKeyword(firstChar) !== firstChar) {
+        stream.next();
+        return new KeywordToken(<string> resolveUnicodeKeyword(firstChar));
+    } else if (isSymbolic(firstChar, options)) {
         charChecker = isSymbolic;
-    } else if (isAlphanumeric(firstChar) && !isNumber(firstChar, false) && firstChar !== '_') {
+    } else if (isAlphanumeric(firstChar, options) && !isNumber(firstChar, false, options)
+               && firstChar !== '_') {
         // alphanumeric identifiers may not start with a number
         charChecker = isAlphanumeric;
     } else if (firstChar !== undefined && reservedWords.has(<char> firstChar)) {
@@ -380,7 +426,9 @@ export function lexIdentifierOrKeyword(stream: LexerStream): Token {
 
     do {
         token += stream.next();
-    } while (charChecker(stream.peek()));
+    } while (charChecker(stream.peek(), options));
+
+//    console.log(token);
 
     if (token === '*') {
         return new StarToken();
@@ -399,19 +447,24 @@ export function lexIdentifierOrKeyword(stream: LexerStream): Token {
             if (token.length >= 2) {
                 return new TypeVariableToken(token);
             } else {
+                if (options.allowUnicodeTypeVariables === true
+                    && resolveUnicodeTypeVariable(stream.peek()) !== stream.peek()) {
+                        return new EqualityTypeVariableToken('\''
+                            + resolveUnicodeTypeVariable(stream.next()));
+                }
                 throw new LexerError('The noise, it won\'t STOP: Invalid type variable "'
                                      + token + '".');
             }
         }
-    } else if (isAlphanumeric(firstChar)) {
+    } else if (isAlphanumeric(firstChar, options)) {
         return new AlphanumericIdentifierToken(token);
     } else {
         return new IdentifierToken(token);
     }
 }
 
-export function lexLongIdentifierOrKeyword(stream: LexerStream): Token {
-    let t: Token = lexIdentifierOrKeyword(stream);
+export function lexLongIdentifierOrKeyword(stream: LexerStream, options: { [name: string]: any } = {}): Token {
+    let t: Token = lexIdentifierOrKeyword(stream, options);
     let token = t.text;
 
     if (stream.peek() === '.') {
@@ -439,7 +492,7 @@ export function lexLongIdentifierOrKeyword(stream: LexerStream): Token {
 
         token += stream.next();
         qualifiers.push(t);
-        t = lexIdentifierOrKeyword(stream);
+        t = lexIdentifierOrKeyword(stream, options);
         token += t.text;
     } while (stream.peek() === '.');
 
@@ -452,7 +505,7 @@ export function lexLongIdentifierOrKeyword(stream: LexerStream): Token {
     return new LongIdentifierToken(token, qualifiers, t);
 }
 
-export function nextToken(stream: LexerStream): Token | undefined {
+export function nextToken(stream: LexerStream, options: { [name: string]: any } = {}): Token | undefined {
     skipWhitespace(stream);
     if (stream.eos()) {
         return undefined;
@@ -461,15 +514,15 @@ export function nextToken(stream: LexerStream): Token | undefined {
     let token: Token;
     if (isNumber(stream.peek(), false)
         || (stream.peek() === '~' && isNumber(stream.peek(1), false))) {
-        token = lexNumber(stream);
+        token = lexNumber(stream, options);
     } else if (stream.peek() === '"') {
-        token = lexString(stream);
+        token = lexString(stream, options);
     } else if (stream.peek() === '#' && stream.peek(1) === '"') {
-        token = lexCharacter(stream);
+        token = lexCharacter(stream, options);
     } else if (stream.peek() === '(' && stream.peek(1) === '*') {
-        token = lexComment(stream);
+        token = lexComment(stream, options);
     } else {
-        token = lexLongIdentifierOrKeyword(stream);
+        token = lexLongIdentifierOrKeyword(stream, options);
     }
     return token;
 }
@@ -477,7 +530,7 @@ export function nextToken(stream: LexerStream): Token | undefined {
 export function lexStream(stream: LexerStream, options: { [name: string]: any } = {}): Token[] {
     let result: Token[] = [];
     while (!stream.eos()) {
-        let current = nextToken(stream);
+        let current = nextToken(stream, options);
         if (current === undefined) {
             break;
         }

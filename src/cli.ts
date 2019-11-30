@@ -10,6 +10,18 @@ import { State, DynamicBasis, StaticBasis, IdentifierStatus } from './state';
 
 import * as readline from 'readline';
 
+let opts = {
+    'allowSuccessorML': true,
+    'allowVector': true,
+    'disableElaboration': false,
+    'disableEvaluation': false,
+    'allowLongFunctionNames': false,
+    'strictMode': false,
+    'allowUnicode': true,
+    'allowUnicodeTypeVariables': true,
+    'showTypeVariablesAsUnicode': true
+};
+
 function printBasis( state: State, dynamicBasis: DynamicBasis | undefined, staticBasis: StaticBasis | undefined, indent: number = 0 ): string {
     let istr = '';
     for( let i = 0; i < indent; ++i ) {
@@ -168,23 +180,12 @@ function printBinding( state: State, bnd: [string, [Value, IdentifierStatus] | u
     }
 
     if (type) {
-        return res + ': \x1b[3m' + type.toString() + '\x1b[0m;';
+        return res + ': \x1b[3m' + type.toString(opts) + '\x1b[0m;';
     } else {
         return res + ': \x1b[3mundefined\x1b[0m;';
     }
 
 }
-
-
-let opts = {
-    'allowUnicodeInStrings': false,
-    'allowSuccessorML': true,
-    'allowVector': true,
-    'disableElaboration': false,
-    'disableEvaluation': false,
-    'allowLongFunctionNames': false,
-    'strictMode': false
-};
 
 let state = getFirstState( );
 let st = getFirstState( ).id + 1;
