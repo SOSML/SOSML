@@ -515,6 +515,15 @@ export class Record extends Expression implements Pattern {
         return res;
     }
 
+    hasEntry(name: string): boolean {
+        for (let i = 0; i < this.entries.length; ++i) {
+            if (this.entries[i][0] === name) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     getEntry(name: string): Expression | PatternExpression {
         for (let i = 0; i < this.entries.length; ++i) {
             if (this.entries[i][0] === name) {
@@ -652,6 +661,8 @@ export class Record extends Expression implements Pattern {
             return [];
         }
 
+        // console.log(this + ' 664', rules.map(a => a + ''));
+
         let sname = this.entries[0][0];
         let nrules: PatternExpression[] = [];
         let sprules = new Map<string, PatternExpression[]>();
@@ -690,6 +701,11 @@ export class Record extends Expression implements Pattern {
             for (let nr of (<Record> rule).entries) {
                 if (nr[0] === sname) {
                     key = <PatternExpression> nr[1];
+                    if (key instanceof FunctionApplication) {
+                        // For constructed values, also the argument should be
+                        // exh, hence also test the argument of the key
+                        cnrule.push([nr[0], (<FunctionApplication> key).argument]);
+                    }
                 } else {
                     cnrule.push(nr);
                 }
@@ -697,6 +713,8 @@ export class Record extends Expression implements Pattern {
             if (key === undefined) {
                 key = wc;
             }
+
+           //  console.log('At rule ' + rule, key);
 
             if (key instanceof ValueIdentifier) {
                 // Check if variable, if it is, replace by Wildcard
@@ -749,7 +767,7 @@ export class Record extends Expression implements Pattern {
                 }
 
                 nrecs.push(new Record((<Record> rule).complete, cnrule));
-                sprules = sprules.set(oldrecs.length + '', nrecs);
+                sprules = sprules.set(oldrecs.length + '', wcrules.concat(nrecs));
                 oldrecs.push(key);
                 ocnr.push(cnrule);
                 continue;
@@ -814,23 +832,48 @@ export class Record extends Expression implements Pattern {
         }
         let newrec = new Record(true, nentries);
 
+        let nentries2: [string, Expression|PatternExpression][] = [];
+        nentries2.push([this.entries[0][0], new Wildcard()]);
+        for (let i = 1; i < this.entries.length; ++i) {
+            nentries2.push(this.entries[i]);
+        }
+        let newrec2 = new Record(true, nentries2);
+
+
         sprules.forEach((sprule: PatternExpression[], key: string) => {
-            //           console.log(this.toString(), '.cover 781', rules.map(a => a.toString()),
-            //                       'ule ', key, sprule.map(a => a.toString()), subsmst);
-            //           let skip = false;
-            //           if (!isNaN(+key)) {
-            //               let kn: number = +key;
-            //               if (kn < subsmst.length && subsmst[kn][1]) {
-            //                    skip = true;
-            //               }
-            //           }
-            //           if (!skip) {
-            warns = warns.concat(newrec.cover(state, sprule).filter(
+            if (key.includes('FunctionApplication')) {
+                let nsprule: PatternExpression[] = [];
+                // Make sure that all rules (wihch are records) still contain all required entries
+                for (let pt of sprule) {
+                    if (!(pt instanceof Record)) {
+                        nsprule.push(pt);
+                    } else {
+                        if (!(<Record> pt).hasEntry(sname)) {
+                            // Something went missing, so re-add it
+                            let nentries3: [string, Expression|PatternExpression][] = [];
+                            nentries3.push([sname, new Wildcard()]);
+                            for (let i = 0; i < (<Record> pt).entries.length; ++i) {
+                                nentries3.push((<Record> pt).entries[i]);
+                            }
+                            nsprule.push(new Record(true, nentries3));
+
+                        } else {
+                            nsprule.push(pt);
+                        }
+                    }
+                }
+                // console.log(this + '', key, sprule.map(a => a + ''),
+                //            nsprule.map(a => a + ''));
+
+                warns = warns.concat(newrec2.cover(state, nsprule).filter(
                 (w: Warning) => w.type === -1)); // We needn't filter these if we wanted to warn
                 // for non-disjoint rules.
-            //          } else {
-            //               console.log('Skipping', key, sprule.map(a => a.toString()));
-            //           }
+            } else {
+                // console.log(this + ' Here', key, sprule.map(a => a + ''));
+                warns = warns.concat(newrec.cover(state, sprule).filter(
+                (w: Warning) => w.type === -1)); // We needn't filter these if we wanted to warn
+                // for non-disjoint rules.
+            }
         });
 
         // If all other rules are constants, no other rule exists, or not all
@@ -2232,6 +2275,7 @@ export class Wildcard extends Expression implements Pattern {
         }
 
         if (!isExh) {
+           // console.log(this + '', rules.map(a => a + ''));
             warns.push(new Warning(-1, 'Pattern matching is not exhaustive.\n'));
         }
         return warns;

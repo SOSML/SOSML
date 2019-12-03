@@ -222,6 +222,10 @@ it('custom type - param', () => {
         ok('datatype D = A of D * D | B of int;'),
         ne('fun f (B x) = 2 | f (A (B 1,x)) = 13;')
     ]);
+    run_test([
+        ok('datatype ltr = L of ltr list;'),
+        ne('fun f (L[],L[]) = 1 | f (L _,L[]) = 2 | f (L[],L _) = 3 | f (L[_],L[_]) = 4;')
+    ]);
 });
 it('custom type - tuple', () => {
     run_test([
