@@ -28,8 +28,8 @@ function printBasis( state: State, dynamicBasis: DynamicBasis | undefined, stati
         istr += '  ';
     }
     let out = '';
-    let fullst = 'ＳＯＳＭＬ＞　';
-    let emptyst = '　　　　　＞　';
+    let fullst = 'SOSML> ';
+    let emptyst = '     > ';
     let stsym = indent === 0 ? fullst : emptyst;
 
     if( dynamicBasis === undefined && staticBasis !== undefined ) {
@@ -190,13 +190,13 @@ function printBinding( state: State, bnd: [string, [Value, IdentifierStatus] | u
 let state = getFirstState( );
 let st = getFirstState( ).id + 1;
 
-console.log('ＳＯＳＭＬ＞　Welcome to SOSML. Please enter your code.\n');
+console.log('SOSML> Welcome to SOSML. Please enter your code.\n');
 let tmp = '';
 
 let rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
-    prompt: 'Ｉｎｐｕｔ＞　'
+    prompt: 'Input> '
 });
 rl.prompt( );
 
@@ -208,8 +208,8 @@ rl.on( 'line', ( line: string ) => {
         let res = interpret( tmp, state, opts );
 
         if( res.evaluationErrored ) {
-            out += 'ＳＯＳＭＬ＞　There was a problem with your code:\n'
-                +  '　　　　　＞　\x1b[31;40;1m' + res.error + '\x1b[39;49;0m\n';
+            out += 'SOSML>　There was a problem with your code:\n'
+                +  '     >  \x1b[31;40;1m' + res.error + '\x1b[39;49;0m\n';
             tmp = '';
         } else {
             out += printBasis( res.state,
@@ -231,13 +231,13 @@ rl.on( 'line', ( line: string ) => {
         console.log( out );
     } catch (e) {
         if( !( e instanceof IncompleteError ) ) {
-            console.log( 'ＳＯＳＭＬ＞　There was a problem with your code:\n'
-                + '　　　　　＞　\x1b[31;40;1m' + e + '\x1b[39;49;0m\n' );
+            console.log( 'SOSML> There was a problem with your code:\n'
+                + '     > \x1b[31;40;1m' + e + '\x1b[39;49;0m\n' );
             tmp = '';
         }
     }
     rl.prompt( );
 }).on('close', () => {
-    console.log( '\nＳＯＳＭＬ＞　Thank you for using SOSML. Have a nice day.' );
+    console.log( '\nSOSML> Thank you for using SOSML. Have a nice day.' );
     process.exit( 0 );
 });
