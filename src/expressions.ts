@@ -680,6 +680,7 @@ export class Record extends Expression implements Pattern {
         let warns: Warning[] = [];
 
         let breakNext: string | undefined = undefined;
+        let specialNeeds = new Set<string>();
         for (let rule of rules) {
             if (breakNext !== undefined) {
                 warns.push(new Warning(0, 'Rules after "' + breakNext
@@ -773,8 +774,10 @@ export class Record extends Expression implements Pattern {
                 continue;
             }
 
+            let specialN = false;
             let kid = key.toString();
             if (key instanceof FunctionApplication) {
+                specialN = true;
                 let fnname = (<FunctionApplication> key).func;
                 if (!(fnname instanceof ValueIdentifier)) {
                     throw new InternalInterpreterError(
@@ -792,6 +795,9 @@ export class Record extends Expression implements Pattern {
                 }
             }
             kid = kid + key.constructor.name;
+            if (specialN) {
+                specialNeeds = specialNeeds.add(kid);
+            }
 
             if (key instanceof Constant) {
                 // Ignore these rules, as they will never contribute to completeness.
@@ -841,7 +847,7 @@ export class Record extends Expression implements Pattern {
 
 
         sprules.forEach((sprule: PatternExpression[], key: string) => {
-            if (key.includes('FunctionApplication')) {
+            if (specialNeeds.has(key)) {
                 let nsprule: PatternExpression[] = [];
                 // Make sure that all rules (wihch are records) still contain all required entries
                 for (let pt of sprule) {
