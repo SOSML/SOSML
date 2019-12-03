@@ -208,7 +208,6 @@ export function getAvailableModules(): string[] {
 
 export function getFirstState(loadModules: string[] = getAvailableModules(),
                               options: {[name: string]: any } = {}): State {
-    return getInitialState();
     let res = loadModule(getInitialState(options), '__Base', options);
     for (let i of loadModules) {
         res = loadModule(res, i, options);
