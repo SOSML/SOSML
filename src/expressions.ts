@@ -96,7 +96,8 @@ export class Constant extends Expression implements Pattern {
         // the call to compute just gets two states but will not use them
         let val = this.compute({'state': state, 'modifiable': state, 'recResult': undefined}, []);
         if (val === undefined || val.value === undefined) {
-            throw new InternalInterpreterError('How is this undefined?');
+            throw new InternalInterpreterError(
+                'Right now, I\'m the happiest interpreter in the world!');
         }
         if ((<Value> val.value).equals(v)) {
             return [];
@@ -1020,7 +1021,7 @@ export class Record extends Expression implements Pattern {
         if (step >= 0) {
             let val = params.recResult;
             if (val === undefined) {
-                throw new InternalInterpreterError('How is this undefined?');
+                throw new InternalInterpreterError('Namjala Latak');
             }
 
             if (val.hasThrown) {
@@ -1136,7 +1137,8 @@ export class LocalDeclarationExpression extends Expression {
             let res = params.recResult;
             if (res === undefined
                 || res.newState === undefined) {
-                throw new InternalInterpreterError('How is this undefined?');
+                throw new InternalInterpreterError(
+                    'You see, even I sleep at night and wake up in the morning');
             }
             let nstate = <State> res.newState;
             if (res.hasThrown) {
@@ -1155,7 +1157,7 @@ export class LocalDeclarationExpression extends Expression {
         }
         let nres = params.recResult;
         if (nres === undefined) {
-            throw new InternalInterpreterError('How is this undefined?');
+            throw new InternalInterpreterError('I just gave this "dying" a try...');
         }
         return {
             'newState': undefined,
@@ -1546,7 +1548,8 @@ export class FunctionApplication extends Expression implements Pattern {
         if (step === 0) {
             let funcVal = params.recResult;
             if (funcVal === undefined) {
-                throw new InternalInterpreterError('How is this undefined?');
+                throw new InternalInterpreterError(
+                    'So you see, squids are evil. I will eat them. I will eat them ALL.');
             }
             if (funcVal.hasThrown) {
                 // computing the function failed
@@ -1570,11 +1573,12 @@ export class FunctionApplication extends Expression implements Pattern {
 
             if (funcVal === undefined
                 || funcVal.value === undefined) {
-                throw new InternalInterpreterError('How is this undefined?');
+                throw new InternalInterpreterError(
+                    'I\'m fabulous down to my very core, so praise me, human.');
             }
             if (argVal === undefined
                 || argVal.value === undefined) {
-                throw new InternalInterpreterError('How is this undefined?');
+                throw new InternalInterpreterError('I guess I really am trash, aren\'t I?');
             }
 
             if (argVal.hasThrown) {
@@ -1617,7 +1621,7 @@ export class FunctionApplication extends Expression implements Pattern {
         {
             let res = <EvaluationResult> params.recResult;
             if (res === undefined) {
-                throw new InternalInterpreterError('How is this undefined?');
+                throw new InternalInterpreterError('No! Stop! Hoshimaru, Stop!');
             }
 
             return {
@@ -1717,7 +1721,8 @@ export class HandleException extends Expression {
         let res = params.recResult;
         if (res === undefined
             || res.value === undefined) {
-            throw new InternalInterpreterError('How is this undefined?');
+            throw new InternalInterpreterError(
+                'Try removing this jumper and that one over there.');
         }
         if (params.exprResult === undefined) {
             if (res.hasThrown) {
@@ -1823,7 +1828,8 @@ export class RaiseException extends Expression {
         let res = params.recResult;
         if (res === undefined
             || res.value === undefined) {
-            throw new InternalInterpreterError('How is this undefined?');
+            throw new InternalInterpreterError(
+                'I know I only killed four squids this month...but last month I killed at least ten!');
         }
         if (!(res.value instanceof ExceptionValue)) {
             throw new EvaluationError(

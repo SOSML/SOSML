@@ -17,8 +17,8 @@ let opts = {
     'disableEvaluation': false,
     'allowLongFunctionNames': false,
     'strictMode': false,
-    'allowUnicode': true,
-    'allowUnicodeTypeVariables': true,
+    'allowUnicode': false,
+    'allowUnicodeTypeVariables': false,
     'showTypeVariablesAsUnicode': true
 };
 
