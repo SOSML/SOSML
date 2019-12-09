@@ -68,9 +68,9 @@ export function isAlphanumeric(c: char | undefined, options: { [name: string]: a
         }
         if (options.allowUnicodeTypeVariables !== true || resolveUnicodeTypeVariable(c) === c) {
             // Allow only sensible characters
-            // Thanks to firefox, we need an ugly regexp
+            // Thanks to firefox, we need a not-so-good filter
             // return /^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Zs}\p{Ps}\p{Pe}]*$/u.test(c);
-            return /^(?:[\0-BD-OQ-Y\[-bdg-km-oqrt-z\|~-\uD7FF\uE000-\uFFFF]|[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF])*$/.test(c);
+            return /^[\S]$/u.test(c);
         }
     }
     return false;
