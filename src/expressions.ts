@@ -590,7 +590,6 @@ export class Record extends Expression implements Pattern {
                                                + tp.normalize()[0] + '": ' + e[0]);
                 }
             } else {
-        //        console.log(this + '', '@' + oldname, tp +'');
                 tyVarBnd = tyVarBnd.set('@' + oldname, [tp, oldIsFree]);
             }
             t = tp;
@@ -662,8 +661,6 @@ export class Record extends Expression implements Pattern {
             return [];
         }
 
-        // console.log(this + ' 664', rules.map(a => a + ''));
-
         let sname = this.entries[0][0];
         let nrules: PatternExpression[] = [];
         let sprules = new Map<string, PatternExpression[]>();
@@ -715,8 +712,6 @@ export class Record extends Expression implements Pattern {
             if (key === undefined) {
                 key = wc;
             }
-
-           //  console.log('At rule ' + rule, key);
 
             if (key instanceof ValueIdentifier) {
                 // Check if variable, if it is, replace by Wildcard
@@ -869,14 +864,10 @@ export class Record extends Expression implements Pattern {
                         }
                     }
                 }
-                // console.log(this + '', key, sprule.map(a => a + ''),
-                //            nsprule.map(a => a + ''));
-
                 warns = warns.concat(newrec2.cover(state, nsprule).filter(
                 (w: Warning) => w.type === -1)); // We needn't filter these if we wanted to warn
                 // for non-disjoint rules.
             } else {
-                // console.log(this + ' Here', key, sprule.map(a => a + ''));
                 warns = warns.concat(newrec.cover(state, sprule).filter(
                 (w: Warning) => w.type === -1)); // We needn't filter these if we wanted to warn
                 // for non-disjoint rules.
@@ -1105,11 +1096,8 @@ export class LocalDeclarationExpression extends Expression {
         });
 
         let nstate = state.getNestedState(state.id);
-        // console.log(this.declaration, tyVarBnd, nparbnd);
         let res = this.declaration.elaborate(nstate, tyVarBnd, nextName, nparbnd, false);
-        // console.log(res[2], nparbnd);
         let r2 = this.expression.getType(res[0], res[2], res[3], tyVars, isPattern, nparbnd);
-        // console.log(this + '', paramBindings, r2[4])
         return [r2[0], res[1].concat(r2[1]), r2[2], r2[3], r2[4], r2[5]];
     }
 
@@ -1451,7 +1439,6 @@ export class FunctionApplication extends Expression implements Pattern {
                 }
             }
         }
-
         let f = this.func.getType(state, tyVarBnd, nextName, tyVars, isPattern, paramBindings);
         state.valueIdentifierId = f[5];
 
@@ -2141,7 +2128,6 @@ export class Wildcard extends Expression implements Pattern {
     }
 
     cover(state: State, rules: PatternExpression[]): Warning[] {
-        // console.log(this.toString(), '.cover', rules.map(a => a.toString()));
         let isExh = false;
         let hasWildcard = false;
         let warns: Warning[] = [];
@@ -2287,7 +2273,6 @@ export class Wildcard extends Expression implements Pattern {
         }
 
         if (!isExh) {
-           // console.log(this + '', rules.map(a => a + ''));
             warns.push(new Warning(-1, 'Pattern matching is not exhaustive.\n'));
         }
         return warns;

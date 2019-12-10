@@ -593,10 +593,15 @@ export class TypeVariable extends Type {
         }
         if (tyVarBnd.has(this.name)) {
             let tmp = (<[Type, boolean]> tyVarBnd.get(this.name))[0].makeEqType(state, tyVarBnd);
-            tyVarBnd = tmp[1];
-            let n = new TypeVariable('\'' + this.name, this.domain);
-            n.isFree = this.isFree;
-            tyVarBnd = tyVarBnd.set(n.name, [tmp[0], n.isFree]);
+
+            if (tmp[0] instanceof TypeVariable
+                && (<TypeVariable> tmp[0]).name !== '\'' + this.name) {
+                // Mapping a tyvar to itself would be "not-so-good"
+                tyVarBnd = tmp[1];
+                let n = new TypeVariable('\'' + this.name, this.domain);
+                n.isFree = this.isFree;
+                tyVarBnd = tyVarBnd.set(n.name, [tmp[0], n.isFree]);
+            }
         }
         let nt = new TypeVariable('\'' + this.name, this.domain);
         return [nt, tyVarBnd.set(this.name, [nt, this.isFree])];

@@ -96,6 +96,7 @@ let WORD = new Type.CustomType('word');
 let STRING = new Type.CustomType('string');
 let CHAR = new Type.CustomType('char');
 let VAR = new Type.TypeVariable('\'a');
+let EQVAR = new Type.TypeVariable('\'\'a');
 let FREE = new Type.TypeVariable('\'~A');
 let FREE2 = new Type.TypeVariable('\'~A');
 FREE2.isFree = true;
@@ -109,6 +110,9 @@ function FUNC (t1: Type.Type, t2: Type.Type): Type.Type {
 }
 function BND (t: Type.Type): Type.Type {
     return new Type.TypeVariableBind('\'a', t);
+}
+function EQBND (t: Type.Type): Type.Type {
+    return new Type.TypeVariableBind('\'\'a', t);
 }
 function BNDB (t: Type.Type): Type.Type {
     return new Type.TypeVariableBind('\'b', t);
@@ -620,5 +624,14 @@ it("let expressions 2", () => {
            [[BND(FUNC(VAR, VAR)), 0]]),
         gc('fun f a = let val b = a val c = b val d = c in d end;', undefined, ['f'], [undefined],
            [[BND(FUNC(VAR, VAR)), 0]]),
+    ]);
+});
+
+it("eq types", () => {
+    run_test([
+        gc("fun f (x: ''a)  = false;", undefined, ['f'], [undefined],
+           [[EQBND(FUNC(EQVAR, BOOL)), 0]]),
+        gc('fun g x = f (x,x);', undefined, ['g'], [undefined],
+           [[EQBND(FUNC(EQVAR, BOOL)), 0]]),
     ]);
 });
