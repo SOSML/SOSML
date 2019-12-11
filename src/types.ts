@@ -940,15 +940,13 @@ export class RecordType extends Type {
         if (!(other instanceof RecordType) || this.complete !== other.complete) {
             return false;
         }
+        if (this.elements.size !== other.elements.size) {
+            return false;
+        }
 
         let res = true;
         this.elements.forEach((val: Type, name: string) => {
             if (!val.equals(other.elements.get(name))) {
-                res = false;
-            }
-        });
-        other.elements.forEach((val: Type, name: string) => {
-            if (!val.equals(this.elements.get(name))) {
                 res = false;
             }
         });

@@ -146,7 +146,10 @@ export class ValueDeclaration extends Declaration {
         let ncp = nextName;
         let ids = nstate.valueIdentifierId;
         let numit = this.valueBinding.length - i + 1;
+
+
         for (let l = 0; l < numit * numit + 1; ++l) {
+            // console.log(this + '', l, '/', numit * numit + 1);
             warns = wcp;
             bnds = new Map<string, [Type, boolean]>();
             bcp.forEach((val: [Type, boolean], key: string) => {
@@ -158,6 +161,7 @@ export class ValueDeclaration extends Declaration {
             let haschange = false;
 
             for (let j = i; j < this.valueBinding.length; ++j) {
+                // console.log(this + '', j, '/', this.valueBinding.length, ' (1)');
                 let hasOuterDeps = false;
                 if (!isTopLevel) {
                     // Check whether function uses things bound on a higher level
@@ -173,6 +177,7 @@ export class ValueDeclaration extends Declaration {
                         hasOuterDeps = true;
                     }
                 }
+                // console.log(this + '', j, '/', this.valueBinding.length, ' (2)');
 
                 let val = this.valueBinding[j].getType(this.typeVariableSequence, nstate, bnds,
                                                        nextName, paramBindings, isTopLevel);
@@ -183,9 +188,11 @@ export class ValueDeclaration extends Declaration {
 
                 for (let k = 0; k < val[0].length; ++k) {
                     let oldtp = nstate.getStaticValue(val[0][k][0]);
+                    // console.log(this + '', oldtp[0].normalize()[0] + '', ' =?= ',  val[0][k][1].normalize()[0] + '');
                     if (oldtp === undefined || !oldtp[0].normalize()[0].equals(val[0][k][1].normalize()[0])) {
                         haschange = true;
                     }
+                    // console.log(this + '', k, '/', val[0].length, 2.5);
 
                     if (!options || options.allowSuccessorML !== true) {
                         if (!val[0][k][1].isResolved()) {
@@ -198,6 +205,7 @@ export class ValueDeclaration extends Declaration {
                         paramBindings = paramBindings.set(val[0][k][0], val[0][k][1]);
                     }
                     nstate.setStaticValue(val[0][k][0], val[0][k][1], IdentifierStatus.VALUE_VARIABLE);
+                    // console.log(this + '', k, '/', val[0].length, 3);
                 }
             }
 

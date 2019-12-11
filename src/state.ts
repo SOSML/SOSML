@@ -502,6 +502,10 @@ export class State {
 
     // Gets an identifier's type. The value  intermediate  determines whether to return intermediate results
     getStaticValue(name: string, idLimit: number = 0): [Type, IdentifierStatus] | undefined {
+        if (name.startsWith('__arg') || name.startsWith('\'*')) {
+            return undefined;
+        }
+
         let result = this.staticBasis.getValue(name);
         if (result !== undefined || this.parent === undefined || this.parent.id < idLimit) {
             if (result !== undefined) {
