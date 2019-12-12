@@ -1105,7 +1105,7 @@ export class CustomType extends Type {
     }
 
     getOpaqueName(): string {
-        if (this.isOpaque) {
+        if (this.isOpaque()) {
             return this.name;
         } else {
             return 'undefined';
