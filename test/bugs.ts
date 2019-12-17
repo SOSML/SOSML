@@ -1,20 +1,15 @@
-const Lexer = require("../src/lexer");
-const Parser = require("../src/parser");
-const Errors = require("../src/errors");
+import * as Errors from '../src/errors';
 
-const API = require("../src/main.ts");
+import * as API from '../src/main';
 
-const State = require("../src/state.ts");
-const InitialState = require("../src/initialState.ts");
-const Expr = require("../src/expressions.ts");
-const Decl = require("../src/declarations.ts");
-const Type = require("../src/types.ts");
-const Val = require("../src/values.ts");
+import * as State from '../src/state';
+import * as Type from '../src/types';
+import * as Val from '../src/values';
 
-const TestHelper = require("./test_helper.ts");
+import * as TestHelper from './test_helper';
 TestHelper.init();
 
-function run_test(commands, loadStdlib: boolean = true): void {
+function run_test(commands: any, loadStdlib: boolean = true): void {
     let oldTests = [];
     let state = API.getFirstState();
     let exception;
@@ -45,9 +40,9 @@ function run_test(commands, loadStdlib: boolean = true): void {
 }
 
 function gc(code: string, expect_error: any = undefined, expect_result: string[] = [], expect_value: any[] = [], expect_type: any[] = []): any {
-    return [code, (x) => { x(); },  (state: State.State, hasThrown: boolean,
-        exceptionValue: Val.Exception) => {
-            let log = code + '\n';
+    return [code, (x: any) => { x(); },  (state: State.State, hasThrown: boolean,
+        exceptionValue: Val.ExceptionValue) => {
+            // let log = code + '\n';
             if (expect_error !== undefined) {
                 expect(hasThrown).toEqual(true);
                 expect(exceptionValue).toEqualWithType(expect_error);
@@ -62,9 +57,9 @@ function gc(code: string, expect_error: any = undefined, expect_result: string[]
                         ? state.getStaticType(expect_result[i].substring(1))
                         : state.getStaticValue(expect_result[i]);
 
-                    log += ('\nChecking ' + expect_result[i] + ':\n'
-                        + 'found val: ' + result_val
-                        + '\nfound type: ' + result_type + '\n');
+                   // log += ('\nChecking ' + expect_result[i] + ':\n'
+                   //     + 'found val: ' + result_val
+                   //     + '\nfound type: ' + result_type + '\n');
                     if (expect_value[i] !== undefined) {
                         expect(result_val).toEqualWithType(expect_value[i]);
                     } else {
@@ -78,12 +73,13 @@ function gc(code: string, expect_error: any = undefined, expect_result: string[]
                 }
             }
             //            console.log(log);
-        }
+        }];
 }
 
 function ge(code: string, expect_error_type: any): any {
-    return [code, (x) => expect(x).toThrow(expect_error_type),
-        (state: State.State, hasThrown: boolean, exceptionValue: Val.Exception) => { }
+    return [code, (x: any) => expect(x).toThrow(expect_error_type),
+        (state: State.State, hasThrown: boolean, exceptionValue: Val.ExceptionValue) => { }
+    ];
 }
 
 
@@ -92,9 +88,9 @@ let UNIT = new Type.TupleType([]).simplify();
 let INT = new Type.CustomType('int');
 let REAL = new Type.CustomType('real');
 let BOOL = new Type.CustomType('bool');
-let WORD = new Type.CustomType('word');
+// let WORD = new Type.CustomType('word');
 let STRING = new Type.CustomType('string');
-let CHAR = new Type.CustomType('char');
+// let CHAR = new Type.CustomType('char');
 let VAR = new Type.TypeVariable('\'a');
 let EQVAR = new Type.TypeVariable('\'\'a');
 let FREE = new Type.TypeVariable('\'~A');
@@ -126,9 +122,9 @@ function PAIR (t1: Type.Type, t2: Type.Type): Type.Type {
     return new Type.TupleType([t1, t2]).simplify();
 }
 
-let MATCH = new Val.ExceptionValue('Match', undefined, 0, 0);
-let BIND = new Val.ExceptionValue('Bind', undefined, 0, 1);
-let DIV = new Val.ExceptionValue('Div', undefined, 0, 2);
+// let MATCH = new Val.ExceptionValue('Match', undefined, 0, 0);
+// let BIND = new Val.ExceptionValue('Bind', undefined, 0, 1);
+// let DIV = new Val.ExceptionValue('Div', undefined, 0, 2);
 let OVERFLOW = new Val.ExceptionValue('Overflow', undefined, 0, 3);
 
 function TI (t: string, cons: string[], arity: number, allowsEquality: boolean = true) {
@@ -202,7 +198,7 @@ it("Non-linear pattern", () => {
                 new Type.CustomType('nat')),1], [FUNC(new Type.CustomType('nat'),
                     FUNC(new Type.CustomType('nat'), BOOL)), 0]]),
         gc('fun f O O = 5;', undefined, ['f'], [undefined], [[FUNC(new Type.CustomType('nat'),
-            FUNC(new Type.CustomType('nat'),INT)), 0]]);
+            FUNC(new Type.CustomType('nat'),INT)), 0]])
     ]);
     run_test([
         gc(`datatype nat = O | S of nat
@@ -317,7 +313,7 @@ it("real equality", () => {
     run_test([
         gc('datatype D = E of real;', undefined, ['_D', 'E'],
             [['E', undefined], [new Val.ValueConstructor('E',1),1],
-            [TI('D', ['E'], 1, false), [new Val.ValueConstructor('E',1),1]]),
+            [TI('D', ['E'], 1, false), 1], [new Val.ValueConstructor('E',1),1]]),
         ge('E 5.0 = E 4.0;', Errors.ElaborationError)
     ]);
     run_test([
@@ -355,7 +351,7 @@ it("unresolved records", () => {
             [[FUNC(PAIR(INT,INT), INT), 0]])
     ]);
     run_test([
-        ge('val g: int*int->int = #3;', Errors.ElaborationError);
+        ge('val g: int*int->int = #3;', Errors.ElaborationError)
     ]);
 });
 
@@ -385,7 +381,7 @@ it("let expression polymorphism", () => {
     ]);
     run_test([
         gc('(fn (x:bool) => let val x = 8 in x end) true;', undefined,
-           ['it'], [[new Val.Integer(8), 0]], [[INT, 0]]);
+           ['it'], [[new Val.Integer(8), 0]], [[INT, 0]])
     ]);
 });
 
@@ -561,9 +557,9 @@ it("type alias", () => {
     run_test([
         gc("type 'a foo = 'a -> int;", undefined),
         gc("fn x : 'a foo foo => ();", undefined, ['it'], [undefined],
-           [[BND(FUNC(FUNC(FUNC(VAR, INT), INT), UNIT)), 0]])
+           [[BND(FUNC(FUNC(FUNC(VAR, INT), INT), UNIT)), 0]]),
         gc("fn x : 'a foo foo foo => ();", undefined, ['it'], [undefined],
-           [[BND(FUNC(FUNC(FUNC( FUNC(VAR, INT), INT), INT), UNIT)), 0]])
+           [[BND(FUNC(FUNC(FUNC( FUNC(VAR, INT), INT), INT), UNIT)), 0]]),
         gc("val a = fn x : 'a foo foo => () val b = fn x : 'a foo foo => ();",
            undefined, ['a', 'b'], [undefined, undefined],
            [[BND(FUNC(FUNC(FUNC(VAR, INT), INT), UNIT)), 0],
@@ -614,7 +610,7 @@ it("incomplete records", () => {
         gc('fun myiter f s 0 = s | myiter f s n = myiter f (f s) (n-1);', undefined),
         gc('fun listulate (f,n) = (myiter (fn a => (#1 a+1,f (#1 a)::(#2 a))) (1,nil) n);',
            undefined, ['listulate'], [undefined], [[BND(FUNC(PAIR(FUNC(INT, VAR), INT),
-                                                             PAIR(INT, LIST(VAR)))), 0]]
+                                                             PAIR(INT, LIST(VAR)))), 0]])
     ]);
 });
 
@@ -633,5 +629,17 @@ it("eq types", () => {
            [[EQBND(FUNC(EQVAR, BOOL)), 0]]),
         gc('fun g x = f (x,x);', undefined, ['g'], [undefined],
            [[EQBND(FUNC(EQVAR, BOOL)), 0]]),
+    ]);
+});
+
+it("star token", () => {
+    run_test([
+        gc('datatype A = * of int;', undefined)
+    ]);
+    run_test([
+        gc('fun op* (a, b) = 0;', undefined)
+    ]);
+    run_test([
+        ge('datatype * = A of int;', Errors.ParserError)
     ]);
 });

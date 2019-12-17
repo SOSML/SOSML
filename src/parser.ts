@@ -8,7 +8,7 @@ import { Type, RecordType, TypeVariable, TupleType, CustomType, FunctionType } f
 import { InternalInterpreterError, IncompleteError, ParserError, FeatureDisabledError } from './errors';
 import { Token, KeywordToken, IdentifierToken, ConstantToken, RealConstantToken,
          TypeVariableToken, LongIdentifierToken, IntegerConstantToken,
-         AlphanumericIdentifierToken, NumericToken } from './tokens';
+         AlphanumericIdentifierToken, NumericToken, StarToken } from './tokens';
 import { EmptyDeclaration, Declaration, ValueBinding, ValueDeclaration,
          FunctionValueBinding, FunctionDeclaration, TypeDeclaration, Evaluation,
          DatatypeReplication, DatatypeDeclaration, SequentialDeclaration,
@@ -105,6 +105,15 @@ export class Parser {
         }
         return true;
     }
+    guardStarToken(tok: Token): Token {
+        // Checks if tok is a StarToken and converts it into an identifier
+        // otherwise returns tok
+
+        if (tok instanceof StarToken) {
+            return new IdentifierToken('*');
+        }
+        return tok;
+    }
 
     parseOpIdentifierToken(allowLong: boolean = false): IdentifierToken | LongIdentifierToken {
         let curTok = this.currentToken();
@@ -115,7 +124,7 @@ export class Parser {
         if (allowLong) {
             this.assertIdentifierOrLongToken(this.currentToken());
         } else {
-            this.assertIdentifierToken(this.currentToken());
+            this.assertIdentifierToken(this.guardStarToken(this.currentToken()));
         }
         let name = this.currentToken();
         (<IdentifierToken|LongIdentifierToken> name).opPrefixed = opPrefixed;
