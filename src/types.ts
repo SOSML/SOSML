@@ -488,7 +488,9 @@ export class TypeVariable extends Type {
         if (res instanceof RecordType && !(<RecordType> res).complete) {
             // Store where the incomplete record came from, so that it can get completed
             // later (e.g. in a different decl in a local decl expr)
-            (<RecordType> res).sourceTyVar = this.name;
+            if ((<RecordType> res).sourceTyVar === undefined) {
+                (<RecordType> res).sourceTyVar = this.name;
+            }
         }
 
         return res.instantiate(state, tyVarBnd, nsen);
@@ -914,7 +916,7 @@ export class RecordType extends Type {
             } else {
                 first = false;
             }
-            result += key + ': ' + type;
+            result += key + ': ' + type.toString(options);
         });
         if (!this.complete) {
             if (!first) {

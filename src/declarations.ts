@@ -149,7 +149,6 @@ export class ValueDeclaration extends Declaration {
 
 
         for (let l = 0; l < numit * numit + 1; ++l) {
-            // console.log(this + '', l, '/', numit * numit + 1);
             warns = wcp;
             bnds = new Map<string, [Type, boolean]>();
             bcp.forEach((val: [Type, boolean], key: string) => {

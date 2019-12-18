@@ -612,6 +612,10 @@ it("incomplete records", () => {
            undefined, ['listulate'], [undefined], [[BND(FUNC(PAIR(FUNC(INT, VAR), INT),
                                                              PAIR(INT, LIST(VAR)))), 0]])
     ]);
+    run_test([
+        gc('val c = case (0, 0)::nil of a => (#1(hd a), #2(hd a));', undefined,
+           ['c'], [undefined], [[PAIR(INT, INT), 0]])
+    ]);
 });
 
 it("let expressions 2", () => {
