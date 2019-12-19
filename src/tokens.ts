@@ -159,6 +159,7 @@ export class StarToken extends KeywordToken {
 // which is a reserved word, is also allowed as an identifier to stand for the equality predicate.
 // The identifier = may not be re-bound; this precludes any syntactic ambiguity." (Definition of SML, page 5)
 export class EqualsToken extends KeywordToken {
+    opPrefixed: boolean = false;
     typeName() { return 'EqualsToken'; }
     constructor() {
         super('=');
