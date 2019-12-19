@@ -1,13 +1,7 @@
-// import * as Lexer from '../src/lexer';
-// import * as Parser from '../src/parser';
 import * as Errors from '../src/errors';
-
 import * as API from '../src/main';
-
 import * as State from '../src/state';
 import * as InitialState from '../src/initialState';
-// import * as Expr from '../src/expressions';
-// import * as Decl from '../src/declarations';
 import * as Type from '../src/types';
 import * as Val from '../src/values';
 

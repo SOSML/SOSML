@@ -1,15 +1,11 @@
-const Lexer = require("../src/lexer");
-const Token = require("../src/tokens");
-const Parser = require("../src/parser");
-const Errors = require("../src/errors");
-
-const State = require("../src/state.ts");
-const InitialState = require("../src/initialState.ts");
-const Expr = require("../src/expressions.ts");
-const Decl = require("../src/declarations.ts");
-const Type = require("../src/types.ts");
-
-const TestHelper = require("./test_helper.ts");
+import * as Lexer from '../src/lexer';
+import * as Token from '../src/tokens';
+import * as Parser from '../src/parser';
+import * as InitialState from '../src/initialState';
+import * as Expr from '../src/expressions';
+import * as Decl from '../src/declarations';
+import * as Type from '../src/types';
+import * as TestHelper from './test_helper';
 TestHelper.init();
 
 function parse(str: string): Decl.Declaration {
@@ -35,7 +31,7 @@ function expression_tester(expression: Expr.Expression) {
 
 it("exp - tuple to record", () => {
     expect(parse("val x = ();").simplify()).toEqualWithType(
-        expression_tester(new Expr.Record( true, []));
+        expression_tester(new Expr.Record( true, []))
     );
 
     let record: Expr.Record = new Expr.Record( true, [
@@ -43,17 +39,17 @@ it("exp - tuple to record", () => {
         ["2", new Expr.Constant( new Token.NumericToken("12", 12))]
     ]);
     expect(parse("val x = (11, 12);").simplify()).toEqualWithType(
-        expression_tester(record);
+        expression_tester(record)
     );
 
     let record1: Expr.Record = new Expr.Record( true, [
         ["1", new Expr.Constant( new Token.NumericToken("11", 11))],
         ["2", new Expr.Constant( new Token.NumericToken("12", 12))],
-        ["3", new Expr.ValueIdentifier( new Token.AlphanumericIdentifierToken("a", 17))],
+        ["3", new Expr.ValueIdentifier( new Token.AlphanumericIdentifierToken("a"))],
         ["4", new Expr.Constant( new Token.NumericToken("14", 14))],
     ]);
     expect(parse("val x = (11, 12, a, 14);").simplify()).toEqualWithType(
-        expression_tester(record1);
+        expression_tester(record1)
     );
 
     expect(parse("val x = (11);").simplify()).toEqualWithType(
@@ -166,14 +162,14 @@ it("exp", () => {
     //TODO
 });
 
-function get42(pos: Errors.Position): Expr.Expresion {
+function get42(): Expr.PatternExpression {
     return new Expr.Constant(new Token.NumericToken('42', 42));
 }
 
-function pattern_tester(pattern: Expr.Pattern, pos42: Errors.Position): Decl.Declaration {
+function pattern_tester(pattern: Expr.Pattern): Decl.Declaration {
     return new Decl.SequentialDeclaration([
         new Decl.ValueDeclaration([], [
-            new Decl.ValueBinding(false, pattern, get42(pos42))
+            new Decl.ValueBinding(false, pattern, get42())
         ], 2)
     ], 1);
 }
@@ -182,7 +178,6 @@ it("pat", () => {
     expect(parse("val () = 42;").simplify()).toEqualWithType(
         pattern_tester(
             new Expr.Record( true, []),
-            9
         )
     )
 
@@ -192,7 +187,6 @@ it("pat", () => {
                 ["1", new Expr.Wildcard()],
                 ["2", new Expr.Record( true, [])]
             ]),
-            13
         )
     )
     //TODO especially the list stuff as soon as it is fixed in exp
@@ -205,7 +199,6 @@ it("patrow", () => {
             new Expr.Record( true, [
                 ["x", new Expr.ValueIdentifier( new Token.AlphanumericIdentifierToken("x"))]
             ]),
-            12
         )
     );
     expect(parse("val {x as y} = 42;").simplify()).toEqualWithType(
@@ -225,7 +218,6 @@ it("patrow", () => {
                     ]
                 ]
             ),
-            15
         )
     );
     expect(parse("val {x:int} = 42;").simplify()).toEqualWithType(
@@ -239,7 +231,6 @@ it("patrow", () => {
                     )
                 ]
             ]),
-            14
         )
     );
     //TODO
@@ -248,7 +239,7 @@ it("patrow", () => {
 // val x = 42 :ty
 function type_tester(type: Type.Type) {
     return expression_tester(new Expr.TypedExpression(
-        get42(8),
+        get42(),
         type
     ))
 }
@@ -283,6 +274,7 @@ it("ty", () => {
     //TODO
 });
 
+/*
 function fvalbind_helper(expr: Expr.Expression) {
     return new Decl.SequentialDeclaration([
         new Decl.FunctionDeclaration([], [
@@ -298,6 +290,7 @@ function fvalbind_helper(expr: Expr.Expression) {
         ], 2)
     ], 1)
 }
+*/
 
 it("fvalbind", () => {
     // expect(parse("fun f x = 1;").simplify()).toEqualWithType(
@@ -319,9 +312,9 @@ it("dec", () => {
                                 new Expr.FunctionApplication(
                                     new Expr.Lambda(
                                         new Expr.Match( [
-                                            [new Expr.ValueIdentifier( new Token.AlphanumericIdentifierToken('x')), get42(13)]
+                                            [new Expr.ValueIdentifier( new Token.AlphanumericIdentifierToken('x')), get42()]
                                         ])
-                                    )
+                                    ),
                                     new Expr.ValueIdentifier( new Token.IdentifierToken('__arg0')),
                                  )
                              ]
@@ -343,9 +336,9 @@ it("dec", () => {
                                 new Expr.FunctionApplication(
                                     new Expr.Lambda(
                                         new Expr.Match( [
-                                            [new Expr.ValueIdentifier( new Token.AlphanumericIdentifierToken('x')), get42(13)]
+                                            [new Expr.ValueIdentifier( new Token.AlphanumericIdentifierToken('x')), get42()]
                                         ])
-                                    )
+                                    ),
                                     new Expr.ValueIdentifier( new Token.IdentifierToken('__arg0')),
                                  )
                              ]
@@ -361,9 +354,9 @@ it("dec", () => {
                                 new Expr.FunctionApplication(
                                     new Expr.Lambda(
                                         new Expr.Match( [
-                                            [new Expr.ValueIdentifier( new Token.AlphanumericIdentifierToken('x')), get42(26)]
+                                            [new Expr.ValueIdentifier( new Token.AlphanumericIdentifierToken('x')), get42()]
                                         ])
-                                    )
+                                    ),
                                     new Expr.ValueIdentifier( new Token.IdentifierToken('__arg0')),
                                  )
                              ]

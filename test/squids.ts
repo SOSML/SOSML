@@ -1,7 +1,5 @@
 import * as Errors from '../src/errors';
-
 import * as API from '../src/main';
-
 import * as State from '../src/state';
 import * as Type from '../src/types';
 import * as Val from '../src/values';

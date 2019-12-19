@@ -24,13 +24,14 @@ import { FunctorDeclaration, StructureDeclaration, SignatureDeclaration, Functor
          IncludeSpecification, EmptySpecification, SequentialSpecification, SharingSpecification,
          Signature, Structure, LocalDeclarationStructureExpression, TypeAliasSpecification } from './modules';
 import { State } from './state';
+import { InterpreterOptions } from './main';
 
 export class Parser {
     private position: number = 0; // position of the next not yet parsed token
     private newcons: Set<string> = new Set<string>(); // new constructor names that appear
 
     constructor(private tokens: Token[], private state: State, private currentId: number,
-                private options: { [name: string]: any }) {
+                private options: InterpreterOptions) {
         if (this.state === undefined) {
             throw new InternalInterpreterError('What are you, stupid? Hurry up and give me ' +
                 'a state already!');
@@ -2326,7 +2327,7 @@ export class Parser {
     }
 }
 
-export function parse(tokens: Token[], state: State, options: {[name: string]: any} = {}): Declaration {
+export function parse(tokens: Token[], state: State, options: InterpreterOptions = {}): Declaration {
     let p: Parser = new Parser(tokens, state, state.id, options);
     let res = p.parseDeclaration(true, true);
     p.assertFinished();

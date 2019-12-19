@@ -12,15 +12,18 @@ export type EvaluationResult = {
     'hasThrown': boolean,
     'newState': State | undefined,
 } | undefined;
+
 export type EvaluationParameters = {
     [name: string]: any,
     'state': State,
     'modifiable': State,
     'recResult': EvaluationResult
 };
+
 export type EvaluationStack = {
     'next': Expression | Declaration | Match,
-    'params': EvaluationParameters}[];
+    'params': EvaluationParameters
+}[];
 
 export function evaluate(state: State, ast: Declaration): EvaluationResult {
     let modifiable = state.getNestedState();

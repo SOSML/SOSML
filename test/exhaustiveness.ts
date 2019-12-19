@@ -1,20 +1,11 @@
-const Lexer = require("../src/lexer");
-const Parser = require("../src/parser");
-const Errors = require("../src/errors");
+import * as Errors from '../src/errors';
+import * as API from '../src/main';
+import * as State from '../src/state';
 
-const API = require("../src/main.ts");
-
-const State = require("../src/state.ts");
-const InitialState = require("../src/initialState.ts");
-const Expr = require("../src/expressions.ts");
-const Decl = require("../src/declarations.ts");
-const Type = require("../src/types.ts");
-const Val = require("../src/values.ts");
-
-const TestHelper = require("./test_helper.ts");
+import * as TestHelper from './test_helper';
 TestHelper.init();
 
-function run_test(commands, loadStdlib: boolean = true): void {
+function run_test(commands: any[], loadStdlib: boolean = true): void {
     let oldTests = [];
     let state = API.getFirstState();
     let warning;
@@ -46,22 +37,22 @@ function run_test(commands, loadStdlib: boolean = true): void {
 }
 
 function ok(code: string): any {
-    return [code, (x) => { x(); },  (state: State.State, warning: Errors.Warning[]) => {
+    return [code, (x: any) => { x(); },  (state: State.State, warning: Errors.Warning[]) => {
         expect(warning.length).toEqual(0);
-    }
+    }];
 }
 
 function ne(code: string, type: number = -1,
             message: string = 'Pattern matching is not exhaustive.\n'): any {
-    return [code, (x) => { x(); },  (state: State.State, warning: Errors.Warning[]) => {
+    return [code, (x: any) => { x(); },  (state: State.State, warning: Errors.Warning[]) => {
         expect(warning.length).toEqual(1);
         expect(warning[0].type).toEqual(type);
         expect(warning[0].message).toEqual(message);
-    }
+    }];
 }
 
 function uu(code: string, duplicate: string, hasne: boolean = false, type: number = 0): any {
-    return [code, (x) => { x(); },  (state: State.State, warning: Errors.Warning[]) => {
+    return [code, (x: any) => { x(); },  (state: State.State, warning: Errors.Warning[]) => {
         let message = 'Rules after "' + duplicate + '" unused in pattern matching.\n';
         let nem = 'Pattern matching is not exhaustive.\n';
         expect(warning.length).toEqual(hasne ? 2 : 1);
@@ -80,11 +71,11 @@ function uu(code: string, duplicate: string, hasne: boolean = false, type: numbe
             expect(warning[0].type).toEqual(type);
             expect(warning[0].message).toEqual(message);
         }
-    }
+    }];
 }
 
 function dp(code: string, duplicate: string, hasne: boolean = false, type: number = 0): any {
-    return [code, (x) => { x(); },  (state: State.State, warning: Errors.Warning[]) => {
+    return [code, (x: any) => { x(); },  (state: State.State, warning: Errors.Warning[]) => {
         let message = 'Duplicate rule for "' + duplicate + '" in pattern matching.\n';
         let nem = 'Pattern matching is not exhaustive.\n';
         expect(warning.length).toEqual(hasne ? 2 : 1);
@@ -104,7 +95,7 @@ function dp(code: string, duplicate: string, hasne: boolean = false, type: numbe
             expect(warning[0].message).toEqual(message);
         }
 
-    }
+    }];
 }
 
 // Exhaustiveness tests
@@ -117,7 +108,7 @@ it('basic', () => {
         ne('fun f 1 = 2 | f 2 = 10;')
     ]);
     run_test([
-        ok('fun f () = 5;');
+        ok('fun f () = 5;')
     ]);
 });
 

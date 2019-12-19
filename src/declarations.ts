@@ -8,6 +8,7 @@ import { InternalInterpreterError, ElaborationError,
 import { Value, ValueConstructor, ExceptionConstructor, ExceptionValue,
          FunctionValue } from './values';
 import { IdCnt, EvaluationResult, EvaluationStack, EvaluationParameters } from './evaluator';
+import { InterpreterOptions } from './main';
 
 export abstract class Declaration {
     id: number;
@@ -16,7 +17,7 @@ export abstract class Declaration {
               nextName: string = '\'*t0',
               paramBindings: Map<string, Type> = new Map<string, Type>(),
               isTopLevel: boolean = false,
-              options: { [name: string]: any } = {}):
+              options: InterpreterOptions = {}):
                 [State, Warning[], Map<string, [Type, boolean]>, string] {
         throw new InternalInterpreterError( 'Not yet implemented.');
     }
@@ -66,7 +67,7 @@ export class ValueDeclaration extends Declaration {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
               paramBindings: Map<string, Type>, isTopLevel: boolean,
-              options: { [name: string]: any }):
+              options: InterpreterOptions):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         let result: [string, Type][] = [];
         let result2: [string, Type][] = [];
@@ -359,7 +360,7 @@ export class TypeDeclaration extends Declaration {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
               paramBindings: Map<string, Type>, isTopLevel: boolean,
-              options: { [name: string]: any }):
+              options: InterpreterOptions):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         for (let i = 0; i < this.typeBinding.length; ++i) {
 
@@ -453,7 +454,7 @@ export class DatatypeDeclaration extends Declaration {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
               paramBindings: Map<string, Type>, isTopLevel: boolean,
-              options: { [name: string]: any }):
+              options: InterpreterOptions):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         // I'm assuming the withtype is empty
 
@@ -542,7 +543,7 @@ export class DatatypeReplication extends Declaration {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
               paramBindings: Map<string, Type>, isTopLevel: boolean,
-              options: { [name: string]: any }):
+              options: InterpreterOptions):
     [State, Warning[], Map<string, [Type, boolean]>, string] {
         let res: TypeInformation | undefined = undefined;
 
@@ -615,7 +616,7 @@ export class ExceptionDeclaration extends Declaration {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
               paramBindings: Map<string, Type>, isTopLevel: boolean,
-              options: { [name: string]: any }):
+              options: InterpreterOptions):
     [State, Warning[], Map<string, [Type, boolean]>, string] {
         let knownTypeVars = new Set<string>();
 
@@ -663,7 +664,7 @@ export class LocalDeclaration extends Declaration {
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
               paramBindings: Map<string, Type>, isTopLevel: boolean,
-              options: { [name: string]: any }):
+              options: InterpreterOptions):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         let nstate: [State, Warning[], Map<string, [Type, boolean]>, string]
             = [state.getNestedState(0).getNestedState(state.id), [], tyVarBnd, nextName];
@@ -774,7 +775,7 @@ export class OpenDeclaration extends Declaration {
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
-              paramBindings: Map<string, Type>, isTopLevel: boolean, options: { [name: string]: any }):
+              paramBindings: Map<string, Type>, isTopLevel: boolean, options: InterpreterOptions):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         for (let i = 0; i < this.names.length; ++i) {
             let tmp: StaticBasis | undefined = undefined;
@@ -841,7 +842,7 @@ export class EmptyDeclaration extends Declaration {
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
-              paramBindings: Map<string, Type>, isTopLevel: boolean, options: { [name: string]: any }):
+              paramBindings: Map<string, Type>, isTopLevel: boolean, options: InterpreterOptions):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         return [state, [], tyVarBnd, nextName];
     }
@@ -881,7 +882,7 @@ export class SequentialDeclaration extends Declaration {
     }
 
     elaborate(state: State, tyVarBnd: Map<string, [Type, boolean]>, nextName: string,
-              paramBindings: Map<string, Type>, isTopLevel: boolean, options: { [name: string]: any }):
+              paramBindings: Map<string, Type>, isTopLevel: boolean, options: InterpreterOptions):
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         let warns: Warning[] = [];
         let bnds = tyVarBnd;
@@ -1531,7 +1532,7 @@ export class DatatypeBinding {
 export interface ExceptionBinding {
     evaluate(state: State, modifiable: State): void;
     elaborate(state: State, isTopLevel: boolean, knownTypeVars: Set<string>,
-              options: { [name: string]: any }): State;
+              options: InterpreterOptions): State;
 }
 
 export class DirectExceptionBinding implements ExceptionBinding {
@@ -1541,7 +1542,7 @@ export class DirectExceptionBinding implements ExceptionBinding {
     }
 
     elaborate(state: State, isTopLevel: boolean, knownTypeVars: Set<string>,
-              options: { [name: string]: any }): State {
+              options: InterpreterOptions): State {
         if (this.type !== undefined) {
             let tp = this.type.simplify().instantiate(state, new Map<string, [Type, boolean]>());
             let tyvars: string[] = [];
@@ -1588,7 +1589,8 @@ export class ExceptionAlias implements ExceptionBinding {
     constructor(public name: IdentifierToken, public oldname: Token) {
     }
 
-    elaborate(state: State, isTopLevel: boolean, options: { [name: string]: any }): State {
+    elaborate(state: State, isTopLevel: boolean, knownTypeVars: Set<string> = new Set<string>(),
+              options: InterpreterOptions): State {
         let res: [Type, IdentifierStatus] | undefined = undefined;
         if (this.oldname instanceof LongIdentifierToken) {
             let st = state.getAndResolveStaticStructure(<LongIdentifierToken> this.oldname);

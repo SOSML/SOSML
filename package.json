@@ -54,7 +54,11 @@
         "globals": {
             "ts-jest": {
                 "diagnostics": {
-                    "warnOnly": true
+                    "warnOnly": true,
+                    "ignoreCodes": [
+                        "6059", "18002", "18003",
+                        "2532", "2769"
+                    ]
                 }
             }
         }

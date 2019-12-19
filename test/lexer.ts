@@ -1,8 +1,7 @@
-const Lexer = require('../src/lexer');
-const Token = require('../src/tokens');
-const Errors = require('../src/errors');
-
-const TestHelper = require("./test_helper.ts");
+import * as Lexer from '../src/lexer';
+import * as Token from '../src/tokens';
+import * as Errors from '../src/errors';
+import * as TestHelper from './test_helper';
 TestHelper.init();
 
 it('very basic test', () => {
@@ -587,10 +586,10 @@ it('string constants', () => {
     expect(Lexer.lex(testcase_empty)).toEqualWithType([
         new Token.StringConstantToken(testcase_empty, '')
     ]);
-    expect(() => { Lexer.lex(testcase_non_ending1); }).toThrow(Token.IncompleteError);
-    expect(() => { Lexer.lex(testcase_non_ending2); }).toThrow(Token.IncompleteError);
-    expect(() => { Lexer.lex(testcase_non_ending3); }).toThrow(Token.IncompleteError);
-    expect(() => { Lexer.lex(testcase_non_ending4); }).toThrow(Token.IncompleteError);
+    expect(() => { Lexer.lex(testcase_non_ending1); }).toThrow(Errors.IncompleteError);
+    expect(() => { Lexer.lex(testcase_non_ending2); }).toThrow(Errors.IncompleteError);
+    expect(() => { Lexer.lex(testcase_non_ending3); }).toThrow(Errors.IncompleteError);
+    expect(() => { Lexer.lex(testcase_non_ending4); }).toThrow(Errors.IncompleteError);
     expect(Lexer.lex(testcase_basic_string)).toEqualWithType([
         new Token.StringConstantToken(testcase_basic_string, 'The quick brown fox jumps over the lazy dog')
     ]);
@@ -630,7 +629,7 @@ it('string constants', () => {
     expect(Lexer.lex(testcase_formatting_ignore2)).toEqualWithType([
         new Token.StringConstantToken(testcase_formatting_ignore2, 'working?')
     ]);
-    expect(() => { Lexer.lex(testcase_formatting_incomplete); }).toThrow(Token.IncompleteError);
+    expect(() => { Lexer.lex(testcase_formatting_incomplete); }).toThrow(Errors.IncompleteError);
     expect(() => { Lexer.lex(testcase_formatting_ignore_wrong); }).toThrow(Errors.LexerError);
     expect(Lexer.lex(testcase_bell_escape1)).toEqualWithType([
         new Token.StringConstantToken(testcase_bell_escape1, '\x07')
@@ -673,16 +672,21 @@ it('comments', () => {
     let testcase_unmatched: string = '*)test';
 
     expect(Lexer.lex(testcase_empty_comment)).toEqualWithType([
-        new Token.AlphanumericIdentifierToken('test', 'test')
+        new Token.AlphanumericIdentifierToken('test')
     ]);
     expect(Lexer.lex(testcase_normal_comment)).toEqualWithType([
-        new Token.AlphanumericIdentifierToken('test', 'test')
+        new Token.AlphanumericIdentifierToken('test')
     ]);
     expect(Lexer.lex(testcase_nested_comment)).toEqualWithType([
-        new Token.AlphanumericIdentifierToken('test', 'test')
+        new Token.AlphanumericIdentifierToken('test')
     ]);
     expect(() => { Lexer.lex(testcase_non_ending1); }).toThrow(Errors.IncompleteError);
     expect(() => { Lexer.lex(testcase_non_ending2); }).toThrow(Errors.IncompleteError);
+    expect(Lexer.lex(testcase_unmatched)).toEqualWithType([
+        new Token.StarToken(),
+        new Token.KeywordToken(')'),
+        new Token.AlphanumericIdentifierToken('test')
+    ]);
 });
 
 it('identifiers', () => {
@@ -699,25 +703,30 @@ it('identifiers', () => {
 
     expect(Lexer.lex(testcase_empty)).toEqualWithType([]);
     expect(Lexer.lex(testcase_alphanum)).toEqualWithType([
-        new Token.AlphanumericIdentifierToken(testcase_alphanum, testcase_alphanum)
+        new Token.AlphanumericIdentifierToken(testcase_alphanum)
     ]);
     expect(Lexer.lex(testcase_symbolic)).toEqualWithType([
-        new Token.IdentifierToken(testcase_symbolic, testcase_symbolic)
+        new Token.IdentifierToken(testcase_symbolic)
     ]);
     expect(() => { Lexer.lex(testcase_prime); }).toThrow(Errors.LexerError);
     expect(() => { Lexer.lex(testcase_prime_symbolic); }).toThrow(Errors.LexerError);
     expect(() => { Lexer.lex(testcase_double_prime); }).toThrow(Errors.LexerError);
     expect(Lexer.lex(testcase_triple_prime)).toEqualWithType([
-        new Token.EqualityTypeVariableToken(testcase_triple_prime, testcase_triple_prime)
+        new Token.EqualityTypeVariableToken(testcase_triple_prime)
     ]);
     expect(Lexer.lex(testcase_spacing)).toEqualWithType([
-        new Token.AlphanumericIdentifierToken('test', 'test'),
-        new Token.AlphanumericIdentifierToken('identifier', 'identifier')
+        new Token.AlphanumericIdentifierToken('test'),
+        new Token.AlphanumericIdentifierToken('identifier')
+    ]);
+    expect(Lexer.lex(testcase_mixed)).toEqualWithType([
+        new Token.AlphanumericIdentifierToken('test'),
+        new Token.IdentifierToken('!'),
+        new Token.AlphanumericIdentifierToken('identifier')
     ]);
     expect(Lexer.lex(testcase_underscore)).toEqualWithType([
-        new Token.KeywordToken('_')
-        new Token.KeywordToken('_')
-        new Token.AlphanumericIdentifierToken('hi', 'hi')
+        new Token.KeywordToken('_'),
+        new Token.KeywordToken('_'),
+        new Token.AlphanumericIdentifierToken('hi')
     ]);
 });
 
@@ -736,15 +745,15 @@ it('long identifiers', () => {
 
     expect(Lexer.lex(testcase_small)).toEqualWithType([
         new Token.LongIdentifierToken(testcase_small, [
-            new Token.AlphanumericIdentifierToken('lon', 'lon')
-        ], new Token.AlphanumericIdentifierToken('ident', 'ident'))
+            new Token.AlphanumericIdentifierToken('lon')
+        ], new Token.AlphanumericIdentifierToken('ident'))
     ]);
     expect(Lexer.lex(testcase_long)).toEqualWithType([
         new Token.LongIdentifierToken(testcase_long, [
-            new Token.AlphanumericIdentifierToken('lon', 'lon'),
-            new Token.AlphanumericIdentifierToken('hey10', 'hey10'),
-            new Token.AlphanumericIdentifierToken('der', 'der')
-        ], new Token.AlphanumericIdentifierToken('ident', 'ident'))
+            new Token.AlphanumericIdentifierToken('lon'),
+            new Token.AlphanumericIdentifierToken('hey10'),
+            new Token.AlphanumericIdentifierToken('der')
+        ], new Token.AlphanumericIdentifierToken('ident'))
     ]);
     expect(() => { Lexer.lex(testcase_space1); }).toThrow(Errors.LexerError);
     expect(() => { Lexer.lex(testcase_space2); }).toThrow(Errors.LexerError);
@@ -755,8 +764,8 @@ it('long identifiers', () => {
     expect(() => { Lexer.lex(testcase_double_prime2); }).toThrow(Errors.LexerError);
     expect(Lexer.lex(testcase_symbolic_good)).toEqualWithType([
         new Token.LongIdentifierToken(testcase_symbolic_good, [
-            new Token.AlphanumericIdentifierToken('lon', 'lon')
-        ], new Token.IdentifierToken('==', '=='))
+            new Token.AlphanumericIdentifierToken('lon')
+        ], new Token.IdentifierToken('=='))
     ]);
     expect(() => { Lexer.lex(testcase_symbolic_bad); }).toThrow(Errors.LexerError);
 });

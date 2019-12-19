@@ -1,171 +1,76 @@
-const Lexer = require("../src/lexer");
-const Parser = require("../src/parser");
-const Value = require("../src/values");
-const Errors = require("../src/errors");
-const State = require("../src/state");
-const InitialState = require("../src/initialState");
-const API = require("../src/main");
+import * as API from '../src/main';
 
-function printBasis( state: any, dynamicBasis: any, staticBasis: any, indent: number = 0 ): string {
-    let istr = '';
-    for( let i = 0; i < indent; ++i ) {
-        istr += '  ';
-    }
-    let out = '';
-    let stsym = '>';
+let opts: API.InterpreterOptions = {
+    'allowSuccessorML': true,
+    'disableElaboration': false,
+    'disableEvaluation': false,
+    'allowUnicode': false,
+    'allowUnicodeTypeVariables': false,
+    'strictMode': true,
+    'realEquality': false
+};
 
-    if( dynamicBasis === undefined ) {
-        for( let i in staticBasis.valueEnvironment ) {
-            if( staticBasis.valueEnvironment.hasOwnProperty( i ) ) {
-                out += stsym + ' ' + istr + printBinding( state,
-                    [ i, undefined,
-                        staticBasis.getValue( i ) ] ) + '\n';
-            }
-        }
-    } else {
-        for( let i in dynamicBasis.valueEnvironment ) {
-            if( dynamicBasis.valueEnvironment.hasOwnProperty( i ) ) {
-                if( staticBasis ) {
-                    out += stsym + ' ' + istr + printBinding( state,
-                        [ i, dynamicBasis.valueEnvironment[ i ],
-                            staticBasis.getValue( i ) ] ) + '\n';
-                } else {
-                    out += stsym + ' ' + istr + printBinding( state,
-                        [ i, dynamicBasis.valueEnvironment[ i ], undefined ] ) + '\n';
-                }
-            }
-        }
-
-        for( let i in dynamicBasis.structureEnvironment ) {
-            if( dynamicBasis.structureEnvironment.hasOwnProperty( i ) ) {
-                out += stsym + ' ' + istr + 'structure ' + i + ' = {\n';
-                if( staticBasis ) {
-                    out += printBasis( state, dynamicBasis.getStructure( i ),
-                        staticBasis.getStructure( i ), indent + 1 );
-                } else {
-                    out += printBasis( state, dynamicBasis.getStructure( i ),
-                        undefined, indent + 1 );
-                }
-                out += stsym + ' ' + istr + '}\n';
-            }
-        }
-    }
-    return out;
+let printOpt: API.PrintOptions = {
+    'showTypeVariablesAsUnicode': true,
+    'fullSymbol': '>',
+    'emptySymbol': ' ',
+    'boldText': ((text: string) => '\x1b[1m' + text + '\x1b[0m'),
+    'italicText': ((text: string) => '\x1b[3m' + text + '\x1b[0m')
 }
 
-function printBinding( state: any, bnd: [ string, [any, any], [any, any] ] ): string {
-    let res = '';
-
-    if( bnd[ 1 ] ) {
-        if( bnd[ 1 ][ 0 ] instanceof Value.ValueConstructor ) {
-            res += 'con';
-        } else if( bnd[ 1 ][ 0 ] instanceof Value.ExceptionConstructor ) {
-            res += 'exn';
-        } else {
-            res += 'val';
-        }
-    } else {
-        if( bnd[ 2 ][ 0 ] instanceof Value.ValueConstructor ) {
-            res += 'con';
-        } else if( bnd[ 2 ][ 0 ] instanceof Value.ExceptionConstructor ) {
-            res += 'exn';
-        } else {
-            res += 'val';
-        }
-    }
-
-    if( bnd[ 1 ] ) {
-        if( bnd[ 2 ] && bnd[ 2 ][ 0 ].isOpaque( ) ) {
-            res += ' ' + bnd[ 0 ] + ' = <' + bnd[ 2 ][ 0 ].getOpaqueName( ) + '>';
-        } else {
-            res += ' ' + bnd[ 0 ] + ' = ' + bnd[ 1 ][ 0 ].toString( state );
-        }
-    } else {
-        res += ' ' + bnd[ 0 ];
-    }
-
-    if( bnd[ 2 ] ) {
-        return res + ': ' + bnd[ 2 ][ 0 ].toString( state ) + ';';
-    } else {
-        return res + ': undefined;';
-    }
-}
-
-function run( stuff: string, moreStuff: string[ ] = [ ], evaluate: boolean = true ) {
-    it( stuff, ( ) => {
-        //let tokens = Lexer.lex( stuff );
-        //let ast = Parser.parse( tokens, InitialState.getInitialState( ) );
-        //console.log(ast);
-        //console.log(ast.simplify().toString());
-        //return;
-        // if( evaluate ) {
-        //    let res = ast.simplify( ).evaluate( InitialState.getInitialState( ) );
-        //}
-        let out = stuff + '\n'; // + '\n ~> ' + ast.simplify().toString();
+function run (stuff: string, moreStuff: string[ ] = [ ], evaluate: boolean = true) {
+    it(stuff, ( ) => {
+        let out = stuff + '\n';
         try {
-
-            let opts = {
-                'allowUnicodeInStrings': false,
-                'allowSuccessorML': true,
-                'disableElaboration': false,
-                'disableEvaluation': true,
-                'disableTypeInference': true,
-                'allowLongFunctionNames': false,
-                'strictMode': false
-            };
-
-            if( evaluate ) {
-                let usestdlib = true;
-                let res = API.interpret( stuff, API.getFirstState( ), opts );
+            if (evaluate) {
+                let state = API.getFirstState(API.getAvailableModules(),  opts);
+                let res = API.interpret(stuff, state, opts);
                 let i = 0;
-                let st = API.getFirstState( ).id + 1;
+                let st = state.id + 1;
                 do {
-                    if( res.evaluationErrored ) {
+                    if (res.evaluationErrored) {
                         out += '\x1b[30;47;1mUncaught exception: '
                             + res.error + '\x1b[39;49;0m';
                         break;
                     } else {
                         if (opts.disableEvaluation) {
-                            out += printBasis( res.state,
-                                undefined,
-                                res.state.getStaticChanges( st - 1 ) );
+                            out += res.state.printBasis(undefined,
+                                res.state.getStaticChanges( st - 1 ), printOpt);
 
                         } else {
-                            out += printBasis( res.state,
-                                res.state.getDynamicChanges( st - 1 ),
-                                res.state.getStaticChanges( st - 1 ) );
+                            out += res.state.printBasis(res.state.getDynamicChanges( st - 1 ),
+                                res.state.getStaticChanges( st - 1 ), printOpt );
                         }
                     }
-                    if( res.warnings !== undefined ) {
-                        for( let i = 0; i < res.warnings.length; ++i ) {
-                            if( res.warnings[ i ].type >= -1 ) {
-                                out += 'WARN: ' + res.warnings[ i ].message;
+                    if (res.warnings !== undefined && res.warnings.length > 0) {
+                        for (let j = 0; j < res.warnings.length; ++j) {
+                            if (res.warnings[j].type >= -1) {
+                                out += 'WARN: ' + res.warnings[j].message;
                             } else {
-                                out += 'Printed: ' + res.warnings[ i ].message;
+                                out += 'Printed: ' + res.warnings[j].message;
                             }
                         }
+                    } else {
+                        out += 'No warnings or warnings undefined.\n';
                     }
-                    if( i < moreStuff.length ) {
+                    if (i < moreStuff.length) {
                         st = res.state.id + 1;
-                        out += '\n' + moreStuff[ i ] + '\n';
-                        res = API.interpret( moreStuff[ i ], res.state, opts );
+                        out += '\n' + moreStuff[i] + '\n';
+                        res = API.interpret(moreStuff[i], res.state, opts);
                     } else {
                         break;
                     }
-                    // res[0].getDefinedIdentifiers().forEach((val: string) => {
-                    //     out += val + ' ';
-                    // });
-                    // out += '\n';
                     ++i;
-                } while( true );
+                } while(true);
             }
         } catch (e) {
             out += '\x1b[31;40;1m' + e + '\x1b[39;49;0m\n';
-            console.log( out );
+            console.log(out);
             throw e;
         }
-        console.log( out );
+        console.log(out);
     });
 }
 
-run(';');
+run('open Version;');
+

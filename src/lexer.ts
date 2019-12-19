@@ -1,13 +1,10 @@
-/*
- * TODO: Documentation for the lexer
- */
-
 import { LexerError, InternalInterpreterError, IncompleteError } from './errors';
 import { int, char, Token, KeywordToken, WordConstantToken, CharacterConstantToken,
          StringConstantToken, IdentifierToken, AlphanumericIdentifierToken, TypeVariableToken,
          EqualityTypeVariableToken, StarToken, EqualsToken, NumericToken, LongIdentifierToken,
          RealConstantToken, IntegerConstantToken, CommentToken } from './tokens';
 import { MAXINT, MININT } from './values';
+import { InterpreterOptions } from './main';
 
 let reservedWords: Set<string> = new Set<string>([
     'abstype', 'and', 'andalso', 'as', 'case', 'datatype', 'do', 'else', 'end', 'exception', 'fn',
@@ -55,7 +52,7 @@ export function resolveUnicodeTypeVariable(c: char | undefined): string | undefi
 }
 
 // TODO proper support for >= 256 chars
-export function isAlphanumeric(c: char | undefined, options: { [name: string]: any } = {}): boolean {
+export function isAlphanumeric(c: char | undefined, options: InterpreterOptions = {}): boolean {
     if (c === undefined) {
         return false;
     }
@@ -76,21 +73,21 @@ export function isAlphanumeric(c: char | undefined, options: { [name: string]: a
     return false;
 }
 
-export function isSymbolic(c: char | undefined, options: { [name: string]: any } = {}): boolean {
+export function isSymbolic(c: char | undefined, options: InterpreterOptions = {}): boolean {
     if (c === undefined) {
         return false;
     }
     return symbolicCharacters.has(<char> c);
 }
 
-export function isWhitespace(c: char | undefined, options: { [name: string]: any } = {}): boolean {
+export function isWhitespace(c: char | undefined, options: InterpreterOptions = {}): boolean {
     if (c === undefined) {
         return false;
     }
     return c === ' ' || c === '\t' || c === '\n' || c === '\f';
 }
 
-export function isNumber(c: char | undefined, hexadecimal: boolean, options: { [name: string]: any } = {}): boolean {
+export function isNumber(c: char | undefined, hexadecimal: boolean, options: InterpreterOptions = {}): boolean {
     if (c === undefined) {
         return false;
     }
@@ -106,7 +103,7 @@ function skipWhitespace(stream: LexerStream): string {
 }
 
 // Reads and munches a single comment and everything that is inside
-export function lexComment(stream: LexerStream, options: { [name: string]: any } = {}): CommentToken {
+export function lexComment(stream: LexerStream, options: InterpreterOptions = {}): CommentToken {
     let comment = '';
     if (stream.peek() === '(' && stream.peek(1) === '*') {
         comment += stream.next() + stream.next();
@@ -165,7 +162,7 @@ function makeNumberToken(token: string, value: string, real: boolean = false, wo
     }
 }
 
-export function lexNumber(stream: LexerStream, options: { [name: string]: any } = {}): Token {
+export function lexNumber(stream: LexerStream, options: InterpreterOptions = {}): Token {
     let token: string = '';
     let value: string = '';
     let hexadecimal: boolean = false;
@@ -239,7 +236,7 @@ export function lexNumber(stream: LexerStream, options: { [name: string]: any } 
     return makeNumberToken(token, value, real);
 }
 
-export function lexString(stream: LexerStream, options: { [name: string]: any } = {}): StringConstantToken {
+export function lexString(stream: LexerStream, options: InterpreterOptions = {}): StringConstantToken {
     if (stream.next() !== '"') {
         throw new InternalInterpreterError('That was not a string.');
     }
@@ -378,7 +375,7 @@ export function lexString(stream: LexerStream, options: { [name: string]: any } 
     return new StringConstantToken(token + '"', value);
 }
 
-export function lexCharacter(stream: LexerStream, options: { [name: string]: any } = {}): CharacterConstantToken {
+export function lexCharacter(stream: LexerStream, options: InterpreterOptions = {}): CharacterConstantToken {
     if (stream.next() !== '#') {
         throw new InternalInterpreterError('That was not a character.');
     }
@@ -390,7 +387,7 @@ export function lexCharacter(stream: LexerStream, options: { [name: string]: any
     return new CharacterConstantToken('#' + t.text, t.value);
 }
 
-export function lexIdentifierOrKeyword(stream: LexerStream, options: { [name: string]: any } = {}): Token {
+export function lexIdentifierOrKeyword(stream: LexerStream, options: InterpreterOptions = {}): Token {
     // Both identifiers and keywords can be either symbolic (consisting only of the characters
     // ! % & $ # + - / : < = > ? @ \ ~ ‘ ^ | *
     // or alphanumeric (consisting only of letters, digits, ' or _).
@@ -465,7 +462,7 @@ export function lexIdentifierOrKeyword(stream: LexerStream, options: { [name: st
     }
 }
 
-export function lexLongIdentifierOrKeyword(stream: LexerStream, options: { [name: string]: any } = {}): Token {
+export function lexLongIdentifierOrKeyword(stream: LexerStream, options: InterpreterOptions = {}): Token {
     let t: Token = lexIdentifierOrKeyword(stream, options);
     let token = t.text;
 
@@ -507,7 +504,7 @@ export function lexLongIdentifierOrKeyword(stream: LexerStream, options: { [name
     return new LongIdentifierToken(token, qualifiers, t);
 }
 
-export function nextToken(stream: LexerStream, options: { [name: string]: any } = {}): Token | undefined {
+export function nextToken(stream: LexerStream, options: InterpreterOptions = {}): Token | undefined {
     skipWhitespace(stream);
     if (stream.eos()) {
         return undefined;
@@ -529,7 +526,7 @@ export function nextToken(stream: LexerStream, options: { [name: string]: any } 
     return token;
 }
 
-export function lexStream(stream: LexerStream, options: { [name: string]: any } = {}): Token[] {
+export function lexStream(stream: LexerStream, options: InterpreterOptions = {}): Token[] {
     let result: Token[] = [];
     while (!stream.eos()) {
         let current = nextToken(stream, options);
@@ -545,7 +542,7 @@ export function lexStream(stream: LexerStream, options: { [name: string]: any } 
     return result;
 }
 
-export function lex(s: string, options: { [name: string]: any } = {}): Token[] {
+export function lex(s: string, options: InterpreterOptions = {}): Token[] {
     let position = 0;
     let stream: LexerStream = {
         'peek': (offset: number = 0) => {

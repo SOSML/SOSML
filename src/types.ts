@@ -1,6 +1,7 @@
 import { ElaborationError, InternalInterpreterError } from './errors';
 import { State } from './state';
 import { LongIdentifierToken } from './tokens';
+import { InterpreterOptions, PrintOptions } from './main';
 
 let unicodeTyVarNames: Map<string, string> = new Map<string, string>([
     ['\'a', 'α'], ['\'b', 'β'], ['\'c', 'γ'], ['\'d', 'δ'], ['\'e', 'ε'], ['\'f', 'ζ'],
@@ -10,7 +11,7 @@ let unicodeTyVarNames: Map<string, string> = new Map<string, string>([
 ]);
 
 export abstract class Type {
-    abstract toString(options: { [name: string]: any }): string;
+    abstract toString(options: PrintOptions): string;
     abstract equals(other: any): boolean;
 
     abstract typeName(): string;
@@ -91,7 +92,7 @@ export abstract class Type {
 
     // Normalizes a type. Free type variables need to get new names **across** different decls.
     // removes all positions in types
-    normalize(nextFree: number = 0, options: { [name: string]: any } = {}): [Type, number] {
+    normalize(nextFree: number = 0, options: InterpreterOptions = {}): [Type, number] {
         let orderedVars = this.getOrderedTypeVariables();
         let freeVars = this.getTypeVariables(true);
         let replacements = new Map<string, string>();
@@ -156,7 +157,7 @@ export class AnyType extends Type {
         return 'AnyType';
     }
 
-    toString(options: { [name: string]: any } = {}): string {
+    toString(options: PrintOptions = {}): string {
         return 'any';
     }
 
@@ -256,7 +257,7 @@ export class TypeVariableBind extends Type {
         return 'TypeVariableBind';
     }
 
-    toString(options: { [name: string]: any } = {}): string {
+    toString(options: PrintOptions = {}): string {
         let frees = new Set<[string, Type[]]>();
         let bound = new Set<[string, Type[]]>();
 
@@ -456,7 +457,7 @@ export class TypeVariable extends Type {
         return 'TypeVariable';
     }
 
-    toString(options: { [name: string]: any } = {}): string {
+    toString(options: PrintOptions = {}): string {
         if (options.showTypeVariablesAsUnicode === true
             && unicodeTyVarNames.has(this.name)) {
             return <string> unicodeTyVarNames.get(this.name);
@@ -887,7 +888,7 @@ export class RecordType extends Type {
         this.elements = setn;
     }
 
-    toString(options: { [name: string]: any } = {}): string {
+    toString(options: PrintOptions = {}): string {
         if (this.isTuple() && this.complete) {
             if (this.elements.size === 0) {
                 return 'unit';
@@ -1058,7 +1059,7 @@ export class FunctionType extends Type {
         return 'FunctionType';
     }
 
-    toString(options: { [name: string]: any } = {}): string {
+    toString(options: PrintOptions = {}): string {
         if (this.parameterType instanceof FunctionType) {
             return '(' + this.parameterType.toString(options) + ')'
                 + ' → ' + this.returnType.toString(options);
@@ -1387,7 +1388,7 @@ export class CustomType extends Type {
         return 'CustomType';
     }
 
-    toString(options: { [name: string]: any } = {}): string {
+    toString(options: PrintOptions = {}): string {
         let result: string = '';
         if (this.typeArguments.length > 1
             || (this.typeArguments.length === 1 && (this.typeArguments[0] instanceof FunctionType
@@ -1458,7 +1459,7 @@ export class TupleType extends Type {
         return 'TupleType';
     }
 
-    toString(options: { [name: string]: any } = {}): string {
+    toString(options: PrintOptions = {}): string {
         let result: string = '(';
         for (let i: number = 0; i < this.elements.length; ++i) {
             if (i > 0) {

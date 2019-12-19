@@ -5,6 +5,7 @@ import { CharValue, Real, Integer, StringValue, PredefinedFunction, Word, Constr
          ValueConstructor, ExceptionConstructor, BoolValue, Value, RecordValue, ReferenceValue } from './values';
 import { InternalInterpreterError, Warning } from './errors';
 import { EvaluationParameters } from './evaluator';
+import { InterpreterOptions } from './main';
 
 // Initial static basis (see SML Definition, appendix C through E)
 
@@ -558,7 +559,7 @@ let initialState: State = new State(
     }
 );
 
-export function getInitialState(options: {[name: string]: any } = {}): State {
+export function getInitialState(options: InterpreterOptions = {}): State {
     let res = initialState.getNestedState();
     if (options.realEquality === true) {
         res.setStaticType('real', realType, [], 0, true);

@@ -33,7 +33,7 @@ export let subscriptException = new ExceptionConstructor('Subscript', 0, 0, 7);
 export let failException = new ExceptionConstructor('Fail', 1, 0, 8);
 
 export type Module = {
-    'native': ((state: State, options?: {[name: string]: any}) => State) | undefined, /* callback for native parts */
+    'native': ((state: State, options?: Interpreter.InterpreterOptions) => State) | undefined, /* callback for native parts */
     'code': string | undefined,
     'requires': string[] | undefined /* names of modules required for this module (excluding __Base) */
 };
@@ -128,7 +128,7 @@ export let STDLIB: {
     }
 };
 
-export function loadModule(state: State, name: string, options: {[name: string]: any }): State {
+export function loadModule(state: State, name: string, options: Interpreter.InterpreterOptions): State {
     if (!STDLIB.hasOwnProperty(name)) {
         throw new InternalInterpreterError('The module "' + name + '" does not exist. Auuuu~');
     }

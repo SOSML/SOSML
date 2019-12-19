@@ -16,8 +16,9 @@ let AST = instance.lexParse(..code..);
 import { State } from './state';
 import { getInitialState } from './initialState';
 import { loadModule, STDLIB } from './stdlib';
-import { InternalInterpreterError } from './errors';
+import { InternalInterpreterError, Warning } from './errors';
 import { Type } from './types';
+import { Value } from './values';
 import * as Lexer from './lexer';
 import * as Parser from './parser';
 import * as Evaluator from './evaluator';
@@ -45,16 +46,57 @@ export {
 };
 export * from './state';
 
+export type PrintOptions = {
+    stopId?: number; // id of the oldest state to print
+    fullSymbol?: string; // Symbol used for the first line of output per declaration (default: "")
+    emptySymbol?: string; // Symbol used for every other line of output per declaration (def: "")
+    indent?: number; // indent amount (spaces, default: 2)
+    boldText?: (text: string) => string; // Function used to make text bold
+    italicText?: (text: string) => string; // Function used to make text italic
+    escapeText?: (text: string) => string; // Function on user-defined names
+    showTypeVariablesAsUnicode?: boolean; // Display type variables as unicode
+};
+
+export type InterpreterOptions = {
+    // General
+    strictMode?: boolean; // Enforce more strict adherence to the SML 97 Standard
+    realEquality?: boolean; // Turn real into a type with equality
+    allowSuccessorML?: boolean; // Enable experimental features
+
+    // Lexer
+    allowUnicode?: boolean; // enable unicode support
+    allowUnicodeTypeVariables?: boolean; // allow unicode replacements for type variables
+    allowCommentToken?: boolean; // don't skip output tokens for comments
+
+    // Parser
+    allowVector?: boolean; // Allow vector patterns
+    allowStructuresAnywhere?: boolean;
+    allowSignaturesAnywhere?: boolean;
+    allowFunctorsAnywhere?: boolean;
+
+    // Elaboration
+    disableElaboration?: boolean;
+
+    // Evaluation
+    disableEvaluation?: boolean;
+}
+
+export type InterpretationResult = {
+    state: State; // Computed state
+    evaluationErrored: boolean; // Evaluation returned an SML error
+    error?: Value; // Thrown SML error; present only if evaluationErrored is true
+    warnings: Warning[]; // Array of emitted warnings / messages
+}
+
 export function interpret(nextInstruction: string,
                           oldState: State = getInitialState(),
-                          options: { [name: string]: any } = {
-                              'allowUnicodeInStrings': false,
+                          options: InterpreterOptions = {
                               'allowSuccessorML': false,
                               'disableElaboration': false,
                               'allowVector': true,
                               'strictMode': true,
                               'realEquality': false
-                          }): { [name: string]: any } {
+                          }): InterpretationResult {
     let state = oldState.getNestedState();
 
     let tkn = Lexer.lex(nextInstruction, options);
@@ -67,7 +109,7 @@ export function interpret(nextInstruction: string,
 
     if (options.disableElaboration === true) {
         let tmp = Evaluator.evaluate(oldState.getNestedState(), ast /* , options */);
-        if (tmp === undefined) {
+        if (tmp === undefined || tmp.newState === undefined) {
             throw new InternalInterpreterError('How is this undefined?');
         }
         return {
@@ -92,7 +134,7 @@ export function interpret(nextInstruction: string,
     }
     // Use a fresh state to be able to piece types and values together
     let res = Evaluator.evaluate(oldState.getNestedState(), ast /* , options */);
-    if (res === undefined) {
+    if (res === undefined || res.newState === undefined) {
         throw new InternalInterpreterError('How is this undefined?');
     }
 
@@ -207,7 +249,7 @@ export function getAvailableModules(): string[] {
 }
 
 export function getFirstState(loadModules: string[] = getAvailableModules(),
-                              options: {[name: string]: any } = {}): State {
+                              options: InterpreterOptions = {}): State {
     let res = loadModule(getInitialState(options), '__Base', options);
     for (let i of loadModules) {
         res = loadModule(res, i, options);

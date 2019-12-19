@@ -1,20 +1,12 @@
-const Lexer = require("../src/lexer");
-const Parser = require("../src/parser");
-const Errors = require("../src/errors");
+import * as Errors from '../src/errors';
+import * as API from '../src/main';
+import * as State from '../src/state';
+import * as Val from '../src/values';
 
-const API = require("../src/main.ts");
-
-const State = require("../src/state.ts");
-const InitialState = require("../src/initialState.ts");
-const Expr = require("../src/expressions.ts");
-const Decl = require("../src/declarations.ts");
-const Type = require("../src/types.ts");
-const Val = require("../src/values.ts");
-
-const TestHelper = require("./test_helper.ts");
+import * as TestHelper from './test_helper';
 TestHelper.init();
 
-function run_test(commands, loadStdlib: boolean = true, disableElab: boolean = false): void {
+function run_test(commands: any[], loadStdlib: boolean = true, disableElab: boolean = false): void {
     let oldTests = [];
     let state = API.getFirstState();
     let exception;
@@ -47,22 +39,22 @@ function run_test(commands, loadStdlib: boolean = true, disableElab: boolean = f
 
 it("basic", () => {
     run_test([
-        ['42;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['42;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(42), 0]);
         }]
     ]);
     run_test([
-        ['0w42;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['0w42;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Word(42), 0]);
         }]
     ]);
     run_test([
-        ['fun f x = 42;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['fun f x = 42;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['f 10;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['f 10;', (x: any) => { x(); }, (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(42), 0]);
         }],
@@ -71,7 +63,7 @@ it("basic", () => {
       val p = pot xs
     in
       p @ (List.map (fn a => x :: a) p)
-    end;`, (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+    end;`, (x: any) => { x(); }, (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
         [`fun pot [] = [[]]
@@ -79,7 +71,7 @@ it("basic", () => {
     val p = pot xs
   in
     (List.map (fn a => x :: a) p) @ p
-  end;`, (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+  end;`, (x: any) => { x(); }, (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }]
     ], true);
@@ -87,15 +79,15 @@ it("basic", () => {
 
 it("exp", () => {
     run_test([
-        ['42; 10.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['42; 10.0;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Real(10), 0]);
         }],
-        ['val it = 42;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['val it = 42;', (x: any) => { x(); }, (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(42), 0]);
         }],
-        [';;42;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        [';;42;', (x: any) => { x(); }, (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(42), 0]);
         }]
@@ -104,43 +96,43 @@ it("exp", () => {
 
 it("local", () => {
     run_test([
-        ['local val x = 1 in val y = x end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['local val x = 1 in val y = x end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('y')).toEqualWithType([new Val.Integer(1), 0]);
         }],
-        ['x;', (x) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['x;', (x: any) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
         }],
     ]);
 
     run_test([
-        [' val x = 2 ; local val x = 1 in val y = x end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        [' val x = 2 ; local val x = 1 in val y = x end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('y')).toEqualWithType([new Val.Integer(1), 0]);
         }],
-        ['x;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['x;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(2), 0])
         }],
     ]);
 
     run_test([
-        ['fun avg (x,y) = (x+y)/2.0; local infix avg in val x = 1.0 avg 1.0 end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['fun avg (x,y) = (x+y)/2.0; local infix avg in val x = 1.0 avg 1.0 end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('x')).toEqualWithType([new Val.Real(1), 0]);
         }],
-        ['1.0 avg 1.0;', (x) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['1.0 avg 1.0;', (x: any) => { expect(x).toThrow(Errors.ElaborationError); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
         }],
     ]);
 
     run_test([
-        ['fun avg (x,y) = (x+y)/2.0; infix avg;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['fun avg (x,y) = (x+y)/2.0; infix avg;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['local nonfix avg in val x = avg(1.0, 1.0) end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['local nonfix avg in val x = avg(1.0, 1.0) end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('x')).toEqualWithType([new Val.Real(1), 0]);
         }],
-        ['1.0 avg 1.0;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['1.0 avg 1.0;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
     ]);
@@ -160,37 +152,37 @@ it("datatype", () => {
 
 it("exception shadowing", () => {
     run_test([
-        ['exception Match;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['exception Match;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['(case 2 of 1 => true) handle Match => false;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['(case 2 of 1 => true) handle Match => false;', (x: any) => { x(); }, (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(true);
             expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Match', undefined, 0, 0));
         }]
     ]);
     run_test([
-        ['exception Div;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['exception Div;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['(1 div 0) handle Div => 42;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['(1 div 0) handle Div => 42;', (x: any) => { x(); }, (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(true);
             expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Div', undefined, 0, 2));
         }]
     ]);
     run_test([
-        ['exception Bind;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['exception Bind;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['let val 1 = 2; in true end handle Bind => false;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['let val 1 = 2; in true end handle Bind => false;', (x: any) => { x(); }, (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(true);
             expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Bind', undefined, 0, 1));
         }]
     ]);
     run_test([
-        ['exception Blob; fun f x = raise Blob; exception Blob;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['exception Blob; fun f x = raise Blob; exception Blob;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['f 42 handle Blob => false;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['f 42 handle Blob => false;', (x: any) => { x(); }, (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(true);
             expect(exceptionValue).toEqualWithType(new Val.ExceptionValue('Blob', undefined, 0, 11));
         }]
@@ -199,72 +191,72 @@ it("exception shadowing", () => {
 
 it("signature", () => {
     run_test([
-        ['signature a = sig end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['signature a = sig end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['structure b : a = struct end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['structure b : a = struct end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['structure ba : a = struct val x = 1; end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['structure ba : a = struct val x = 1; end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['structure bb : a = struct fun f x = 29 end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['structure bb : a = struct fun f x = 29 end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['structure bc : a = struct type z=int end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['structure bc : a = struct type z=int end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['structure bd : a = struct type z=blu end;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ['structure bd : a = struct type z=blu end;', (x: any) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {}
         ],
-        ['structure c :> a = struct end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['structure c :> a = struct end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['structure ca :> a = struct val x = 1; end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['structure ca :> a = struct val x = 1; end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['structure cb :> a = struct fun f x = 29 end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['structure cb :> a = struct fun f x = 29 end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['structure cc :> a = struct type z=int end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['structure cc :> a = struct type z=int end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['structure cd :> a = struct type z=blu end;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ['structure cd :> a = struct type z=blu end;', (x: any) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {}
         ],
-        ['ba.x;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ['ba.x;', (x: any) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {}
         ],
-        ['bb.f;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ['bb.f;', (x: any) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {}
         ],
-        ['bc.z;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ['bc.z;', (x: any) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {}
         ],
-        ['bd.z;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ['bd.z;', (x: any) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {}
         ],
-        ['ca.x;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ['ca.x;', (x: any) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {}
         ],
-        ['cb.f;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ['cb.f;', (x: any) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {}
         ],
-        ['cc.z;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ['cc.z;', (x: any) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {}
         ],
-        ['cd.z;', (x) => { expect(x).toThrow(Errors.ElaborationError); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+        ['cd.z;', (x: any) => { expect(x).toThrow(Errors.ElaborationError); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {}
         ],
     ]);
     run_test([
-        ['signature a = sig type z end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['signature a = sig type z end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['structure b :> a = struct type z=int end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['structure b :> a = struct type z=int end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false); //TODO
         }],
-        ['structure c : a = struct type z=int end;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['structure c : a = struct type z=int end;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false); //TODO
         }],
     ]);
@@ -272,22 +264,22 @@ it("signature", () => {
 
 it("no elab - basic", () => {
     run_test([
-        ['42;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['42;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(42), 0]);
         }]
     ], true, true);
     run_test([
-        ['0w42;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['0w42;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Word(42), 0]);
         }]
     ], true, true);
     run_test([
-        ['fun f x = 42;', (x) => { x(); },  (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['fun f x = 42;', (x: any) => { x(); },  (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['f 10;', (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['f 10;', (x: any) => { x(); }, (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
             expect(state.getDynamicValue('it')).toEqualWithType([new Val.Integer(42), 0]);
         }],
@@ -296,7 +288,7 @@ it("no elab - basic", () => {
       val p = pot xs
     in
       p @ (List.map (fn a => x :: a) p)
-    end;`, (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+    end;`, (x: any) => { x(); }, (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
         [`fun pot [] = [[]]
@@ -304,7 +296,7 @@ it("no elab - basic", () => {
     val p = pot xs
   in
     (List.map (fn a => x :: a) p) @ p
-  end;`, (x) => { x(); }, (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+  end;`, (x: any) => { x(); }, (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }]
     ], true, true);
@@ -313,35 +305,35 @@ it("no elab - basic", () => {
 
 it("no elab - incorrect types", () => {
     run_test([
-        ['["1", #"1"];', (x) => { x(); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['["1", #"1"];', (x: any) => { x(); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['["1", 1.0];', (x) => { x(); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['["1", 1.0];', (x: any) => { x(); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }],
-        ['["1", #"1"] : char list;', (x) => { x(); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {
+        ['["1", #"1"] : char list;', (x: any) => { x(); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {
             expect(hasThrown).toEqual(false);
         }]
     ], true, true);
     run_test([
         ['(fn x => (fn y => (fn x => y) x) y) x;',
-            (x) => { expect(x).toThrow(Errors.EvaluationError); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+            (x: any) => { expect(x).toThrow(Errors.EvaluationError); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {}
         ]
     ], true, true);
     run_test([
         ['vall x = 10;',
-            (x) => { expect(x).toThrow(Errors.EvaluationError); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+            (x: any) => { expect(x).toThrow(Errors.EvaluationError); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {}
         ]
     ], true, true);
     run_test([
         ['2 * 5.5;',
-            (x) => { expect(x).toThrow(Errors.InternalInterpreterError); },
-            (state : State.State, hasThrown : bool, exceptionValue : Val.Exception) => {}
+            (x: any) => { expect(x).toThrow(Errors.InternalInterpreterError); },
+            (state : State.State, hasThrown : boolean, exceptionValue : Val.ExceptionValue) => {}
         ]
     ], true, true);
 

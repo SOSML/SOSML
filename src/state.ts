@@ -1,9 +1,10 @@
-import { Type } from './types';
-import { Value, ReferenceValue } from './values';
+import { Type, CustomType, FunctionType } from './types';
+import { Value, ReferenceValue, ValueConstructor, ExceptionConstructor } from './values';
 import { Token, IdentifierToken, LongIdentifierToken } from './tokens';
 import { Warning, InternalInterpreterError, EvaluationError } from './errors';
 import { Structure } from './modules';
 import { Expression } from './expressions';
+import { PrintOptions } from './main';
 
 export enum IdentifierStatus {
     VALUE_VARIABLE,
@@ -361,6 +362,197 @@ export class State {
                 public insideLocalDeclBody: boolean = false,
                 public localDeclStart: boolean = false,
                 public loadedModules: string[] = []) {
+    }
+
+    printBinding(name: string, value: [Value, IdentifierStatus] | undefined,
+                 type: [Type, IdentifierStatus] | undefined, options: PrintOptions = {},
+                 acon: boolean =  true) {
+
+        let bold = options.boldText === undefined ? ((text: string) => text) : options.boldText;
+        let italic = options.italicText === undefined ? ((text: string) => text) : options.italicText;
+        let escape = options.escapeText === undefined ? ((text: string) => text) : options.escapeText;
+        let val: Value | undefined;
+        if (value !== undefined) {
+            val = value[0];
+        }
+        let tp: Type | undefined;
+        if (type !== undefined) {
+            tp = type[0];
+        }
+
+        let res = '';
+
+        if ((val instanceof ValueConstructor || (type instanceof CustomType
+            && type + '' !== 'exn')) && acon) {
+            res += 'con';
+        } else if (value instanceof ExceptionConstructor || type + '' === 'exn') {
+            res += 'exn';
+        } else {
+            res += 'val';
+        }
+
+        if (val) {
+            if (tp && tp.isOpaque()) {
+                res += ' ' + bold(name + ' = <' + escape(tp.getOpaqueName()) + '>');
+            } else {
+                res += ' ' + bold(name + ' = ' + escape(val.toString(this)));
+            }
+        } else {
+            res += ' ' + bold(name);
+        }
+
+        if (tp) {
+            return res + ': ' + italic(escape(tp.toString(options))) + ';';
+        } else {
+            return res + ': undefined;';
+        }
+    }
+
+    printBasis(dynamicBasis: DynamicBasis | undefined, staticBasis: StaticBasis | undefined,
+               options: PrintOptions = {}, indent: number = 0): string {
+        let out = '';
+
+        let fullst = options.fullSymbol === undefined ? '' : options.fullSymbol;
+        let emptyst = options.emptySymbol === undefined ? '' : options.emptySymbol;
+
+        let stsym = indent === 0 ? fullst : emptyst;
+
+        let istr = ' '.repeat(indent * (options.indent === undefined ? 2 : options.indent));
+
+        let bold = options.boldText === undefined ? ((text: string) => text) : options.boldText;
+        let escape = options.escapeText === undefined ? ((text: string) => text) : options.escapeText;
+
+        if (dynamicBasis === undefined && staticBasis !== undefined) {
+            // values
+            for (let i in staticBasis.valueEnvironment) {
+                if (staticBasis.valueEnvironment.hasOwnProperty(i)) {
+                    out += stsym + ' ' + istr
+                        + this.printBinding(i, undefined, staticBasis.getValue(i), options) + '\n';
+                }
+            }
+
+            // datatypes
+            for (let i in staticBasis.typeEnvironment) {
+                if (staticBasis.typeEnvironment.hasOwnProperty(i)) {
+                    let sbtp = staticBasis.getType(i);
+                    if (sbtp !== undefined) {
+                        if (sbtp.type instanceof CustomType) {
+                            out += stsym + ' ' + istr + 'datatype '
+                                + bold(escape(sbtp.type.toString(options))) + ' : {\n'
+                            for (let j of sbtp.constructors) {
+                                out += emptyst + '   ' + istr + this.printBinding(j, undefined,
+                                    staticBasis.getValue(j), options) + '\n';
+                            }
+                            out += emptyst + ' ' + istr + '};\n';
+                        }
+                    }
+                }
+            }
+            for (let i in staticBasis.typeEnvironment) {
+                if (staticBasis.typeEnvironment.hasOwnProperty(i)) {
+                    let sbtp = staticBasis.getType(i);
+                    if (sbtp !== undefined) {
+                        if (sbtp.type instanceof FunctionType) {
+                            out += stsym + ' ' + istr + 'type '
+                                + bold(escape(sbtp.type.parameterType.toString(options))
+                                + ' = ' + escape(sbtp.type.returnType.toString(options))) + ';\n';
+                        }
+                    }
+                }
+            }
+
+            // Print structures
+            for (let i in staticBasis.structureEnvironment) {
+                if (staticBasis.structureEnvironment.hasOwnProperty(i)) {
+                    out += stsym + ' ' + istr + 'structure ' + bold(escape(i)) + ': sig\n';
+                    if (staticBasis) {
+                        out += this.printBasis(undefined, staticBasis.getStructure(i), options,
+                            indent + 1);
+                    } else {
+                        out += this.printBasis(undefined, undefined, options, indent + 1);
+                    }
+                    out += emptyst + ' ' + istr + 'end;\n';
+                }
+            }
+
+            // Print functors
+            // TODO
+        } else if (staticBasis !== undefined && dynamicBasis !== undefined) {
+            // values
+            for (let i in dynamicBasis.valueEnvironment) {
+                if (dynamicBasis.valueEnvironment.hasOwnProperty(i)) {
+                    if (staticBasis) {
+                        out += stsym + ' ' + istr + this.printBinding(i,
+                            dynamicBasis.valueEnvironment[i], staticBasis.getValue(i),
+                            options, false) + '\n';
+                    } else {
+                        out += stsym + ' ' + istr + this.printBinding(i,
+                            dynamicBasis.valueEnvironment[i], undefined, options, false) + '\n';
+                    }
+                }
+            }
+
+            // datatypes
+            for (let i in dynamicBasis.typeEnvironment) {
+                if (dynamicBasis.typeEnvironment.hasOwnProperty(i)) {
+                    if (staticBasis.typeEnvironment.hasOwnProperty(i)) {
+                        let sbtp = staticBasis.getType(i);
+                        if (sbtp !== undefined) {
+                            if (sbtp.type instanceof CustomType) {
+                                out += stsym + ' ' + istr + 'datatype ' +
+                                    bold(escape(sbtp.type.toString(options))) + ' = {\n'
+                                for (let j of sbtp.constructors) {
+                                    out += emptyst + '   ' + istr + this.printBinding(j,
+                                        dynamicBasis.valueEnvironment[j],
+                                        staticBasis.getValue(j), options) + '\n';
+                                }
+                                out += emptyst + ' ' + istr + '};\n';
+                            }
+                        }
+                    }
+                }
+            }
+            for (let i in dynamicBasis.typeEnvironment) {
+                if (dynamicBasis.typeEnvironment.hasOwnProperty(i)) {
+                    if (staticBasis.typeEnvironment.hasOwnProperty(i)) {
+                        let sbtp = staticBasis.getType(i);
+                        if (sbtp !== undefined) {
+                            if (sbtp.type instanceof FunctionType) {
+                                out += stsym + ' ' + istr + 'type '
+                                + bold(escape(sbtp.type.parameterType.toString(options) + ' = '
+                                + sbtp.type.returnType.toString(options))) + ';\n';
+                            }
+                        }
+                    }
+                }
+            }
+
+            // structures
+            for (let i in dynamicBasis.structureEnvironment) {
+                if (dynamicBasis.structureEnvironment.hasOwnProperty(i)) {
+                    out += stsym + ' ' + istr + 'structure ' + bold(escape(i)) + ' = struct\n';
+                    if (staticBasis) {
+                        out += this.printBasis(dynamicBasis.getStructure(i),
+                            staticBasis.getStructure(i), options, indent + 1 );
+                    } else {
+                        out += this.printBasis(dynamicBasis.getStructure(i),
+                            undefined, options, indent + 1);
+                    }
+                    out += emptyst + ' ' + istr + 'end;\n';
+                }
+            }
+
+            // functors?
+        }
+
+        return out;
+    }
+
+    toString(options: PrintOptions = {}): string {
+        let stpId = options.stopId === undefined ? this.id : options.stopId;
+        let dynChanges = this.getDynamicChanges(stpId - 1);
+        let statChanges = this.getStaticChanges(stpId - 1);
+        return this.printBasis(dynChanges, statChanges, options, 0);
     }
 
     getNestedState(newId: number|undefined = undefined) {
