@@ -36,7 +36,7 @@ Correctly lexing, parsing, elaborating and interpreting any SML core language pr
   * [x] `ref`, `!`, and `:=`
   * [x] structures
   * [x] signatures
-  * [x] functors
+  * [x] functors (experimental)
 * Supported standard library constructs (Note that all available libraries are loaded per default, currently SOSML has not implemented any user-space loading of modules.)
   * Math library
   * Char library `ord`, `chr`, `Char.isLower`, `Char.isUpper`, `Char.isDigit`, `Char.isAlpha`
@@ -50,7 +50,7 @@ Correctly lexing, parsing, elaborating and interpreting any SML core language pr
 
 ## Using SOSML as an interpreter for Standard ML (SML)
 
-If you just want to test SOSML, just head to https://sosml.org/editor and enter your code. 
+If you just want to test SOSML, just head to https://sosml.org/editor and enter your code.
 Adding a `;` will then start the evaluation.
 
 If you don't like web browsers, but still want to test SOSML, you can install the experimental CLI via `npm`
@@ -73,10 +73,11 @@ and you are good to go:
 import { interpret, getFirstState, State } from '@sosml/interpreter';
 
 // Obtain an initial state for the interpretation
-let initialState: State = getFirstState(); 
+let initialState: State = getFirstState();
 
-// Let's interpret some code 
+// Let's interpret some code
 let interpretationResult = interpret('val x = "Hello World!";', initialState);
+console.log(interpretationResult.state.toString()); // Prints "val x = "Hello World!": string;"
 
 // Let's interpret some more code; note how we use the state obtained from the last step
 interpretationResult = interpret('fun f y = x | f 10 = "???";', interpretationResult.state);
@@ -87,7 +88,7 @@ console.log(interpretationResult.warnings); // Something like "Rules after "y" u
 // Similarly, interpretationResult.evaluationErrored may contain an Error if the interpretation of your code failed
 // Lastly, SML exceptions raised by your code that are not handled end up in interpretationResult.error.
 ```
-Check out the `src/cli.ts` file for an example on how to parse and print the computed `State` objects.
+Check out the `src/cli.ts` file for an example SML interpreter using SOSML.
 
 ## Contributing to SOSML
 
@@ -130,6 +131,6 @@ SOSML comes with an extensive set of tests which can be run via:
 ```bash
 npm test
 ```
-This runs all tests located in the `test` directory. 
+This runs all tests located in the `test` directory.
 When contributing new code, please make sure that you add the appropriate tests and that no old tests begin to fail.
 

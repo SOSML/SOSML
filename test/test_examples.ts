@@ -16,7 +16,7 @@ function run_test(commands: any[]): void {
     let value;
     for(let step of commands) {
         step[1](() => {
-            let res = API.interpret(step[0], state, {'allowLongFunctionNames': true});
+            let res = API.interpret(step[0], state);
             state = res['state'];
             exception = res['evaluationErrored'];
             value = res['error'];
