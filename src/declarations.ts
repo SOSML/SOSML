@@ -299,6 +299,11 @@ export class ValueDeclaration extends Declaration {
         let nstate = state.getNestedState(state.id);
 
         for (let j = 0; j < recursives.length; ++j) {
+            if (recursives[j][0] === '=') {
+                throw new EvaluationError(
+                    'All declarations are equal, but some declarations are more equal than others.');
+            }
+
             if (recursives[j][1] instanceof FunctionValue) {
                 nstate.setDynamicValue(recursives[j][0], new FunctionValue(
                     (<FunctionValue> recursives[j][1]).state, recursives,
@@ -309,6 +314,11 @@ export class ValueDeclaration extends Declaration {
         }
 
         for (let j = 0; j < result.length; ++j) {
+            if (result[j][0] === '=') {
+                throw new EvaluationError(
+                    'All declarations are equal, but some declarations are more equal than others.');
+            }
+
             nstate.setDynamicValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
         }
 
@@ -1295,6 +1305,9 @@ export class ValueBinding {
         let hasFree = false;
 
         for (let i = 0; i < res[0].length; ++i) {
+            if (res[0][i][0] === '=') {
+                throw new ElaborationError('All declarations are equal, but some declarations are more equal than others.');
+            }
             res[0][i][1] = res[0][i][1].instantiate(state, res[2]);
             if (!isTopLevel) {
                 paramBindings = paramBindings.set(res[0][i][0], res[0][i][1]);

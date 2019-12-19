@@ -649,6 +649,12 @@ it("star token", () => {
     ]);
 });
 
+it("redefining equality", () => {
+    run_test([
+        ge('val op= = 7;', Errors.ElaborationError)
+    ]);
+});
+
 it("nested exception type", () => {
     run_test([
         gc('fun something x = (raise Empty; x);', undefined, ['something'],
