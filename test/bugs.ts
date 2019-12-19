@@ -91,6 +91,7 @@ let BOOL = new Type.CustomType('bool');
 // let WORD = new Type.CustomType('word');
 let STRING = new Type.CustomType('string');
 // let CHAR = new Type.CustomType('char');
+let EXN = new Type.CustomType('exn');
 let VAR = new Type.TypeVariable('\'a');
 let EQVAR = new Type.TypeVariable('\'\'a');
 let FREE = new Type.TypeVariable('\'~A');
@@ -645,5 +646,15 @@ it("star token", () => {
     ]);
     run_test([
         ge('datatype * = A of int;', Errors.ParserError)
+    ]);
+});
+
+it("nested exception type", () => {
+    run_test([
+        gc('fun something x = (raise Empty; x);', undefined, ['something'],
+          [undefined], [[BND(FUNC(VAR, VAR)), 0]]),
+        gc('val foo = fn x => raise (something Empty) handle Empty => x;', undefined,
+           ['foo'], [undefined], [[BND(FUNC(EXN, VAR)), 0]]),
+        ge('foo 3;', Errors.ElaborationError)
     ]);
 });
