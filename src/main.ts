@@ -62,6 +62,7 @@ export type InterpreterOptions = {
     strictMode?: boolean; // Enforce more strict adherence to the SML 97 Standard
     realEquality?: boolean; // Turn real into a type with equality
     allowSuccessorML?: boolean; // Enable experimental features
+    noModules?: boolean; // Don't load any modules
 
     // Lexer
     allowUnicode?: boolean; // enable unicode support
@@ -250,6 +251,9 @@ export function getAvailableModules(): string[] {
 
 export function getFirstState(loadModules: string[] = getAvailableModules(),
                               options: InterpreterOptions = {}): State {
+    if (options.noModules === true) {
+        return getInitialState(options);
+    }
     let res = loadModule(getInitialState(options), '__Base', options);
     for (let i of loadModules) {
         res = loadModule(res, i, options);

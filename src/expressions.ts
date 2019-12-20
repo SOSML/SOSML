@@ -1849,7 +1849,7 @@ export class Lambda extends Expression {
     }
 
     toString(): string {
-        return '( fn ' + this.match + ' )';
+        return '(fn ' + this.match + ')';
     }
 
     getType(state: State,

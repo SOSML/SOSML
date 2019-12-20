@@ -331,7 +331,10 @@ export class ValueDeclaration extends Declaration {
     }
 
     toString(): string {
-        let res = 'val <stuff>';
+        let res = 'val';
+        for (let i = 0; i < this.typeVariableSequence.length; ++i) {
+            res += ' ' + this.typeVariableSequence.toString();
+        }
         for (let i = 0; i < this.valueBinding.length; ++i) {
             if (i > 0) {
                 res += ' and';
@@ -893,6 +896,7 @@ export class SequentialDeclaration extends Declaration {
                 state.getTypeVariableBinds()[1].forEach((val: [Type, boolean], key: string) => {
                     bnds = bnds.set(key, val);
                 });
+                paramBindings = new Map<string, Type>();
             }
             let res = this.declarations[i].elaborate(
                 state.getNestedState(this.declarations[i].id),
