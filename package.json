@@ -1,6 +1,6 @@
 {
     "name": "@sosml/interpreter",
-    "version": "1.4.2",
+    "version": "1.4.3",
     "description": "An interpreter for Standard ML written in TypeScript.",
     "files": [
         "build/interpreter.min.js",
