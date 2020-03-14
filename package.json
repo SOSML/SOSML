@@ -1,6 +1,6 @@
 {
     "name": "@sosml/interpreter",
-    "version": "1.4.1",
+    "version": "1.4.2",
     "description": "An interpreter for Standard ML written in TypeScript.",
     "files": [
         "build/interpreter.min.js",
@@ -56,8 +56,11 @@
                 "diagnostics": {
                     "warnOnly": false,
                     "ignoreCodes": [
-                        "6059", "18002", "18003",
-                        "2532", "2769"
+                        "6059",
+                        "18002",
+                        "18003",
+                        "2532",
+                        "2769"
                     ]
                 }
             }
