@@ -7,7 +7,8 @@ module.exports = {
         filename: 'interpreter.min.js',
         path: path.resolve(__dirname, 'build'),
         library: "Interpreter",
-        libraryTarget : "umd"
+        libraryTarget : "umd",
+        globalObject: 'this'
     },
     module: {
         rules: [
