@@ -48,7 +48,7 @@ Correctly lexing, parsing, elaborating and interpreting any SML core language pr
   * Array library `fromList`, `tabulate`, `length`, `sub`, `update`, `vector`, `foldl`, `foldr`
   * String library
 
-## Using SOSML as an interpreter for Standard ML (SML)
+## Using SOSML as an Interpreter for Standard ML (SML)
 
 If you just want to test SOSML, just head to https://sosml.org/editor and enter your code.
 Adding a `;` will then start the evaluation.
@@ -60,7 +60,9 @@ npm install -g @sosml/interpreter@latest
 This makes the command `sosml` available, which behaves like any other run-of-the-mill interpreter for SML.
 Note that due to its experimental state, the CLI currently does not take any options or parameters.
 
-## Using SOSML as a component in your project
+## Using SOSML as a Component in Your Project
+
+### The `node` Way
 
 You may use the interpreter bundled in SOSML or parts of it to build your own fancy SML interpreter:
 First, install SOSML via
@@ -90,6 +92,29 @@ console.log(interpretationResult.warnings); // Something like "Rules after "y" u
 ```
 Check out the `src/cli.ts` file for an example SML interpreter using SOSML.
 
+### The “But I Hate `node.js`” Way
+
+Starting with version `1.5.0`, you can directly run SOSML in a `<script>` tag in HTML:
+
+```HTML
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <script src="https://unpkg.com/@sosml/interpreter@^1.5.0/build/interpreter.min.js"></script>
+    </head>
+    <body>
+        <script>
+            let initialState = Interpreter.getFirstState();
+            let interpretationResult = Interpreter.interpret('val x = "Hello World!";', initialState);
+            console.log(interpretationResult.state.toString());
+            interpretationResult = Interpreter.interpret('fun f y = x | f 10 = "???";',                   interpretationResult.state);
+            console.log(interpretationResult.warnings);
+        </script>
+    </body>
+</html>
+```
+
 ## Contributing to SOSML
 
 We welcome you to open an Issue for any error you may find, and we will try to fix it ASAP.
@@ -99,7 +124,7 @@ feel free to open a new Issue.
 If you want to contribute via writing code, you may check the Issues page for any unresolved problems
 or unimplemented features and then submit a pull request after solving that problem or implementing that feature.
 
-### Cloning and building
+### Cloning and Building
 
 To get started on writing code for SOSML, clone the repository and install the dependencies:
 ```bash
@@ -125,7 +150,7 @@ npm run cli
 npm link
 ```
 
-### Testing your changes
+### Testing Your Changes
 
 SOSML comes with an extensive set of tests which can be run via:
 ```bash
