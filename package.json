@@ -37,8 +37,8 @@
         "ts-loader": "^4.4.2",
         "tslint": "^5.3.2",
         "typescript": "^3.7",
-        "webpack": "^4.34.0",
-        "webpack-cli": "^3.3.4"
+        "webpack": "^4.42.1",
+        "webpack-cli": "^3.3.11"
     },
     "jest": {
         "transform": {
