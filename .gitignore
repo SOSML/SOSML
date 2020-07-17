@@ -24,4 +24,6 @@ yarn-error.log*
 
 \.idea/
 
+*.d.ts
+
 __javascript__/

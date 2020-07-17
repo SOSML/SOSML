@@ -31,14 +31,14 @@
     },
     "devDependencies": {
         "@types/jest": "^19.2.3",
-        "@types/node": "^7.10.9",
+        "@types/node": "^7.10.11",
         "jest": "^24.9.0",
         "ts-jest": "^24.3.0",
         "ts-loader": "^5.3.3",
         "tslint": "^5.20.1",
-        "typescript": "^3.8.3",
-        "webpack": "^4.42.1",
-        "webpack-cli": "^3.3.11"
+        "typescript": "^3.9.7",
+        "webpack": "^4.43.0",
+        "webpack-cli": "^3.3.12"
     },
     "jest": {
         "transform": {
