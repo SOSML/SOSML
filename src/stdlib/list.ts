@@ -125,6 +125,14 @@ export let LIST_LIB: Module = { /* complete */
             fun mapPartial f l
                 = ((map valOf) o (filter isSome) o (map f)) l;
 
+            fun permutations x = let
+                fun p2 a [] = [ a ]
+                  | p2 a [x] = map (fn y => x::y) ( p2 [] a )
+                  | p2 a (x::xs) = ( map ( fn y => x::y ) (p2 [] (a@xs))) @ (p2 (a @ [x]) xs )
+            in
+                p2 [] x
+            end;
+
             fun find f [] = NONE
               | find f (x::xs) = if f x then SOME x else find f xs;
 
