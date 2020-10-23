@@ -1,7 +1,7 @@
 {
     "name": "@sosml/interpreter",
-    "version": "1.5.2",
-    "description": "An interpreter for Standard ML written in TypeScript.",
+    "version": "1.5.3",
+    "description": "The online interpreter for Standard ML, written in TypeScript.",
     "files": [
         "build/interpreter.min.js",
         "build/sosml_cli.js",
@@ -31,13 +31,13 @@
     },
     "devDependencies": {
         "@types/jest": "^19.2.3",
-        "@types/node": "^7.10.11",
+        "@types/node": "^7.10.14",
         "jest": "^24.9.0",
         "ts-jest": "^24.3.0",
         "ts-loader": "^5.3.3",
         "tslint": "^5.20.1",
         "typescript": "^3.9.7",
-        "webpack": "^4.44.1",
+        "webpack": "^4.44.2",
         "webpack-cli": "^3.3.12"
     },
     "jest": {
