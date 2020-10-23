@@ -37,12 +37,9 @@ function addArrayLib(state: State): State {
                 }
 
                 return [arr, false, []];
-            } else {
-                throw new InternalInterpreterError('std type mismatch');
             }
-        } else {
-            throw new InternalInterpreterError('std type mismatch');
         }
+        throw new InternalInterpreterError('std type mismatch');
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('array',
         new FunctionType(new TupleType([intType, new TypeVariable('\'a')]).simplify(), arrayType),

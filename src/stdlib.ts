@@ -6,6 +6,7 @@ import * as Interpreter from './main';
 import { COMMIT_HASH, BRANCH_NAME, BUILD_DATE, COMMIT_MESSAGE, VERSION } from './version';
 
 import { ARRAY_LIB } from './stdlib/array';
+import { ASSERT_LIB } from './stdlib/assert';
 import { CHAR_LIB } from './stdlib/char';
 import { EVAL_LIB } from './stdlib/eval';
 import { INT_LIB } from './stdlib/int';
@@ -64,6 +65,7 @@ export let STDLIB: {
             fun a before (b: unit) = a;`,
         'requires': undefined },
     'Array': ARRAY_LIB,
+    'Assert' : ASSERT_LIB,
     'Char': CHAR_LIB,
     'Eval': EVAL_LIB,
     'Int': INT_LIB,
