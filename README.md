@@ -79,7 +79,7 @@ let initialState: State = getFirstState();
 
 // Let's interpret some code
 let interpretationResult = interpret('val x = "Hello World!";', initialState);
-console.log(interpretationResult.state.toString()); // Prints "val x = "Hello World!": string;"
+console.log(interpretationResult.state.toString({stopId: initialState.id + 1})); // Prints "val x = "Hello World!": string;"
 
 // Let's interpret some more code; note how we use the state obtained from the last step
 interpretationResult = interpret('fun f y = x | f 10 = "???";', interpretationResult.state);
@@ -107,8 +107,8 @@ Starting with version `1.5.0`, you can directly run SOSML in a `<script>` tag in
         <script>
             let initialState = Interpreter.getFirstState();
             let interpretationResult = Interpreter.interpret('val x = "Hello World!";', initialState);
-            console.log(interpretationResult.state.toString());
-            interpretationResult = Interpreter.interpret('fun f y = x | f 10 = "???";',                   interpretationResult.state);
+            console.log(interpretationResult.state.toString({stopId: initialState.id + 1}));
+            interpretationResult = Interpreter.interpret('fun f y = x | f 10 = "???";', interpretationResult.state);
             console.log(interpretationResult.warnings);
         </script>
     </body>
