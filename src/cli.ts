@@ -22,11 +22,12 @@ let printOpts: PrintOptions = {
     'boldText': ((text: string) => '\x1b[1m' + text + '\x1b[0m'),
     'italicText': ((text: string) => '\x1b[3m' + text + '\x1b[0m'),
     'showTypeVariablesAsUnicode': true
-}
+};
 
 let state = getFirstState( );
 printOpts.stopId = getFirstState( ).id + 1;
 
+// tslint:disable-next-line
 console.log('SOSML> Welcome to SOSML. Please enter your code.\n');
 let tmp = '';
 
@@ -44,7 +45,7 @@ rl.on( 'line', ( line: string ) => {
         let out = '';
         let res = interpret( tmp, state, opts );
 
-        if( res.evaluationErrored ) {
+        if (res.evaluationErrored) {
             out += 'SOSML>　There was a problem with your code:\n'
                 +  '     >  \x1b[31;40;1m' + res.error + '\x1b[39;49;0m\n';
             tmp = '';
@@ -54,18 +55,20 @@ rl.on( 'line', ( line: string ) => {
             state = res.state;
             tmp = '';
         }
-        if( res.warnings !== undefined ) {
-            for( let i = 0; i < res.warnings.length; ++i ) {
-                if( res.warnings[ i ].type >= -1 ) {
+        if (res.warnings !== undefined) {
+            for (let i = 0; i < res.warnings.length; ++i) {
+                if (res.warnings[ i ].type >= -1) {
                     out += 'Attention: ' + res.warnings[ i ].message;
                 } else {
                     out += 'Message: ' + res.warnings[ i ].message;
                 }
             }
         }
+        // tslint:disable-next-line
         console.log( out );
     } catch (e) {
-        if( !( e instanceof IncompleteError ) ) {
+        if (!( e instanceof IncompleteError )) {
+            // tslint:disable-next-line
             console.log( 'SOSML> There was a problem with your code:\n'
                 + '     > \x1b[31;40;1m' + e + '\x1b[39;49;0m\n' );
             tmp = '';
@@ -73,6 +76,7 @@ rl.on( 'line', ( line: string ) => {
     }
     rl.prompt( );
 }).on('close', () => {
+    // tslint:disable-next-line
     console.log( '\nSOSML> Thank you for using SOSML. Have a nice day.' );
     process.exit( 0 );
 });

@@ -5,9 +5,9 @@ module.exports = {
     entry: './src/main.ts',
     output: {
         filename: 'interpreter.min.js',
-        path: path.resolve(__dirname, 'build'),
-        library: "Interpreter",
-        libraryTarget : "umd",
+        path: path.join(process.cwd(), 'build'),
+        library: 'Interpreter',
+        libraryTarget : 'umd',
         globalObject: 'this'
     },
     module: {

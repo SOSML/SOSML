@@ -80,14 +80,14 @@ export type InterpreterOptions = {
 
     // Evaluation
     disableEvaluation?: boolean;
-}
+};
 
 export type InterpretationResult = {
     state: State; // Computed state
     evaluationErrored: boolean; // Evaluation returned an SML error
     error?: Value; // Thrown SML error; present only if evaluationErrored is true
     warnings: Warning[]; // Array of emitted warnings / messages
-}
+};
 
 export function interpret(nextInstruction: string,
                           oldState: State = getInitialState(),

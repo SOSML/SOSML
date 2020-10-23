@@ -8,7 +8,8 @@ function addRandomLib(state: State): State {
     let dres = new DynamicBasis({}, {}, {}, {}, {});
     let sres = new StaticBasis({}, {}, {}, {}, {});
 
-    dres.setValue('date', new PredefinedFunction('toString', (val: Value, params:                   EvaluationParameters) => {
+    dres.setValue('date', new PredefinedFunction(
+        'toString', (val: Value, params: EvaluationParameters) => {
         let date = new Integer(new Date().getMilliseconds() + new Date().getSeconds());
         return [date, false, []];
     }), IdentifierStatus.VALUE_VARIABLE);

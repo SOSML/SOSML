@@ -5,7 +5,7 @@ module.exports = {
     entry: './src/cli.ts',
     output: {
         filename: 'sosml_cli.js',
-        path: path.resolve(__dirname, 'build'),
+        path: path.join(process.cwd(), 'build'),
         pathinfo: true,
     },
     module: {

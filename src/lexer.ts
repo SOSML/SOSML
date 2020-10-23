@@ -127,7 +127,7 @@ export function lexComment(stream: LexerStream, options: InterpreterOptions = {}
     throw new InternalInterpreterError('That was a bad comment...');
 }
 
-//Reads a sequence of digits. Sign, exponent etc. are handled by lexNumber. Accepts leading zeros.
+// Reads a sequence of digits. Sign, exponent etc. are handled by lexNumber. Accepts leading zeros.
 function readNumeric(stream: LexerStream, hexadecimal: boolean, maxLength: number = -1): string {
     let result: string = '';
     while (isNumber(stream.peek(), hexadecimal) && result.length !== maxLength) {
@@ -136,7 +136,8 @@ function readNumeric(stream: LexerStream, hexadecimal: boolean, maxLength: numbe
     return result;
 }
 
-function makeNumberToken(token: string, value: string, real: boolean = false, word: boolean = false, hexadecimal: boolean = false): Token {
+function makeNumberToken(token: string, value: string, real: boolean = false,
+                         word: boolean = false, hexadecimal: boolean = false): Token {
     if (real && word) {
         throw new InternalInterpreterError('There is no such thing as a real word.');
     }

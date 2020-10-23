@@ -438,7 +438,7 @@ export class State {
                     if (sbtp !== undefined) {
                         if (sbtp.type instanceof CustomType) {
                             out += stsym + ' ' + istr + 'datatype '
-                                + bold(escape(sbtp.type.toString(options))) + ' : {\n'
+                                + bold(escape(sbtp.type.toString(options))) + ' : {\n';
                             for (let j of sbtp.constructors) {
                                 out += emptyst + '   ' + istr + this.printBinding(j, undefined,
                                     staticBasis.getValue(j), options) + '\n';
@@ -500,7 +500,7 @@ export class State {
                         if (sbtp !== undefined) {
                             if (sbtp.type instanceof CustomType) {
                                 out += stsym + ' ' + istr + 'datatype ' +
-                                    bold(escape(sbtp.type.toString(options))) + ' = {\n'
+                                    bold(escape(sbtp.type.toString(options))) + ' = {\n';
                                 for (let j of sbtp.constructors) {
                                     out += emptyst + '   ' + istr + this.printBinding(j,
                                         dynamicBasis.valueEnvironment[j],
