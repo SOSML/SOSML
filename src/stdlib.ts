@@ -1,9 +1,11 @@
-import { State } from './state';
+import { State, IdentifierStatus } from './state';
 import { InternalInterpreterError } from './errors';
-import { CustomType } from './types';
-import { ExceptionConstructor } from './values';
+import { CustomType, FunctionType } from './types';
+import { Value, PredefinedFunction, PrintCounter, StringValue, ExceptionValue,
+         ExceptionConstructor } from './values';
 import * as Interpreter from './main';
 import { COMMIT_HASH, BRANCH_NAME, BUILD_DATE, COMMIT_MESSAGE, VERSION } from './version';
+import { EvaluationParameters } from './evaluator';
 
 import { ARRAY_LIB } from './stdlib/array';
 import { ASSERT_LIB } from './stdlib/assert';
@@ -25,6 +27,7 @@ export let wordType = new CustomType('word');
 export let boolType = new CustomType('bool');
 export let stringType = new CustomType('string');
 export let charType = new CustomType('char');
+export let exnType = new CustomType('exn');
 
 export let overflowException = new ExceptionConstructor('Overflow', 0, 0, 3);
 export let domainException = new ExceptionConstructor('Domain', 0, 0, 4);
@@ -39,11 +42,39 @@ export type Module = {
     'requires': string[] | undefined /* names of modules required for this module (excluding __Base) */
 };
 
+function addGeneralLib(state: State): State {
+    state.setStaticValue('exnName', new FunctionType(exnType, stringType),
+                         IdentifierStatus.VALUE_VARIABLE);
+    state.setDynamicValue('exnName',
+                          new PredefinedFunction('exnName',
+                                                 (val: Value, params: EvaluationParameters) => {
+        if (val instanceof ExceptionValue) {
+            return [new StringValue((val as ExceptionValue).constructorName), false, []];
+        }
+        throw new InternalInterpreterError('Expected an exception.');
+    }), IdentifierStatus.VALUE_VARIABLE);
+
+
+    state.setStaticValue('exnMessage', new FunctionType(exnType, stringType),
+                         IdentifierStatus.VALUE_VARIABLE);
+    state.setDynamicValue('exnMessage',
+                          new PredefinedFunction('exnMessage',
+                                                 (val: Value, params: EvaluationParameters) => {
+        if (val instanceof ExceptionValue) {
+            return [new StringValue((val as ExceptionValue).pcToString(params.modifiable,
+                    new PrintCounter(50))), false, []];
+        }
+        throw new InternalInterpreterError('Expected an exception.');
+    }), IdentifierStatus.VALUE_VARIABLE);
+
+    return state;
+}
+
 export let STDLIB: {
     [name: string]: Module
 } = {
     '__Base': {
-        'native': undefined,
+        'native': addGeneralLib,
         'code': `fun o (f,g) x = f (g x);
             infix 3 o;
             datatype order = LESS | EQUAL | GREATER;

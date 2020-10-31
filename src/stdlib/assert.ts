@@ -123,7 +123,7 @@ function addAssertLib(state: State): State {
                 }
             }
         }
-        throw new InternalInterpreterError('嘘だ');
+        throw new InternalInterpreterError('嘘だッ！');
     }), IdentifierStatus.VALUE_VARIABLE);
     sres.setValue('assertValue', new FunctionType(
         new TupleType([new TupleType([stringType, stringType]), stringType]),
