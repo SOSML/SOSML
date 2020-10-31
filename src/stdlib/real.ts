@@ -182,7 +182,7 @@ export let REAL_LIB: Module = {
     val floor = Real.floor;
     val round = Real.round;
     (* val trunc = Real.trunc; *)
-    val fromInt = Real.fromInt;
+    val real = Real.fromInt;
     `,
     'requires': ['Math']
 };
