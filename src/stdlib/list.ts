@@ -65,6 +65,9 @@ export let LIST_LIB: Module = { /* complete */
 
             fun foldl f e []      = e
               | foldl f e (x::xr) = foldl f (f(x, e)) xr;
+
+            fun app (f: 'a -> unit) [] = ()
+              | app (f: 'a -> unit) (x::xs) = (f x; app f xs);
         end;
         open List;
         infixr 5 @;
@@ -119,9 +122,6 @@ export let LIST_LIB: Module = { /* complete */
 
             fun revAppend (l1, l2) = (rev l1) @ l2;
 
-            fun app (f: 'a -> unit) [] = ()
-              | app (f: 'a -> unit) (x::xs) = (f x; app f xs);
-
             fun mapPartial f l
                 = ((map valOf) o (filter isSome) o (map f)) l;
 
@@ -143,6 +143,7 @@ export let LIST_LIB: Module = { /* complete */
                 if f x then (x :: #1 tmp, #2 tmp)
                 else (#1 tmp, x :: #2 tmp)
             end;
-        end;`,
+        end;
+    `,
     'requires': ['Option']
 };

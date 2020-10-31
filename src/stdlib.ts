@@ -119,11 +119,11 @@ export let STDLIB: {
 
                 fun valOf (SOME x) = x
                   | valOf NONE = raise Option;
+            end;
+            open Option;
 
-                fun filter f x = if f x then SOME x else NONE;
-
-                fun join NONE = NONE
-                  | join (SOME (SOME x)) = SOME x;
+            structure Option = struct
+                open Option;
 
                 fun app f (SOME v) = f v
                   | app f NONE = ();
@@ -134,6 +134,11 @@ export let STDLIB: {
                 fun mapPartial f NONE = NONE
                   | mapPartial f (SOME v) = f v;
 
+                fun filter f x = if f x then SOME x else NONE;
+
+                fun join NONE = NONE
+                  | join (SOME (SOME x)) = SOME x;
+
                 fun compose (f, g) a = case g a of
                       NONE => NONE
                     | SOME v => SOME (f v);
@@ -142,7 +147,7 @@ export let STDLIB: {
                       NONE => NONE
                     | SOME v => (f v);
             end;
-            open Option;`,
+            `,
         'requires': undefined },
     'Random': RANDOM_LIB,
     'Real': REAL_LIB,
