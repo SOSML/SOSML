@@ -106,6 +106,11 @@ export let STRING_LIB: Module = {
             fun op> (a, b) = compare (a, b) = GREATER;
             fun op<= (a, b) = compare (a, b) <> GREATER;
             fun op>= (a, b) = compare (a, b) <> LESS;
-        end;`,
+        end;
+        val concat    = String.concat;
+        val size      = String.size;
+        val str       = String.str;
+        val substring = String.substring;
+        `,
     'requires': ['Char', 'List']
 };

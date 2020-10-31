@@ -176,6 +176,13 @@ export let REAL_LIB: Module = {
     end;
     structure Real :> REAL = struct
         open Real;
-    end;`,
+    end;
+
+    val ceil  = Real.ceil;
+    val floor = Real.floor;
+    val round = Real.round;
+    (* val trunc = Real.trunc; *)
+    val fromInt = Real.fromInt;
+    `,
     'requires': ['Math']
 };
