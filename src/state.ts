@@ -475,8 +475,38 @@ export class State {
                 }
             }
 
+            // Print signatures
+            for (let i in staticBasis.signatureEnvironment) {
+                if (staticBasis.signatureEnvironment.hasOwnProperty(i)) {
+                    out += stsym + ' ' + istr + 'signature ' + bold(escape(i)) + ': sig\n';
+                    if (staticBasis) {
+                        out += this.printBasis(undefined, staticBasis.getSignature(i), options,
+                            indent + 1);
+                    } else {
+                        out += this.printBasis(undefined, undefined, options, indent + 1);
+                    }
+                    out += emptyst + ' ' + istr + 'end;\n';
+                }
+            }
+
+
             // Print functors
-            // TODO
+            for (let i in staticBasis.functorEnvironment) {
+                if (staticBasis.functorEnvironment.hasOwnProperty(i)) {
+                    out += stsym + ' ' + istr + 'functor ' + bold(escape(i)) + '(';
+                    if (staticBasis) {
+                        let functor = staticBasis.getFunctor(i);
+                        out += functor[2] + ': sig\n';
+                        out += this.printBasis(undefined, functor[0], options, indent + 1);
+                        out += emptyst + ' ' + istr + 'end): sig\n';
+                        out += this.printBasis(undefined, functor[1], options, indent + 1);
+                    } else {
+                        out += ' ??? ): sig\n';
+                        out += this.printBasis(undefined, undefined, options, indent + 1);
+                    }
+                    out += emptyst + ' ' + istr + 'end;\n';
+                }
+            }
         } else if (staticBasis !== undefined && dynamicBasis !== undefined) {
             // values
             for (let i in dynamicBasis.valueEnvironment) {
@@ -542,7 +572,38 @@ export class State {
                 }
             }
 
-            // functors?
+            // Print signatures
+            for (let i in dynamicBasis.signatureEnvironment) {
+                if (dynamicBasis.signatureEnvironment.hasOwnProperty(i)) {
+                    out += stsym + ' ' + istr + 'signature ' + bold(escape(i)) + ': sig\n';
+                    if (staticBasis) {
+                        out += this.printBasis(undefined, staticBasis.getSignature(i), options,
+                            indent + 1);
+                    } else {
+                        out += this.printBasis(undefined, undefined, options, indent + 1);
+                    }
+                    out += emptyst + ' ' + istr + 'end;\n';
+                }
+            }
+
+            // Print functors
+            for (let i in dynamicBasis.functorEnvironment) {
+                if (dynamicBasis.functorEnvironment.hasOwnProperty(i)) {
+                    out += stsym + ' ' + istr + 'functor ' + bold(escape(i)) + '(';
+                    if (staticBasis) {
+                        let functor = staticBasis.getFunctor(i);
+                        out += functor[2] + ': sig\n';
+                        out += this.printBasis(undefined, functor[0], options, indent + 1);
+                        out += emptyst + ' ' + istr + 'end): struct\n';
+                        out += this.printBasis(undefined, functor[1], options, indent + 1);
+                    } else {
+                        out += ' ??? ): sig\n';
+                        out += this.printBasis(undefined, undefined, options, indent + 1);
+                    }
+                    out += emptyst + ' ' + istr + 'end;\n';
+                }
+            }
+
         }
 
         return out;

@@ -531,6 +531,8 @@ export class FunctorApplication extends Expression implements Structure {
         let fn = new StaticBasis({}, {}, {}, {}, {});
         fn.extend(fun[1]);
 
+        // TODO: do this here properly
+
         let res = fn.extend(TransparentConstraint.restrict(fun[0],
             str[0], state, tyVarBnd, nextName)[0]);
 
