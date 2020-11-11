@@ -535,11 +535,11 @@ export class State {
                 if (dynamicBasis.valueEnvironment.hasOwnProperty(i)) {
                     if (staticBasis) {
                         out += stsym + ' ' + istr + this.printBinding(i,
-                                                                      dynamicBasis.valueEnvironment[i], staticBasis.getValue(i),
+                            dynamicBasis.valueEnvironment[i], staticBasis.getValue(i),
                         options, false) + '\n';
                     } else {
                         out += stsym + ' ' + istr + this.printBinding(i,
-                                                                      dynamicBasis.valueEnvironment[i], undefined, options, false) + '\n';
+                            dynamicBasis.valueEnvironment[i], undefined, options, false) + '\n';
                     }
                 }
             }
