@@ -32,12 +32,18 @@ export function evaluate(state: State, ast: Declaration): EvaluationResult {
     callStack.push({'next': ast, 'params': {'state': state, 'modifiable': modifiable, 'recResult': undefined}});
 
     let lastResult: EvaluationResult = undefined;
+
     while (callStack.length > 0) {
         let next = callStack.pop();
         if (next === undefined) {
             throw new InternalInterpreterError('How is this undefined?');
         }
         let target = next.next;
+
+        if (next.next === undefined) {
+            throw new InternalInterpreterError('I\'ll solve everything by burning it!');
+        }
+
         let params = next.params;
         params.recResult = lastResult;
         if (target instanceof Declaration) {

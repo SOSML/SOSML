@@ -22,12 +22,12 @@ export abstract class Expression {
             paramBindings: Map<string, Type> = new Map<string, Type>() /* i/o: contains bindings
             for parameters introduced in current decl */
            ): [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
-        throw new InternalInterpreterError('Called "getType" on a derived form.');
+        throw new InternalInterpreterError('Called "getType" on a derived form. [' + this + ']');
     }
 
     // Computes the value of an expression, returns [computed value, is thrown exception]
     compute(params: EvaluationParameters, callStack: EvaluationStack): EvaluationResult {
-        throw new InternalInterpreterError('Called "getValue" on a derived form.');
+        throw new InternalInterpreterError('Called "getValue" on a derived form. [' + this + ']');
     }
 
     // Returns whether the expression could do nasty stuff (value polymorphism ...)

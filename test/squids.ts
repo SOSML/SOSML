@@ -587,6 +587,14 @@ it("functors", () => {
         gc("structure LIST_THING : EXAMPLE = struct type 'a thing = 'a list fun example a = [a] end;", undefined),
         gc("structure LOL = EXTEND (LIST_THING);", undefined)
     ]);
+    run_test([
+        gc("signature SIG = sig eqtype T end;", undefined),
+        gc("functor F( S: SIG ) = struct type FT = S.T end;", undefined),
+        gc("structure FI = F( struct type T = int end );", undefined),
+        gc("open FI;", undefined),
+        gc("fun f (x: FI.FT) = 0;", undefined),
+        gc("f 5;", undefined)
+    ]);
 });
 
 it("tuple typeVar propagation", () => {

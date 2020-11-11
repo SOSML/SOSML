@@ -496,10 +496,14 @@ export class State {
                     out += stsym + ' ' + istr + 'functor ' + bold(escape(i)) + '(';
                     if (staticBasis) {
                         let functor = staticBasis.getFunctor(i);
-                        out += functor[2] + ': sig\n';
-                        out += this.printBasis(undefined, functor[0], options, indent + 1);
-                        out += emptyst + ' ' + istr + 'end): sig\n';
-                        out += this.printBasis(undefined, functor[1], options, indent + 1);
+                        if (functor !== undefined) {
+                            out += functor[2] + ': sig\n';
+                            out += this.printBasis(undefined, functor[0], options, indent + 1);
+                            out += emptyst + ' ' + istr + 'end): sig\n';
+                            out += this.printBasis(undefined, functor[1], options, indent + 1);
+                        } else {
+                            out += '<undefined>): struct\n';
+                        }
                     } else {
                         out += ' ??? ): sig\n';
                         out += this.printBasis(undefined, undefined, options, indent + 1);
@@ -513,11 +517,11 @@ export class State {
                 if (dynamicBasis.valueEnvironment.hasOwnProperty(i)) {
                     if (staticBasis) {
                         out += stsym + ' ' + istr + this.printBinding(i,
-                            dynamicBasis.valueEnvironment[i], staticBasis.getValue(i),
-                            options, false) + '\n';
+                                                                      dynamicBasis.valueEnvironment[i], staticBasis.getValue(i),
+                        options, false) + '\n';
                     } else {
                         out += stsym + ' ' + istr + this.printBinding(i,
-                            dynamicBasis.valueEnvironment[i], undefined, options, false) + '\n';
+                                                                      dynamicBasis.valueEnvironment[i], undefined, options, false) + '\n';
                     }
                 }
             }
@@ -592,10 +596,14 @@ export class State {
                     out += stsym + ' ' + istr + 'functor ' + bold(escape(i)) + '(';
                     if (staticBasis) {
                         let functor = staticBasis.getFunctor(i);
-                        out += functor[2] + ': sig\n';
-                        out += this.printBasis(undefined, functor[0], options, indent + 1);
-                        out += emptyst + ' ' + istr + 'end): struct\n';
-                        out += this.printBasis(undefined, functor[1], options, indent + 1);
+                        if (functor !== undefined) {
+                            out += functor[2] + ': sig\n';
+                            out += this.printBasis(undefined, functor[0], options, indent + 1);
+                            out += emptyst + ' ' + istr + 'end): struct\n';
+                            out += this.printBasis(undefined, functor[1], options, indent + 1);
+                        } else {
+                            out += ' <functor undefined> ): struct\n';
+                        }
                     } else {
                         out += ' ??? ): sig\n';
                         out += this.printBasis(undefined, undefined, options, indent + 1);

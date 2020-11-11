@@ -4,7 +4,7 @@ import { IdentifierToken, Token, LongIdentifierToken } from './tokens';
 import { Type, TypeVariable, CustomType, TypeVariableBind, FunctionType } from './types';
 import { State, DynamicInterface, DynamicStructureInterface, DynamicValueInterface, StaticBasis,
          DynamicTypeInterface, IdentifierStatus, DynamicBasis, DynamicFunctorInformation,
-         TypeInformation, StaticStructureEnvironment } from './state';
+         TypeInformation } from './state';
 import { Warning, EvaluationError, ElaborationError, InternalInterpreterError } from './errors';
 import { Value } from './values';
 import { getInitialState } from './initialState';
@@ -49,6 +49,7 @@ export class StructureExpression extends Expression implements Structure {
             let nstate = state.getNestedState(0).getNestedState(state.id);
 
             callStack.push({'next': recCall, 'params': params});
+
             callStack.push({
                 'next': this.structureDeclaration,
                 'params': {'state': nstate, 'modifiable': params.modifiable, 'recResult': undefined}
@@ -58,8 +59,7 @@ export class StructureExpression extends Expression implements Structure {
         // braced so linter does not complain about shadowed names
         {
             let tmp = params.recResult;
-            if (tmp === undefined
-                || tmp.newState === undefined) {
+            if (tmp === undefined || tmp.newState === undefined) {
                 throw new InternalInterpreterError('RAINBOW!');
             }
             let nstate = <State> tmp.newState;
@@ -528,27 +528,28 @@ export class FunctorApplication extends Expression implements Structure {
             throw new EvaluationError('Undefined functor "' + this.functorId.getText() + '".');
         }
 
-        let fn = new StaticBasis({}, {}, {}, {}, {});
-        fn.extend(fun[1]);
-
-        // TODO: do this here properly
-
-        let res = fn.extend(TransparentConstraint.restrict(fun[0],
-            str[0], state, tyVarBnd, nextName)[0]);
+        let tst = state.getNestedState(state.id);
+        tst.setStaticStructure(fun[2], TransparentConstraint.restrict(fun[0], str[0], state,
+                                                                      tyVarBnd, nextName)[0]);
+        let res = new StaticBasis({}, {}, {}, {}, {}).extend(fun[1]);
 
         for (let i in res.valueEnvironment) {
             if (res.valueEnvironment.hasOwnProperty(i)) {
                 let tmp = res.valueEnvironment[i];
 
                 if (tmp !== undefined && tmp[0] !== undefined) {
-                    let tst = state.getNestedState(state.id);
-
-                    let nstr: StaticStructureEnvironment = {};
-                    nstr[fun[2]] = res;
-
-                    tst.staticBasis = new StaticBasis({}, {}, nstr, {}, {});
-
                     res.valueEnvironment[i] = [tmp[0].instantiate(tst, str[2]), tmp[1]];
+                }
+            }
+        }
+        for (let i in res.typeEnvironment) {
+            if (res.typeEnvironment.hasOwnProperty(i)) {
+                if (res.typeEnvironment[i].type instanceof FunctionType) {
+                    let oldtp: FunctionType = (res.typeEnvironment[i].type as FunctionType);
+                    res.typeEnvironment[i].type =
+                        new FunctionType(oldtp.parameterType,
+                                         oldtp.returnType.instantiate(tst, str[2]));
+
                 }
             }
         }
@@ -558,6 +559,7 @@ export class FunctorApplication extends Expression implements Structure {
 
     computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
         DynamicBasis | Value | undefined {
+
         let state = params.state;
         let fun = state.getDynamicFunctor(this.functorId.getText());
 
@@ -646,7 +648,9 @@ export class LocalDeclarationStructureExpression extends Expression implements S
         if (params.ldseRes === undefined) {
             if (params.recResult === undefined) {
                 let nstate = state.getNestedState(0).getNestedState(state.id);
+
                 callStack.push({'next': recCall, 'params': params});
+
                 callStack.push({
                     'next': this.declaration,
                     'params': {'state': nstate, 'modifiable': params.modifiable, 'recResult': undefined}
@@ -659,7 +663,7 @@ export class LocalDeclarationStructureExpression extends Expression implements S
         let res = <EvaluationResult> params.ldseRes;
         if (res === undefined
             || res.newState === undefined) {
-            throw new InternalInterpreterError('Anpan.');
+                throw new InternalInterpreterError('Anpan.');
         }
         // braced so linter does not complain about shadowing
         {
@@ -1113,7 +1117,6 @@ export class FunctorBinding {
 
         state.setDynamicFunctor(this.name.getText(),
             new DynamicFunctorInformation(this.signatureName, inter, this.binding, nstate));
-
         return state;
     }
 
