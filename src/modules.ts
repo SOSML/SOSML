@@ -529,9 +529,16 @@ export class FunctorApplication extends Expression implements Structure {
         }
 
         let tst = state.getNestedState(state.id);
+        let res = new StaticBasis({}, {}, {}, {}, {});
+        let warns: Warning[] = [];
+        if (fun[3]) {
+            // Dirty hack: we have to open the structure given as parameter
+            tst.staticBasis = tst.staticBasis.extend(str[0]);
+            warns.push(new Warning(0, 'Using an approximately elaborated functor.'));
+        }
         tst.setStaticStructure(fun[2], TransparentConstraint.restrict(fun[0], str[0], state,
                                                                       tyVarBnd, nextName)[0]);
-        let res = new StaticBasis({}, {}, {}, {}, {}).extend(fun[1]);
+        res = res.extend(fun[1]);
 
         for (let i in res.valueEnvironment) {
             if (res.valueEnvironment.hasOwnProperty(i)) {
@@ -554,7 +561,7 @@ export class FunctorApplication extends Expression implements Structure {
             }
         }
 
-        return [res, str[1], str[2], str[3]];
+        return [res, str[1].concat(warns), str[2], str[3]];
     }
 
     computeStructure(params: EvaluationParameters, callStack: EvaluationStack, recCall: Declaration):
@@ -1104,10 +1111,23 @@ export class FunctorBinding {
         let sig = this.signatureBinding.elaborate(state, tyVarBnd, nextName, paramBindings);
         let nstate = state.getNestedState(state.id);
         nstate.setStaticStructure(this.signatureName.getText(), sig[0]);
+
+        // Dirty hacks time: Check if the binding is a local declaration expression; it it
+        // is, we set a special flag in the functor that always opens the structure given
+        // as a parameter.
+
+        let openParameter = false;
+        let warns: Warning[] = [];
+        if (this.binding instanceof LocalDeclarationStructureExpression) {
+            openParameter = true;
+            warns.push(new Warning(0, 'Functor elaborated approximately.'));
+        }
+
         let str = this.binding.elaborate(nstate, sig[2], sig[3], paramBindings);
         state.setStaticFunctor(this.name.getText(), [sig[0], str[0],
-            this.signatureName.getText()]);
-        return [state, sig[1].concat(str[1]), str[2], str[3]];
+            this.signatureName.getText()], openParameter);
+
+        return [state, sig[1].concat(warns).concat(str[1]), str[2], str[3]];
     }
 
     evaluate(state: State): State {

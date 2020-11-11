@@ -213,7 +213,7 @@ export function interpret(nextInstruction: string,
 
                     let tp = state.getStaticFunctor(i, curState.id);
                     if (tp !== undefined) {
-                        curState.setStaticFunctor(i, tp);
+                        curState.setStaticFunctor(i, [tp[0], tp[1], tp[2]], tp[3]);
                     }
                 }
             }

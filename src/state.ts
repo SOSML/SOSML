@@ -61,7 +61,7 @@ export class DynamicFunctorInformation {
 
 export type DynamicFunctorEnvironment = { [name: string]: DynamicFunctorInformation };
 
-export type StaticFunctorEnvironment = { [name: string]: [StaticBasis, StaticBasis, string] };
+export type StaticFunctorEnvironment = { [name: string]: [StaticBasis, StaticBasis, string, boolean] };
 
 
 export class DynamicInterface {
@@ -266,7 +266,7 @@ export class StaticBasis {
         return undefined;
     }
 
-    getFunctor(name: string): [StaticBasis, StaticBasis, string] | undefined {
+    getFunctor(name: string): [StaticBasis, StaticBasis, string, boolean] | undefined {
         if (this.functorEnvironment.hasOwnProperty(name)) {
             return this.functorEnvironment[name];
         }
@@ -294,8 +294,8 @@ export class StaticBasis {
         this.signatureEnvironment[name] = signature;
     }
 
-    setFunctor(name: string, functor: [StaticBasis, StaticBasis, string]) {
-        this.functorEnvironment[name] = functor;
+    setFunctor(name: string, functor: [StaticBasis, StaticBasis, string], openParameter: boolean) {
+        this.functorEnvironment[name] = [functor[0], functor[1], functor[2], openParameter];
     }
 
     extend(other: StaticBasis): StaticBasis {
@@ -437,13 +437,23 @@ export class State {
                     let sbtp = staticBasis.getType(i);
                     if (sbtp !== undefined) {
                         if (sbtp.type instanceof CustomType) {
-                            out += stsym + ' ' + istr + 'datatype '
+                            if (sbtp.constructors.length === 0) {
+                                if (sbtp.allowsEquality) {
+                                    out += stsym + ' ' + istr + 'eqtype '
+                                    + bold(escape(sbtp.type.toString(options))) + ';\n';
+                                } else {
+                                    out += stsym + ' ' + istr + 'type '
+                                    + bold(escape(sbtp.type.toString(options))) + ';\n';
+                                }
+                            } else {
+                                out += stsym + ' ' + istr + 'datatype '
                                 + bold(escape(sbtp.type.toString(options))) + ' : {\n';
-                            for (let j of sbtp.constructors) {
-                                out += emptyst + '   ' + istr + this.printBinding(j, undefined,
-                                    staticBasis.getValue(j), options) + '\n';
+                                for (let j of sbtp.constructors) {
+                                    out += emptyst + '   ' + istr + this.printBinding(j, undefined,
+                                        staticBasis.getValue(j), options) + '\n';
+                                }
+                                out += emptyst + ' ' + istr + '};\n';
                             }
-                            out += emptyst + ' ' + istr + '};\n';
                         }
                     }
                 }
@@ -454,8 +464,8 @@ export class State {
                     if (sbtp !== undefined) {
                         if (sbtp.type instanceof FunctionType) {
                             out += stsym + ' ' + istr + 'type '
-                                + bold(escape(sbtp.type.parameterType.toString(options))
-                                + ' = ' + escape(sbtp.type.returnType.toString(options))) + ';\n';
+                            + bold(escape(sbtp.type.parameterType.toString(options))
+                                   + ' = ' + escape(sbtp.type.returnType.toString(options))) + ';\n';
                         }
                     }
                 }
@@ -497,10 +507,18 @@ export class State {
                     if (staticBasis) {
                         let functor = staticBasis.getFunctor(i);
                         if (functor !== undefined) {
-                            out += functor[2] + ': sig\n';
-                            out += this.printBasis(undefined, functor[0], options, indent + 1);
-                            out += emptyst + ' ' + istr + 'end): sig\n';
-                            out += this.printBasis(undefined, functor[1], options, indent + 1);
+                            if (functor[2] !== undefined) {
+                                out += functor[2] + ': sig\n';
+                                out += this.printBasis(undefined, functor[0], options, indent + 1);
+                                out += emptyst + ' ' + istr + 'end): sig\n';
+                                out += this.printBasis(undefined, functor[1], options, indent + 1);
+                            } else {
+                                // Special output for syntactic sugar
+                                out += '\n';
+                                out += this.printBasis(undefined, functor[0], options, indent + 1);
+                                out += emptyst + ' ' + istr + '): struct\n';
+                                out += this.printBasis(undefined, functor[1], options, indent + 1);
+                            }
                         } else {
                             out += '<undefined>): struct\n';
                         }
@@ -533,14 +551,24 @@ export class State {
                         let sbtp = staticBasis.getType(i);
                         if (sbtp !== undefined) {
                             if (sbtp.type instanceof CustomType) {
-                                out += stsym + ' ' + istr + 'datatype ' +
-                                    bold(escape(sbtp.type.toString(options))) + ' = {\n';
-                                for (let j of sbtp.constructors) {
-                                    out += emptyst + '   ' + istr + this.printBinding(j,
-                                        dynamicBasis.valueEnvironment[j],
-                                        staticBasis.getValue(j), options) + '\n';
+                                if (sbtp.constructors.length === 0) {
+                                    if (sbtp.allowsEquality) {
+                                        out += stsym + ' ' + istr + 'eqtype '
+                                        + bold(escape(sbtp.type.toString(options))) + ';\n';
+                                    } else {
+                                        out += stsym + ' ' + istr + 'type '
+                                        + bold(escape(sbtp.type.toString(options))) + ';\n';
+                                    }
+                                } else {
+                                    out += stsym + ' ' + istr + 'datatype ' +
+                                        bold(escape(sbtp.type.toString(options))) + ' = {\n';
+                                    for (let j of sbtp.constructors) {
+                                        out += emptyst + '   ' + istr + this.printBinding(j,
+                                            dynamicBasis.valueEnvironment[j],
+                                            staticBasis.getValue(j), options) + '\n';
+                                    }
+                                    out += emptyst + ' ' + istr + '};\n';
                                 }
-                                out += emptyst + ' ' + istr + '};\n';
                             }
                         }
                     }
@@ -597,10 +625,18 @@ export class State {
                     if (staticBasis) {
                         let functor = staticBasis.getFunctor(i);
                         if (functor !== undefined) {
-                            out += functor[2] + ': sig\n';
-                            out += this.printBasis(undefined, functor[0], options, indent + 1);
-                            out += emptyst + ' ' + istr + 'end): struct\n';
-                            out += this.printBasis(undefined, functor[1], options, indent + 1);
+                            if (functor[2] !== '__farg') {
+                                out += functor[2] + ': sig\n';
+                                out += this.printBasis(undefined, functor[0], options, indent + 1);
+                                out += emptyst + ' ' + istr + 'end): struct\n';
+                                out += this.printBasis(undefined, functor[1], options, indent + 1);
+                            } else {
+                                // Special output for syntactic sugar
+                                out += '\n';
+                                out += this.printBasis(undefined, functor[0], options, indent + 1);
+                                out += emptyst + ' ' + istr + '): struct\n';
+                                out += this.printBasis(undefined, functor[1], options, indent + 1);
+                            }
                         } else {
                             out += ' <functor undefined> ): struct\n';
                         }
@@ -824,7 +860,7 @@ export class State {
         }
     }
 
-    getStaticFunctor(name: string, idLimit: number = 0): [StaticBasis, StaticBasis, string] | undefined {
+    getStaticFunctor(name: string, idLimit: number = 0): [StaticBasis, StaticBasis, string, boolean] | undefined {
         let result = this.staticBasis.getFunctor(name);
         if (result !== undefined || this.parent === undefined || this.parent.id < idLimit) {
             return result;
@@ -1008,13 +1044,14 @@ export class State {
         }
     }
 
-    setStaticFunctor(name: string, functor: [StaticBasis, StaticBasis, string], atId: number|undefined = undefined) {
+    setStaticFunctor(name: string, functor: [StaticBasis, StaticBasis, string],
+                     openParameter: boolean = false, atId: number|undefined = undefined) {
         if (atId === undefined || atId === this.id) {
-            this.staticBasis.setFunctor(name, functor);
+            this.staticBasis.setFunctor(name, functor, openParameter);
         } else if (atId > this.id || this.parent === undefined) {
             throw new InternalInterpreterError('State with id "' + atId + '" does not exist.');
         } else {
-            this.parent.setStaticFunctor(name, functor, atId);
+            this.parent.setStaticFunctor(name, functor, openParameter, atId);
         }
     }
 
