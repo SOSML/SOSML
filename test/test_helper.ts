@@ -1,12 +1,12 @@
 import * as API from '../src/main';
 
-import * as diff from 'jest-diff';
+const diff = require('jest-diff').default;
 
 const NO_DIFF_MESSAGE = diff('', '');
 
 declare global {
     namespace jest {
-        interface Matchers {
+        interface Matchers<R, T = {}> {
             toEqualWithType: (received: any) => any;
         }
     }
