@@ -165,12 +165,21 @@ export class TransparentConstraint extends Expression implements Structure {
                 try {
                     let sgtp = <CustomType> sg.type;
                     let sttp = st.type;
+                    let eqtp = st.type;
                     if (!(sg.type instanceof FunctionType) && st.type instanceof FunctionType) {
-                       sttp = (<FunctionType> st.type).parameterType;
+                        eqtp = (<FunctionType> st.type).returnType;
+                        sttp = (<FunctionType> st.type).parameterType;
                     }
                     let tp = sgtp.merge(nstate, tyVarBnd, sttp);
 
-                    res.setType(i, st.type.instantiate(nstate2, tp[1]), sg.constructors, sg.arity, sg.allowsEquality);
+                    if (sg.allowsEquality && !eqtp.admitsEquality(nstate)) {
+                        throw new ElaborationError(
+                            'Signature mismatch: Implementation of type "' + i
+                            + '" should admit equality.');
+                    }
+
+                    res.setType(i, st.type.instantiate(nstate2, tp[1]), sg.constructors,
+                                sg.arity, true);
                     tyVarBnd = tp[1];
                 } catch (e) {
                     if (!(e instanceof Array)) {
@@ -347,13 +356,21 @@ export class OpaqueConstraint extends Expression implements Structure {
                 try {
                     let sgtp = <CustomType> sg.type;
                     let sttp = st.type;
+                    let eqtp = st.type;
                     if (!(sg.type instanceof FunctionType) && st.type instanceof FunctionType) {
+                        eqtp = (<FunctionType> st.type).returnType;
                         sttp = (<FunctionType> st.type).parameterType;
                     }
                     let tp = sgtp.merge(nstate, tyVarBnd, sttp);
                     // We need to create a new type here because of reference stuff
                     sgtp = new CustomType(sgtp.name, sgtp.typeArguments,
                         sgtp.qualifiedName, true);
+
+                    if (sg.allowsEquality && !eqtp.admitsEquality(nstate)) {
+                        throw new ElaborationError(
+                            'Signature mismatch: Implementation of type "' + i
+                            + '" should admit equality.');
+                    }
 
                     res.setType(i, sgtp, [], sg.arity, sg.allowsEquality);
                     nstate2.staticBasis.setType(i, sgtp, sg.constructors, sg.arity, sg.allowsEquality);
@@ -1283,7 +1300,7 @@ export class DatatypeSpecification extends Specification {
                 }
             }
             res.setType(this.datatypeDescription[i][1].getText(), ctp, ctr,
-                this.datatypeDescription[i][0].length, true);
+                this.datatypeDescription[i][0].length, false);
         }
 
         return [res, [], tyVarBnd, nextName];
