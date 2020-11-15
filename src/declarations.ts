@@ -720,7 +720,7 @@ export class LocalDeclaration extends Declaration {
             let nnstate = <State> res.newState;
 
             if (res.hasThrown) {
-                // Something came flying in our direction. So hide we were here and let it flow.
+                // Something came flying in our direction. So, hide we were here and let it fly.
                 return {
                     'newState': state,
                     'value': res.value,

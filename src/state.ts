@@ -137,7 +137,13 @@ export class DynamicBasis {
 
     getFunctor(name: string): DynamicFunctorInformation | undefined {
         if (this.functorEnvironment.hasOwnProperty(name)) {
-            return this.functorEnvironment[name];
+            return new DynamicFunctorInformation(
+                this.functorEnvironment[name].paramName,
+                this.functorEnvironment[name].param,
+                this.functorEnvironment[name].body,
+                this.functorEnvironment[name].state.getNestedState(
+                this.functorEnvironment[name].state.id)
+            );
         }
         return undefined;
     }
@@ -268,7 +274,16 @@ export class StaticBasis {
 
     getFunctor(name: string): [StaticBasis, StaticBasis, string, boolean] | undefined {
         if (this.functorEnvironment.hasOwnProperty(name)) {
-            return this.functorEnvironment[name];
+            // Different applications of a functor may have different types, so we need to
+            // make sure that changes in type don't creep into the functor itself.
+            let str1 = this.functorEnvironment[name][0];
+            let str2 = this.functorEnvironment[name][1];
+            return [
+                new StaticBasis({}, {}, {}, {}, {}).extend(str1),
+                new StaticBasis({}, {}, {}, {}, {}).extend(str2),
+                this.functorEnvironment[name][2],
+                this.functorEnvironment[name][3]
+            ];
         }
         return undefined;
     }
@@ -301,7 +316,11 @@ export class StaticBasis {
     extend(other: StaticBasis): StaticBasis {
         for (let i in other.typeEnvironment) {
             if (other.typeEnvironment.hasOwnProperty(i)) {
-                this.typeEnvironment[i] = other.typeEnvironment[i];
+                this.typeEnvironment[i] = new TypeInformation(
+                    other.typeEnvironment[i].type,
+                    other.typeEnvironment[i].constructors,
+                    other.typeEnvironment[i].arity,
+                    other.typeEnvironment[i].allowsEquality);
             }
         }
         for (let i in other.valueEnvironment) {

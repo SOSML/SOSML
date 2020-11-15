@@ -67,7 +67,6 @@ export class StructureExpression extends Expression implements Structure {
             if (tmp.hasThrown) {
                 return <Value> tmp.value;
             }
-
             return nstate.getDynamicChanges(0);
         }
     }
@@ -522,6 +521,7 @@ export class FunctorApplication extends Expression implements Structure {
         [StaticBasis, Warning[], Map<string, [Type, boolean]>, string] {
 
         let str = this.structureExpression.elaborate(state, tyVarBnd, nextName, paramBindings);
+
         let fun = state.getStaticFunctor(this.functorId.getText());
 
         if (fun === undefined) {
@@ -534,11 +534,13 @@ export class FunctorApplication extends Expression implements Structure {
         if (fun[3]) {
             // Dirty hack: we have to open the structure given as parameter
             tst.staticBasis = tst.staticBasis.extend(str[0]);
-            warns.push(new Warning(0, 'Using an approximately elaborated functor.'));
+            warns.push(new Warning(0, 'Using approximately elaborated functor "' +
+                                   this.functorId.getText() + '".\n'));
         }
         tst.setStaticStructure(fun[2], TransparentConstraint.restrict(fun[0], str[0], state,
                                                                       tyVarBnd, nextName)[0]);
         res = res.extend(fun[1]);
+        tst.staticBasis = tst.staticBasis.extend(fun[1]);
 
         for (let i in res.valueEnvironment) {
             if (res.valueEnvironment.hasOwnProperty(i)) {
@@ -556,7 +558,6 @@ export class FunctorApplication extends Expression implements Structure {
                     res.typeEnvironment[i].type =
                         new FunctionType(oldtp.parameterType,
                                          oldtp.returnType.instantiate(tst, str[2]));
-
                 }
             }
         }
@@ -574,35 +575,29 @@ export class FunctorApplication extends Expression implements Structure {
             throw new EvaluationError('Undefined functor "' + this.functorId.getText() + '".');
         }
 
-        if (params.funappres === undefined) {
-            let res = this.structureExpression.computeStructure(params, callStack, recCall);
-            if (res === undefined) {
-                return undefined;
-            }
-
-            if (res instanceof Value) {
-                return res;
-            }
-            params.funappres = res;
+        let res = this.structureExpression.computeStructure(params, callStack, recCall);
+        if (res === undefined || res instanceof Value) {
+            return res;
         }
-        // braced so linter does not complain about shadowing
-        {
-            let res = params.funappres;
 
-            if (params.nstate === undefined) {
-                let nstate = fun.state.getNestedState(fun.state.id);
-                nstate.setDynamicStructure(fun.paramName.getText(),
-                    (<DynamicBasis> res).restrict(fun.param));
-                params.nstate = nstate;
-            }
+        let nnstate = fun.state.getNestedState(fun.state.id);
+        nnstate.dynamicBasis = nnstate.dynamicBasis.extend(<DynamicBasis> res);
 
-            // we have to fake our state for a short time, so computeStructure will add the correct recursive state
-            params.state = params.nstate;
-            let nres = fun.body.computeStructure(params, callStack, recCall);
-            params.state = state;
+        nnstate.setDynamicStructure(fun.paramName.getText(),
+                                    (<DynamicBasis> res).restrict(fun.param));
 
-            return nres;
+        // we have to fake our state for a short time, so computeStructure will add the
+        // correct recursive state
+
+        if (params[this + ''] === undefined) {
+            params.recResult = undefined;
+            params[this + ''] = true;
         }
+        params.state = nnstate;
+        let nres = fun.body.computeStructure(params, callStack, recCall);
+        params.state = state;
+
+        return nres;
     }
 
     toString(): string {
@@ -1030,6 +1025,7 @@ export class StructureBinding {
         [State, Warning[], Map<string, [Type, boolean]>, string] {
         let tmp = this.binding.elaborate(state, tyVarBnd, nextName, paramBindings);
         state.setStaticStructure(this.name.getText(), tmp[0]);
+
         return [state, tmp[1], tmp[2], tmp[3]];
     }
 
@@ -1046,6 +1042,10 @@ export class StructureBinding {
                 'hasThrown': true,
             };
         }
+
+//        console.log('Set dyStr ' + this.name.getText());
+//        console.log(tmp);
+
         state.setDynamicStructure(this.name.getText(), <DynamicBasis> tmp);
         return {
             'newState': state,
@@ -1120,7 +1120,8 @@ export class FunctorBinding {
         let warns: Warning[] = [];
         if (this.binding instanceof LocalDeclarationStructureExpression) {
             openParameter = true;
-            warns.push(new Warning(0, 'Functor elaborated approximately.'));
+            warns.push(new Warning(0, 'Functor "' + this.name.getText()
+                                   + '" elaborated approximately.\n'));
         }
 
         let str = this.binding.elaborate(nstate, sig[2], sig[3], paramBindings);
