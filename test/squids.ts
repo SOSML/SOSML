@@ -149,6 +149,14 @@ it("recursive val", () => {
     ]);
 });
 
+it("type annotations in patterns", () => {
+    run_test([
+        gc('fun y (x:int) = 10;', undefined, ['y'], [undefined], [[FUNC(INT, INT), 0]]),
+        gc('val z = 12;', undefined, ['z'], [[new Val.Integer(12), 0]], [[INT, 0]]),
+        ge('fun foo (x:int) = (fn (y:int->int) (z:int) => y (z+x));', Errors.ElaborationError)
+    ]);
+});
+
 it("constructor redefinition", () => {
     run_test([
         gc('datatype x = f of int;', undefined, ['_x', 'f'], [['f', undefined], [new Val.ValueConstructor('f', 1), 1 ]], [TI('x', ['f'], 0, true), [FUNC(INT, new Type.CustomType('x')), 1]]),

@@ -1419,22 +1419,28 @@ export class FunctionApplication extends Expression implements Pattern {
             paramBindings: Map<string, Type> = new Map<string, Type>())
         : [Type, Warning[], string, Set<string>, Map<string, [Type, boolean]>, IdCnt] {
 
-        if (isPattern && this.func instanceof ValueIdentifier) {
-            if ((<ValueIdentifier> this.func).name instanceof LongIdentifierToken) {
+
+        let cleanedFunc = this.func;
+        while (cleanedFunc instanceof TypedExpression) {
+            cleanedFunc = (<TypedExpression> cleanedFunc).expression;
+        }
+
+        if (isPattern && cleanedFunc instanceof ValueIdentifier) {
+            if ((<ValueIdentifier> cleanedFunc).name instanceof LongIdentifierToken) {
                 let st = state.getAndResolveStaticStructure(<LongIdentifierToken>
-                    (<ValueIdentifier> this.func).name);
+                    (<ValueIdentifier> cleanedFunc).name);
                 if (st === undefined ||
-                    st.getValue((<LongIdentifierToken> (<ValueIdentifier> this.func).name).
+                    st.getValue((<LongIdentifierToken> (<ValueIdentifier> cleanedFunc).name).
                         id.getText()) === undefined) {
                     throw new ElaborationError(
-                        '"' + (<ValueIdentifier> this.func).name.getText()
+                        '"' + (<ValueIdentifier> cleanedFunc).name.getText()
                         + '" is not a constructor.');
                 }
             } else {
-                let t = state.getStaticValue((<ValueIdentifier> this.func).name.getText());
+                let t = state.getStaticValue((<ValueIdentifier> cleanedFunc).name.getText());
                 if (t === undefined || t[1] === IdentifierStatus.VALUE_VARIABLE) {
                     throw new ElaborationError(
-                        '"' + (<ValueIdentifier> this.func).name.getText()
+                        '"' + (<ValueIdentifier> cleanedFunc).name.getText()
                         + '" is not a constructor.');
                 }
             }
