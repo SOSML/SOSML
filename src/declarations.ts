@@ -133,7 +133,7 @@ export class ValueDeclaration extends Declaration {
             if (!options || options.allowSuccessorML !== true) {
                 if (!result[j][1].isResolved()) {
                     throw new ElaborationError(
-                        'Unresolved record type.');
+                        'Unresolved record type: Multiple non-agreeing types possible.');
                 }
             }
             nstate.setStaticValue(result[j][0], result[j][1], IdentifierStatus.VALUE_VARIABLE);
@@ -197,7 +197,7 @@ export class ValueDeclaration extends Declaration {
                     if (!options || options.allowSuccessorML !== true) {
                         if (!val[0][k][1].isResolved()) {
                             throw new ElaborationError(
-                                'Unresolved record type.');
+                                'Unresolved record type: Multiple non-agreeing types possible.');
                         }
                     }
 
@@ -221,7 +221,7 @@ export class ValueDeclaration extends Declaration {
             if (!options || options.allowSuccessorML !== true) {
                 if (!result2[j][1].isResolved()) {
                     throw new ElaborationError(
-                        'Unresolved record type.');
+                        'Unresolved record type: Multiple non-agreeing types possible.');
                 }
             }
             if (!r2outdeps[j]) {

@@ -1741,7 +1741,7 @@ export class HandleException extends Expression {
             || res.value === undefined
             || next === undefined
             || next.value === undefined) {
-            throw new InternalInterpreterError('How is this undefined?');
+            throw new InternalInterpreterError('Error. I didn\'t quite catch that.');
         }
         if (!next.hasThrown || !(<Value> next.value).equals(new ExceptionValue('Match', undefined, 0, 0))) {
             // Exception got handled

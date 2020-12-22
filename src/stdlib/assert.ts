@@ -1,7 +1,7 @@
 import { State, IdentifierStatus, DynamicBasis, StaticBasis } from '../state';
 import { TypeVariable, FunctionType, TupleType } from '../types';
 import { PredefinedFunction, RecordValue, Value, StringValue } from '../values';
-import { InternalInterpreterError } from '../errors';
+import { Warning, InternalInterpreterError } from '../errors';
 import { EvaluationParameters } from '../evaluator';
 import { Module, failException, intType, stringType } from '../stdlib';
 
@@ -42,6 +42,31 @@ function addAssertLib(state: State): State {
     sres.setValue('assertDefined', new FunctionType(
         new TupleType([stringType, stringType]),
         new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE);
+
+    dres.setValue('printType',
+                  new PredefinedFunction('printType',
+                                         (val: Value, params: EvaluationParameters) => {
+        let warns: Warning[] = [];
+        if (val instanceof StringValue) {
+            let varnm: string = (val as StringValue).value;
+            let curstate = params.modifiable;
+            if (curstate !== undefined) {
+                let varval = curstate.getStaticValue(varnm);
+                if (varval !== undefined) {
+                    let vval = varval[0];
+                    if (vval !== undefined) {
+                        warns.push(new Warning(-2, vval.toString({})));
+                    }
+                }
+                return [new RecordValue(), false, warns];
+            }
+        }
+        throw new InternalInterpreterError('コノヤロー!!バカヤロー!!');
+    }), IdentifierStatus.VALUE_VARIABLE);
+    sres.setValue('printType', new FunctionType(
+        stringType,
+        new TupleType([])).simplify(), IdentifierStatus.VALUE_VARIABLE);
+
 
     dres.setValue('assertType',
                   new PredefinedFunction('assertType',
@@ -202,17 +227,20 @@ export let ASSERT_LIB: Module = {
 
         (* Checks whether an identifier is defined, otherwise raises an Fail
            with the second parameter as the message *)
-        (* val assertDefined : string * string -> unit; *)
+        val assertDefined : string * string -> unit;
+
+        (* Prints the type of the symbol passed as argument *)
+        val printType : string -> unit;
 
         (* Checks whether an identifier has the specified type,
            otherwise raises an Fail with the second parameter as the message *)
-        (* val assertType : (string * string) * string -> unit; *)
+        val assertType : (string * string) * string -> unit;
 
         (* Checks whether an identifier is equal to the given value,
            otherwise raises an Fail with the second parameter as the message *)
-        (* val assertValueEq : (string * ''a) * string -> unit; *)
+        val assertValueEq : (string * ''a) * string -> unit;
 
-        (* val assertValue : (string * string) * string -> unit; *)
+        val assertValue : (string * string) * string -> unit;
 
         (* Counts how often the second identifier occurs in the definition of the first identifier
            (after resolving simplifications). *)

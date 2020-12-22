@@ -5,6 +5,8 @@
 import { getFirstState, interpret, InterpreterOptions, PrintOptions } from './main';
 import { IncompleteError } from './errors';
 
+const {performance} = require('perf_hooks');
+
 import * as readline from 'readline';
 
 let opts: InterpreterOptions = {
@@ -43,6 +45,7 @@ rl.on( 'line', ( line: string ) => {
     try {
         tmp = tmp + line;
         let out = '';
+        let oldtm = performance.now();
         let res = interpret( tmp, state, opts );
 
         if (res.evaluationErrored) {
@@ -53,6 +56,7 @@ rl.on( 'line', ( line: string ) => {
             out += res.state.toString( printOpts );
             printOpts.stopId = res.state.id + 1;
             state = res.state;
+            out += 'Evaluation took ' + (performance.now() - oldtm).toFixed() + 'ms.\n';
             tmp = '';
         }
         if (res.warnings !== undefined) {
