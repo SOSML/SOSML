@@ -446,10 +446,10 @@ export class Record extends Expression implements Pattern {
 
     hasConstant(): boolean {
         for (let exp of this.entries) {
-            if (exp instanceof Constant) {
+            if (exp[1] instanceof Constant) {
                 return true;
             }
-            if (exp instanceof Record && (<Record> exp).hasConstant()) {
+            if (exp[1] instanceof Record && (<Record> exp[1]).hasConstant()) {
                 return true;
             }
         }
@@ -690,6 +690,10 @@ export class Record extends Expression implements Pattern {
                 throw new InternalInterpreterError('Pipiru piru piru pipiru pii!');
             }
 
+            if ((<Record> rule).hasConstant()) {
+                continue;
+            }
+
             if (rule.subsumes(state, this)) {
                 // This rule rules them all
                 breakNext = rule.toString();
@@ -797,7 +801,6 @@ export class Record extends Expression implements Pattern {
 
             if (key instanceof Constant) {
                 // Ignore these rules, as they will never contribute to completeness.
-                hadConstants = true;
                 continue;
             }
 

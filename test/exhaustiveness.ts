@@ -217,6 +217,10 @@ it('custom type - param', () => {
         ok('datatype ltr = L of ltr list;'),
         ne('fun f (L[],L[]) = 1 | f (L _,L[]) = 2 | f (L[],L _) = 3 | f (L[_],L[_]) = 4;')
     ]);
+    run_test([
+        ok('datatype ltr = L of int * ltr list;'),
+        ok('fun f (L (a, _)) 0 = [a] | f (L (a, nil)) _ = [] | f (L (a, x::xr)) k = [];')
+    ]);
 });
 it('custom type - tuple', () => {
     run_test([
