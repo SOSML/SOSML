@@ -463,6 +463,18 @@ export class DatatypeDeclaration extends Declaration {
 
         let tocheck: Type[] = [];
         for (let i = 0; i < this.datatypeBinding.length; ++i) {
+            let res = this.datatypeBinding[i].getType(state, isTopLevel, paramBindings, true);
+
+            state.setStaticType(res[2][0], res[1], res[2][1],
+                                this.datatypeBinding[i].typeVariableSequence.length, true);
+
+            for (let j = 0; j < res[0].length; ++j) {
+                state.setStaticValue(res[0][j][0], res[0][j][1],
+                                     IdentifierStatus.VALUE_CONSTRUCTOR);
+            }
+        }
+
+        for (let i = 0; i < this.datatypeBinding.length; ++i) {
             let res = this.datatypeBinding[i].getType(state, isTopLevel, paramBindings);
 
             for (let j = 0; j < res[0].length; ++j) {
@@ -470,11 +482,15 @@ export class DatatypeDeclaration extends Declaration {
                     throw new ElaborationError('You simply cannot rebind "'
                         + res[0][j][0] + '".');
                 }
-                state.setStaticValue(res[0][j][0], res[0][j][1], IdentifierStatus.VALUE_CONSTRUCTOR);
                 tocheck.push(res[0][j][1]);
+
+                state.setStaticValue(res[0][j][0], res[0][j][1],
+                                     IdentifierStatus.VALUE_CONSTRUCTOR);
             }
+
             state.setStaticType(res[2][0], res[1], res[2][1],
-                this.datatypeBinding[i].typeVariableSequence.length, true);
+                                this.datatypeBinding[i].typeVariableSequence.length, true);
+
             state.incrementValueIdentifierId(res[2][0]);
         }
 
@@ -1457,7 +1473,8 @@ export class DatatypeBinding {
                 public givenIds: {[name: string]: number} = {}) {
     }
 
-    getType(state: State, isTopLevel: boolean, paramBindings: Map<string, Type>):
+    getType(state: State, isTopLevel: boolean, paramBindings: Map<string, Type>,
+            simplified: boolean = false):
         [[string, Type][], Type, [string, string[]]] {
         let connames: string[] = [];
         let ve: [string, Type][] = [];
@@ -1470,12 +1487,17 @@ export class DatatypeBinding {
             undefined, false, 0);
         let restp = new CustomType(this.name.getText(), this.typeVariableSequence,
             undefined, false, id);
-        nstate.setStaticType(this.name.getText(), restp, [], this.typeVariableSequence.length,
-            true);
+        let arity = this.typeVariableSequence.length;
+        nstate.setStaticType(this.name.getText(), restp, [], arity, true);
         for (let i = 0; i < this.type.length; ++i) {
             let tp: Type = restp;
+
             if (this.type[i][1] !== undefined) {
-                let curtp = (<Type> this.type[i][1]).replace(idlesstp, restp);
+                let curtp = (<Type> this.type[i][1]);
+                if (!simplified) {
+                    curtp.instantiate(nstate, new Map<string, [Type, boolean]>());
+                }
+                curtp = curtp.replace(idlesstp, restp);
                 tp = new FunctionType(curtp, tp);
             }
 

@@ -132,6 +132,12 @@ function TI (t: string, cons: string[], arity: number, allowsEquality: boolean =
 
 // Here be Tooru
 
+it("datatype arity mismatch", () => {
+    run_test([
+        ge('datatype \'a mylist = Comb of \'a * mylist | Leer;', Errors.ElaborationError)
+    ]);
+});
+
 it("recursive val", () => {
     run_test([
         gc('fun f x = x - 1;', undefined, ['f'], [undefined], [[FUNC(INT, INT), 0]]),
