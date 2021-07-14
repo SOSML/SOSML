@@ -178,8 +178,15 @@ export class TransparentConstraint extends Expression implements Structure {
                             + '" should admit equality.');
                     }
 
-                    res.setType(i, st.type.instantiate(nstate2, tp[1]), sg.constructors,
-                                sg.arity, true);
+                    let insttp = sttp.instantiate(nstate2, tp[1]);
+
+                    if( insttp instanceof FunctionType ) {
+                        res.setType(i, sttp, sg.constructors, sg.arity, true);
+                    } else {
+                        res.setType(i, st.type.instantiate(nstate2, tp[1]), sg.constructors,
+                                    sg.arity, true);
+                    }
+
                     tyVarBnd = tp[1];
                 } catch (e) {
                     if (!(e instanceof Array)) {
@@ -372,8 +379,16 @@ export class OpaqueConstraint extends Expression implements Structure {
                             + '" should admit equality.');
                     }
 
-                    res.setType(i, sgtp, [], sg.arity, sg.allowsEquality);
-                    nstate2.staticBasis.setType(i, sgtp, sg.constructors, sg.arity, sg.allowsEquality);
+                    if( sttp instanceof FunctionType ) {
+                        res.setType(i, sttp, sg.constructors,
+                                sg.arity, true);
+                        nstate2.staticBasis.setType(i, sttp, sg.constructors,
+                                sg.arity, true);
+                    } else {
+                        res.setType(i, sgtp, [], sg.arity, sg.allowsEquality);
+                        nstate2.staticBasis.setType(i, sgtp, sg.constructors, sg.arity,
+                                                    sg.allowsEquality);
+                    }
 
                     tyVarBnd = tp[1];
                 } catch (e) {
@@ -1059,9 +1074,6 @@ export class StructureBinding {
                 'hasThrown': true,
             };
         }
-
-//        console.log('Set dyStr ' + this.name.getText());
-//        console.log(tmp);
 
         state.setDynamicStructure(this.name.getText(), <DynamicBasis> tmp);
         return {

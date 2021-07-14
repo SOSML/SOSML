@@ -611,6 +611,14 @@ it("functors", () => {
     ]);
 });
 
+it("opaque sig where", () => {
+    run_test([
+        gc("signature SIG = sig type ty end;", undefined),
+        gc("structure Mod : SIG where type ty = int = struct  type ty = int end;", undefined),
+        gc("val x: Mod.ty = 4;", undefined)
+    ]);
+});
+
 it("tuple typeVar propagation", () => {
     run_test([
         ge('{1 = fn x=>(), 2 = fn () => x };', Errors.ElaborationError)
