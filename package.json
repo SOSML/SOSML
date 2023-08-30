@@ -27,7 +27,7 @@
     "author": "The SOSML Developers",
     "repository": {
         "type": "git",
-        "url": "https://github.com/SOSML/SOSML.git"
+        "url": "git+https://github.com/SOSML/SOSML.git"
     },
     "devDependencies": {
         "@types/jest": "^26.0.20",
