@@ -1,5 +1,7 @@
 # SOSML: The Online Interpreter for Standard ML
 
+[![DOI](https://zenodo.org/badge/96932703.svg)](https://doi.org/10.5281/zenodo.18612451)
+
 SOSML is the online interpreter for the functional programming language Standard ML (SML), written in TypeScript.
 SOSML is used in a freshman class at Saarland University; you can check it out at https://sosml.org.
 
